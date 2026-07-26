@@ -74,7 +74,7 @@ public static class FirstPersonSceneSetup
         CardScatterUtility.SpawnScatteredCards();
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
-        Debug.Log("Spawned 20 test cards on the ground.");
+        Debug.Log("Spawned " + CardScatterUtility.DefaultScatterCount + " test cards on the ground.");
     }
 
     [MenuItem("TCG Card Caos/Add Crosshair To Scene")]

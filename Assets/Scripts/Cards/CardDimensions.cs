@@ -7,4 +7,10 @@ public static class CardDimensions
 
     /// <summary>Vertical gap between flat cards in hand.</summary>
     public const float HandStackSpacing = 0.002f;
+
+    public const float ScatterMinX = -5f;
+    public const float ScatterMaxX = 5f;
+    public const float ScatterMinZ = 0.5f;
+    public const float ScatterMaxZ = 8.5f;
+    public const float ScatterMinSpacing = 0.075f;
 }

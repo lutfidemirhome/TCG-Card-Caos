@@ -6,12 +6,21 @@ using UnityEngine;
 public class WorldCard : MonoBehaviour, IInteractable
 {
     [SerializeField] string cardLabel = "Pick Up";
+    [SerializeField] int cardDefinitionId;
+    [SerializeField] int paletteIndex;
 
     Collider _collider;
     Rigidbody _rigidbody;
     bool _isHeld;
 
     public bool IsHeld => _isHeld;
+    public int CardDefinitionId => cardDefinitionId;
+
+    public void Initialize(int definitionId, int palette)
+    {
+        cardDefinitionId = definitionId;
+        paletteIndex = palette;
+    }
 
     void Awake()
     {
