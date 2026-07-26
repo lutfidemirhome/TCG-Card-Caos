@@ -1,9 +1,10 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// A card lying in the world. Press E to pick up into the right hand.
 /// </summary>
-public class WorldCard : MonoBehaviour, IInteractable
+public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 {
     [SerializeField] string cardLabel = "Pick Up";
     [SerializeField] int cardDefinitionId;
@@ -11,6 +12,7 @@ public class WorldCard : MonoBehaviour, IInteractable
 
     Collider _collider;
     Rigidbody _rigidbody;
+    GameObject _outlineObject;
     bool _isHeld;
 
     public bool IsHeld => _isHeld;
@@ -25,6 +27,13 @@ public class WorldCard : MonoBehaviour, IInteractable
     void Awake()
     {
         _collider = GetComponent<Collider>();
+        EnsureOutlineRenderer();
+    }
+
+    public void SetInteractionHighlight(bool highlighted)
+    {
+        if (_outlineObject != null)
+            _outlineObject.SetActive(highlighted && !_isHeld);
     }
 
     public string GetPromptText()
@@ -57,6 +66,7 @@ public class WorldCard : MonoBehaviour, IInteractable
     public void SetHeld(Transform handAnchor, int stackIndex)
     {
         _isHeld = true;
+        SetInteractionHighlight(false);
         RemovePhysics();
 
         if (_collider != null)
@@ -127,9 +137,29 @@ public class WorldCard : MonoBehaviour, IInteractable
         transform.localScale = Vector3.one * 1.35f;
     }
 
+    void EnsureOutlineRenderer()
+    {
+        if (_outlineObject != null)
+            return;
+
+        _outlineObject = new GameObject("InteractionOutline");
+        _outlineObject.transform.SetParent(transform, false);
+
+        var meshFilter = _outlineObject.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
+
+        var meshRenderer = _outlineObject.AddComponent<MeshRenderer>();
+        meshRenderer.sharedMaterial = CardVisualResources.InteractionOutlineMaterial;
+        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        meshRenderer.receiveShadows = false;
+
+        _outlineObject.SetActive(false);
+    }
+
     public void SetWorldPose(Vector3 position, Quaternion rotation)
     {
         _isHeld = false;
+        SetInteractionHighlight(false);
         RemovePhysics();
 
         if (_collider != null)

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 static class RuntimeMaterialUtility
 {
@@ -10,6 +11,22 @@ static class RuntimeMaterialUtility
 
         var material = new Material(shader);
         material.color = color;
+
+        if (enableInstancing)
+            material.enableInstancing = true;
+
+        return material;
+    }
+
+    public static Material CreateUnlitMaterial(Color color, bool enableInstancing = false, int renderQueue = (int)RenderQueue.Geometry)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (shader == null)
+            shader = Shader.Find("Unlit/Color");
+
+        var material = new Material(shader);
+        material.color = color;
+        material.renderQueue = renderQueue;
 
         if (enableInstancing)
             material.enableInstancing = true;

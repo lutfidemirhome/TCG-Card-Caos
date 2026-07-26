@@ -15,6 +15,7 @@ public class InteractionController : MonoBehaviour
     GameObject _promptRoot;
     Text _promptText;
     IInteractable _currentTarget;
+    IInteractionHighlight _currentHighlight;
 
     void Awake()
     {
@@ -61,7 +62,10 @@ public class InteractionController : MonoBehaviour
 
         if (!ReferenceEquals(interactable, _currentTarget))
         {
+            ClearHighlight();
             _currentTarget = interactable;
+            _currentHighlight = GetHighlight(interactable);
+            _currentHighlight?.SetInteractionHighlight(true);
             _promptText.text = prompt;
             _promptRoot.SetActive(true);
         }
@@ -77,9 +81,27 @@ public class InteractionController : MonoBehaviour
 
     void ClearTarget()
     {
+        ClearHighlight();
         _currentTarget = null;
         if (_promptRoot != null)
             _promptRoot.SetActive(false);
+    }
+
+    static IInteractionHighlight GetHighlight(IInteractable interactable)
+    {
+        if (interactable is not MonoBehaviour behaviour)
+            return null;
+
+        if (behaviour is IInteractionHighlight highlight)
+            return highlight;
+
+        return behaviour.GetComponent<IInteractionHighlight>();
+    }
+
+    void ClearHighlight()
+    {
+        _currentHighlight?.SetInteractionHighlight(false);
+        _currentHighlight = null;
     }
 
     void BuildPromptUI()

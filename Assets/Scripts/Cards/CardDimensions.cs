@@ -13,4 +13,7 @@ public static class CardDimensions
     public const float ScatterMinZ = 0.5f;
     public const float ScatterMaxZ = 8.5f;
     public const float ScatterMinSpacing = 0.075f;
+
+    /// <summary>Yellow highlight border thickness around interactable cards.</summary>
+    public const float InteractionOutlineThickness = 0.0084f;
 }

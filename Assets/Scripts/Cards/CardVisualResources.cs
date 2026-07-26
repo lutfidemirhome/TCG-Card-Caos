@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Shared mesh and materials for all world cards. Keeps draw-call and memory cost flat
@@ -8,9 +9,12 @@ using UnityEngine;
 static class CardVisualResources
 {
     static readonly Color BorderColor = new Color(0.85f, 0.72f, 0.2f);
+    static readonly Color InteractionOutlineColor = new Color(1f, 0.88f, 0.12f);
 
     static Mesh _cardMesh;
+    static Mesh _interactionBorderFrameMesh;
     static Material _borderMaterial;
+    static Material _outlineMaterial;
     static readonly Dictionary<int, Material> FaceMaterials = new Dictionary<int, Material>();
 
     public static Mesh CardMesh
@@ -28,6 +32,24 @@ static class CardVisualResources
         {
             EnsureInitialized();
             return _borderMaterial;
+        }
+    }
+
+    public static Material InteractionOutlineMaterial
+    {
+        get
+        {
+            EnsureInitialized();
+            return _outlineMaterial;
+        }
+    }
+
+    public static Mesh InteractionBorderFrameMesh
+    {
+        get
+        {
+            EnsureInitialized();
+            return _interactionBorderFrameMesh;
         }
     }
 
@@ -52,11 +74,75 @@ static class CardVisualResources
 
     static void EnsureInitialized()
     {
-        if (_cardMesh != null && _borderMaterial != null)
+        if (_cardMesh != null && _interactionBorderFrameMesh != null && _borderMaterial != null && _outlineMaterial != null)
             return;
 
         _cardMesh ??= BuildCombinedCardMesh();
+        _interactionBorderFrameMesh ??= BuildInteractionBorderFrameMesh();
         _borderMaterial ??= RuntimeMaterialUtility.CreateSharedColorMaterial(BorderColor, enableInstancing: true);
+        _outlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
+            InteractionOutlineColor,
+            enableInstancing: true,
+            renderQueue: (int)RenderQueue.Geometry + 1);
+    }
+
+    static Mesh BuildInteractionBorderFrameMesh()
+    {
+        float halfWidth = CardDimensions.Width * 0.5f;
+        float halfHeight = CardDimensions.Height * 0.5f;
+        float borderThickness = CardDimensions.InteractionOutlineThickness;
+        float y = CardDimensions.Thickness * 0.65f;
+        float verticalSize = CardDimensions.Thickness * 0.35f;
+
+        var combine = new CombineInstance[4];
+        combine[0] = CreateStripMatrix(halfWidth, halfHeight, borderThickness, y, verticalSize, edgeZ: 1f);
+        combine[1] = CreateStripMatrix(halfWidth, halfHeight, borderThickness, y, verticalSize, edgeZ: -1f);
+        combine[2] = CreateStripMatrix(halfWidth, halfHeight, borderThickness, y, verticalSize, edgeX: -1f);
+        combine[3] = CreateStripMatrix(halfWidth, halfHeight, borderThickness, y, verticalSize, edgeX: 1f);
+
+        var mesh = new Mesh { name = "CardInteractionBorderFrame" };
+        mesh.CombineMeshes(combine, mergeSubMeshes: true, useMatrices: true);
+        return mesh;
+    }
+
+    static CombineInstance CreateStripMatrix(
+        float halfWidth,
+        float halfHeight,
+        float borderThickness,
+        float y,
+        float verticalSize,
+        float edgeX = 0f,
+        float edgeZ = 0f)
+    {
+        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Vector3 scale;
+        Vector3 position;
+
+        if (edgeZ != 0f)
+        {
+            scale = new Vector3(
+                CardDimensions.Width + borderThickness * 2f,
+                verticalSize,
+                borderThickness);
+            position = new Vector3(0f, y, edgeZ * (halfHeight + borderThickness * 0.5f));
+        }
+        else
+        {
+            scale = new Vector3(
+                borderThickness,
+                verticalSize,
+                CardDimensions.Height);
+            position = new Vector3(edgeX * (halfWidth + borderThickness * 0.5f), y, 0f);
+        }
+
+        var combine = new CombineInstance
+        {
+            mesh = cube.GetComponent<MeshFilter>().sharedMesh,
+            transform = Matrix4x4.TRS(position, Quaternion.identity, scale),
+        };
+
+        Object.DestroyImmediate(cube);
+        return combine;
     }
 
     static Mesh BuildCombinedCardMesh()
