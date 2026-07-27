@@ -9,8 +9,8 @@ public class PlayerCardHand : MonoBehaviour
     [Header("Screen placement")]
     [SerializeField] float handDistance = 0.42f;
     [Tooltip("Fraction of each card hidden below the bottom screen edge.")]
-    [SerializeField] [Range(0f, 0.65f)] float bottomClipPercent = 0.36f;
-    [SerializeField] float handDownwardOffset = 0.019f;
+    [SerializeField] [Range(0f, 0.65f)] float bottomClipPercent = 0.46f;
+    [SerializeField] float handDownwardOffset = 0.025f;
 
     [Header("Fan layout (VoodooDeck-style arc)")]
     [SerializeField] float minFanAngle = 9f;
@@ -18,10 +18,10 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float fanAngleRampCardSpan = 8f;
     [SerializeField] float fanAngleHardCap = 40f;
     [SerializeField] float radius = 0.252f;
-    [SerializeField] float fanPivotY = -0.032f;
+    [SerializeField] float fanPivotY = -0.036f;
     [SerializeField] float verticalCurve = 0.018f;
     [SerializeField] float cardPitchDegrees = 0f;
-    [SerializeField] float heldCardScale = 1.85f;
+    [SerializeField] float heldCardScale = 1.48f;
     [Tooltip("Hand cards render this much smaller than heldCardScale (layout uses the reduced size too).")]
     [SerializeField] [Range(0f, 0.5f)] float handScaleReductionPercent = 0.1f;
     [SerializeField] float cardDepthStep = 0.0025f;

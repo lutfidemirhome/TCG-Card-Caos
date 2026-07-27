@@ -109,6 +109,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             _collider.enabled = false;
 
         transform.SetParent(null, true);
+        SetVisualRotation(CardArtLibrary.HandVisualRotation);
     }
 
     public void UpdatePickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
@@ -135,6 +136,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         _handState = HandState.Held;
         transform.SetParent(_handAnchor, false);
+        SetVisualRotation(CardArtLibrary.HandVisualRotation);
 
         System.Action callback = _onPickupFlightComplete;
         _onPickupFlightComplete = null;
@@ -145,6 +147,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         _handState = HandState.World;
         SetHandSelected(false);
+        SetVisualRotation(CardArtLibrary.WorldVisualRotation);
         transform.SetParent(null, true);
         transform.localScale = Vector3.one;
 
@@ -203,7 +206,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.localPosition = pose.LocalPosition;
         transform.localRotation = pose.LocalRotation;
         transform.localScale = Vector3.one * pose.Scale;
+        SetVisualRotation(CardArtLibrary.HandVisualRotation);
         SetHandSelected(isSelected);
+    }
+
+    void SetVisualRotation(Quaternion localRotation)
+    {
+        Transform visual = transform.Find("CardVisual");
+        if (visual != null)
+            visual.localRotation = localRotation;
     }
 
     public void SetHandSelected(bool selected)
@@ -212,13 +223,19 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             _handSelectionOutlineObject.SetActive(selected && IsHeld);
     }
 
+    Transform GetOutlineParent()
+    {
+        Transform visual = transform.Find("CardVisual");
+        return visual != null ? visual : transform;
+    }
+
     void EnsureOutlineRenderer()
     {
         if (_outlineObject != null)
             return;
 
         _outlineObject = new GameObject("InteractionOutline");
-        _outlineObject.transform.SetParent(transform, false);
+        _outlineObject.transform.SetParent(GetOutlineParent(), false);
 
         var meshFilter = _outlineObject.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
@@ -237,7 +254,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         _handSelectionOutlineObject = new GameObject("HandSelectionOutline");
-        _handSelectionOutlineObject.transform.SetParent(transform, false);
+        _handSelectionOutlineObject.transform.SetParent(GetOutlineParent(), false);
 
         var meshFilter = _handSelectionOutlineObject.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = CardVisualResources.HandSelectionBorderFrameMesh;
@@ -262,6 +279,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         transform.SetParent(null, true);
         transform.SetPositionAndRotation(position, rotation);
+        SetVisualRotation(CardArtLibrary.WorldVisualRotation);
         transform.localScale = Vector3.one;
     }
 }

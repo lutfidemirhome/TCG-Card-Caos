@@ -60,6 +60,7 @@ public static class FirstPersonSceneSetup
             Object.DestroyImmediate(oldCube);
 
         CardScatterUtility.ClearTestCards();
+        EnsureCardArtReady();
         CardScatterUtility.SpawnScatteredCards();
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
@@ -70,11 +71,36 @@ public static class FirstPersonSceneSetup
     [MenuItem("TCG Card Caos/Spawn Test Cards In Scene")]
     public static void SpawnTestCardsMenu()
     {
+        EnsureCardArtReady();
         CardScatterUtility.ClearTestCards();
         CardScatterUtility.SpawnScatteredCards();
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
         Debug.Log("Spawned " + CardScatterUtility.DefaultScatterCount + " test cards on the ground.");
+    }
+
+    [MenuItem("TCG Card Caos/Setup Card Art")]
+    public static void SetupCardArtMenu()
+    {
+        CardArtSetup.SetupCardArt();
+    }
+
+    [MenuItem("TCG Card Caos/Respawn Cards With New Model")]
+    public static void RespawnCardsWithNewModelMenu()
+    {
+        SpawnTestCardsMenu();
+    }
+
+    static void EnsureCardArtReady()
+    {
+        CardArtLibrary.ResetCache();
+        CardArtLibrary.EnsureLoaded();
+        if (CardArtLibrary.CardMesh != null)
+            return;
+
+        CardArtSetup.SetupCardArt();
+        CardArtLibrary.ResetCache();
+        CardArtLibrary.EnsureLoaded();
     }
 
     [MenuItem("TCG Card Caos/Add Crosshair To Scene")]

@@ -10,18 +10,20 @@ public static class CardFactory
         int cardDefinitionId,
         string cardName = "Card")
     {
+        CardArtLibrary.EnsureLoaded();
+
         var root = new GameObject(cardName);
         root.transform.SetPositionAndRotation(position, rotation);
 
-        var meshFilter = root.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = CardVisualResources.CardMesh;
+        var visualGo = new GameObject("CardVisual");
+        visualGo.transform.SetParent(root.transform, false);
+        visualGo.transform.localRotation = CardArtLibrary.WorldVisualRotation;
 
-        var meshRenderer = root.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterials = new[]
-        {
-            CardVisualResources.BorderMaterial,
-            CardVisualResources.GetFaceMaterial(paletteIndex),
-        };
+        var meshFilter = visualGo.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = CardArtLibrary.CardMesh;
+
+        var meshRenderer = visualGo.AddComponent<MeshRenderer>();
+        meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(paletteIndex);
         DisableShadows(meshRenderer);
 
         var collider = root.AddComponent<BoxCollider>();

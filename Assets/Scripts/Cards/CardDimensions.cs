@@ -1,8 +1,5 @@
 public static class CardDimensions
 {
-    public const float Width = 0.063f;
-    public const float Height = 0.088f;
-    public const float Thickness = 0.0008f;
     public const int MaxHandSize = 10;
 
     /// <summary>Vertical gap between flat cards in hand.</summary>
@@ -12,11 +9,23 @@ public static class CardDimensions
     public const float ScatterMaxX = 5f;
     public const float ScatterMinZ = 0.5f;
     public const float ScatterMaxZ = 8.5f;
-    public const float ScatterMinSpacing = 0.075f;
+    public const float ScatterMinSpacing = 0.12f;
+
+    const float InteractionOutlineThicknessPercent = 0.07f;
+    const float HandSelectionOutlineThicknessPercent = 0.024f;
+
+    /// <summary>Card width in flat/root space (X).</summary>
+    public static float Width => CardArtLibrary.FlatWidth;
+
+    /// <summary>Card length in flat/root space (Z).</summary>
+    public static float Height => CardArtLibrary.FlatHeight;
+
+    /// <summary>Card thickness in flat/root space (Y).</summary>
+    public static float Thickness => CardArtLibrary.FlatThickness;
 
     /// <summary>Yellow highlight border thickness around interactable cards.</summary>
-    public const float InteractionOutlineThickness = 0.0084f;
+    public static float InteractionOutlineThickness => Width * InteractionOutlineThicknessPercent;
 
     /// <summary>White border thickness for the selected hand card.</summary>
-    public const float HandSelectionOutlineThickness = 0.00285f;
+    public static float HandSelectionOutlineThickness => Width * HandSelectionOutlineThicknessPercent;
 }
