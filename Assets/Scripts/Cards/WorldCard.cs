@@ -6,6 +6,13 @@ using UnityEngine.Rendering;
 /// </summary>
 public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 {
+    enum HandState
+    {
+        World,
+        FlyingToHand,
+        Held,
+    }
+
     [SerializeField] string cardLabel = "Pick Up";
     [SerializeField] int cardDefinitionId;
     [SerializeField] int paletteIndex;
@@ -13,9 +20,21 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Collider _collider;
     Rigidbody _rigidbody;
     GameObject _outlineObject;
-    bool _isHeld;
+    GameObject _handSelectionOutlineObject;
+    HandState _handState = HandState.World;
+    Transform _handAnchor;
+    float _flightStartWorldScale = 1f;
+    float _flightTargetHandScale = 1f;
+    float _flightElapsed;
+    float _flightDuration;
+    Vector3 _flightStartWorldPos;
+    Quaternion _flightStartWorldRot;
+    float _flightArcHeight;
+    System.Action _onPickupFlightComplete;
 
-    public bool IsHeld => _isHeld;
+    public bool IsHeld => _handState == HandState.Held;
+    public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
+    public bool IsInHand => _handState != HandState.World;
     public int CardDefinitionId => cardDefinitionId;
 
     public void Initialize(int definitionId, int palette)
@@ -28,17 +47,18 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         _collider = GetComponent<Collider>();
         EnsureOutlineRenderer();
+        EnsureHandSelectionOutlineRenderer();
     }
 
     public void SetInteractionHighlight(bool highlighted)
     {
         if (_outlineObject != null)
-            _outlineObject.SetActive(highlighted && !_isHeld);
+            _outlineObject.SetActive(highlighted && !IsInHand);
     }
 
     public string GetPromptText()
     {
-        if (_isHeld)
+        if (IsInHand)
             return string.Empty;
 
         PlayerCardHand hand = Object.FindFirstObjectByType<PlayerCardHand>();
@@ -50,7 +70,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void Interact(GameObject interactor)
     {
-        if (_isHeld)
+        if (IsInHand)
             return;
 
         PlayerCardHand hand = interactor.GetComponent<PlayerCardHand>();
@@ -63,22 +83,68 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         hand.TryPickup(this);
     }
 
-    public void SetHeld(Transform handAnchor, int stackIndex)
+    public void BeginPickupFlight(
+        Transform handAnchor,
+        float targetHandScale,
+        float duration,
+        float arcHeight,
+        System.Action onComplete = null)
     {
-        _isHeld = true;
+        _handState = HandState.FlyingToHand;
+        _handAnchor = handAnchor;
+        _flightTargetHandScale = targetHandScale;
+        _flightDuration = Mathf.Max(0.05f, duration);
+        _flightElapsed = 0f;
+        _flightStartWorldPos = transform.position;
+        _flightStartWorldRot = transform.rotation;
+        _flightStartWorldScale = transform.localScale.x;
+        _flightArcHeight = arcHeight;
+        _onPickupFlightComplete = onComplete;
+
         SetInteractionHighlight(false);
+        SetHandSelected(false);
         RemovePhysics();
 
         if (_collider != null)
             _collider.enabled = false;
 
-        transform.SetParent(handAnchor, false);
-        ApplyHeldPose(stackIndex);
+        transform.SetParent(null, true);
+    }
+
+    public void UpdatePickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
+    {
+        if (_handState != HandState.FlyingToHand)
+            return;
+
+        _flightElapsed += Time.deltaTime;
+        float t = Mathf.Clamp01(_flightElapsed / _flightDuration);
+        float smoothT = t * t * (3f - 2f * t);
+
+        Vector3 pos = Vector3.Lerp(_flightStartWorldPos, targetWorldPos, smoothT);
+        pos += Vector3.up * (Mathf.Sin(smoothT * Mathf.PI) * _flightArcHeight);
+
+        transform.SetPositionAndRotation(pos, Quaternion.Slerp(_flightStartWorldRot, targetWorldRot, smoothT));
+        float scale = Mathf.Lerp(_flightStartWorldScale, _flightTargetHandScale, smoothT);
+        transform.localScale = Vector3.one * scale;
+
+        if (t >= 1f)
+            CompletePickupFlight();
+    }
+
+    void CompletePickupFlight()
+    {
+        _handState = HandState.Held;
+        transform.SetParent(_handAnchor, false);
+
+        System.Action callback = _onPickupFlightComplete;
+        _onPickupFlightComplete = null;
+        callback?.Invoke();
     }
 
     public void DropWithPhysics(Vector3 velocity)
     {
-        _isHeld = false;
+        _handState = HandState.World;
+        SetHandSelected(false);
         transform.SetParent(null, true);
         transform.localScale = Vector3.one;
 
@@ -89,7 +155,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _rigidbody.isKinematic = false;
         _rigidbody.useGravity = true;
 
-        // Velocities can only be set on dynamic bodies.
         if (!_rigidbody.isKinematic)
         {
             _rigidbody.linearVelocity = velocity;
@@ -109,7 +174,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
-        // Destroy immediately so held cards don't keep simulating this frame.
         DestroyImmediate(rb);
         _rigidbody = null;
     }
@@ -130,11 +194,22 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
     }
 
-    public void ApplyHeldPose(int stackIndex)
+    public void ApplyFanPose(int fanIndex, int fanCount, in HandFanLayoutSettings layout, bool isSelected)
     {
-        transform.localPosition = new Vector3(0f, stackIndex * CardDimensions.HandStackSpacing, 0f);
-        transform.localRotation = Quaternion.identity;
-        transform.localScale = Vector3.one * 1.35f;
+        if (_handState != HandState.Held)
+            return;
+
+        HandCardPose pose = HandFanLayout.GetPose(fanIndex, fanCount, layout, isSelected);
+        transform.localPosition = pose.LocalPosition;
+        transform.localRotation = pose.LocalRotation;
+        transform.localScale = Vector3.one * pose.Scale;
+        SetHandSelected(isSelected);
+    }
+
+    public void SetHandSelected(bool selected)
+    {
+        if (_handSelectionOutlineObject != null)
+            _handSelectionOutlineObject.SetActive(selected && IsHeld);
     }
 
     void EnsureOutlineRenderer()
@@ -156,10 +231,30 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _outlineObject.SetActive(false);
     }
 
+    void EnsureHandSelectionOutlineRenderer()
+    {
+        if (_handSelectionOutlineObject != null)
+            return;
+
+        _handSelectionOutlineObject = new GameObject("HandSelectionOutline");
+        _handSelectionOutlineObject.transform.SetParent(transform, false);
+
+        var meshFilter = _handSelectionOutlineObject.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = CardVisualResources.HandSelectionBorderFrameMesh;
+
+        var meshRenderer = _handSelectionOutlineObject.AddComponent<MeshRenderer>();
+        meshRenderer.sharedMaterial = CardVisualResources.HandSelectionOutlineMaterial;
+        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        meshRenderer.receiveShadows = false;
+
+        _handSelectionOutlineObject.SetActive(false);
+    }
+
     public void SetWorldPose(Vector3 position, Quaternion rotation)
     {
-        _isHeld = false;
+        _handState = HandState.World;
         SetInteractionHighlight(false);
+        SetHandSelected(false);
         RemovePhysics();
 
         if (_collider != null)

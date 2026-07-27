@@ -16,4 +16,7 @@ public static class CardDimensions
 
     /// <summary>Yellow highlight border thickness around interactable cards.</summary>
     public const float InteractionOutlineThickness = 0.0084f;
+
+    /// <summary>White border thickness for the selected hand card.</summary>
+    public const float HandSelectionOutlineThickness = 0.00285f;
 }

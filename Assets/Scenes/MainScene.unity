@@ -9231,7 +9231,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4098e5f83726b40368fa8b1711538d84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cameraHandOffset: {x: 0.42, y: -0.2, z: 0.58}
+  handDistance: 0.42
+  bottomClipPercent: 0.36
+  handDownwardOffset: 0.019
+  minFanAngle: 14
+  maxFanAngle: 56
+  fanAngleRampCardSpan: 8
+  fanAngleHardCap: 62
+  radius: 0.24
+  fanPivotY: -0.032
+  verticalCurve: 0.018
+  cardPitchDegrees: 0
+  heldCardScale: 1.85
+  handScaleReductionPercent: 0.1
+  cardDepthStep: 0.0025
+  cardVisualOffsetY: 0
+  maxWidth: 0.22
+  extraMaxWidthPerCard: 0.006
+  maxWidthClamp: 0.42
+  minCardSpacing: 0.012
+  maxCardSpacing: 0.04
+  selectedLiftPercent: 0.25
+  selectedForwardOffset: 0.008
+  pickupFlightDuration: 0.4
+  pickupFlightArcHeight: 0.22
   throwSpeed: 4.5
   throwUpBoost: 0.2
   dropKey: 113

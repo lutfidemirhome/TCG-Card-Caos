@@ -10,11 +10,14 @@ static class CardVisualResources
 {
     static readonly Color BorderColor = new Color(0.85f, 0.72f, 0.2f);
     static readonly Color InteractionOutlineColor = new Color(1f, 0.88f, 0.12f);
+    static readonly Color HandSelectionOutlineColor = Color.white;
 
     static Mesh _cardMesh;
     static Mesh _interactionBorderFrameMesh;
+    static Mesh _handSelectionBorderFrameMesh;
     static Material _borderMaterial;
     static Material _outlineMaterial;
+    static Material _handSelectionOutlineMaterial;
     static readonly Dictionary<int, Material> FaceMaterials = new Dictionary<int, Material>();
 
     public static Mesh CardMesh
@@ -53,6 +56,24 @@ static class CardVisualResources
         }
     }
 
+    public static Material HandSelectionOutlineMaterial
+    {
+        get
+        {
+            EnsureInitialized();
+            return _handSelectionOutlineMaterial;
+        }
+    }
+
+    public static Mesh HandSelectionBorderFrameMesh
+    {
+        get
+        {
+            EnsureInitialized();
+            return _handSelectionBorderFrameMesh;
+        }
+    }
+
     public static Material GetFaceMaterial(int paletteIndex)
     {
         return GetFaceMaterial(CardPalette.GetColor(paletteIndex));
@@ -74,23 +95,28 @@ static class CardVisualResources
 
     static void EnsureInitialized()
     {
-        if (_cardMesh != null && _interactionBorderFrameMesh != null && _borderMaterial != null && _outlineMaterial != null)
+        if (_cardMesh != null && _interactionBorderFrameMesh != null && _handSelectionBorderFrameMesh != null
+            && _borderMaterial != null && _outlineMaterial != null && _handSelectionOutlineMaterial != null)
             return;
 
         _cardMesh ??= BuildCombinedCardMesh();
-        _interactionBorderFrameMesh ??= BuildInteractionBorderFrameMesh();
+        _interactionBorderFrameMesh ??= BuildBorderFrameMesh(CardDimensions.InteractionOutlineThickness);
+        _handSelectionBorderFrameMesh ??= BuildBorderFrameMesh(CardDimensions.HandSelectionOutlineThickness);
         _borderMaterial ??= RuntimeMaterialUtility.CreateSharedColorMaterial(BorderColor, enableInstancing: true);
         _outlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
             InteractionOutlineColor,
             enableInstancing: true,
             renderQueue: (int)RenderQueue.Geometry + 1);
+        _handSelectionOutlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
+            HandSelectionOutlineColor,
+            enableInstancing: true,
+            renderQueue: (int)RenderQueue.Geometry + 2);
     }
 
-    static Mesh BuildInteractionBorderFrameMesh()
+    static Mesh BuildBorderFrameMesh(float borderThickness)
     {
         float halfWidth = CardDimensions.Width * 0.5f;
         float halfHeight = CardDimensions.Height * 0.5f;
-        float borderThickness = CardDimensions.InteractionOutlineThickness;
         float y = CardDimensions.Thickness * 0.65f;
         float verticalSize = CardDimensions.Thickness * 0.35f;
 
@@ -100,9 +126,14 @@ static class CardVisualResources
         combine[2] = CreateStripMatrix(halfWidth, halfHeight, borderThickness, y, verticalSize, edgeX: -1f);
         combine[3] = CreateStripMatrix(halfWidth, halfHeight, borderThickness, y, verticalSize, edgeX: 1f);
 
-        var mesh = new Mesh { name = "CardInteractionBorderFrame" };
+        var mesh = new Mesh { name = "CardBorderFrame" };
         mesh.CombineMeshes(combine, mergeSubMeshes: true, useMatrices: true);
         return mesh;
+    }
+
+    static Mesh BuildInteractionBorderFrameMesh()
+    {
+        return BuildBorderFrameMesh(CardDimensions.InteractionOutlineThickness);
     }
 
     static CombineInstance CreateStripMatrix(
