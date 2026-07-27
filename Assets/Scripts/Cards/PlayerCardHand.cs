@@ -17,7 +17,7 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float maxFanAngle = 36f;
     [SerializeField] float fanAngleRampCardSpan = 8f;
     [SerializeField] float fanAngleHardCap = 40f;
-    [SerializeField] float radius = 0.24f;
+    [SerializeField] float radius = 0.252f;
     [SerializeField] float fanPivotY = -0.032f;
     [SerializeField] float verticalCurve = 0.018f;
     [SerializeField] float cardPitchDegrees = 0f;
@@ -28,11 +28,11 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float cardVisualOffsetY = 0f;
 
     [Header("Fan width budget")]
-    [SerializeField] float maxWidth = 0.22f;
-    [SerializeField] float extraMaxWidthPerCard = 0.006f;
-    [SerializeField] float maxWidthClamp = 0.42f;
-    [SerializeField] float minCardSpacing = 0.012f;
-    [SerializeField] float maxCardSpacing = 0.04f;
+    [SerializeField] float maxWidth = 0.231f;
+    [SerializeField] float extraMaxWidthPerCard = 0.0063f;
+    [SerializeField] float maxWidthClamp = 0.441f;
+    [SerializeField] float minCardSpacing = 0.0126f;
+    [SerializeField] float maxCardSpacing = 0.042f;
 
     [Header("Hand selection")]
     [Tooltip("Screen-up lift for the selected card as a fraction of held card height.")]

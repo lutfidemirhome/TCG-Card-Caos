@@ -9238,7 +9238,7 @@ MonoBehaviour:
   maxFanAngle: 36
   fanAngleRampCardSpan: 8
   fanAngleHardCap: 40
-  radius: 0.24
+  radius: 0.252
   fanPivotY: -0.032
   verticalCurve: 0.018
   cardPitchDegrees: 0
@@ -9246,11 +9246,11 @@ MonoBehaviour:
   handScaleReductionPercent: 0.1
   cardDepthStep: 0.0025
   cardVisualOffsetY: 0
-  maxWidth: 0.22
-  extraMaxWidthPerCard: 0.006
-  maxWidthClamp: 0.42
-  minCardSpacing: 0.012
-  maxCardSpacing: 0.04
+  maxWidth: 0.231
+  extraMaxWidthPerCard: 0.0063
+  maxWidthClamp: 0.441
+  minCardSpacing: 0.0126
+  maxCardSpacing: 0.042
   selectedLiftPercent: 0.25
   selectedForwardOffset: 0.008
   pickupFlightDuration: 0.4
