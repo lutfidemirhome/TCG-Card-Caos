@@ -127,7 +127,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         {
             int paletteIndex = _scratchPaletteIndices[i];
             HashSet<WorldCard> cards = _cardsByPalette[paletteIndex];
-            Material frontMaterial = CardArtLibrary.GetFrontMaterial(paletteIndex);
+            Material frontMaterial = CardArtLibrary.GetFrontMaterial(paletteIndex, CardTextureQuality.World);
             if (frontMaterial == null)
                 continue;
 

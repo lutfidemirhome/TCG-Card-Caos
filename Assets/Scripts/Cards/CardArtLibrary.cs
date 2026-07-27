@@ -10,10 +10,15 @@ public static class CardArtLibrary
     public const string ModelAssetPath = "Assets/Art/Cards/yzma.fbx";
     public const string FrontMaterialAssetPath = "Assets/Art/Cards/CardFront.mat";
     public const string BackMaterialAssetPath = "Assets/Art/Cards/CardBack.mat";
+    public const string FrontTextureAssetPath = "Assets/Art/Cards/yzma.png";
+    public const string BackTextureAssetPath = "Assets/Art/Cards/lorcana_back.png";
+
     public const string RuntimeMeshResourcePath = "Cards/TradingCardMesh";
     public const string RuntimeInstancedMeshResourcePath = "Cards/InstancedCardMesh";
-    public const string RuntimeFrontMaterialResourcePath = "Cards/CardFront";
-    public const string RuntimeBackMaterialResourcePath = "Cards/CardBack";
+    public const string RuntimeFrontWorldMaterialResourcePath = "Cards/CardFrontWorld";
+    public const string RuntimeBackWorldMaterialResourcePath = "Cards/CardBackWorld";
+    public const string RuntimeFrontDetailMaterialResourcePath = "Cards/CardFrontDetail";
+    public const string RuntimeBackDetailMaterialResourcePath = "Cards/CardBackDetail";
 
     /// <summary>Lays the imported upright card model flat on the table.</summary>
     public static readonly Quaternion WorldVisualRotation = Quaternion.Euler(-90f, 0f, 0f);
@@ -25,11 +30,14 @@ public static class CardArtLibrary
 
     static Mesh _cardMesh;
     static Mesh _instancedCardMesh;
-    static Material _sharedFrontTemplate;
-    static Material _sharedBack;
+    static Material _sharedFrontWorldTemplate;
+    static Material _sharedBackWorldTemplate;
+    static Material _sharedFrontDetailTemplate;
+    static Material _sharedBackDetailTemplate;
     static Vector3? _flatSize;
     static float? _meshCornerRadius;
-    static readonly Dictionary<int, Material> FrontMaterialsByPalette = new Dictionary<int, Material>();
+    static readonly Dictionary<int, Material> FrontWorldMaterialsByPalette = new Dictionary<int, Material>();
+    static readonly Dictionary<int, Material> FrontDetailMaterialsByPalette = new Dictionary<int, Material>();
 
     public static float FlatWidth => FlatSize.x;
     public static float FlatHeight => FlatSize.z;
@@ -88,35 +96,44 @@ public static class CardArtLibrary
         }
     }
 
-    public static Material SharedBackMaterial
+    public static Material GetBackMaterial(CardTextureQuality quality)
     {
-        get
-        {
-            EnsureLoaded();
-            return _sharedBack;
-        }
+        EnsureLoaded();
+        return quality == CardTextureQuality.World
+            ? _sharedBackWorldTemplate
+            : _sharedBackDetailTemplate;
     }
 
-    public static Material GetFrontMaterial(int paletteIndex)
+    public static Material GetFrontMaterial(int paletteIndex, CardTextureQuality quality = CardTextureQuality.Detail)
     {
         EnsureLoaded();
 
-        if (!FrontMaterialsByPalette.TryGetValue(paletteIndex, out Material frontMaterial))
+        Dictionary<int, Material> cache = quality == CardTextureQuality.World
+            ? FrontWorldMaterialsByPalette
+            : FrontDetailMaterialsByPalette;
+
+        Material template = quality == CardTextureQuality.World
+            ? _sharedFrontWorldTemplate
+            : _sharedFrontDetailTemplate;
+
+        if (!cache.TryGetValue(paletteIndex, out Material frontMaterial))
         {
-            frontMaterial = new Material(_sharedFrontTemplate);
-            frontMaterial.enableInstancing = true;
-            FrontMaterialsByPalette[paletteIndex] = frontMaterial;
+            frontMaterial = new Material(template);
+            if (quality == CardTextureQuality.World)
+                frontMaterial.enableInstancing = true;
+
+            cache[paletteIndex] = frontMaterial;
         }
 
         return frontMaterial;
     }
 
-    public static Material[] GetCardMaterials(int paletteIndex)
+    public static Material[] GetCardMaterials(int paletteIndex, CardTextureQuality quality = CardTextureQuality.Detail)
     {
         return new[]
         {
-            GetFrontMaterial(paletteIndex),
-            SharedBackMaterial,
+            GetFrontMaterial(paletteIndex, quality),
+            GetBackMaterial(quality),
         };
     }
 
@@ -124,18 +141,27 @@ public static class CardArtLibrary
     {
         _cardMesh = null;
         _instancedCardMesh = null;
-        _sharedFrontTemplate = null;
-        _sharedBack = null;
+        _sharedFrontWorldTemplate = null;
+        _sharedBackWorldTemplate = null;
+        _sharedFrontDetailTemplate = null;
+        _sharedBackDetailTemplate = null;
         _flatSize = null;
         _meshCornerRadius = null;
-        FrontMaterialsByPalette.Clear();
+        FrontWorldMaterialsByPalette.Clear();
+        FrontDetailMaterialsByPalette.Clear();
         CardVisualResources.ResetOutlineCache();
     }
 
     public static void EnsureLoaded()
     {
-        if (_cardMesh != null && _sharedFrontTemplate != null && _sharedBack != null)
+        if (_cardMesh != null
+            && _sharedFrontWorldTemplate != null
+            && _sharedBackWorldTemplate != null
+            && _sharedFrontDetailTemplate != null
+            && _sharedBackDetailTemplate != null)
+        {
             return;
+        }
 
         if (!TryLoadRuntimeAssets())
         {
@@ -148,9 +174,24 @@ public static class CardArtLibrary
     {
         _cardMesh = Resources.Load<Mesh>(RuntimeMeshResourcePath);
         _instancedCardMesh = Resources.Load<Mesh>(RuntimeInstancedMeshResourcePath);
-        _sharedFrontTemplate = Resources.Load<Material>(RuntimeFrontMaterialResourcePath);
-        _sharedBack = Resources.Load<Material>(RuntimeBackMaterialResourcePath);
-        return _cardMesh != null && _sharedFrontTemplate != null && _sharedBack != null;
+        _sharedFrontWorldTemplate = Resources.Load<Material>(RuntimeFrontWorldMaterialResourcePath);
+        _sharedBackWorldTemplate = Resources.Load<Material>(RuntimeBackWorldMaterialResourcePath);
+        _sharedFrontDetailTemplate = Resources.Load<Material>(RuntimeFrontDetailMaterialResourcePath);
+        _sharedBackDetailTemplate = Resources.Load<Material>(RuntimeBackDetailMaterialResourcePath);
+
+        if (_sharedFrontDetailTemplate == null)
+            _sharedFrontDetailTemplate = Resources.Load<Material>("Cards/CardFront");
+
+        if (_sharedBackDetailTemplate == null)
+            _sharedBackDetailTemplate = Resources.Load<Material>("Cards/CardBack");
+
+        if (_sharedFrontWorldTemplate == null)
+            _sharedFrontWorldTemplate = _sharedFrontDetailTemplate;
+
+        if (_sharedBackWorldTemplate == null)
+            _sharedBackWorldTemplate = _sharedBackDetailTemplate;
+
+        return _cardMesh != null && _sharedFrontDetailTemplate != null && _sharedBackDetailTemplate != null;
     }
 
     static Vector3 ComputeFlatSize(Mesh mesh)
@@ -159,7 +200,6 @@ public static class CardArtLibrary
             return new Vector3(0.063f, 0.0008f, 0.088f);
 
         Vector3 meshSize = mesh.bounds.size;
-        // Imported mesh is upright: X=width, Y=length, Z=thickness. Flatten with -90° on X.
         return new Vector3(meshSize.x, meshSize.z, meshSize.y);
     }
 

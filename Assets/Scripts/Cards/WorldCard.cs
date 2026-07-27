@@ -49,7 +49,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool CanUseInstancedRendering =>
         Application.isPlaying
         && _handState == HandState.World
-        && !_interactionHighlighted
         && !_scaleTransitionActive
         && _rigidbody == null
         && _cardVisual == null;
@@ -358,12 +357,24 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (CanUseInstancedRendering)
         {
             ReleaseCardVisual();
-            ReleaseInteractionOutline();
+
+            if (_interactionHighlighted)
+            {
+                EnsureInteractionOutlineRenderer();
+                if (_outlineObject != null)
+                    _outlineObject.SetActive(true);
+            }
+            else
+            {
+                ReleaseInteractionOutline();
+            }
+
             CardInstancedRenderManager.Instance?.Register(this);
             return;
         }
 
         EnsureCardVisual();
+        ApplyCardVisualTextureQuality();
 
         if (_interactionHighlighted)
         {
@@ -398,11 +409,27 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshFilter.sharedMesh = CardArtLibrary.CardMesh;
 
         var meshRenderer = visualGo.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(paletteIndex);
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
 
         _cardVisual = visualGo.transform;
+        ApplyCardVisualTextureQuality();
+    }
+
+    void ApplyCardVisualTextureQuality()
+    {
+        if (_cardVisual == null)
+            return;
+
+        var meshRenderer = _cardVisual.GetComponent<MeshRenderer>();
+        if (meshRenderer == null)
+            return;
+
+        CardTextureQuality quality = IsInHand || _handState == HandState.FlyingToHand
+            ? CardTextureQuality.Detail
+            : CardTextureQuality.World;
+
+        meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(paletteIndex, quality);
     }
 
     void ReleaseCardVisual()
@@ -433,7 +460,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         _outlineObject = new GameObject("InteractionOutline");
-        _outlineObject.transform.SetParent(GetOutlineParent(), false);
+        Transform outlineParent = _cardVisual != null ? _cardVisual : transform;
+        _outlineObject.transform.SetParent(outlineParent, false);
+        if (_cardVisual == null)
+            _outlineObject.transform.localRotation = CardArtLibrary.WorldVisualRotation;
 
         var meshFilter = _outlineObject.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
