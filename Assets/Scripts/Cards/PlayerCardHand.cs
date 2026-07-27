@@ -13,10 +13,10 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float handDownwardOffset = 0.019f;
 
     [Header("Fan layout (VoodooDeck-style arc)")]
-    [SerializeField] float minFanAngle = 14f;
-    [SerializeField] float maxFanAngle = 56f;
+    [SerializeField] float minFanAngle = 9f;
+    [SerializeField] float maxFanAngle = 36f;
     [SerializeField] float fanAngleRampCardSpan = 8f;
-    [SerializeField] float fanAngleHardCap = 62f;
+    [SerializeField] float fanAngleHardCap = 40f;
     [SerializeField] float radius = 0.24f;
     [SerializeField] float fanPivotY = -0.032f;
     [SerializeField] float verticalCurve = 0.018f;

@@ -9234,10 +9234,10 @@ MonoBehaviour:
   handDistance: 0.42
   bottomClipPercent: 0.36
   handDownwardOffset: 0.019
-  minFanAngle: 14
-  maxFanAngle: 56
+  minFanAngle: 9
+  maxFanAngle: 36
   fanAngleRampCardSpan: 8
-  fanAngleHardCap: 62
+  fanAngleHardCap: 40
   radius: 0.24
   fanPivotY: -0.032
   verticalCurve: 0.018
