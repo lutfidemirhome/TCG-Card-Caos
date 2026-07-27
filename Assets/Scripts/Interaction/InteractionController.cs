@@ -127,10 +127,10 @@ public class InteractionController : MonoBehaviour
         background.raycastTarget = false;
 
         RectTransform panelRect = background.rectTransform;
-        panelRect.anchorMin = new Vector2(0.5f, 0f);
-        panelRect.anchorMax = new Vector2(0.5f, 0f);
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.pivot = new Vector2(0.5f, 0f);
-        panelRect.anchoredPosition = new Vector2(0f, 72f);
+        panelRect.anchoredPosition = new Vector2(0f, 220f);
         panelRect.sizeDelta = new Vector2(460f, 52f);
 
         var textGo = new GameObject("PromptText");
