@@ -31,6 +31,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Quaternion _flightStartWorldRot;
     float _flightArcHeight;
     System.Action _onPickupFlightComplete;
+    float _scaleFrom = 1f;
+    float _scaleTo = 1f;
+    float _scaleTransitionElapsed;
+    float _scaleTransitionDuration;
+    bool _scaleTransitionActive;
 
     public bool IsHeld => _handState == HandState.Held;
     public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
@@ -48,6 +53,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _collider = GetComponent<Collider>();
         EnsureOutlineRenderer();
         EnsureHandSelectionOutlineRenderer();
+    }
+
+    void Update()
+    {
+        UpdateScaleTransition();
     }
 
     public void SetInteractionHighlight(bool highlighted)
@@ -143,16 +153,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         callback?.Invoke();
     }
 
-    public void DropWithPhysics(Vector3 velocity)
+    public void DropWithPhysics(Vector3 velocity, float worldScaleTransitionDuration = 0.12f)
     {
         _handState = HandState.World;
         SetHandSelected(false);
         SetVisualRotation(CardArtLibrary.WorldVisualRotation);
         transform.SetParent(null, true);
-        transform.localScale = Vector3.one;
 
         if (_collider != null)
             _collider.enabled = true;
+
+        BeginScaleTransition(transform.localScale.x, CardDimensions.WorldCardScale, worldScaleTransitionDuration);
 
         EnsureRigidbody();
         _rigidbody.isKinematic = false;
@@ -166,6 +177,30 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                 Random.Range(-1f, 1f),
                 Random.Range(-3f, 3f));
         }
+    }
+
+    void BeginScaleTransition(float fromScale, float toScale, float duration)
+    {
+        _scaleFrom = fromScale;
+        _scaleTo = toScale;
+        _scaleTransitionDuration = Mathf.Max(0.01f, duration);
+        _scaleTransitionElapsed = 0f;
+        _scaleTransitionActive = true;
+        transform.localScale = Vector3.one * fromScale;
+    }
+
+    void UpdateScaleTransition()
+    {
+        if (!_scaleTransitionActive || _handState == HandState.FlyingToHand || _handState == HandState.Held)
+            return;
+
+        _scaleTransitionElapsed += Time.deltaTime;
+        float t = Mathf.Clamp01(_scaleTransitionElapsed / _scaleTransitionDuration);
+        float smoothT = t * t * (3f - 2f * t);
+        transform.localScale = Vector3.one * Mathf.Lerp(_scaleFrom, _scaleTo, smoothT);
+
+        if (t >= 1f)
+            _scaleTransitionActive = false;
     }
 
     void RemovePhysics()
@@ -280,6 +315,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.SetParent(null, true);
         transform.SetPositionAndRotation(position, rotation);
         SetVisualRotation(CardArtLibrary.WorldVisualRotation);
-        transform.localScale = Vector3.one;
+        _scaleTransitionActive = false;
+        transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
     }
 }

@@ -42,6 +42,13 @@ public static class HandFanLayout
         float centerIndex = (count - 1) * 0.5f;
         float z = (centerIndex - index) * settings.CardDepthStep;
 
+        if (isSelected && count > 1)
+        {
+            // Depth buffer decides draw order for 3D meshes — sibling index is not enough.
+            // Snap the selected card to the front of the fan regardless of scroll position.
+            z = (centerIndex - (count - 1)) * settings.CardDepthStep - settings.SelectedForwardMargin;
+        }
+
         var faceCamera = Quaternion.FromToRotation(Vector3.up, -Vector3.forward);
         if (settings.CardPitchDegrees != 0f)
             faceCamera = Quaternion.AngleAxis(settings.CardPitchDegrees, Vector3.right) * faceCamera;
@@ -57,11 +64,7 @@ public static class HandFanLayout
             localPosition += localRotation * (Vector3.up * settings.CardVisualOffsetY);
 
         if (isSelected)
-        {
-            // Lift in camera/anchor space — card-local "up" points at the lens after faceCamera.
             localPosition += Vector3.up * settings.SelectedLift;
-            localPosition.z -= settings.SelectedForwardOffset;
-        }
 
         return new HandCardPose
         {
@@ -120,5 +123,5 @@ public struct HandFanLayoutSettings
     public float MaxCardSpacing;
 
     public float SelectedLift;
-    public float SelectedForwardOffset;
+    public float SelectedForwardMargin;
 }

@@ -9,7 +9,7 @@ public class PlayerCardHand : MonoBehaviour
     [Header("Screen placement")]
     [SerializeField] float handDistance = 0.42f;
     [Tooltip("Fraction of each card hidden below the bottom screen edge.")]
-    [SerializeField] [Range(0f, 0.65f)] float bottomClipPercent = 0.46f;
+    [SerializeField] [Range(0f, 0.65f)] float bottomClipPercent = 0.41f;
     [SerializeField] float handDownwardOffset = 0.025f;
 
     [Header("Fan layout (VoodooDeck-style arc)")]
@@ -23,7 +23,7 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float cardPitchDegrees = 0f;
     [SerializeField] float heldCardScale = 1.48f;
     [Tooltip("Hand cards render this much smaller than heldCardScale (layout uses the reduced size too).")]
-    [SerializeField] [Range(0f, 0.5f)] float handScaleReductionPercent = 0.1f;
+    [SerializeField] [Range(0f, 0.5f)] float handScaleReductionPercent = 0.2305f;
     [SerializeField] float cardDepthStep = 0.0025f;
     [SerializeField] float cardVisualOffsetY = 0f;
 
@@ -36,14 +36,16 @@ public class PlayerCardHand : MonoBehaviour
 
     [Header("Hand selection")]
     [Tooltip("Screen-up lift for the selected card as a fraction of held card height.")]
-    [SerializeField] [Range(0f, 0.5f)] float selectedLiftPercent = 0.25f;
-    [SerializeField] float selectedForwardOffset = 0.008f;
+    [SerializeField] [Range(0f, 0.5f)] float selectedLiftPercent = 0.15f;
+    [Tooltip("Extra pull toward the camera so the selected card clears every other hand card.")]
+    [SerializeField] float selectedForwardMargin = 0.006f;
 
     [Header("Pickup flight")]
     [SerializeField] float pickupFlightDuration = 0.4f;
     [SerializeField] float pickupFlightArcHeight = 0.22f;
 
     [Header("Throw")]
+    [SerializeField] float dropScaleTransitionDuration = 0.12f;
     [SerializeField] float throwSpeed = 4.5f;
     [SerializeField] float throwUpBoost = 0.2f;
     [SerializeField] KeyCode dropKey = KeyCode.Q;
@@ -211,7 +213,7 @@ public class PlayerCardHand : MonoBehaviour
         _cards.Remove(selectedCard);
 
         Vector3 throwDirection = (_camera.transform.forward + _camera.transform.up * throwUpBoost).normalized;
-        selectedCard.DropWithPhysics(throwDirection * throwSpeed);
+        selectedCard.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
 
         ClampSelectionIndex();
         ApplyFanLayout();
@@ -332,7 +334,7 @@ public class PlayerCardHand : MonoBehaviour
             MinCardSpacing = minCardSpacing,
             MaxCardSpacing = maxCardSpacing,
             SelectedLift = CardDimensions.Height * EffectiveHeldScale * selectedLiftPercent,
-            SelectedForwardOffset = selectedForwardOffset,
+            SelectedForwardMargin = selectedForwardMargin,
         };
     }
 }

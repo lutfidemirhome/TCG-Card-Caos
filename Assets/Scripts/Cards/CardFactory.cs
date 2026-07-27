@@ -32,6 +32,7 @@ public static class CardFactory
 
         var card = root.AddComponent<WorldCard>();
         card.Initialize(cardDefinitionId, paletteIndex);
+        root.transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
         return card;
     }
 
@@ -61,6 +62,6 @@ public static class CardFactory
 
     public static float GroundHeightOffset()
     {
-        return CardDimensions.Thickness * 0.6f + 0.001f;
+        return CardDimensions.Thickness * CardDimensions.WorldCardScale * 0.6f + 0.001f;
     }
 }
