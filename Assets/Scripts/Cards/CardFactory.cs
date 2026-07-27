@@ -14,17 +14,7 @@ public static class CardFactory
 
         var root = new GameObject(cardName);
         root.transform.SetPositionAndRotation(position, rotation);
-
-        var visualGo = new GameObject("CardVisual");
-        visualGo.transform.SetParent(root.transform, false);
-        visualGo.transform.localRotation = CardArtLibrary.WorldVisualRotation;
-
-        var meshFilter = visualGo.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = CardArtLibrary.CardMesh;
-
-        var meshRenderer = visualGo.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(paletteIndex);
-        DisableShadows(meshRenderer);
+        root.transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
 
         var collider = root.AddComponent<BoxCollider>();
         collider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
@@ -32,7 +22,6 @@ public static class CardFactory
 
         var card = root.AddComponent<WorldCard>();
         card.Initialize(cardDefinitionId, paletteIndex);
-        root.transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
         return card;
     }
 
@@ -49,15 +38,6 @@ public static class CardFactory
         }
 
         return CreateWorldCard(position, rotation, paletteIndex, cardDefinitionId: 0, cardName);
-    }
-
-    static void DisableShadows(MeshRenderer renderer)
-    {
-        if (renderer == null)
-            return;
-
-        renderer.shadowCastingMode = ShadowCastingMode.Off;
-        renderer.receiveShadows = false;
     }
 
     public static float GroundHeightOffset()

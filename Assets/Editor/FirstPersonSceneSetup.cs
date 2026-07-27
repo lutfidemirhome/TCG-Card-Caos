@@ -79,6 +79,17 @@ public static class FirstPersonSceneSetup
         Debug.Log("Spawned " + CardScatterUtility.DefaultScatterCount + " test cards on the ground.");
     }
 
+    [MenuItem("TCG Card Caos/Spawn 5000 Stress Test Cards")]
+    public static void SpawnStressTestCardsMenu()
+    {
+        EnsureCardArtReady();
+        CardScatterUtility.ClearTestCards();
+        CardScatterUtility.SpawnScatteredCards(CardScatterUtility.StressTestScatterCount);
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        EditorSceneManager.SaveOpenScenes();
+        Debug.Log("Spawned " + CardScatterUtility.StressTestScatterCount + " instanced stress-test cards.");
+    }
+
     [MenuItem("TCG Card Caos/Setup Card Art")]
     public static void SetupCardArtMenu()
     {

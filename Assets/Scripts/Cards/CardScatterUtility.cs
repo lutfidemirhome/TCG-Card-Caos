@@ -4,6 +4,7 @@ using UnityEngine;
 public static class CardScatterUtility
 {
     public const int DefaultScatterCount = 100;
+    public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "TestCard_";
 

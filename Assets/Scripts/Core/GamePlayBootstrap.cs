@@ -10,6 +10,7 @@ static class GamePlayBootstrap
     {
         EnsureCameraSystems();
         EnsurePlayerHand();
+        EnsureCardInstancedRenderer();
         EnsureTestCards();
     }
 
@@ -34,6 +35,11 @@ static class GamePlayBootstrap
 
         if (player.GetComponent<PlayerCardHand>() == null)
             player.gameObject.AddComponent<PlayerCardHand>();
+    }
+
+    static void EnsureCardInstancedRenderer()
+    {
+        CardInstancedRenderManager.EnsureExists();
     }
 
     static void EnsureTestCards()

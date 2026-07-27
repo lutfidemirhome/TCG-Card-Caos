@@ -29,22 +29,48 @@ public static class CardArtSetup
             return;
         }
 
-        string meshAssetPath = ResourcesCardsFolder + "/TradingCardMesh.asset";
-        if (AssetDatabase.LoadAssetAtPath<Mesh>(meshAssetPath) != null)
-            AssetDatabase.DeleteAsset(meshAssetPath);
+        Mesh readableSource = Object.Instantiate(meshFilter.sharedMesh);
+        readableSource.name = meshFilter.sharedMesh.name + "_ReadableCopy";
 
-        Mesh meshCopy = Object.Instantiate(meshFilter.sharedMesh);
-        meshCopy.name = "TradingCardMesh";
-        AssetDatabase.CreateAsset(meshCopy, meshAssetPath);
+        try
+        {
+            EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking instanced ground quad...", 0.35f);
 
-        CopyAssetIfNeeded(CardArtLibrary.FrontMaterialAssetPath, ResourcesCardsFolder + "/CardFront.mat");
-        CopyAssetIfNeeded(CardArtLibrary.BackMaterialAssetPath, ResourcesCardsFolder + "/CardBack.mat");
+            Mesh instancedMesh = CardMeshBuilder.CreateInstancedGroundCardMesh(readableSource);
+            SaveMeshAsset(instancedMesh, ResourcesCardsFolder + "/InstancedCardMesh.asset");
 
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-        CardArtLibrary.ResetCache();
+            EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking detail card mesh...", 0.7f);
 
-        Debug.Log("TCG Card Caos: Card art setup complete.");
+            Mesh detailMesh = Object.Instantiate(meshFilter.sharedMesh);
+            detailMesh.name = "TradingCardMesh";
+            SaveMeshAsset(detailMesh, ResourcesCardsFolder + "/TradingCardMesh.asset");
+
+            CopyAssetIfNeeded(CardArtLibrary.FrontMaterialAssetPath, ResourcesCardsFolder + "/CardFront.mat");
+            CopyAssetIfNeeded(CardArtLibrary.BackMaterialAssetPath, ResourcesCardsFolder + "/CardBack.mat");
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            CardArtLibrary.ResetCache();
+
+            Debug.Log(
+                "TCG Card Caos: Card art setup complete. Detail mesh: "
+                + detailMesh.vertexCount + " verts. Instanced ground quad: "
+                + instancedMesh.vertexCount + " verts, "
+                + (instancedMesh.triangles.Length / 3) + " tris.");
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+            Object.DestroyImmediate(readableSource);
+        }
+    }
+
+    static void SaveMeshAsset(Mesh mesh, string assetPath)
+    {
+        if (AssetDatabase.LoadAssetAtPath<Mesh>(assetPath) != null)
+            AssetDatabase.DeleteAsset(assetPath);
+
+        AssetDatabase.CreateAsset(mesh, assetPath);
     }
 
     static void CopyAssetIfNeeded(string sourceAssetPath, string destinationAssetPath)
