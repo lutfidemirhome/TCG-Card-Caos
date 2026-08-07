@@ -47,7 +47,10 @@ static class GamePlayBootstrap
     static void EnsureTestCards()
     {
         if (Object.FindFirstObjectByType<WorldCard>() != null)
+        {
+            CardScatterUtility.SnapCardsToFloor();
             return;
+        }
 
         CardScatterUtility.SpawnScatteredCards();
     }

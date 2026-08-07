@@ -10,6 +10,7 @@ public static class CardScatterUtility
 
     public static void SpawnScatteredCards(int count = DefaultScatterCount)
     {
+        CardFactory.InvalidateGroundCache();
         Transform scatterRoot = EnsureScatterRoot();
         float groundY = CardFactory.GroundHeightOffset();
         var positions = GenerateScatterPositions(count);
@@ -30,6 +31,34 @@ public static class CardScatterUtility
 
             card.transform.SetParent(scatterRoot, true);
         }
+    }
+
+    /// <summary>Move settled world cards onto the current floor top (after placing Floor tiles).</summary>
+    public static int SnapCardsToFloor()
+    {
+        CardFactory.InvalidateGroundCache();
+        float groundY = CardFactory.GroundHeightOffset();
+        int snapped = 0;
+
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
+        for (int i = 0; i < cards.Length; i++)
+        {
+            WorldCard card = cards[i];
+            if (card == null || card.IsInHand)
+                continue;
+            if (card.GetComponent<Rigidbody>() != null)
+                continue;
+
+            Vector3 p = card.transform.position;
+            if (Mathf.Abs(p.y - groundY) < 0.0005f)
+                continue;
+
+            p.y = groundY;
+            card.transform.position = p;
+            snapped++;
+        }
+
+        return snapped;
     }
 
     public static void ClearTestCards()

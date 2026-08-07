@@ -40,6 +40,20 @@ public static class MaterialFixEditor
         Debug.Log("Pink materials fixed. Ground should look normal now.");
     }
 
+    [MenuItem("TCG Card Caos/Import ModernSupermarket URP Package")]
+    public static void ImportModernSupermarketUrpPackage()
+    {
+        const string packagePath = "Assets/ModernSupermarket/Settings/URP/URP.unitypackage";
+        if (!System.IO.File.Exists(packagePath))
+        {
+            Debug.LogError("TCG Card Caos: Missing " + packagePath);
+            return;
+        }
+
+        AssetDatabase.ImportPackage(packagePath, false);
+        Debug.Log("TCG Card Caos: Imported ModernSupermarket URP materials/shaders. Prefab thumbnails should refresh after reimport.");
+    }
+
     public static Material GetOrCreateLitMaterial(string path, Color color)
     {
         Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
