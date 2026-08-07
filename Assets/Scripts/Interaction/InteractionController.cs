@@ -49,16 +49,21 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
-        IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
+        IInteractable interactable = ResolveInteractable(hit);
         if (interactable == null)
         {
             ClearTarget();
             return;
         }
 
+        if (interactable is CardShelf shelf)
+            shelf.SetAimHit(hit);
+
         string prompt = interactable.GetPromptText();
         if (string.IsNullOrEmpty(prompt))
         {
+            if (interactable is CardShelf emptyShelf)
+                emptyShelf.ClearAim();
             ClearTarget();
             return;
         }
@@ -73,6 +78,27 @@ public class InteractionController : MonoBehaviour
             _promptRoot.SetActive(true);
             RefreshInspectPreview();
         }
+        else if (_promptText != null)
+        {
+            _promptText.text = prompt;
+        }
+    }
+
+    IInteractable ResolveInteractable(RaycastHit hit)
+    {
+        // While holding a card, prefer placing on a shelf even if the ray hits a card on it.
+        PlayerCardHand hand = GetComponentInParent<PlayerCardHand>();
+        if (hand == null)
+            hand = transform.root.GetComponentInChildren<PlayerCardHand>();
+
+        if (hand != null && hand.HasSelectedHeldCard())
+        {
+            CardShelf shelf = hit.collider.GetComponentInParent<CardShelf>();
+            if (shelf != null)
+                return shelf;
+        }
+
+        return hit.collider.GetComponentInParent<IInteractable>();
     }
 
     void HandleInput()
@@ -81,12 +107,14 @@ public class InteractionController : MonoBehaviour
             return;
 
         _currentTarget.Interact(gameObject.transform.root.gameObject);
-        // Pickup clears interactability for this card; refresh look-at state next frame.
         ClearTarget();
     }
 
     void ClearTarget()
     {
+        if (_currentTarget is CardShelf shelf)
+            shelf.ClearAim();
+
         ClearHighlight();
         _currentTarget = null;
         if (_promptRoot != null)

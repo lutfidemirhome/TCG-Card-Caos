@@ -2,7 +2,7 @@ using UnityEngine;
 
 public static class CardFactory
 {
-    const float MaxFloorSurfaceY = 1.25f;
+    const float MaxFloorSurfaceY = 0.45f;
     const float MaxFloorThickness = 0.85f;
     const float MinFloorSpan = 0.75f;
 
@@ -54,7 +54,7 @@ public static class CardFactory
         return GroundSurfaceY() + halfThickness + 0.002f;
     }
 
-    /// <summary>Top of the walkable floor mesh/collider (not y=0).</summary>
+    /// <summary>Top of the walkable floor mesh/collider (not furniture shelves).</summary>
     public static float GroundSurfaceY()
     {
         if (_hasCachedSurface && _cachedFrame == Time.frameCount)
@@ -75,8 +75,10 @@ public static class CardFactory
 
     static float DetectFloorSurfaceY()
     {
-        float best = 0f;
-        bool found = false;
+        float bestNamed = float.NegativeInfinity;
+        bool foundNamed = false;
+        float bestPlane = 0f;
+        bool foundPlane = false;
 
         Collider[] colliders = Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
         for (int i = 0; i < colliders.Length; i++)
@@ -84,70 +86,94 @@ public static class CardFactory
             Collider col = colliders[i];
             if (col == null || !col.enabled || col.isTrigger)
                 continue;
-            if (col.GetComponentInParent<WorldCard>() != null)
-                continue;
-            if (col.GetComponentInParent<FirstPersonController>() != null)
-                continue;
-            if (col is CharacterController)
+            if (ShouldIgnoreGroundCandidate(col))
                 continue;
 
-            if (!LooksLikeFloor(col))
+            Bounds b = col.bounds;
+            if (b.size.y > MaxFloorThickness || b.max.y > MaxFloorSurfaceY)
                 continue;
 
-            float top = col.bounds.max.y;
-            if (!found || top > best)
+            float span = Mathf.Max(b.size.x, b.size.z);
+            if (span < MinFloorSpan)
+                continue;
+
+            string objectName = col.gameObject.name;
+            if (NameLooksLikeFloor(objectName))
             {
-                best = top;
-                found = true;
-            }
-        }
-
-        if (!found)
-        {
-            // Fallback: renderer bounds for Floor* without waiting on colliders.
-            Renderer[] renderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                Renderer renderer = renderers[i];
-                if (renderer == null || !renderer.enabled)
-                    continue;
-                if (!NameLooksLikeFloor(renderer.gameObject.name))
-                    continue;
-
-                Bounds b = renderer.bounds;
-                if (b.size.y > MaxFloorThickness || b.max.y > MaxFloorSurfaceY)
-                    continue;
-                if (b.size.x < MinFloorSpan && b.size.z < MinFloorSpan)
-                    continue;
-
-                if (!found || b.max.y > best)
+                if (!foundNamed || b.max.y > bestNamed)
                 {
-                    best = b.max.y;
-                    found = true;
+                    bestNamed = b.max.y;
+                    foundNamed = true;
+                }
+
+                continue;
+            }
+
+            // Anonymous ground plane only — never furniture boards (shelves sit higher).
+            if (b.size.y <= 0.2f && span >= 2f && b.max.y <= 0.2f)
+            {
+                if (!foundPlane || b.max.y > bestPlane)
+                {
+                    bestPlane = b.max.y;
+                    foundPlane = true;
                 }
             }
         }
 
-        return found ? best : 0f;
+        if (foundNamed)
+            return bestNamed;
+
+        if (foundPlane)
+            return bestPlane;
+
+        Renderer[] renderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        float bestRenderer = 0f;
+        bool foundRenderer = false;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled)
+                continue;
+            if (!NameLooksLikeFloor(renderer.gameObject.name))
+                continue;
+            if (renderer.GetComponentInParent<CardShelf>() != null)
+                continue;
+
+            Bounds b = renderer.bounds;
+            if (b.size.y > MaxFloorThickness || b.max.y > MaxFloorSurfaceY)
+                continue;
+            if (b.size.x < MinFloorSpan && b.size.z < MinFloorSpan)
+                continue;
+
+            if (!foundRenderer || b.max.y > bestRenderer)
+            {
+                bestRenderer = b.max.y;
+                foundRenderer = true;
+            }
+        }
+
+        return foundRenderer ? bestRenderer : 0f;
     }
 
-    static bool LooksLikeFloor(Collider col)
+    static bool ShouldIgnoreGroundCandidate(Collider col)
     {
-        Bounds b = col.bounds;
-        if (b.max.y > MaxFloorSurfaceY)
-            return false;
-        if (b.size.y > MaxFloorThickness)
-            return false;
-
-        float span = Mathf.Max(b.size.x, b.size.z);
-        if (span < MinFloorSpan)
-            return false;
-
-        // Prefer explicitly named floor tiles; also accept wide flat colliders (plane ground).
-        if (NameLooksLikeFloor(col.gameObject.name))
+        if (col.GetComponentInParent<WorldCard>() != null)
+            return true;
+        if (col.GetComponentInParent<FirstPersonController>() != null)
+            return true;
+        if (col.GetComponentInParent<CardShelf>() != null)
+            return true;
+        if (col is CharacterController)
             return true;
 
-        return b.size.y <= 0.35f && span >= 2f;
+        string objectName = col.gameObject.name;
+        if (objectName.StartsWith("Shelf", System.StringComparison.OrdinalIgnoreCase)
+            || objectName.StartsWith("Wall", System.StringComparison.OrdinalIgnoreCase)
+            || objectName.StartsWith("Ceiling", System.StringComparison.OrdinalIgnoreCase)
+            || objectName.StartsWith("Pillar", System.StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
     }
 
     static bool NameLooksLikeFloor(string name)

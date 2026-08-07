@@ -233,6 +233,332 @@ public static class FirstPersonSceneSetup
             + ").");
     }
 
+    [MenuItem("TCG Card Caos/Setup Card Shelf On Selection")]
+    public static void SetupCardShelfOnSelection()
+    {
+        GameObject selected = Selection.activeGameObject;
+        if (selected == null)
+        {
+            Debug.LogWarning("TCG Card Caos: Select your cabinet/shelf (scene or prefab), then run this again.");
+            return;
+        }
+
+        CardShelf shelf = selected.GetComponent<CardShelf>();
+        if (shelf == null)
+            shelf = selected.AddComponent<CardShelf>();
+
+        shelf.RefreshSlotCache();
+        MarkShelfAuthoringDirty(selected);
+
+        Debug.Log(
+            "TCG Card Caos: CardShelf on '"
+            + selected.name
+            + "'. Next: Create Card Shelf Slot Grid, duplicate ShelfSlots_Level per board, Equalize if needed, then Save.");
+    }
+
+    [MenuItem("TCG Card Caos/Add Card Shelf Slot")]
+    public static void AddCardShelfSlot()
+    {
+        GameObject parent = Selection.activeGameObject;
+        if (parent == null)
+        {
+            Debug.LogWarning("TCG Card Caos: Select the cabinet (or a child) first.");
+            return;
+        }
+
+        CardShelf shelf = parent.GetComponentInParent<CardShelf>();
+        if (shelf == null)
+        {
+            shelf = parent.AddComponent<CardShelf>();
+            Debug.Log("TCG Card Caos: Added CardShelf to '" + parent.name + "'.");
+        }
+
+        var slotGo = new GameObject("CardShelfSlot");
+        Undo.RegisterCreatedObjectUndo(slotGo, "Add Card Shelf Slot");
+        slotGo.transform.SetParent(shelf.transform, false);
+        slotGo.transform.localPosition = new Vector3(0f, 1f, 0f);
+        slotGo.transform.localRotation = Quaternion.identity;
+        slotGo.AddComponent<CardShelfSlot>();
+
+        shelf.RefreshSlotCache();
+        Selection.activeGameObject = slotGo;
+        MarkShelfAuthoringDirty(shelf.gameObject);
+        Debug.Log("TCG Card Caos: Slot added. Move/rotate the yellow gizmo — blue arrow (forward) should face the room.");
+    }
+
+    [MenuItem("TCG Card Caos/Create Card Shelf Slot Grid")]
+    public static void CreateCardShelfSlotGrid()
+    {
+        GameObject parent = Selection.activeGameObject;
+        if (parent == null)
+        {
+            Debug.LogWarning("TCG Card Caos: Select the cabinet (or an existing ShelfSlots_Level) first.");
+            return;
+        }
+
+        CardShelf shelf = parent.GetComponentInParent<CardShelf>();
+        if (shelf == null)
+            shelf = parent.AddComponent<CardShelf>();
+
+        // One row: 10 seats side-by-side along local X, with side margins (no depth stacking).
+        const int columns = 10;
+        const float usableWidth = 1.8f; // ~0.1m inset each side on a ~2m board
+        float spacingX = columns > 1 ? usableWidth / (columns - 1) : 0f;
+        float originX = -0.5f * usableWidth;
+
+        Transform levelRoot = null;
+        if (parent.name.StartsWith("ShelfSlots_Level", System.StringComparison.Ordinal))
+        {
+            levelRoot = parent.transform;
+            for (int i = levelRoot.childCount - 1; i >= 0; i--)
+                Undo.DestroyObjectImmediate(levelRoot.GetChild(i).gameObject);
+        }
+        else
+        {
+            float startY = 1f;
+            BoxCollider[] boxes = shelf.GetComponentsInChildren<BoxCollider>();
+            float bestY = float.MaxValue;
+            bool foundBoard = false;
+            for (int i = 0; i < boxes.Length; i++)
+            {
+                BoxCollider box = boxes[i];
+                if (box.size.y > 0.12f || Mathf.Max(box.size.x, box.size.z) < 0.25f)
+                    continue;
+                float top = box.transform.localPosition.y + box.center.y + box.size.y * 0.5f;
+                if (top < bestY)
+                {
+                    bestY = top;
+                    foundBoard = true;
+                }
+            }
+
+            if (foundBoard)
+                startY = bestY;
+
+            var root = new GameObject("ShelfSlots_Level");
+            Undo.RegisterCreatedObjectUndo(root, "Create Card Shelf Slot Grid");
+            root.transform.SetParent(shelf.transform, false);
+            root.transform.localPosition = new Vector3(0f, startY, 0f);
+            root.transform.localRotation = Quaternion.identity;
+            levelRoot = root.transform;
+        }
+
+        for (int col = 0; col < columns; col++)
+        {
+            var slotGo = new GameObject("CardShelfSlot_0_" + col);
+            Undo.RegisterCreatedObjectUndo(slotGo, "Create Card Shelf Slot");
+            slotGo.transform.SetParent(levelRoot, false);
+            slotGo.transform.localPosition = new Vector3(originX + col * spacingX, 0f, 0f);
+            slotGo.transform.localRotation = Quaternion.identity;
+            slotGo.AddComponent<CardShelfSlot>();
+        }
+
+        shelf.RefreshSlotCache();
+        Selection.activeGameObject = levelRoot.gameObject;
+        MarkShelfAuthoringDirty(shelf.gameObject);
+        Debug.Log(
+            "TCG Card Caos: "
+            + columns
+            + " slots in one row (side margins on a "
+            + usableWidth.ToString("0.##")
+            + "m span). Duplicate 'ShelfSlots_Level' for other boards and move Y. Save the prefab.");
+    }
+
+    [MenuItem("TCG Card Caos/Equalize ShelfSlots Spacing")]
+    [MenuItem("TCG Card Caos/Equalize Selected ShelfSlots Spacing")]
+    public static void EqualizeSelectedShelfSlotsSpacing()
+    {
+        // Finds ShelfSlots_Level / ShelfSlots_Level (n) under selection (or whole scene).
+        // Spacing = pos(Level1) - pos(Level0). Then pos(n) = pos(0) + n * delta.
+        var levels = CollectShelfSlotLevelGroups(Selection.activeTransform);
+        if (levels.Count < 2)
+        {
+            Debug.LogWarning(
+                "TCG Card Caos: Need at least 'ShelfSlots_Level' and 'ShelfSlots_Level (1)' in the scene "
+                + "(under the selected cabinet, or anywhere in the open scene).");
+            return;
+        }
+
+        levels.Sort((a, b) => a.index.CompareTo(b.index));
+
+        Transform baseLevel = null;
+        Transform nextLevel = null;
+        for (int i = 0; i < levels.Count; i++)
+        {
+            if (levels[i].index == 0)
+                baseLevel = levels[i].transform;
+            if (levels[i].index == 1)
+                nextLevel = levels[i].transform;
+        }
+
+        if (baseLevel == null || nextLevel == null)
+        {
+            Debug.LogWarning(
+                "TCG Card Caos: Found "
+                + levels.Count
+                + " groups, but missing base names. Keep one named exactly 'ShelfSlots_Level' and one 'ShelfSlots_Level (1)'.");
+            return;
+        }
+
+        bool useLocal = baseLevel.parent != null && baseLevel.parent == nextLevel.parent;
+        Vector3 basePos = useLocal ? baseLevel.localPosition : baseLevel.position;
+        Vector3 nextPos = useLocal ? nextLevel.localPosition : nextLevel.position;
+        Vector3 delta = nextPos - basePos;
+
+        if (delta.sqrMagnitude < 0.0000001f)
+        {
+            Debug.LogWarning("TCG Card Caos: Level and Level (1) are in the same place — move Level (1) to set the gap first.");
+            return;
+        }
+
+        var undoTargets = new UnityEngine.Object[levels.Count];
+        for (int i = 0; i < levels.Count; i++)
+            undoTargets[i] = levels[i].transform;
+        Undo.RecordObjects(undoTargets, "Equalize ShelfSlots Spacing");
+
+        for (int i = 0; i < levels.Count; i++)
+        {
+            int index = levels[i].index;
+            Transform t = levels[i].transform;
+            Vector3 target = basePos + delta * index;
+            if (useLocal)
+                t.localPosition = target;
+            else
+                t.position = target;
+            EditorUtility.SetDirty(t);
+        }
+
+        MarkShelfAuthoringDirty(baseLevel.gameObject);
+        Debug.Log(
+            "TCG Card Caos: Equalized "
+            + levels.Count
+            + " ShelfSlots_Level groups. Step = "
+            + delta
+            + " ("
+            + (useLocal ? "local" : "world")
+            + "). Save the prefab/scene (Ctrl/Cmd+S).");
+    }
+
+    static System.Collections.Generic.List<(int index, Transform transform)> CollectShelfSlotLevelGroups(Transform hint)
+    {
+        var levels = new System.Collections.Generic.List<(int index, Transform transform)>();
+        var seen = new System.Collections.Generic.HashSet<int>();
+
+        void TryAdd(Transform t)
+        {
+            if (t == null || !TryParseShelfSlotsLevelIndex(t.name, out int index))
+                return;
+            if (!seen.Add(t.GetInstanceID()))
+                return;
+            levels.Add((index, t));
+        }
+
+        // 1) Under selected object / its CardShelf parent
+        if (hint != null)
+        {
+            Transform root = hint;
+            CardShelf shelf = hint.GetComponentInParent<CardShelf>();
+            if (shelf != null)
+                root = shelf.transform;
+
+            Transform[] children = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < children.Length; i++)
+                TryAdd(children[i]);
+        }
+
+        // 2) Fallback: whole open scene
+        if (levels.Count < 2)
+        {
+            levels.Clear();
+            seen.Clear();
+            GameObject[] roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            for (int r = 0; r < roots.Length; r++)
+            {
+                Transform[] children = roots[r].GetComponentsInChildren<Transform>(true);
+                for (int i = 0; i < children.Length; i++)
+                    TryAdd(children[i]);
+            }
+        }
+
+        return levels;
+    }
+
+    static bool TryParseShelfSlotsLevelIndex(string name, out int index)
+    {
+        index = 0;
+        const string prefix = "ShelfSlots_Level";
+        if (string.IsNullOrEmpty(name) || !name.StartsWith(prefix, System.StringComparison.Ordinal))
+            return false;
+
+        if (name.Length == prefix.Length)
+            return true;
+
+        // "ShelfSlots_Level (3)"
+        int open = name.LastIndexOf('(');
+        int close = name.LastIndexOf(')');
+        if (open < 0 || close <= open)
+            return false;
+
+        return int.TryParse(name.Substring(open + 1, close - open - 1), out index);
+    }
+
+    [MenuItem("TCG Card Caos/Place Shelf_kicg9f In Scene")]
+    public static void PlaceCardShelfInScene()
+    {
+        const string prefabPath = "Assets/ModernSupermarket/Prefabs/Furniture/Shelf_kicg9f.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab == null)
+        {
+            Debug.LogError("TCG Card Caos: Missing shelf prefab at " + prefabPath);
+            return;
+        }
+
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        instance.name = "Shelf_kicg9f";
+        instance.transform.position = new Vector3(2f, 0f, 3f);
+
+        FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
+        if (player != null)
+        {
+            Vector3 forward = player.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.01f)
+                forward = Vector3.forward;
+            instance.transform.position = player.transform.position + forward.normalized * 2.2f;
+            instance.transform.rotation = Quaternion.LookRotation(-forward.normalized, Vector3.up);
+        }
+
+        CardShelf shelf = instance.GetComponent<CardShelf>();
+        if (shelf == null)
+            shelf = instance.AddComponent<CardShelf>();
+        shelf.RefreshSlotCache();
+
+        Selection.activeGameObject = instance;
+        MarkShelfAuthoringDirty(instance);
+        Debug.Log(
+            "TCG Card Caos: Placed Shelf_kicg9f. Prefer editing slots on the prefab asset "
+            + "(open Prefab → Setup Card Shelf → Create Slot Grid), then drop into MainScene.");
+    }
+
+    static void MarkShelfAuthoringDirty(GameObject target)
+    {
+        if (target == null)
+            return;
+
+        EditorUtility.SetDirty(target);
+        var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+        if (stage != null)
+        {
+            EditorSceneManager.MarkSceneDirty(stage.scene);
+            return;
+        }
+
+        if (!EditorSceneManager.GetActiveScene().IsValid())
+            return;
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+    }
+
     [MenuItem("TCG Card Caos/Spawn Test Cards In Scene")]
     public static void SpawnTestCardsMenu()
     {

@@ -1,0 +1,283 @@
+using UnityEngine;
+using UnityEngine.Rendering;
+
+/// <summary>
+/// Marker for one card seat on a cabinet shelf.
+/// In the editor a translucent card-shaped plane is always visible so you can place seats by eye.
+/// Parent under an object with <see cref="CardShelf"/>. Forward (blue axis) = card face direction.
+/// </summary>
+[ExecuteAlways]
+public class CardShelfSlot : MonoBehaviour
+{
+    const string PreviewObjectName = "SlotCardPreview";
+
+    static readonly Color PreviewFillColor = new Color(1f, 0.82f, 0.12f, 0.45f);
+    static readonly Color PreviewEdgeColor = new Color(1f, 0.92f, 0.2f, 0.95f);
+
+    static Mesh _sharedCardPlaneMesh;
+    static Material _sharedFillMaterial;
+    static Material _sharedEdgeMaterial;
+
+    [SerializeField] WorldCard occupiedCard;
+
+    Transform _previewRoot;
+    MeshRenderer _fillRenderer;
+    MeshRenderer _edgeRenderer;
+    bool _previewDeferred;
+
+    public bool IsEmpty
+    {
+        get
+        {
+            if (occupiedCard == null)
+                return true;
+            if (occupiedCard.IsInHand)
+            {
+                occupiedCard = null;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    public WorldCard OccupiedCard => occupiedCard;
+
+    public void Occupy(WorldCard card)
+    {
+        occupiedCard = card;
+        RefreshPreviewVisibility();
+    }
+
+    public void ClearIfMatches(WorldCard card)
+    {
+        if (occupiedCard == card)
+            occupiedCard = null;
+        RefreshPreviewVisibility();
+    }
+
+    public void RefreshOccupancy()
+    {
+        if (occupiedCard != null && occupiedCard.IsInHand)
+            occupiedCard = null;
+        RefreshPreviewVisibility();
+    }
+
+    void OnEnable()
+    {
+        EnsurePreview();
+        RefreshPreviewVisibility();
+    }
+
+    void OnDisable()
+    {
+        SetPreviewActive(false);
+    }
+
+    void OnValidate()
+    {
+        // SetParent/AddComponent are illegal during OnValidate — defer to editor delayCall.
+        SchedulePreviewRefresh();
+    }
+
+    void SchedulePreviewRefresh()
+    {
+        if (Application.isPlaying || _previewDeferred)
+            return;
+
+        _previewDeferred = true;
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.delayCall += ApplyDeferredPreview;
+#else
+        _previewDeferred = false;
+#endif
+    }
+
+#if UNITY_EDITOR
+    void ApplyDeferredPreview()
+    {
+        _previewDeferred = false;
+        if (this == null)
+            return;
+
+        EnsurePreview();
+        RefreshPreviewVisibility();
+    }
+#endif
+
+    void LateUpdate()
+    {
+        // Keep preview alive while editing; hide during Play (runtime outline handles aim).
+        if (Application.isPlaying)
+        {
+            SetPreviewActive(false);
+            return;
+        }
+
+        EnsurePreview();
+        RefreshPreviewVisibility();
+    }
+
+    void RefreshPreviewVisibility()
+    {
+        bool show = !Application.isPlaying && IsEmpty;
+        SetPreviewActive(show);
+    }
+
+    void SetPreviewActive(bool active)
+    {
+        if (_previewRoot != null)
+            _previewRoot.gameObject.SetActive(active);
+    }
+
+    void EnsurePreview()
+    {
+        if (_previewRoot == null)
+        {
+            Transform existing = transform.Find(PreviewObjectName);
+            if (existing != null)
+                _previewRoot = existing;
+        }
+
+        if (_previewRoot == null)
+        {
+            var go = new GameObject(PreviewObjectName);
+            go.transform.SetParent(transform, false);
+            _previewRoot = go.transform;
+        }
+
+        _previewRoot.localPosition = Vector3.zero;
+        _previewRoot.localRotation = Quaternion.identity;
+        _previewRoot.localScale = Vector3.one;
+
+        EnsureSharedAssets();
+
+        if (_fillRenderer == null)
+            _fillRenderer = EnsureChildRenderer(_previewRoot, "Fill", _sharedCardPlaneMesh, _sharedFillMaterial);
+        if (_edgeRenderer == null)
+            _edgeRenderer = EnsureChildRenderer(_previewRoot, "Edge", CardVisualResources.InteractionBorderFrameMesh, _sharedEdgeMaterial);
+
+        // Card plane: pivot at bottom-center, face along +Z (slot forward).
+        Transform fillT = _fillRenderer.transform;
+        fillT.localPosition = Vector3.zero;
+        fillT.localRotation = Quaternion.identity;
+        fillT.localScale = Vector3.one * CardDimensions.WorldCardScale;
+
+        // Border mesh is authored in card-visual XY space (centered). Lift to card center.
+        float halfHeight = PreviewCardHeight() * CardDimensions.WorldCardScale * 0.5f;
+        Transform edgeT = _edgeRenderer.transform;
+        edgeT.localPosition = new Vector3(0f, halfHeight, 0f);
+        edgeT.localRotation = Quaternion.identity;
+        edgeT.localScale = Vector3.one * CardDimensions.WorldCardScale;
+    }
+
+    static MeshRenderer EnsureChildRenderer(Transform parent, string childName, Mesh mesh, Material material)
+    {
+        Transform child = parent.Find(childName);
+        GameObject go = child != null ? child.gameObject : new GameObject(childName);
+        if (child == null)
+            go.transform.SetParent(parent, false);
+
+        var filter = go.GetComponent<MeshFilter>();
+        if (filter == null)
+            filter = go.AddComponent<MeshFilter>();
+        filter.sharedMesh = mesh;
+
+        var renderer = go.GetComponent<MeshRenderer>();
+        if (renderer == null)
+            renderer = go.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = material;
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        return renderer;
+    }
+
+    static void EnsureSharedAssets()
+    {
+        CardArtLibrary.EnsureLoaded();
+
+        if (_sharedCardPlaneMesh == null)
+            _sharedCardPlaneMesh = BuildUprightCardPlaneMesh();
+
+        if (_sharedFillMaterial == null)
+        {
+            _sharedFillMaterial = RuntimeMaterialUtility.CreateUnlitMaterial(
+                PreviewFillColor,
+                enableInstancing: false,
+                renderQueue: (int)RenderQueue.Transparent);
+            SetMaterialTransparent(_sharedFillMaterial, PreviewFillColor);
+        }
+
+        if (_sharedEdgeMaterial == null)
+        {
+            _sharedEdgeMaterial = RuntimeMaterialUtility.CreateUnlitMaterial(
+                PreviewEdgeColor,
+                enableInstancing: false,
+                renderQueue: (int)RenderQueue.Transparent + 1);
+            SetMaterialTransparent(_sharedEdgeMaterial, PreviewEdgeColor);
+        }
+    }
+
+    static void SetMaterialTransparent(Material material, Color color)
+    {
+        if (material == null)
+            return;
+
+        material.color = color;
+        if (material.HasProperty("_BaseColor"))
+            material.SetColor("_BaseColor", color);
+        if (material.HasProperty("_Color"))
+            material.SetColor("_Color", color);
+
+        material.SetOverrideTag("RenderType", "Transparent");
+        material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+        material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+        material.SetInt("_ZWrite", 0);
+        material.DisableKeyword("_ALPHATEST_ON");
+        material.EnableKeyword("_ALPHABLEND_ON");
+        material.renderQueue = (int)RenderQueue.Transparent;
+    }
+
+    static float PreviewCardWidth()
+    {
+        float width = CardDimensions.Width;
+        return width > 0.001f ? width : 0.063f;
+    }
+
+    static float PreviewCardHeight()
+    {
+        float height = CardDimensions.Height;
+        return height > 0.001f ? height : 0.088f;
+    }
+
+    /// <summary>
+    /// Upright card quad in local space: bottom-center pivot, face toward +Z.
+    /// </summary>
+    static Mesh BuildUprightCardPlaneMesh()
+    {
+        float halfW = PreviewCardWidth() * 0.5f;
+        float height = PreviewCardHeight();
+        const float z = 0.001f;
+
+        var mesh = new Mesh { name = "ShelfSlotCardPlane" };
+        mesh.vertices = new[]
+        {
+            new Vector3(-halfW, 0f, z),
+            new Vector3(halfW, 0f, z),
+            new Vector3(halfW, height, z),
+            new Vector3(-halfW, height, z),
+        };
+        mesh.uv = new[]
+        {
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(1f, 1f),
+            new Vector2(0f, 1f),
+        };
+        // Front + back so it reads from both sides while editing.
+        mesh.triangles = new[] { 0, 2, 1, 0, 3, 2, 0, 1, 2, 0, 2, 3 };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+}

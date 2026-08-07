@@ -584,18 +584,91 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void SetWorldPose(Vector3 position, Quaternion rotation)
     {
+        PlaceOnSurface(null, position, rotation);
+    }
+
+    /// <summary>
+    /// Places the card face-up flat on the ground without physics.
+    /// </summary>
+    public void PlaceOnSurface(Transform parent, Vector3 worldPosition, Quaternion worldRotation)
+    {
         _handState = HandState.World;
         SetInteractionHighlight(false);
         SetHandSelected(false);
         RemovePhysics();
+        _scaleTransitionActive = false;
+
+        EnsureCardVisual();
+        ConvertHandVisualToWorldRoot();
 
         if (_collider != null)
+        {
             _collider.enabled = true;
+            if (_collider is BoxCollider boxCollider)
+            {
+                boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
+                boxCollider.center = Vector3.zero;
+            }
+        }
 
-        transform.SetParent(null, true);
-        transform.SetPositionAndRotation(position, rotation);
-        _scaleTransitionActive = false;
+        transform.SetParent(parent, true);
+        transform.SetPositionAndRotation(worldPosition, worldRotation);
         transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
+
+        ReleaseCardVisual();
+        RefreshRenderMode();
+    }
+
+    /// <summary>
+    /// Stands the card upright on a shelf board, face toward <paramref name="faceDirection"/>.
+    /// </summary>
+    public void PlaceUprightOnShelf(Transform parent, Vector3 surfacePoint, Vector3 faceDirection)
+    {
+        _handState = HandState.World;
+        SetInteractionHighlight(false);
+        SetHandSelected(false);
+        RemovePhysics();
+        _scaleTransitionActive = false;
+
+        faceDirection.y = 0f;
+        if (faceDirection.sqrMagnitude < 0.0001f)
+            faceDirection = parent != null ? -parent.forward : Vector3.forward;
+        faceDirection.Normalize();
+
+        // Upright imported mesh (no WorldVisualRotation flatten) facing the viewer.
+        EnsureCardVisual();
+        SetVisualRotation(Quaternion.identity);
+
+        if (_collider != null)
+        {
+            _collider.enabled = true;
+            if (_collider is BoxCollider boxCollider)
+            {
+                // Upright: height along local Y, thickness along local Z (toward viewer).
+                boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Height, CardDimensions.Thickness);
+                boxCollider.center = Vector3.zero;
+            }
+        }
+
+        transform.SetParent(parent, true);
+        transform.rotation = Quaternion.LookRotation(faceDirection, Vector3.up);
+        transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
+        transform.position = surfacePoint;
+
+        // Sit the bottom edge on the board.
+        MeshRenderer meshRenderer = _cardVisual != null
+            ? _cardVisual.GetComponent<MeshRenderer>()
+            : GetComponentInChildren<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            float lift = surfacePoint.y - meshRenderer.bounds.min.y;
+            transform.position += Vector3.up * lift;
+        }
+        else
+        {
+            transform.position += Vector3.up * (CardDimensions.Height * CardDimensions.WorldCardScale * 0.5f);
+        }
+
         RefreshRenderMode();
     }
 }

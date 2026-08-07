@@ -195,6 +195,27 @@ public class PlayerCardHand : MonoBehaviour
         _selectedIndex = cardIndex;
     }
 
+    public bool HasSelectedHeldCard()
+    {
+        return GetSelectedHeldCard() != null;
+    }
+
+    /// <summary>
+    /// Removes the selected held card from the hand without throwing it.
+    /// Used for placing onto shelves / surfaces.
+    /// </summary>
+    public bool TryTakeSelectedHeldCard(out WorldCard card)
+    {
+        card = GetSelectedHeldCard();
+        if (card == null)
+            return false;
+
+        _cards.Remove(card);
+        ClampSelectionIndex();
+        ApplyFanLayout();
+        return true;
+    }
+
     public bool TryDropSelectedCard()
     {
         if (_cards.Count == 0)
@@ -206,17 +227,11 @@ public class PlayerCardHand : MonoBehaviour
         if (_camera == null)
             return false;
 
-        WorldCard selectedCard = GetSelectedHeldCard();
-        if (selectedCard == null)
+        if (!TryTakeSelectedHeldCard(out WorldCard selectedCard))
             return false;
-
-        _cards.Remove(selectedCard);
 
         Vector3 throwDirection = (_camera.transform.forward + _camera.transform.up * throwUpBoost).normalized;
         selectedCard.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
-
-        ClampSelectionIndex();
-        ApplyFanLayout();
         return true;
     }
 
