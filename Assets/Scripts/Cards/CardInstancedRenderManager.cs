@@ -30,17 +30,23 @@ public class CardInstancedRenderManager : MonoBehaviour
     public static CardInstancedRenderManager EnsureExists()
     {
         if (_instance != null)
+        {
+            _instance.EnsureBucketsInitialized();
             return _instance;
+        }
 
         var existing = FindFirstObjectByType<CardInstancedRenderManager>();
         if (existing != null)
         {
             _instance = existing;
+            _instance.EnsureBucketsInitialized();
             return _instance;
         }
 
         var managerObject = new GameObject(nameof(CardInstancedRenderManager));
-        return managerObject.AddComponent<CardInstancedRenderManager>();
+        var created = managerObject.AddComponent<CardInstancedRenderManager>();
+        created.EnsureBucketsInitialized();
+        return created;
     }
 
     void Awake()
@@ -53,9 +59,19 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         _instance = this;
         CacheDistances();
+        EnsureBucketsInitialized();
+    }
 
+    void EnsureBucketsInitialized()
+    {
         for (int i = 0; i < _cardsByPalette.Length; i++)
-            _cardsByPalette[i] = new HashSet<WorldCard>();
+        {
+            if (_cardsByPalette[i] == null)
+                _cardsByPalette[i] = new HashSet<WorldCard>();
+        }
+
+        if (_drawDistanceSq <= 0f || _colliderDistanceSq <= 0f)
+            CacheDistances();
     }
 
     void OnDestroy()
@@ -91,6 +107,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (card == null || !card.CanUseInstancedRendering)
             return;
 
+        EnsureBucketsInitialized();
         _cardsByPalette[GetPaletteIndex(card)].Add(card);
     }
 
@@ -99,7 +116,10 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (card == null)
             return;
 
-        _cardsByPalette[GetPaletteIndex(card)].Remove(card);
+        EnsureBucketsInitialized();
+        HashSet<WorldCard> bucket = _cardsByPalette[GetPaletteIndex(card)];
+        if (bucket != null)
+            bucket.Remove(card);
     }
 
     void DrawInstancedCards()
@@ -107,6 +127,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (_camera == null)
             return;
 
+        EnsureBucketsInitialized();
         CardArtLibrary.EnsureLoaded();
 
         Mesh mesh = CardArtLibrary.InstancedCardMesh;
@@ -119,7 +140,8 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         for (int paletteIndex = 0; paletteIndex < _cardsByPalette.Length; paletteIndex++)
         {
-            if (_cardsByPalette[paletteIndex].Count > 0)
+            HashSet<WorldCard> bucket = _cardsByPalette[paletteIndex];
+            if (bucket != null && bucket.Count > 0)
                 _scratchPaletteIndices.Add(paletteIndex);
         }
 
@@ -167,6 +189,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (_camera == null)
             return;
 
+        EnsureBucketsInitialized();
         _colliderUpdateTimer -= Time.deltaTime;
         if (_colliderUpdateTimer > 0f)
             return;
@@ -177,6 +200,9 @@ public class CardInstancedRenderManager : MonoBehaviour
         for (int paletteIndex = 0; paletteIndex < _cardsByPalette.Length; paletteIndex++)
         {
             HashSet<WorldCard> cards = _cardsByPalette[paletteIndex];
+            if (cards == null)
+                continue;
+
             foreach (WorldCard card in cards)
             {
                 if (card == null || !card.CanUseInstancedRendering)
