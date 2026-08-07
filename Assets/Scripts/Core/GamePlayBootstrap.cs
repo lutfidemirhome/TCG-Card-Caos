@@ -25,6 +25,8 @@ static class GamePlayBootstrap
 
         if (camera.GetComponent<InteractionController>() == null)
             camera.gameObject.AddComponent<InteractionController>();
+
+        CardInspectPreview.EnsureOn(camera);
     }
 
     static void EnsurePlayerHand()

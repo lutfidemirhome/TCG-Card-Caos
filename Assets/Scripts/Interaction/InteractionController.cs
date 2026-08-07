@@ -3,6 +3,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Raycast from screen center, show prompt, interact with E.
+/// Looking at a ground card also shows a large readable inspect preview on the middle-right.
 /// </summary>
 public class InteractionController : MonoBehaviour
 {
@@ -16,12 +17,14 @@ public class InteractionController : MonoBehaviour
     Text _promptText;
     IInteractable _currentTarget;
     IInteractionHighlight _currentHighlight;
+    CardInspectPreview _inspectPreview;
 
     void Awake()
     {
         if (viewCamera == null)
             viewCamera = GetComponent<Camera>();
 
+        _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
         BuildPromptUI();
     }
 
@@ -68,6 +71,7 @@ public class InteractionController : MonoBehaviour
             _currentHighlight?.SetInteractionHighlight(true);
             _promptText.text = prompt;
             _promptRoot.SetActive(true);
+            RefreshInspectPreview();
         }
     }
 
@@ -77,6 +81,8 @@ public class InteractionController : MonoBehaviour
             return;
 
         _currentTarget.Interact(gameObject.transform.root.gameObject);
+        // Pickup clears interactability for this card; refresh look-at state next frame.
+        ClearTarget();
     }
 
     void ClearTarget()
@@ -85,6 +91,19 @@ public class InteractionController : MonoBehaviour
         _currentTarget = null;
         if (_promptRoot != null)
             _promptRoot.SetActive(false);
+
+        _inspectPreview?.Hide();
+    }
+
+    void RefreshInspectPreview()
+    {
+        if (_inspectPreview == null)
+            _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
+
+        if (_currentTarget is WorldCard worldCard && !worldCard.IsInHand)
+            _inspectPreview.Show(worldCard);
+        else
+            _inspectPreview.Hide();
     }
 
     static IInteractionHighlight GetHighlight(IInteractable interactable)

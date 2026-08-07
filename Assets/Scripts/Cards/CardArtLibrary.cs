@@ -36,6 +36,7 @@ public static class CardArtLibrary
     static Material _sharedBackDetailTemplate;
     static Vector3? _flatSize;
     static float? _meshCornerRadius;
+    static Rect? _frontArtUvRect;
     static readonly Dictionary<int, Material> FrontWorldMaterialsByPalette = new Dictionary<int, Material>();
     static readonly Dictionary<int, Material> FrontDetailMaterialsByPalette = new Dictionary<int, Material>();
 
@@ -96,6 +97,24 @@ public static class CardArtLibrary
         }
     }
 
+    /// <summary>UV rect of the readable front art, for screen-space inspect UI.</summary>
+    public static Rect FrontArtUvRect
+    {
+        get
+        {
+            EnsureLoaded();
+            if (_frontArtUvRect == null)
+            {
+                if (_cardMesh != null && CardMeshBuilder.TryGetFrontFaceUvRect(_cardMesh, out Rect rect))
+                    _frontArtUvRect = rect;
+                else
+                    _frontArtUvRect = new Rect(0f, 0f, 1f, 1f);
+            }
+
+            return _frontArtUvRect.Value;
+        }
+    }
+
     public static Material GetBackMaterial(CardTextureQuality quality)
     {
         EnsureLoaded();
@@ -147,6 +166,7 @@ public static class CardArtLibrary
         _sharedBackDetailTemplate = null;
         _flatSize = null;
         _meshCornerRadius = null;
+        _frontArtUvRect = null;
         FrontWorldMaterialsByPalette.Clear();
         FrontDetailMaterialsByPalette.Clear();
         CardVisualResources.ResetOutlineCache();

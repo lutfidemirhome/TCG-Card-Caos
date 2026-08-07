@@ -122,6 +122,35 @@ public static class CardMeshBuilder
     }
 
     /// <summary>
+    /// UV rect covering the front-face art (bevel/black padding excluded). For UI RawImage.
+    /// </summary>
+    public static bool TryGetFrontFaceUvRect(Mesh referenceMesh, out Rect uvRect)
+    {
+        uvRect = new Rect(0f, 0f, 1f, 1f);
+        if (referenceMesh == null)
+            return false;
+
+        if (!TryFitFrontFaceUv(referenceMesh, out Bounds xyBounds, out _, out UvPlaneFit fit))
+            return false;
+
+        Vector2 bl = fit.Evaluate(xyBounds.min.x, xyBounds.min.y);
+        Vector2 br = fit.Evaluate(xyBounds.max.x, xyBounds.min.y);
+        Vector2 tr = fit.Evaluate(xyBounds.max.x, xyBounds.max.y);
+        Vector2 tl = fit.Evaluate(xyBounds.min.x, xyBounds.max.y);
+
+        float minU = Mathf.Min(Mathf.Min(bl.x, br.x), Mathf.Min(tr.x, tl.x));
+        float maxU = Mathf.Max(Mathf.Max(bl.x, br.x), Mathf.Max(tr.x, tl.x));
+        float minV = Mathf.Min(Mathf.Min(bl.y, br.y), Mathf.Min(tr.y, tl.y));
+        float maxV = Mathf.Max(Mathf.Max(bl.y, br.y), Mathf.Max(tr.y, tl.y));
+
+        if (maxU - minU < 0.01f || maxV - minV < 0.01f)
+            return false;
+
+        uvRect = Rect.MinMaxRect(minU, minV, maxU, maxV);
+        return true;
+    }
+
+    /// <summary>
     /// Single front-face quad for GPU-instanced ground cards (2 tris).
     /// UVs are fitted from interior flat-face samples so bevel/black padding is excluded.
     /// </summary>
