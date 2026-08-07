@@ -243,7 +243,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _handState = HandState.World;
         SetHandSelected(false);
         EnsureCardVisual();
-        SetVisualRotation(CardArtLibrary.WorldVisualRotation);
+        // Keep hand art orientation in flight — switching to WorldVisualRotation flips the texture.
+        SetVisualRotation(CardArtLibrary.HandVisualRotation);
         transform.SetParent(null, true);
 
         if (_collider != null)
@@ -255,6 +256,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         EnsureRigidbody();
         _rigidbody.isKinematic = false;
         _rigidbody.useGravity = true;
+        _rigidbody.constraints = RigidbodyConstraints.None;
 
         if (!_rigidbody.isKinematic)
         {
@@ -270,21 +272,84 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     System.Collections.IEnumerator SettleDroppedCardRoutine()
     {
-        while (_handState == HandState.World
-               && !_scaleTransitionActive
-               && !_interactionHighlighted
-               && _rigidbody != null
-               && !_rigidbody.IsSleeping())
+        float groundedTime = 0f;
+        float elapsed = 0f;
+        const float settleAfterGrounded = 0.18f;
+        const float forceSettleAfterGrounded = 0.55f;
+        const float maxFlightTime = 4f;
+
+        while (_handState == HandState.World && _rigidbody != null)
         {
+            if (_interactionHighlighted)
+                yield break;
+
+            elapsed += Time.deltaTime;
+            bool scaleDone = !_scaleTransitionActive;
+            float groundY = CardFactory.GroundHeightOffset();
+            bool nearGround = transform.position.y <= groundY + 0.1f;
+            bool fallingOrResting = _rigidbody.linearVelocity.y <= 0.35f;
+
+            if (scaleDone && nearGround && fallingOrResting)
+                groundedTime += Time.deltaTime;
+            else if (!nearGround)
+                groundedTime = 0f;
+
+            float horizontalSpeedSq =
+                _rigidbody.linearVelocity.x * _rigidbody.linearVelocity.x
+                + _rigidbody.linearVelocity.z * _rigidbody.linearVelocity.z;
+
+            bool slowSlide = horizontalSpeedSq < 2.5f;
+            if (groundedTime >= settleAfterGrounded && slowSlide)
+                break;
+            if (groundedTime >= forceSettleAfterGrounded)
+                break;
+            if (elapsed >= maxFlightTime)
+                break;
+
             yield return null;
         }
 
-        if (_handState != HandState.World || _scaleTransitionActive || _interactionHighlighted || _rigidbody == null)
+        if (_handState != HandState.World || _rigidbody == null || _interactionHighlighted)
             yield break;
 
+        // Keep whatever face landed up — more natural than forcing CardFront.
         RemovePhysics();
-        ReleaseCardVisual();
-        RefreshRenderMode();
+        // Bake hand visual into root so switching to WorldVisualRotation does not flip art.
+        ConvertHandVisualToWorldRoot();
+
+        if (IsCardFaceUp())
+        {
+            ReleaseCardVisual();
+            RefreshRenderMode();
+        }
+        else
+        {
+            // Instanced ground quads only draw the front — keep the full mesh so CardBack stays visible.
+            EnsureCardVisual();
+            SetVisualRotation(CardArtLibrary.WorldVisualRotation);
+            CardInstancedRenderManager.Instance?.Unregister(this);
+        }
+    }
+
+    /// <summary>
+    /// Preserves world-space card art when changing local visual from Hand to World rotation.
+    /// </summary>
+    void ConvertHandVisualToWorldRoot()
+    {
+        Quaternion handLocal = CardArtLibrary.HandVisualRotation;
+        Quaternion worldLocal = CardArtLibrary.WorldVisualRotation;
+        transform.rotation = transform.rotation * handLocal * Quaternion.Inverse(worldLocal);
+        if (_cardVisual != null)
+            SetVisualRotation(worldLocal);
+    }
+
+    bool IsCardFaceUp()
+    {
+        Quaternion visualLocal = _cardVisual != null
+            ? _cardVisual.localRotation
+            : CardArtLibrary.WorldVisualRotation;
+        Vector3 frontWorld = transform.rotation * visualLocal * Vector3.forward;
+        return frontWorld.y >= 0f;
     }
 
     void RemovePhysics()
