@@ -192,6 +192,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _flightArcHeight = arcHeight;
         _onPickupFlightComplete = onComplete;
 
+        CardShelfSlot shelfSlot = GetComponentInParent<CardShelfSlot>();
+        if (shelfSlot != null)
+            shelfSlot.ClearIfMatches(this);
+
         SetInteractionHighlight(false);
         SetHandSelected(false);
         RemovePhysics();
@@ -247,6 +251,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         SetVisualRotation(CardArtLibrary.HandVisualRotation);
         transform.SetParent(null, true);
 
+        ApplyFlatWorldCollider();
+
         if (_collider != null)
             _collider.enabled = true;
 
@@ -262,9 +268,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             _rigidbody.linearVelocity = velocity;
             _rigidbody.angularVelocity = new Vector3(
-                Random.Range(-3f, 3f),
-                Random.Range(-1f, 1f),
-                Random.Range(-3f, 3f));
+                Random.Range(-1.5f, 1.5f),
+                Random.Range(-2f, 2f),
+                Random.Range(-1.5f, 1.5f));
         }
 
         StartCoroutine(SettleDroppedCardRoutine());
@@ -312,10 +318,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_handState != HandState.World || _rigidbody == null || _interactionHighlighted)
             yield break;
 
-        // Keep whatever face landed up — more natural than forcing CardFront.
+        // Flat on the floor — shelf tilt must not carry over after a throw.
         RemovePhysics();
-        // Bake hand visual into root so switching to WorldVisualRotation does not flip art.
-        ConvertHandVisualToWorldRoot();
+        FlattenAndSnapToGround();
 
         if (IsCardFaceUp())
         {
@@ -328,6 +333,55 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             EnsureCardVisual();
             SetVisualRotation(CardArtLibrary.WorldVisualRotation);
             CardInstancedRenderManager.Instance?.Unregister(this);
+        }
+    }
+
+    void ApplyFlatWorldCollider()
+    {
+        if (_collider is BoxCollider boxCollider)
+        {
+            boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
+            boxCollider.center = Vector3.zero;
+        }
+    }
+
+    void FlattenAndSnapToGround()
+    {
+        EnsureCardVisual();
+        ApplyFlatWorldCollider();
+
+        Quaternion visualLocal = _cardVisual != null
+            ? _cardVisual.localRotation
+            : CardArtLibrary.HandVisualRotation;
+
+        Vector3 faceForward = transform.rotation * visualLocal * Vector3.forward;
+        faceForward.y = 0f;
+        if (faceForward.sqrMagnitude < 0.0001f)
+        {
+            Vector3 heightAxis = transform.rotation * visualLocal * Vector3.up;
+            heightAxis.y = 0f;
+            if (heightAxis.sqrMagnitude > 0.0001f)
+                faceForward = Vector3.Cross(Vector3.up, heightAxis.normalized);
+            else
+                faceForward = Vector3.forward;
+        }
+
+        float yaw = Mathf.Atan2(faceForward.x, faceForward.z) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        SetVisualRotation(CardArtLibrary.WorldVisualRotation);
+
+        MeshRenderer meshRenderer = _cardVisual != null
+            ? _cardVisual.GetComponent<MeshRenderer>()
+            : GetComponentInChildren<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            float lift = CardFactory.GroundSurfaceY() + 0.002f - meshRenderer.bounds.min.y;
+            transform.position += Vector3.up * lift;
+        }
+        else
+        {
+            Vector3 pos = transform.position;
+            transform.position = new Vector3(pos.x, CardFactory.GroundHeightOffset(), pos.z);
         }
     }
 
@@ -670,5 +724,77 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         }
 
         RefreshRenderMode();
+    }
+
+    /// <summary>
+    /// Places the card using the slot marker's full rotation (tilt, yaw, etc.).
+    /// Card local axes match the slot: +Y = height, +Z = face, bottom pivot at origin.
+    /// </summary>
+    public void PlaceOnShelfSlot(Transform slot, float surfacePadding)
+    {
+        if (slot == null)
+            return;
+
+        _handState = HandState.World;
+        SetInteractionHighlight(false);
+        SetHandSelected(false);
+        RemovePhysics();
+        _scaleTransitionActive = false;
+
+        EnsureCardVisual();
+        SetVisualRotation(Quaternion.identity);
+
+        if (_collider != null)
+        {
+            _collider.enabled = true;
+            if (_collider is BoxCollider boxCollider)
+            {
+                boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Height, CardDimensions.Thickness);
+                boxCollider.center = Vector3.zero;
+            }
+        }
+
+        transform.SetParent(slot, false);
+        transform.localRotation = Quaternion.identity;
+        transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
+        transform.localPosition = Vector3.zero;
+
+        AlignBottomToSlotPlane(slot, surfacePadding);
+
+        RefreshRenderMode();
+    }
+
+    void AlignBottomToSlotPlane(Transform slot, float surfacePadding)
+    {
+        MeshRenderer meshRenderer = _cardVisual != null
+            ? _cardVisual.GetComponent<MeshRenderer>()
+            : GetComponentInChildren<MeshRenderer>();
+
+        if (meshRenderer == null)
+        {
+            transform.localPosition = Vector3.up * surfacePadding;
+            return;
+        }
+
+        Bounds bounds = meshRenderer.bounds;
+        Vector3 center = bounds.center;
+        Vector3 extents = bounds.extents;
+        float minLocalY = float.MaxValue;
+
+        for (int ix = -1; ix <= 1; ix += 2)
+        {
+            for (int iy = -1; iy <= 1; iy += 2)
+            {
+                for (int iz = -1; iz <= 1; iz += 2)
+                {
+                    Vector3 corner = center + Vector3.Scale(extents, new Vector3(ix, iy, iz));
+                    float localY = slot.InverseTransformPoint(corner).y;
+                    if (localY < minLocalY)
+                        minLocalY = localY;
+                }
+            }
+        }
+
+        transform.localPosition = new Vector3(0f, -minLocalY + surfacePadding, 0f);
     }
 }

@@ -97,13 +97,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (card == null || slot == null)
             return;
 
-        Vector3 surfacePoint = slot.transform.position + slot.transform.up * surfacePadding;
-        Vector3 face = slot.transform.forward;
-        face.y = 0f;
-        if (face.sqrMagnitude < 0.0001f)
-            face = GetFaceDirection(surfacePoint);
-
-        card.PlaceUprightOnShelf(slot.transform, surfacePoint, face.normalized);
+        card.PlaceOnShelfSlot(slot.transform, surfacePadding);
         slot.Occupy(card);
     }
 
@@ -196,15 +190,10 @@ public class CardShelf : MonoBehaviour, IInteractable
         CardArtLibrary.EnsureLoaded();
 
         float halfHeight = CardDimensions.Height * CardDimensions.WorldCardScale * 0.5f;
-        Vector3 face = slot.transform.forward;
-        face.y = 0f;
-        if (face.sqrMagnitude < 0.0001f)
-            face = GetFaceDirection(slot.transform.position);
-        Quaternion upright = Quaternion.LookRotation(face.normalized, Vector3.up);
-        Vector3 outlinePos = slot.transform.position + Vector3.up * (halfHeight + surfacePadding);
+        Vector3 outlinePos = slot.transform.position + slot.transform.up * (halfHeight + surfacePadding);
 
         Transform t = _placementOutline.transform;
-        t.SetPositionAndRotation(outlinePos, upright);
+        t.SetPositionAndRotation(outlinePos, slot.transform.rotation);
         t.localScale = Vector3.one * CardDimensions.WorldCardScale;
         _placementOutline.SetActive(true);
     }
