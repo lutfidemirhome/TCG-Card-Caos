@@ -270,7 +270,7 @@ public static class CardMeshBuilder
     }
 
     /// <summary>
-    /// Builds a lightweight trading-card mesh from the yzma reference (silhouette + UVs preserved).
+    /// Builds a lightweight trading-card mesh from a reference mesh (silhouette + UVs preserved).
     /// </summary>
     public static Mesh CreateTradingCardMeshFromReference(Mesh referenceMesh, int cornerSegments = DefaultCornerSegments)
     {

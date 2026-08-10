@@ -196,10 +196,10 @@ public static class CardArtLibrary
         _sharedBackDetailTemplate = Resources.Load<Material>(RuntimeBackDetailMaterialResourcePath);
 
         if (_sharedFrontDetailTemplate == null)
-            _sharedFrontDetailTemplate = Resources.Load<Material>("Cards/CardFront");
+            _sharedFrontDetailTemplate = Resources.Load<Material>("Cards/CardFrontDetail");
 
         if (_sharedBackDetailTemplate == null)
-            _sharedBackDetailTemplate = Resources.Load<Material>("Cards/CardBack");
+            _sharedBackDetailTemplate = Resources.Load<Material>("Cards/CardBackDetail");
 
         if (_sharedFrontWorldTemplate == null)
             _sharedFrontWorldTemplate = _sharedFrontDetailTemplate;
