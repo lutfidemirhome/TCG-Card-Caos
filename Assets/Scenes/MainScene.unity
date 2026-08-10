@@ -5452,15 +5452,15 @@ MonoBehaviour:
   fanPivotY: -0.036
   verticalCurve: 0.018
   cardPitchDegrees: 0
-  heldCardScale: 1.48
+  heldCardScale: 1.036
   handScaleReductionPercent: 0.2305
   cardDepthStep: 0.0025
   cardVisualOffsetY: 0
-  maxWidth: 0.231
-  extraMaxWidthPerCard: 0.0063
-  maxWidthClamp: 0.441
-  minCardSpacing: 0.0126
-  maxCardSpacing: 0.042
+  maxWidth: 0.462
+  extraMaxWidthPerCard: 0.0126
+  maxWidthClamp: 0.882
+  minCardSpacing: 0.0252
+  maxCardSpacing: 0.084
   selectedLiftPercent: 0.15
   selectedForwardMargin: 0.006
   pickupFlightDuration: 0.4
@@ -7155,8 +7155,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c3be5de0b9f7426a8f05f121a889cd0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  drawDistance: 12
-  colliderDistance: 9
+  drawDistance: 40
+  colliderDistance: 25
   colliderUpdateInterval: 0.25
 --- !u!4 &1614384406
 Transform:

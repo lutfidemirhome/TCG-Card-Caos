@@ -11,26 +11,15 @@ public static class CardArtSetup
         EnsureFolder("Assets/Resources");
         EnsureFolder(ResourcesCardsFolder);
 
-        GameObject modelRoot = AssetDatabase.LoadAssetAtPath<GameObject>(CardArtLibrary.ModelAssetPath);
         Material frontMaterialTemplate = AssetDatabase.LoadAssetAtPath<Material>(CardArtLibrary.FrontMaterialAssetPath);
         Material backMaterialTemplate = AssetDatabase.LoadAssetAtPath<Material>(CardArtLibrary.BackMaterialAssetPath);
 
-        if (modelRoot == null || frontMaterialTemplate == null || backMaterialTemplate == null)
+        if (frontMaterialTemplate == null || backMaterialTemplate == null)
         {
             Debug.LogError(
-                "TCG Card Caos: Card art setup failed. Ensure yzma.fbx, CardFront.mat and CardBack.mat exist under Assets/Art/Cards.");
+                "TCG Card Caos: Card art setup failed. Ensure CardFront.mat and CardBack.mat exist under Assets/Art/Cards.");
             return;
         }
-
-        MeshFilter meshFilter = modelRoot.GetComponentInChildren<MeshFilter>(true);
-        if (meshFilter == null || meshFilter.sharedMesh == null)
-        {
-            Debug.LogError("TCG Card Caos: Could not find a mesh inside yzma.fbx.");
-            return;
-        }
-
-        Mesh readableSource = Object.Instantiate(meshFilter.sharedMesh);
-        readableSource.name = meshFilter.sharedMesh.name + "_ReadableCopy";
 
         try
         {
@@ -38,19 +27,19 @@ public static class CardArtSetup
 
             Texture2D frontWorldTexture = CopyTextureWithMaxSize(
                 CardArtLibrary.FrontTextureAssetPath,
-                ResourcesCardsFolder + "/yzma_world.png",
+                ResourcesCardsFolder + "/card_front_world.png",
                 CardTextureSettings.WorldMaxSize);
             Texture2D backWorldTexture = CopyTextureWithMaxSize(
                 CardArtLibrary.BackTextureAssetPath,
-                ResourcesCardsFolder + "/lorcana_back_world.png",
+                ResourcesCardsFolder + "/card_back_world.png",
                 CardTextureSettings.WorldMaxSize);
             Texture2D frontDetailTexture = CopyTextureWithMaxSize(
                 CardArtLibrary.FrontTextureAssetPath,
-                ResourcesCardsFolder + "/yzma_detail.png",
+                ResourcesCardsFolder + "/card_front_detail.png",
                 CardTextureSettings.DetailMaxSize);
             Texture2D backDetailTexture = CopyTextureWithMaxSize(
                 CardArtLibrary.BackTextureAssetPath,
-                ResourcesCardsFolder + "/lorcana_back_detail.png",
+                ResourcesCardsFolder + "/card_back_detail.png",
                 CardTextureSettings.DetailMaxSize);
 
             SaveMaterialAsset(
@@ -66,15 +55,15 @@ public static class CardArtSetup
                 CreateMaterial(backMaterialTemplate, backDetailTexture, "CardBackDetail", enableInstancing: false),
                 ResourcesCardsFolder + "/CardBackDetail.mat");
 
-            EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking instanced ground quad...", 0.55f);
+            EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking box card mesh...", 0.55f);
 
-            Mesh instancedMesh = CardMeshBuilder.CreateInstancedGroundCardMesh(readableSource);
+            Mesh instancedMesh = CardMeshBuilder.CreatePrototypeInstancedQuad();
             Vector2[] instancedUvs = instancedMesh.uv;
             SaveMeshAsset(instancedMesh, ResourcesCardsFolder + "/InstancedCardMesh.asset");
 
             EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking detail card mesh...", 0.8f);
 
-            Mesh detailMesh = Object.Instantiate(meshFilter.sharedMesh);
+            Mesh detailMesh = CardMeshBuilder.CreatePrototypeCardMesh();
             detailMesh.name = "TradingCardMesh";
             SaveMeshAsset(detailMesh, ResourcesCardsFolder + "/TradingCardMesh.asset");
 
@@ -83,11 +72,20 @@ public static class CardArtSetup
             CardArtLibrary.ResetCache();
 
             Debug.Log(
-                "TCG Card Caos: Card art setup complete. World textures: "
+                "TCG Card Caos: Card art setup complete (1024×1434 box mesh, no FBX). "
+                + "World textures: "
                 + CardTextureSettings.WorldMaxSize
                 + "px. Detail textures: "
                 + CardTextureSettings.DetailMaxSize
-                + "px. Instanced UV corners: "
+                + "px. Mesh: "
+                + detailMesh.vertexCount
+                + " verts, "
+                + CardMeshBuilder.CountTriangles(detailMesh)
+                + " tris. Size "
+                + CardModelDimensions.Width.ToString("0.###")
+                + " × "
+                + CardModelDimensions.Height.ToString("0.###")
+                + " m. Instanced UV: "
                 + FormatUv(instancedUvs[0]) + " "
                 + FormatUv(instancedUvs[1]) + " "
                 + FormatUv(instancedUvs[2]) + " "
@@ -96,7 +94,6 @@ public static class CardArtSetup
         finally
         {
             EditorUtility.ClearProgressBar();
-            Object.DestroyImmediate(readableSource);
         }
     }
 
@@ -107,6 +104,12 @@ public static class CardArtSetup
 
     static Texture2D CopyTextureWithMaxSize(string sourceAssetPath, string destinationAssetPath, int maxTextureSize)
     {
+        if (AssetDatabase.LoadAssetAtPath<Texture2D>(sourceAssetPath) == null)
+        {
+            Debug.LogError("TCG Card Caos: Missing texture at " + sourceAssetPath);
+            return null;
+        }
+
         if (AssetDatabase.LoadAssetAtPath<Texture2D>(destinationAssetPath) != null)
             AssetDatabase.DeleteAsset(destinationAssetPath);
 

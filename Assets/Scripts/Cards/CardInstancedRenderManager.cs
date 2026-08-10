@@ -9,8 +9,8 @@ public class CardInstancedRenderManager : MonoBehaviour
 {
     const int MaxInstancesPerBatch = 1023;
 
-    [SerializeField] float drawDistance = 12f;
-    [SerializeField] float colliderDistance = 9f;
+    [SerializeField] float drawDistance = 40f;
+    [SerializeField] float colliderDistance = 25f;
     [SerializeField] float colliderUpdateInterval = 0.25f;
 
     static CardInstancedRenderManager _instance;
@@ -18,6 +18,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     readonly HashSet<WorldCard>[] _cardsByPalette = new HashSet<WorldCard>[CardPalette.Count];
     readonly Matrix4x4[] _matrixBuffer = new Matrix4x4[MaxInstancesPerBatch];
     readonly List<int> _scratchPaletteIndices = new List<int>(CardPalette.Count);
+    readonly List<WorldCard> _drawSortScratch = new List<WorldCard>(512);
     readonly Plane[] _frustumPlanes = new Plane[6];
 
     Camera _camera;
@@ -104,10 +105,16 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     public void Register(WorldCard card)
     {
-        if (card == null || !card.CanUseInstancedRendering)
+        if (card == null || card.IsInHand)
             return;
 
         EnsureBucketsInitialized();
+        CardGroundStack.Track(card);
+        CardGroundStack.RefreshCluster(card);
+
+        if (!card.CanUseInstancedRendering)
+            return;
+
         _cardsByPalette[GetPaletteIndex(card)].Add(card);
     }
 
@@ -122,6 +129,12 @@ public class CardInstancedRenderManager : MonoBehaviour
             bucket.Remove(card);
     }
 
+    public static void ReleaseFromGround(WorldCard card)
+    {
+        Instance?.Unregister(card);
+        CardGroundStack.Untrack(card);
+    }
+
     void DrawInstancedCards()
     {
         if (_camera == null)
@@ -134,7 +147,6 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (mesh == null)
             return;
 
-        Vector3 cameraPosition = _camera.transform.position;
         GeometryUtility.CalculateFrustumPlanes(_camera, _frustumPlanes);
         _scratchPaletteIndices.Clear();
 
@@ -153,16 +165,23 @@ public class CardInstancedRenderManager : MonoBehaviour
             if (frontMaterial == null)
                 continue;
 
-            int writeIndex = 0;
+            _drawSortScratch.Clear();
             foreach (WorldCard card in cards)
             {
                 if (card == null || !card.CanUseInstancedRendering)
                     continue;
-
-                if (!ShouldRenderCard(card, cameraPosition))
+                if (!ShouldRenderCard(card))
                     continue;
 
-                _matrixBuffer[writeIndex++] = card.GetInstancedDrawMatrix();
+                _drawSortScratch.Add(card);
+            }
+
+            _drawSortScratch.Sort(CompareDrawOrder);
+
+            int writeIndex = 0;
+            for (int c = 0; c < _drawSortScratch.Count; c++)
+            {
+                _matrixBuffer[writeIndex++] = _drawSortScratch[c].GetInstancedDrawMatrix();
                 if (writeIndex < MaxInstancesPerBatch)
                     continue;
 
@@ -175,12 +194,17 @@ public class CardInstancedRenderManager : MonoBehaviour
         }
     }
 
-    bool ShouldRenderCard(WorldCard card, Vector3 cameraPosition)
+    static int CompareDrawOrder(WorldCard a, WorldCard b)
     {
-        Vector3 cardPosition = card.transform.position;
-        if ((cardPosition - cameraPosition).sqrMagnitude > _drawDistanceSq)
-            return false;
+        int layerCompare = a.GroundStackLayer.CompareTo(b.GroundStackLayer);
+        if (layerCompare != 0)
+            return layerCompare;
 
+        return a.GetInstanceID().CompareTo(b.GetInstanceID());
+    }
+
+    bool ShouldRenderCard(WorldCard card)
+    {
         return GeometryUtility.TestPlanesAABB(_frustumPlanes, card.GetInstancedCullBounds());
     }
 
@@ -196,6 +220,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         _colliderUpdateTimer = colliderUpdateInterval;
         Vector3 cameraPosition = _camera.transform.position;
+        GeometryUtility.CalculateFrustumPlanes(_camera, _frustumPlanes);
 
         for (int paletteIndex = 0; paletteIndex < _cardsByPalette.Length; paletteIndex++)
         {
@@ -208,15 +233,23 @@ public class CardInstancedRenderManager : MonoBehaviour
                 if (card == null || !card.CanUseInstancedRendering)
                     continue;
 
-                bool enableCollider = (card.transform.position - cameraPosition).sqrMagnitude <= _colliderDistanceSq;
-                card.SetWorldColliderEnabled(enableCollider);
+                Bounds bounds = card.GetInstancedCullBounds();
+                bool inView = GeometryUtility.TestPlanesAABB(_frustumPlanes, bounds);
+                if (!inView)
+                {
+                    card.SetWorldColliderEnabled(false);
+                    continue;
+                }
+
+                Vector3 closestPoint = bounds.ClosestPoint(cameraPosition);
+                bool nearEnough = (closestPoint - cameraPosition).sqrMagnitude <= _colliderDistanceSq;
+                card.SetWorldColliderEnabled(nearEnough);
             }
         }
     }
 
     static void DrawBatch(Mesh mesh, Material frontMaterial, Matrix4x4[] matrices, int count)
     {
-        // Ground cards lie face-up; the back submesh faces into the floor and is never visible.
         Graphics.DrawMeshInstanced(
             mesh,
             0,

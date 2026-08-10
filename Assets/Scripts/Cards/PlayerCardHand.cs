@@ -21,18 +21,18 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float fanPivotY = -0.036f;
     [SerializeField] float verticalCurve = 0.018f;
     [SerializeField] float cardPitchDegrees = 0f;
-    [SerializeField] float heldCardScale = 1.48f;
+    [SerializeField] float heldCardScale = 1.036f;
     [Tooltip("Hand cards render this much smaller than heldCardScale (layout uses the reduced size too).")]
     [SerializeField] [Range(0f, 0.5f)] float handScaleReductionPercent = 0.2305f;
     [SerializeField] float cardDepthStep = 0.0025f;
     [SerializeField] float cardVisualOffsetY = 0f;
 
     [Header("Fan width budget")]
-    [SerializeField] float maxWidth = 0.231f;
-    [SerializeField] float extraMaxWidthPerCard = 0.0063f;
-    [SerializeField] float maxWidthClamp = 0.441f;
-    [SerializeField] float minCardSpacing = 0.0126f;
-    [SerializeField] float maxCardSpacing = 0.042f;
+    [SerializeField] float maxWidth = 0.462f;
+    [SerializeField] float extraMaxWidthPerCard = 0.0126f;
+    [SerializeField] float maxWidthClamp = 0.882f;
+    [SerializeField] float minCardSpacing = 0.0252f;
+    [SerializeField] float maxCardSpacing = 0.084f;
 
     [Header("Hand selection")]
     [Tooltip("Screen-up lift for the selected card as a fraction of held card height.")]

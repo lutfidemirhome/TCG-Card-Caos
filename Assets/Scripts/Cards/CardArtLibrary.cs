@@ -7,11 +7,10 @@ using UnityEngine;
 /// </summary>
 public static class CardArtLibrary
 {
-    public const string ModelAssetPath = "Assets/Art/Cards/yzma.fbx";
+    public const string FrontTextureAssetPath = "Assets/Art/Cards/card_texture_ön_test.png";
+    public const string BackTextureAssetPath = "Assets/Art/Cards/kart_arka_template.png";
     public const string FrontMaterialAssetPath = "Assets/Art/Cards/CardFront.mat";
     public const string BackMaterialAssetPath = "Assets/Art/Cards/CardBack.mat";
-    public const string FrontTextureAssetPath = "Assets/Art/Cards/yzma.png";
-    public const string BackTextureAssetPath = "Assets/Art/Cards/lorcana_back.png";
 
     public const string RuntimeMeshResourcePath = "Cards/TradingCardMesh";
     public const string RuntimeInstancedMeshResourcePath = "Cards/InstancedCardMesh";
@@ -26,6 +25,15 @@ public static class CardArtLibrary
     /// <summary>Orientates the textured face toward the camera in the hand fan.</summary>
     public static readonly Quaternion HandVisualRotation = Quaternion.Euler(-90f, 180f, 0f);
 
+    /// <summary>Cancels the horizontal mirror from HandVisualRotation (left-right symmetry).</summary>
+    public static readonly Vector3 HandVisualScale = new Vector3(-1f, 1f, 1f);
+
+    /// <summary>Upright card on shelf slots (+Y height, +Z face).</summary>
+    public static readonly Quaternion ShelfVisualRotation = Quaternion.identity;
+
+    /// <summary>Cancels horizontal mirror for upright shelf cards (left-right text).</summary>
+    public static readonly Vector3 ShelfVisualScale = new Vector3(-1f, 1f, 1f);
+
     public static readonly Quaternion ModelCorrectionRotation = WorldVisualRotation;
 
     static Mesh _cardMesh;
@@ -35,7 +43,6 @@ public static class CardArtLibrary
     static Material _sharedFrontDetailTemplate;
     static Material _sharedBackDetailTemplate;
     static Vector3? _flatSize;
-    static float? _meshCornerRadius;
     static Rect? _frontArtUvRect;
     static readonly Dictionary<int, Material> FrontWorldMaterialsByPalette = new Dictionary<int, Material>();
     static readonly Dictionary<int, Material> FrontDetailMaterialsByPalette = new Dictionary<int, Material>();
@@ -61,22 +68,12 @@ public static class CardArtLibrary
         get
         {
             EnsureLoaded();
-            return _cardMesh != null ? _cardMesh.bounds : new Bounds(Vector3.zero, new Vector3(0.063f, 0.088f, 0.0008f));
+            return _cardMesh != null ? _cardMesh.bounds : new Bounds(Vector3.zero, new Vector3(0.126f, 0.176f, 0.004f));
         }
     }
 
     /// <summary>Corner radius of the card mesh silhouette in mesh-local XY space.</summary>
-    public static float MeshCornerRadius
-    {
-        get
-        {
-            EnsureLoaded();
-            if (_meshCornerRadius == null)
-                _meshCornerRadius = EstimateMeshCornerRadius(_cardMesh, MeshBounds);
-
-            return _meshCornerRadius.Value;
-        }
-    }
+    public static float MeshCornerRadius => CardModelDimensions.CornerRadius;
 
     public static Mesh CardMesh
     {
@@ -165,7 +162,6 @@ public static class CardArtLibrary
         _sharedFrontDetailTemplate = null;
         _sharedBackDetailTemplate = null;
         _flatSize = null;
-        _meshCornerRadius = null;
         _frontArtUvRect = null;
         FrontWorldMaterialsByPalette.Clear();
         FrontDetailMaterialsByPalette.Clear();
@@ -217,14 +213,9 @@ public static class CardArtLibrary
     static Vector3 ComputeFlatSize(Mesh mesh)
     {
         if (mesh == null)
-            return new Vector3(0.063f, 0.0008f, 0.088f);
+            return new Vector3(CardModelDimensions.Width, CardModelDimensions.Thickness, CardModelDimensions.Height);
 
         Vector3 meshSize = mesh.bounds.size;
         return new Vector3(meshSize.x, meshSize.z, meshSize.y);
-    }
-
-    static float EstimateMeshCornerRadius(Mesh mesh, Bounds bounds)
-    {
-        return CardMeshBuilder.EstimateCornerRadius(mesh, bounds);
     }
 }

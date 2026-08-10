@@ -12,6 +12,8 @@ public class InteractionController : MonoBehaviour
     [SerializeField] LayerMask interactMask = ~0;
     [SerializeField] KeyCode interactKey = KeyCode.E;
 
+    static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
+
     Canvas _canvas;
     GameObject _promptRoot;
     Text _promptText;
@@ -43,13 +45,20 @@ public class InteractionController : MonoBehaviour
     void UpdateTarget()
     {
         Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        if (!Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactMask, QueryTriggerInteraction.Ignore))
+        int hitCount = Physics.RaycastNonAlloc(
+            ray,
+            HitBuffer,
+            interactDistance,
+            interactMask,
+            QueryTriggerInteraction.Ignore);
+
+        if (hitCount <= 0)
         {
             ClearTarget();
             return;
         }
 
-        IInteractable interactable = ResolveInteractable(hit);
+        IInteractable interactable = ResolveBestInteractable(HitBuffer, hitCount);
         if (interactable == null)
         {
             ClearTarget();
@@ -57,7 +66,7 @@ public class InteractionController : MonoBehaviour
         }
 
         if (interactable is CardShelf shelf)
-            shelf.SetAimHit(hit);
+            shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf));
 
         string prompt = interactable.GetPromptText();
         if (string.IsNullOrEmpty(prompt))
@@ -82,6 +91,74 @@ public class InteractionController : MonoBehaviour
         {
             _promptText.text = prompt;
         }
+    }
+
+    IInteractable ResolveBestInteractable(RaycastHit[] hits, int hitCount)
+    {
+        PlayerCardHand hand = GetComponentInParent<PlayerCardHand>();
+        if (hand == null)
+            hand = transform.root.GetComponentInChildren<PlayerCardHand>();
+
+        if (hand != null && hand.HasSelectedHeldCard())
+        {
+            for (int i = 0; i < hitCount; i++)
+            {
+                CardShelf shelf = hits[i].collider.GetComponentInParent<CardShelf>();
+                if (shelf != null)
+                    return shelf;
+            }
+        }
+
+        WorldCard bestCard = null;
+        float bestCardDistance = float.MaxValue;
+
+        IInteractable bestOther = null;
+        float bestOtherDistance = float.MaxValue;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider collider = hits[i].collider;
+            if (collider == null)
+                continue;
+
+            WorldCard worldCard = collider.GetComponentInParent<WorldCard>();
+            if (worldCard != null && !worldCard.IsInHand)
+            {
+                if (hits[i].distance < bestCardDistance)
+                {
+                    bestCardDistance = hits[i].distance;
+                    bestCard = worldCard;
+                }
+
+                continue;
+            }
+
+            IInteractable interactable = collider.GetComponentInParent<IInteractable>();
+            if (interactable == null)
+                continue;
+
+            if (hits[i].distance < bestOtherDistance)
+            {
+                bestOtherDistance = hits[i].distance;
+                bestOther = interactable;
+            }
+        }
+
+        if (bestCard != null)
+            return bestCard;
+
+        return bestOther;
+    }
+
+    static RaycastHit FindShelfHit(RaycastHit[] hits, int hitCount, CardShelf shelf)
+    {
+        for (int i = 0; i < hitCount; i++)
+        {
+            if (hits[i].collider != null && hits[i].collider.GetComponentInParent<CardShelf>() == shelf)
+                return hits[i];
+        }
+
+        return hits[0];
     }
 
     IInteractable ResolveInteractable(RaycastHit hit)

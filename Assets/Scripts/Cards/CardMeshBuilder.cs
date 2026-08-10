@@ -2,12 +2,176 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Builds a lightweight trading-card mesh (~100 triangles) that matches the yzma silhouette.
-/// UVs are copied from the source mesh surface so art alignment stays identical.
+/// Builds lightweight trading-card meshes (box + instanced quad) with full-face UVs for 1024×1434 art.
 /// </summary>
 public static class CardMeshBuilder
 {
     public const int DefaultCornerSegments = 8;
+
+    /// <summary>
+    /// Thin box card: front/back submeshes, full 0–1 UVs on faces (12 tris).
+    /// Local space: width X, height Y, thickness Z; front face at +Z.
+    /// </summary>
+    public static Mesh CreateBoxCardMesh(float width, float height, float thickness)
+    {
+        float hw = width * 0.5f;
+        float hh = height * 0.5f;
+        float ht = thickness * 0.5f;
+
+        var vertices = new System.Collections.Generic.List<Vector3>(32);
+        var uvs = new System.Collections.Generic.List<Vector2>(32);
+        var frontTriangles = new System.Collections.Generic.List<int>(6);
+        var backTriangles = new System.Collections.Generic.List<int>(30);
+
+        AddFaceQuad(
+            vertices,
+            uvs,
+            frontTriangles,
+            new Vector3(-hw, -hh, ht),
+            new Vector3(hw, -hh, ht),
+            new Vector3(hw, hh, ht),
+            new Vector3(-hw, hh, ht),
+            flipU: false);
+
+        AddFaceQuad(
+            vertices,
+            uvs,
+            backTriangles,
+            new Vector3(hw, -hh, -ht),
+            new Vector3(-hw, -hh, -ht),
+            new Vector3(-hw, hh, -ht),
+            new Vector3(hw, hh, -ht),
+            flipU: true);
+
+        AddSideQuad(vertices, uvs, backTriangles, new Vector3(-hw, -hh, ht), new Vector3(-hw, -hh, -ht), new Vector3(-hw, hh, -ht), new Vector3(-hw, hh, ht));
+        AddSideQuad(vertices, uvs, backTriangles, new Vector3(hw, -hh, -ht), new Vector3(hw, -hh, ht), new Vector3(hw, hh, ht), new Vector3(hw, hh, -ht));
+        AddSideQuad(vertices, uvs, backTriangles, new Vector3(-hw, -hh, -ht), new Vector3(hw, -hh, -ht), new Vector3(hw, -hh, ht), new Vector3(-hw, -hh, ht));
+        AddSideQuad(vertices, uvs, backTriangles, new Vector3(-hw, hh, ht), new Vector3(hw, hh, ht), new Vector3(hw, hh, -ht), new Vector3(-hw, hh, -ht));
+
+        var mesh = new Mesh { name = "TradingCardMesh" };
+        mesh.SetVertices(vertices);
+        mesh.SetUVs(0, uvs);
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(frontTriangles, 0);
+        mesh.SetTriangles(backTriangles, 1);
+        mesh.RecalculateNormals();
+        mesh.RecalculateTangents();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    /// <summary>Front-face quad for GPU-instanced ground cards (2 tris).</summary>
+    public static Mesh CreateInstancedGroundCardQuad(float width, float height, float thickness)
+    {
+        float hw = width * 0.5f;
+        float hh = height * 0.5f;
+        float z = thickness * 0.5f;
+
+        var vertices = new[]
+        {
+            new Vector3(-hw, -hh, z),
+            new Vector3(hw, -hh, z),
+            new Vector3(hw, hh, z),
+            new Vector3(-hw, hh, z),
+        };
+        var uvs = new[]
+        {
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(1f, 1f),
+            new Vector2(0f, 1f),
+        };
+
+        var mesh = new Mesh { name = "InstancedGroundCardMesh" };
+        mesh.vertices = vertices;
+        mesh.uv = uvs;
+        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        mesh.subMeshCount = 1;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    public static Mesh CreatePrototypeCardMesh()
+    {
+        return CreateBoxCardMesh(
+            CardModelDimensions.Width,
+            CardModelDimensions.Height,
+            CardModelDimensions.Thickness);
+    }
+
+    public static Mesh CreatePrototypeInstancedQuad()
+    {
+        return CreateInstancedGroundCardQuad(
+            CardModelDimensions.Width,
+            CardModelDimensions.Height,
+            CardModelDimensions.Thickness);
+    }
+
+    static void AddFaceQuad(
+        System.Collections.Generic.List<Vector3> vertices,
+        System.Collections.Generic.List<Vector2> uvs,
+        System.Collections.Generic.List<int> triangles,
+        Vector3 v0,
+        Vector3 v1,
+        Vector3 v2,
+        Vector3 v3,
+        bool flipU)
+    {
+        int start = vertices.Count;
+        vertices.Add(v0);
+        vertices.Add(v1);
+        vertices.Add(v2);
+        vertices.Add(v3);
+
+        if (flipU)
+        {
+            uvs.Add(new Vector2(1f, 0f));
+            uvs.Add(new Vector2(0f, 0f));
+            uvs.Add(new Vector2(0f, 1f));
+            uvs.Add(new Vector2(1f, 1f));
+        }
+        else
+        {
+            uvs.Add(new Vector2(0f, 0f));
+            uvs.Add(new Vector2(1f, 0f));
+            uvs.Add(new Vector2(1f, 1f));
+            uvs.Add(new Vector2(0f, 1f));
+        }
+
+        triangles.Add(start);
+        triangles.Add(start + 1);
+        triangles.Add(start + 2);
+        triangles.Add(start);
+        triangles.Add(start + 2);
+        triangles.Add(start + 3);
+    }
+
+    static void AddSideQuad(
+        System.Collections.Generic.List<Vector3> vertices,
+        System.Collections.Generic.List<Vector2> uvs,
+        System.Collections.Generic.List<int> triangles,
+        Vector3 v0,
+        Vector3 v1,
+        Vector3 v2,
+        Vector3 v3)
+    {
+        int start = vertices.Count;
+        vertices.Add(v0);
+        vertices.Add(v1);
+        vertices.Add(v2);
+        vertices.Add(v3);
+        uvs.Add(new Vector2(0f, 0f));
+        uvs.Add(new Vector2(1f, 0f));
+        uvs.Add(new Vector2(1f, 1f));
+        uvs.Add(new Vector2(0f, 1f));
+        triangles.Add(start);
+        triangles.Add(start + 1);
+        triangles.Add(start + 2);
+        triangles.Add(start);
+        triangles.Add(start + 2);
+        triangles.Add(start + 3);
+    }
 
     public static Mesh CreateTradingCardMesh(
         float halfWidth,
@@ -105,6 +269,42 @@ public static class CardMeshBuilder
         return mesh;
     }
 
+    /// <summary>
+    /// Builds a lightweight trading-card mesh from the yzma reference (silhouette + UVs preserved).
+    /// </summary>
+    public static Mesh CreateTradingCardMeshFromReference(Mesh referenceMesh, int cornerSegments = DefaultCornerSegments)
+    {
+        if (referenceMesh == null)
+            return null;
+
+        Bounds bounds = referenceMesh.bounds;
+        float halfWidth = bounds.extents.x;
+        float halfHeight = bounds.extents.y;
+        float halfThickness = bounds.extents.z;
+        float cornerRadius = EstimateCornerRadius(referenceMesh, bounds);
+
+        return CreateTradingCardMesh(
+            halfWidth,
+            halfHeight,
+            halfThickness,
+            cornerRadius,
+            cornerSegments,
+            referenceMesh,
+            includeEdgeGeometry: true);
+    }
+
+    public static int CountTriangles(Mesh mesh)
+    {
+        if (mesh == null)
+            return 0;
+
+        int count = 0;
+        for (int submesh = 0; submesh < mesh.subMeshCount; submesh++)
+            count += mesh.GetTriangles(submesh).Length / 3;
+
+        return count;
+    }
+
     static Vector2 SampleUv(
         FaceUvProjector uvProjector,
         float x,
@@ -122,10 +322,14 @@ public static class CardMeshBuilder
     }
 
     /// <summary>
-    /// UV rect covering the front-face art (bevel/black padding excluded). For UI RawImage.
+    /// UV rect for inspect UI — full texture on box cards.
     /// </summary>
     public static bool TryGetFrontFaceUvRect(Mesh referenceMesh, out Rect uvRect)
     {
+        uvRect = new Rect(0f, 0f, 1f, 1f);
+        if (referenceMesh != null && referenceMesh.vertexCount <= 32)
+            return true;
+
         uvRect = new Rect(0f, 0f, 1f, 1f);
         if (referenceMesh == null)
             return false;

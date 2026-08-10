@@ -39,12 +39,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     float _scaleTransitionElapsed;
     float _scaleTransitionDuration;
     bool _scaleTransitionActive;
+    int _groundStackLayer;
+    bool _worldColliderRequested;
 
     public bool IsHeld => _handState == HandState.Held;
     public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
     public bool IsInHand => _handState != HandState.World;
     public int CardDefinitionId => cardDefinitionId;
     public int PaletteIndex => paletteIndex;
+    public int GroundStackLayer => _groundStackLayer;
 
     public bool CanUseInstancedRendering =>
         Application.isPlaying
@@ -52,6 +55,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         && !_scaleTransitionActive
         && _rigidbody == null
         && _cardVisual == null;
+
+    public void SetGroundStackLayer(int layer)
+    {
+        _groundStackLayer = Mathf.Max(0, layer);
+    }
 
     public void Initialize(int definitionId, int palette)
     {
@@ -75,12 +83,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
-        CardInstancedRenderManager.Instance?.Unregister(this);
+        CardInstancedRenderManager.ReleaseFromGround(this);
     }
 
     void OnDestroy()
     {
-        CardInstancedRenderManager.Instance?.Unregister(this);
+        CardInstancedRenderManager.ReleaseFromGround(this);
     }
 
     void BeginScaleTransition(float fromScale, float toScale, float duration)
@@ -120,7 +128,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         Vector3 scale = transform.lossyScale;
         Quaternion visualRotation = transform.rotation * CardArtLibrary.WorldVisualRotation;
-        return Matrix4x4.TRS(transform.position, visualRotation, scale);
+        Vector3 position = transform.position;
+        position.y = CardGroundStack.GetStackedWorldY(_groundStackLayer);
+        return Matrix4x4.TRS(position, visualRotation, scale);
     }
 
     public Bounds GetInstancedCullBounds()
@@ -130,15 +140,23 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             CardDimensions.Width * scale,
             CardDimensions.Thickness * scale * 4f,
             CardDimensions.Height * scale);
-        return new Bounds(transform.position, size);
+        Vector3 center = transform.position;
+        center.y = CardGroundStack.GetStackedWorldY(_groundStackLayer);
+        return new Bounds(center, size);
     }
 
     public void SetWorldColliderEnabled(bool enabled)
     {
-        if (_collider == null || !CanUseInstancedRendering)
+        _worldColliderRequested = enabled;
+        ApplyWorldColliderState();
+    }
+
+    void ApplyWorldColliderState()
+    {
+        if (_collider == null || IsInHand)
             return;
 
-        _collider.enabled = enabled;
+        _collider.enabled = _worldColliderRequested;
     }
 
     public void SetInteractionHighlight(bool highlighted)
@@ -196,6 +214,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (shelfSlot != null)
             shelfSlot.ClearIfMatches(this);
 
+        CardInstancedRenderManager.ReleaseFromGround(this);
+
         SetInteractionHighlight(false);
         SetHandSelected(false);
         RemovePhysics();
@@ -205,7 +225,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         transform.SetParent(null, true);
         EnsureCardVisual();
-        SetVisualRotation(CardArtLibrary.HandVisualRotation);
+        ApplyHandVisualOrientation();
         RefreshRenderMode();
     }
 
@@ -234,7 +254,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _handState = HandState.Held;
         transform.SetParent(_handAnchor, false);
         EnsureCardVisual();
-        SetVisualRotation(CardArtLibrary.HandVisualRotation);
+        ApplyHandVisualOrientation();
         RefreshRenderMode();
 
         System.Action callback = _onPickupFlightComplete;
@@ -247,8 +267,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _handState = HandState.World;
         SetHandSelected(false);
         EnsureCardVisual();
-        // Keep hand art orientation in flight — switching to WorldVisualRotation flips the texture.
-        SetVisualRotation(CardArtLibrary.HandVisualRotation);
+        // Bake hand pose into root so the flat collider matches the mesh during flight.
+        ConvertHandVisualToWorldRoot();
         transform.SetParent(null, true);
 
         ApplyFlatWorldCollider();
@@ -268,9 +288,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             _rigidbody.linearVelocity = velocity;
             _rigidbody.angularVelocity = new Vector3(
-                Random.Range(-1.5f, 1.5f),
-                Random.Range(-2f, 2f),
-                Random.Range(-1.5f, 1.5f));
+                Random.Range(-0.6f, 0.6f),
+                Random.Range(-1f, 1f),
+                Random.Range(-0.6f, 0.6f));
         }
 
         StartCoroutine(SettleDroppedCardRoutine());
@@ -296,7 +316,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             bool fallingOrResting = _rigidbody.linearVelocity.y <= 0.35f;
 
             if (scaleDone && nearGround && fallingOrResting)
+            {
                 groundedTime += Time.deltaTime;
+                _rigidbody.angularVelocity *= 0.92f;
+            }
             else if (!nearGround)
                 groundedTime = 0f;
 
@@ -331,7 +354,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             // Instanced ground quads only draw the front — keep the full mesh so CardBack stays visible.
             EnsureCardVisual();
-            SetVisualRotation(CardArtLibrary.WorldVisualRotation);
+            ApplyWorldVisualOrientation();
             CardInstancedRenderManager.Instance?.Unregister(this);
         }
     }
@@ -350,39 +373,27 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         EnsureCardVisual();
         ApplyFlatWorldCollider();
 
-        Quaternion visualLocal = _cardVisual != null
-            ? _cardVisual.localRotation
-            : CardArtLibrary.HandVisualRotation;
+        Vector3 frontNormal = _cardVisual != null ? _cardVisual.forward : Vector3.up;
+        if (frontNormal.sqrMagnitude < 0.0001f)
+            frontNormal = Vector3.up;
 
-        Vector3 faceForward = transform.rotation * visualLocal * Vector3.forward;
-        faceForward.y = 0f;
-        if (faceForward.sqrMagnitude < 0.0001f)
-        {
-            Vector3 heightAxis = transform.rotation * visualLocal * Vector3.up;
-            heightAxis.y = 0f;
-            if (heightAxis.sqrMagnitude > 0.0001f)
-                faceForward = Vector3.Cross(Vector3.up, heightAxis.normalized);
-            else
-                faceForward = Vector3.forward;
-        }
+        bool frontFaceUp = frontNormal.y >= 0f;
 
-        float yaw = Mathf.Atan2(faceForward.x, faceForward.z) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-        SetVisualRotation(CardArtLibrary.WorldVisualRotation);
+        Vector3 widthAxis = _cardVisual != null ? _cardVisual.right : Vector3.right;
+        widthAxis.y = 0f;
+        if (widthAxis.sqrMagnitude < 0.0001f)
+        {
+            Vector3 fallback = Vector3.Cross(Vector3.up, frontNormal);
+            fallback.y = 0f;
+            widthAxis = fallback.sqrMagnitude > 0.0001f ? fallback : Vector3.forward;
+        }
+        widthAxis.Normalize();
 
-        MeshRenderer meshRenderer = _cardVisual != null
-            ? _cardVisual.GetComponent<MeshRenderer>()
-            : GetComponentInChildren<MeshRenderer>();
-        if (meshRenderer != null)
-        {
-            float lift = CardFactory.GroundSurfaceY() + 0.002f - meshRenderer.bounds.min.y;
-            transform.position += Vector3.up * lift;
-        }
-        else
-        {
-            Vector3 pos = transform.position;
-            transform.position = new Vector3(pos.x, CardFactory.GroundHeightOffset(), pos.z);
-        }
+        float yaw = Mathf.Atan2(widthAxis.x, widthAxis.z) * Mathf.Rad2Deg;
+        float pitch = frontFaceUp ? 0f : 180f;
+        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        ApplyWorldVisualOrientation();
+        CardGroundStack.ApplyStackHeight(this);
     }
 
     /// <summary>
@@ -390,20 +401,20 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// </summary>
     void ConvertHandVisualToWorldRoot()
     {
-        Quaternion handLocal = CardArtLibrary.HandVisualRotation;
-        Quaternion worldLocal = CardArtLibrary.WorldVisualRotation;
-        transform.rotation = transform.rotation * handLocal * Quaternion.Inverse(worldLocal);
-        if (_cardVisual != null)
-            SetVisualRotation(worldLocal);
+        EnsureCardVisual();
+        if (_cardVisual == null)
+            return;
+
+        transform.rotation = _cardVisual.rotation * Quaternion.Inverse(CardArtLibrary.WorldVisualRotation);
+        ApplyWorldVisualOrientation();
     }
 
     bool IsCardFaceUp()
     {
-        Quaternion visualLocal = _cardVisual != null
-            ? _cardVisual.localRotation
-            : CardArtLibrary.WorldVisualRotation;
-        Vector3 frontWorld = transform.rotation * visualLocal * Vector3.forward;
-        return frontWorld.y >= 0f;
+        if (_cardVisual == null)
+            return true;
+
+        return _cardVisual.forward.y >= 0f;
     }
 
     void RemovePhysics()
@@ -448,8 +459,35 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.localPosition = pose.LocalPosition;
         transform.localRotation = pose.LocalRotation;
         transform.localScale = Vector3.one * pose.Scale;
-        SetVisualRotation(CardArtLibrary.HandVisualRotation);
+        ApplyHandVisualOrientation();
         SetHandSelected(isSelected);
+    }
+
+    void ApplyHandVisualOrientation()
+    {
+        if (_cardVisual == null)
+            return;
+
+        _cardVisual.localRotation = CardArtLibrary.HandVisualRotation;
+        _cardVisual.localScale = CardArtLibrary.HandVisualScale;
+    }
+
+    void ApplyWorldVisualOrientation()
+    {
+        if (_cardVisual == null)
+            return;
+
+        _cardVisual.localRotation = CardArtLibrary.WorldVisualRotation;
+        _cardVisual.localScale = Vector3.one;
+    }
+
+    void ApplyShelfVisualOrientation()
+    {
+        if (_cardVisual == null)
+            return;
+
+        _cardVisual.localRotation = CardArtLibrary.ShelfVisualRotation;
+        _cardVisual.localScale = CardArtLibrary.ShelfVisualScale;
     }
 
     void SetVisualRotation(Quaternion localRotation)
@@ -576,13 +614,20 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     void EnsureInteractionOutlineRenderer()
     {
         if (_outlineObject != null)
+        {
+            if (_cardVisual == null)
+                _outlineObject.transform.localPosition = Vector3.up * GetOutlineLift();
             return;
+        }
 
         _outlineObject = new GameObject("InteractionOutline");
         Transform outlineParent = _cardVisual != null ? _cardVisual : transform;
         _outlineObject.transform.SetParent(outlineParent, false);
         if (_cardVisual == null)
+        {
             _outlineObject.transform.localRotation = CardArtLibrary.WorldVisualRotation;
+            _outlineObject.transform.localPosition = Vector3.up * GetOutlineLift();
+        }
 
         var meshFilter = _outlineObject.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
@@ -608,6 +653,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshRenderer.sharedMaterial = CardVisualResources.HandSelectionOutlineMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
+    }
+
+    float GetOutlineLift()
+    {
+        float halfThickness = CardDimensions.Thickness * CardDimensions.WorldCardScale * 0.5f;
+        return halfThickness + _groundStackLayer * 0.00025f;
     }
 
     void ReleaseInteractionOutline()
@@ -689,9 +740,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             faceDirection = parent != null ? -parent.forward : Vector3.forward;
         faceDirection.Normalize();
 
-        // Upright imported mesh (no WorldVisualRotation flatten) facing the viewer.
+        // Upright mesh on shelf: +Y height, +Z face (slot forward).
         EnsureCardVisual();
-        SetVisualRotation(Quaternion.identity);
+        ApplyShelfVisualOrientation();
 
         if (_collider != null)
         {
@@ -742,7 +793,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _scaleTransitionActive = false;
 
         EnsureCardVisual();
-        SetVisualRotation(Quaternion.identity);
+        ApplyShelfVisualOrientation();
 
         if (_collider != null)
         {

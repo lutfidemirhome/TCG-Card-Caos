@@ -55,6 +55,7 @@ public static class CardScatterUtility
 
             p.y = groundY;
             card.transform.position = p;
+            CardGroundStack.ApplyStackHeight(card);
             snapped++;
         }
 

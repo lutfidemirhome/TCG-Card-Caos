@@ -241,13 +241,13 @@ public class CardShelfSlot : MonoBehaviour
     static float PreviewCardWidth()
     {
         float width = CardDimensions.Width;
-        return width > 0.001f ? width : 0.063f;
+        return width > 0.001f ? width : 0.126f;
     }
 
     static float PreviewCardHeight()
     {
         float height = CardDimensions.Height;
-        return height > 0.001f ? height : 0.088f;
+        return height > 0.001f ? height : 0.176f;
     }
 
     /// <summary>
