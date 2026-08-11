@@ -60,17 +60,6 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
         bool aimOnOccupied = IsAimOnOccupiedSlot(aim);
-        bool canTake = !hand.IsFull && HasCardsToTake()
-            && (!hand.HasSelectedHeldCard() || aimOnOccupied);
-
-        if (canTake)
-        {
-            HidePlacementOutline();
-            if (FindClosestOccupiedSlot(aim) == null)
-                return string.Empty;
-
-            return "Press [E] To Take Card";
-        }
 
         if (hand.HasSelectedHeldCard() && !aimOnOccupied)
         {
@@ -96,16 +85,8 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
         bool aimOnOccupied = IsAimOnOccupiedSlot(aim);
-        bool canTake = !hand.IsFull && HasCardsToTake()
-            && (!hand.HasSelectedHeldCard() || aimOnOccupied);
 
-        if (canTake)
-        {
-            TryTakeSingleCard(hand, aim);
-            return;
-        }
-
-        if (hand.HasSelectedHeldCard())
+        if (hand.HasSelectedHeldCard() && !aimOnOccupied)
         {
             if (!hand.TryTakeSelectedHeldCard(out WorldCard card))
                 return;
@@ -130,37 +111,6 @@ public class CardShelf : MonoBehaviour, IInteractable
         RefreshOccupancy();
         CardShelfSlot closest = FindClosestSlot(aim);
         return closest != null && !closest.IsEmpty;
-    }
-
-    public bool HasCardsToTake()
-    {
-        RefreshOccupancy();
-        for (int i = 0; i < _slots.Count; i++)
-        {
-            CardShelfSlot slot = _slots[i];
-            if (slot != null && !slot.IsEmpty)
-                return true;
-        }
-
-        return false;
-    }
-
-    public bool TryTakeSingleCard(PlayerCardHand hand, Vector3? referencePoint = null)
-    {
-        if (hand == null || hand.IsFull)
-            return false;
-
-        RefreshOccupancy();
-        Vector3 aim = referencePoint ?? (_hasAimPoint ? _aimWorldPoint : transform.position);
-        CardShelfSlot slot = FindClosestOccupiedSlot(aim);
-        if (slot == null || slot.IsEmpty)
-            return false;
-
-        WorldCard card = slot.OccupiedCard;
-        if (card == null || card.IsInHand)
-            return false;
-
-        return hand.TryPickup(card);
     }
 
     public void PlaceCardInSlot(WorldCard card, CardShelfSlot slot)
@@ -251,28 +201,6 @@ public class CardShelf : MonoBehaviour, IInteractable
         {
             CardShelfSlot slot = _slots[i];
             if (slot == null)
-                continue;
-
-            float dist = (slot.transform.position - aim).sqrMagnitude;
-            if (dist < closestDist)
-            {
-                closestDist = dist;
-                closest = slot;
-            }
-        }
-
-        return closest;
-    }
-
-    CardShelfSlot FindClosestOccupiedSlot(Vector3 aim)
-    {
-        CardShelfSlot closest = null;
-        float closestDist = float.MaxValue;
-
-        for (int i = 0; i < _slots.Count; i++)
-        {
-            CardShelfSlot slot = _slots[i];
-            if (slot == null || slot.IsEmpty)
                 continue;
 
             float dist = (slot.transform.position - aim).sqrMagnitude;

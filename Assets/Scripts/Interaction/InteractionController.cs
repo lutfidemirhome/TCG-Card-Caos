@@ -158,13 +158,6 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        if (bestCard != null && hand != null && !hand.IsFull)
-        {
-            CardShelf shelf = bestCard.GetComponentInParent<CardShelf>();
-            if (shelf != null && shelf.HasCardsToTake())
-                return bestCard;
-        }
-
         if (bestCard != null)
             return bestCard;
 
@@ -173,9 +166,6 @@ public class InteractionController : MonoBehaviour
             Vector3 aim = FindShelfHit(hits, hitCount, bestShelf).point;
 
             if (hand.HasSelectedHeldCard() && !bestShelf.IsAimOnOccupiedSlot(aim))
-                return bestShelf;
-
-            if (!hand.IsFull && bestShelf.HasCardsToTake())
                 return bestShelf;
         }
 

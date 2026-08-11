@@ -319,6 +319,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             {
                 groundedTime += Time.deltaTime;
                 _rigidbody.angularVelocity *= 0.92f;
+                ResolveWorldPenetration(_rigidbody);
             }
             else if (!nearGround)
                 groundedTime = 0f;
@@ -365,6 +366,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
             boxCollider.center = Vector3.zero;
+            CardCollisionUtility.ApplyToCollider(boxCollider);
         }
     }
 
@@ -394,6 +396,16 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
         ApplyWorldVisualOrientation();
         CardGroundStack.ApplyStackHeight(this);
+        ResolveWorldPenetration();
+        CardGroundStack.ApplyStackHeight(this);
+    }
+
+    void ResolveWorldPenetration(Rigidbody body = null)
+    {
+        if (_collider is not BoxCollider boxCollider)
+            return;
+
+        CardCollisionUtility.ResolveStaticPenetration(transform, boxCollider, this, body);
     }
 
     /// <summary>
@@ -446,7 +458,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _rigidbody.linearDamping = 0.4f;
         _rigidbody.angularDamping = 0.8f;
         _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
     }
 
     public void ApplyFanPose(int fanIndex, int fanCount, in HandFanLayoutSettings layout, bool isSelected)

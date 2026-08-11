@@ -26,6 +26,7 @@ public static class CardFactory
         var collider = root.AddComponent<BoxCollider>();
         collider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
         collider.center = Vector3.zero;
+        CardCollisionUtility.ApplyToCollider(collider);
 
         var card = root.AddComponent<WorldCard>();
         card.Initialize(cardDefinitionId, paletteIndex);
