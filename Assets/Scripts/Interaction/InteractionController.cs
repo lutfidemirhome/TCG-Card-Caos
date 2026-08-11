@@ -66,7 +66,13 @@ public class InteractionController : MonoBehaviour
         }
 
         if (interactable is CardShelf shelf)
+        {
             shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf));
+        }
+        else
+        {
+            ClearShelfAimForNonShelfTarget(interactable);
+        }
 
         string prompt = interactable.GetPromptText();
         if (string.IsNullOrEmpty(prompt))
@@ -79,6 +85,9 @@ public class InteractionController : MonoBehaviour
 
         if (!ReferenceEquals(interactable, _currentTarget))
         {
+            if (_currentTarget is CardShelf previousShelf)
+                previousShelf.ClearAim();
+
             ClearHighlight();
             _currentTarget = interactable;
             _currentHighlight = GetHighlight(interactable);
@@ -99,18 +108,11 @@ public class InteractionController : MonoBehaviour
         if (hand == null)
             hand = transform.root.GetComponentInChildren<PlayerCardHand>();
 
-        if (hand != null && hand.HasSelectedHeldCard())
-        {
-            for (int i = 0; i < hitCount; i++)
-            {
-                CardShelf shelf = hits[i].collider.GetComponentInParent<CardShelf>();
-                if (shelf != null)
-                    return shelf;
-            }
-        }
-
         WorldCard bestCard = null;
         float bestCardDistance = float.MaxValue;
+
+        CardShelf bestShelf = null;
+        float bestShelfDistance = float.MaxValue;
 
         IInteractable bestOther = null;
         float bestOtherDistance = float.MaxValue;
@@ -133,6 +135,18 @@ public class InteractionController : MonoBehaviour
                 continue;
             }
 
+            CardShelf shelf = collider.GetComponentInParent<CardShelf>();
+            if (shelf != null)
+            {
+                if (hits[i].distance < bestShelfDistance)
+                {
+                    bestShelfDistance = hits[i].distance;
+                    bestShelf = shelf;
+                }
+
+                continue;
+            }
+
             IInteractable interactable = collider.GetComponentInParent<IInteractable>();
             if (interactable == null)
                 continue;
@@ -144,10 +158,34 @@ public class InteractionController : MonoBehaviour
             }
         }
 
+        if (bestCard != null && hand != null && !hand.IsFull)
+        {
+            CardShelf shelf = bestCard.GetComponentInParent<CardShelf>();
+            if (shelf != null && shelf.HasCardsToTake())
+                return bestCard;
+        }
+
         if (bestCard != null)
             return bestCard;
 
+        if (bestShelf != null && hand != null)
+        {
+            Vector3 aim = FindShelfHit(hits, hitCount, bestShelf).point;
+
+            if (hand.HasSelectedHeldCard() && !bestShelf.IsAimOnOccupiedSlot(aim))
+                return bestShelf;
+
+            if (!hand.IsFull && bestShelf.HasCardsToTake())
+                return bestShelf;
+        }
+
         return bestOther;
+    }
+
+    void ClearShelfAimForNonShelfTarget(IInteractable interactable)
+    {
+        if (interactable is WorldCard worldCard)
+            worldCard.GetComponentInParent<CardShelf>()?.ClearAim();
     }
 
     static RaycastHit FindShelfHit(RaycastHit[] hits, int hitCount, CardShelf shelf)

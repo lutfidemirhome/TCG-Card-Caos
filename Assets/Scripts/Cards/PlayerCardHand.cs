@@ -57,6 +57,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public int Count => _cards.Count;
     public bool IsFull => _cards.Count >= CardDimensions.MaxHandSize;
+    public int AvailableSlots => CardDimensions.MaxHandSize - _cards.Count;
     public int SelectedIndex => _selectedIndex;
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
 

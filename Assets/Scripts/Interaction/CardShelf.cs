@@ -55,41 +55,112 @@ public class CardShelf : MonoBehaviour, IInteractable
     public string GetPromptText()
     {
         PlayerCardHand hand = FindHand();
-        if (hand == null || !hand.HasSelectedHeldCard())
-        {
-            HidePlacementOutline();
+        if (hand == null)
             return string.Empty;
-        }
 
-        RefreshOccupancy();
-        if (FindTargetSlot() == null)
+        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
+        bool aimOnOccupied = IsAimOnOccupiedSlot(aim);
+        bool canTake = !hand.IsFull && HasCardsToTake()
+            && (!hand.HasSelectedHeldCard() || aimOnOccupied);
+
+        if (canTake)
         {
             HidePlacementOutline();
-            return HasAnySlots() ? "Shelf Full" : "No Shelf Slots";
+            if (FindClosestOccupiedSlot(aim) == null)
+                return string.Empty;
+
+            return "Press [E] To Take Card";
         }
 
-        return "Press [E] To Place Card";
+        if (hand.HasSelectedHeldCard() && !aimOnOccupied)
+        {
+            RefreshOccupancy();
+            if (FindTargetSlot() == null)
+            {
+                HidePlacementOutline();
+                return HasAnySlots() ? "Shelf Full" : "No Shelf Slots";
+            }
+
+            return "Press [E] To Place Card";
+        }
+
+        HidePlacementOutline();
+        return string.Empty;
     }
 
     public void Interact(GameObject interactor)
     {
         PlayerCardHand hand = ResolveHand(interactor);
-        if (hand == null || !hand.TryTakeSelectedHeldCard(out WorldCard card))
+        if (hand == null)
             return;
 
-        RefreshOccupancy();
-        CardShelfSlot slot = FindTargetSlot();
-        if (slot == null)
+        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
+        bool aimOnOccupied = IsAimOnOccupiedSlot(aim);
+        bool canTake = !hand.IsFull && HasCardsToTake()
+            && (!hand.HasSelectedHeldCard() || aimOnOccupied);
+
+        if (canTake)
         {
-            // Put the card back into the world near aim so it is not lost.
-            Vector3 fallback = _hasAimPoint ? _aimWorldPoint : transform.position;
-            card.PlaceUprightOnShelf(placementRoot, fallback, GetFaceDirection(fallback));
-            ClearAim();
+            TryTakeSingleCard(hand, aim);
             return;
         }
 
-        PlaceCardInSlot(card, slot);
-        ClearAim();
+        if (hand.HasSelectedHeldCard())
+        {
+            if (!hand.TryTakeSelectedHeldCard(out WorldCard card))
+                return;
+
+            RefreshOccupancy();
+            CardShelfSlot slot = FindTargetSlot();
+            if (slot == null)
+            {
+                Vector3 fallback = _hasAimPoint ? _aimWorldPoint : transform.position;
+                card.PlaceUprightOnShelf(placementRoot, fallback, GetFaceDirection(fallback));
+                ClearAim();
+                return;
+            }
+
+            PlaceCardInSlot(card, slot);
+            ClearAim();
+        }
+    }
+
+    public bool IsAimOnOccupiedSlot(Vector3 aim)
+    {
+        RefreshOccupancy();
+        CardShelfSlot closest = FindClosestSlot(aim);
+        return closest != null && !closest.IsEmpty;
+    }
+
+    public bool HasCardsToTake()
+    {
+        RefreshOccupancy();
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot != null && !slot.IsEmpty)
+                return true;
+        }
+
+        return false;
+    }
+
+    public bool TryTakeSingleCard(PlayerCardHand hand, Vector3? referencePoint = null)
+    {
+        if (hand == null || hand.IsFull)
+            return false;
+
+        RefreshOccupancy();
+        Vector3 aim = referencePoint ?? (_hasAimPoint ? _aimWorldPoint : transform.position);
+        CardShelfSlot slot = FindClosestOccupiedSlot(aim);
+        if (slot == null || slot.IsEmpty)
+            return false;
+
+        WorldCard card = slot.OccupiedCard;
+        if (card == null || card.IsInHand)
+            return false;
+
+        return hand.TryPickup(card);
     }
 
     public void PlaceCardInSlot(WorldCard card, CardShelfSlot slot)
@@ -105,6 +176,12 @@ public class CardShelf : MonoBehaviour, IInteractable
     {
         PlayerCardHand hand = FindHand();
         if (hand == null || !hand.HasSelectedHeldCard() || !_hasAimPoint)
+        {
+            HidePlacementOutline();
+            return;
+        }
+
+        if (IsAimOnOccupiedSlot(_aimWorldPoint))
         {
             HidePlacementOutline();
             return;
@@ -163,6 +240,50 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (bestOnLevel != null)
             return bestOnLevel;
         return bestAny;
+    }
+
+    CardShelfSlot FindClosestSlot(Vector3 aim)
+    {
+        CardShelfSlot closest = null;
+        float closestDist = float.MaxValue;
+
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null)
+                continue;
+
+            float dist = (slot.transform.position - aim).sqrMagnitude;
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                closest = slot;
+            }
+        }
+
+        return closest;
+    }
+
+    CardShelfSlot FindClosestOccupiedSlot(Vector3 aim)
+    {
+        CardShelfSlot closest = null;
+        float closestDist = float.MaxValue;
+
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            float dist = (slot.transform.position - aim).sqrMagnitude;
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                closest = slot;
+            }
+        }
+
+        return closest;
     }
 
     void RefreshOccupancy()
