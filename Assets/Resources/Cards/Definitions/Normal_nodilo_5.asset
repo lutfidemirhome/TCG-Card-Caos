@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d0dd49612e9649128599303e4c70cba, type: 3}
+  m_Name: Normal_nodilo_5
+  m_EditorClassIdentifier: 
+  definitionId: Normal_nodilo_5
+  displayName: Nodilo 5
+  shelfCategoryId: normal_uncommon
+  shelfSlotNumber: 5
+  frontTexture: {fileID: 2800000, guid: 7e219162f7c34e128ba02acf31891eb7, type: 3}
+  categorySymbol: {fileID: 0}

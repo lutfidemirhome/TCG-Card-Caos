@@ -4,19 +4,33 @@ using UnityEngine;
 public static class CardScatterUtility
 {
     public const int DefaultScatterCount = 100;
+    public const int UncommonScatterCount = 50;
+    public const int FullScatterCount = DefaultScatterCount + UncommonScatterCount;
     public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "Card_";
 
-    public static void SpawnScatteredCards(int count = DefaultScatterCount)
+    public static void SpawnScatteredCards(int count = FullScatterCount)
+    {
+        SpawnScatteredCards(count, shelfCategoryId: null);
+    }
+
+    public static void SpawnAllTestCards()
+    {
+        ClearTestCards();
+        SpawnScatteredCards(FullScatterCount, shelfCategoryId: null);
+    }
+
+    public static void SpawnScatteredCards(int count, string shelfCategoryId)
     {
         CardCatalog.Reload();
-        List<CardDefinition> definitions = BuildScatterDefinitions();
+        List<CardDefinition> definitions = BuildScatterDefinitions(shelfCategoryId);
         if (definitions.Count == 0)
         {
             Debug.LogError(
-                "CardScatterUtility: No CardDefinition assets found. "
-                + "Run Tools/generate_card_definitions.py or TCG Card Caos → Import Normal Common Cards From Art.");
+                "CardScatterUtility: No CardDefinition assets found"
+                + (string.IsNullOrWhiteSpace(shelfCategoryId) ? "." : " for category '" + shelfCategoryId + "'.")
+                + " Run TCG Card Caos → Import Normal Common/Uncommon Cards From Art.");
             return;
         }
 
@@ -51,15 +65,23 @@ public static class CardScatterUtility
         }
     }
 
-    static List<CardDefinition> BuildScatterDefinitions()
+    static List<CardDefinition> BuildScatterDefinitions(string shelfCategoryId = null)
     {
         var definitions = new List<CardDefinition>(CardCatalog.Count);
         IReadOnlyList<CardDefinition> loaded = CardCatalog.All;
         for (int i = 0; i < loaded.Count; i++)
         {
             CardDefinition definition = loaded[i];
-            if (definition != null)
-                definitions.Add(definition);
+            if (definition == null)
+                continue;
+
+            if (!string.IsNullOrWhiteSpace(shelfCategoryId)
+                && !string.Equals(definition.ShelfCategoryId, shelfCategoryId, System.StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            definitions.Add(definition);
         }
 
         definitions.Sort((a, b) => string.CompareOrdinal(a.DefinitionId, b.DefinitionId));
@@ -187,7 +209,7 @@ public static class CardScatterUtility
 
     public static bool SceneNeedsScatterRefresh()
     {
-        if (CountScatterCards() < DefaultScatterCount)
+        if (CountScatterCards() < FullScatterCount)
             return true;
 
         return HasInvalidScatterCards();

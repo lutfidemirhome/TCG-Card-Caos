@@ -10,24 +10,47 @@ using UnityEngine;
 public static class CardDefinitionSetup
 {
     const string DefinitionsFolder = "Assets/Resources/Cards/Definitions";
-    const string ArtRootFolder = "Assets/Art/Cards/Normal_Common_Cards";
-    static readonly Regex FileNamePattern = new Regex(
-        "^normal_common_(?<character>[a-z]+)_(?<slot>\\d+)\\.png$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     [MenuItem("TCG Card Caos/Import Normal Common Cards From Art")]
     public static void ImportNormalCommonCardsFromArt()
     {
-        if (!AssetDatabase.IsValidFolder(ArtRootFolder))
+        ImportCardsFromArt(
+            "Assets/Art/Cards/Normal_Common_Cards",
+            "^normal_common_(?<character>[a-z]+)_(?<slot>\\d+)\\.png$",
+            "normal_common",
+            CardShelfCategories.NormalCommon,
+            CardShelfCategories.DefaultSlotsPerRow);
+    }
+
+    [MenuItem("TCG Card Caos/Import Normal Uncommon Cards From Art")]
+    public static void ImportNormalUncommonCardsFromArt()
+    {
+        ImportNamedCardsFromArt(
+            "Assets/Art/Cards/Normal_Uncommon_Cards",
+            "^Normal_(?<character>[a-z]+)_(?<slot>\\d+)\\.png$",
+            CardShelfCategories.NormalUncommon,
+            CardShelfCategories.GetDefaultSlotsPerRow(CardShelfCategories.NormalUncommon));
+    }
+
+    static void ImportCardsFromArt(
+        string artRootFolder,
+        string fileNamePattern,
+        string definitionPrefix,
+        string shelfCategoryId,
+        int maxSlotNumber)
+    {
+        if (!AssetDatabase.IsValidFolder(artRootFolder))
         {
-            Debug.LogError("TCG Card Caos: Missing art folder " + ArtRootFolder);
+            Debug.LogError("TCG Card Caos: Missing art folder " + artRootFolder);
             return;
         }
 
         Directory.CreateDirectory(DefinitionsFolder);
-        string[] pngGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { ArtRootFolder });
+        var pattern = new Regex(fileNamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        string[] pngGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { artRootFolder });
         int created = 0;
         int updated = 0;
+        int skipped = 0;
 
         for (int i = 0; i < pngGuids.Length; i++)
         {
@@ -36,13 +59,19 @@ public static class CardDefinitionSetup
                 continue;
 
             string fileName = Path.GetFileName(pngPath);
-            Match match = FileNamePattern.Match(fileName);
+            Match match = pattern.Match(fileName);
             if (!match.Success)
                 continue;
 
             string character = match.Groups["character"].Value.ToLowerInvariant();
             int slot = int.Parse(match.Groups["slot"].Value);
-            string definitionId = "normal_common_" + character + "_" + slot.ToString("00");
+            if (slot < CardShelfCategories.MinSlotNumber || slot > maxSlotNumber)
+            {
+                skipped++;
+                continue;
+            }
+
+            string definitionId = definitionPrefix + "_" + character + "_" + slot.ToString("00");
             string assetPath = DefinitionsFolder + "/" + definitionId + ".asset";
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(pngPath);
 
@@ -63,7 +92,7 @@ public static class CardDefinitionSetup
                 definition,
                 definitionId,
                 BuildDisplayName(character, slot),
-                CardShelfCategories.NormalCommon,
+                shelfCategoryId,
                 slot,
                 texture);
             EditorUtility.SetDirty(definition);
@@ -73,13 +102,99 @@ public static class CardDefinitionSetup
         AssetDatabase.Refresh();
         CardCatalog.Reload();
         Debug.Log(
-            "TCG Card Caos: Imported Normal Common cards into "
+            "TCG Card Caos: Imported "
+            + shelfCategoryId
+            + " cards into "
             + DefinitionsFolder
             + " (created "
             + created
             + ", updated "
             + updated
-            + ").");
+            + ", skipped "
+            + skipped
+            + " out-of-range slots).");
+    }
+
+    static void ImportNamedCardsFromArt(
+        string artRootFolder,
+        string fileNamePattern,
+        string shelfCategoryId,
+        int maxSlotNumber)
+    {
+        if (!AssetDatabase.IsValidFolder(artRootFolder))
+        {
+            Debug.LogError("TCG Card Caos: Missing art folder " + artRootFolder);
+            return;
+        }
+
+        Directory.CreateDirectory(DefinitionsFolder);
+        var pattern = new Regex(fileNamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        string[] pngGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { artRootFolder });
+        int created = 0;
+        int updated = 0;
+        int skipped = 0;
+
+        for (int i = 0; i < pngGuids.Length; i++)
+        {
+            string pngPath = AssetDatabase.GUIDToAssetPath(pngGuids[i]);
+            if (string.IsNullOrEmpty(pngPath) || !pngPath.EndsWith(".png"))
+                continue;
+
+            string fileName = Path.GetFileName(pngPath);
+            Match match = pattern.Match(fileName);
+            if (!match.Success)
+                continue;
+
+            string character = match.Groups["character"].Value.ToLowerInvariant();
+            int slot = int.Parse(match.Groups["slot"].Value);
+            if (slot < CardShelfCategories.MinSlotNumber || slot > maxSlotNumber)
+            {
+                skipped++;
+                continue;
+            }
+
+            string definitionId = "Normal_" + character + "_" + slot;
+            string assetPath = DefinitionsFolder + "/" + definitionId + ".asset";
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(pngPath);
+
+            CardDefinition definition = AssetDatabase.LoadAssetAtPath<CardDefinition>(assetPath);
+            bool isNew = definition == null;
+            if (isNew)
+            {
+                definition = ScriptableObject.CreateInstance<CardDefinition>();
+                AssetDatabase.CreateAsset(definition, assetPath);
+                created++;
+            }
+            else
+            {
+                updated++;
+            }
+
+            ApplyDefinitionFields(
+                definition,
+                definitionId,
+                BuildDisplayName(character, slot),
+                shelfCategoryId,
+                slot,
+                texture);
+            EditorUtility.SetDirty(definition);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        CardCatalog.Reload();
+        Debug.Log(
+            "TCG Card Caos: Imported "
+            + shelfCategoryId
+            + " cards into "
+            + DefinitionsFolder
+            + " (created "
+            + created
+            + ", updated "
+            + updated
+            + ", skipped "
+            + skipped
+            + " out-of-range slots). Expected filenames like Normal_cloudle_1.png.");
     }
 
     [MenuItem("TCG Card Caos/Create Normal Common Card Definitions (Slots 1-10)")]

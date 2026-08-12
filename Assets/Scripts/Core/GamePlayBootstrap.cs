@@ -54,7 +54,6 @@ static class GamePlayBootstrap
             return;
         }
 
-        CardScatterUtility.ClearTestCards();
-        CardScatterUtility.SpawnScatteredCards();
+        CardScatterUtility.SpawnAllTestCards();
     }
 }

@@ -43,7 +43,7 @@ public static class FirstPersonSceneSetup
         CardInstancedRenderManager.EnsureExists();
         EnsureCardArtReady();
         CardScatterUtility.ClearTestCards();
-        CardScatterUtility.SpawnScatteredCards(CardScatterUtility.DefaultScatterCount);
+        CardScatterUtility.SpawnScatteredCards(CardScatterUtility.FullScatterCount);
 
         Selection.activeGameObject = player;
         FinishEmptyShopScene(newScene);
@@ -63,10 +63,10 @@ public static class FirstPersonSceneSetup
         EnsureCardArtReady();
 
         int cardCount = CountTestCards();
-        if (cardCount != CardScatterUtility.DefaultScatterCount)
+        if (cardCount != CardScatterUtility.FullScatterCount)
         {
             CardScatterUtility.ClearTestCards();
-            CardScatterUtility.SpawnScatteredCards(CardScatterUtility.DefaultScatterCount);
+            CardScatterUtility.SpawnScatteredCards(CardScatterUtility.FullScatterCount);
         }
 
         Selection.activeGameObject = player;
@@ -120,7 +120,7 @@ public static class FirstPersonSceneSetup
             "TCG Card Caos: Empty card shop ready at "
             + ScenePath
             + " with walk settings + "
-            + CardScatterUtility.DefaultScatterCount
+            + CardScatterUtility.FullScatterCount
             + " cards. Drop furniture from Assets/ModernSupermarket/Prefabs. Press Play to test.");
     }
 
@@ -195,8 +195,7 @@ public static class FirstPersonSceneSetup
 
         CardInstancedRenderManager.EnsureExists();
         EnsureCardArtReady();
-        CardScatterUtility.ClearTestCards();
-        CardScatterUtility.SpawnScatteredCards();
+        CardScatterUtility.SpawnAllTestCards();
 
         Selection.activeGameObject = player;
         EditorSceneManager.MarkSceneDirty(scene);
@@ -208,7 +207,7 @@ public static class FirstPersonSceneSetup
         Debug.Log(
             "TCG Card Caos: Gameplay ready in '"
             + scene.name
-            + "'. Player + 100 cards added. Delete unused shop props in Hierarchy, then Save. Press Play to test.");
+            + "'. Player + 150 cards added. Delete unused shop props in Hierarchy, then Save. Press Play to test.");
     }
 
     [MenuItem("TCG Card Caos/Fix Current Scene")]
@@ -511,7 +510,8 @@ public static class FirstPersonSceneSetup
     {
         PlaceCabinetInScene(
             "Assets/Prefabs/Cabinets/Cabinet_NormalCommon.prefab",
-            "Cabinet_NormalCommon");
+            "Cabinet_NormalCommon",
+            CardShelfCategories.NormalCommon);
     }
 
     [MenuItem("TCG Card Caos/Place Cabinet Normal Uncommon In Scene")]
@@ -519,11 +519,24 @@ public static class FirstPersonSceneSetup
     {
         PlaceCabinetInScene(
             "Assets/Prefabs/Cabinets/Cabinet_NormalUncommon.prefab",
-            "Cabinet_NormalUncommon");
+            "Cabinet_NormalUncommon",
+            CardShelfCategories.NormalUncommon);
     }
 
-    static void PlaceCabinetInScene(string prefabPath, string instanceName)
+    static void PlaceCabinetInScene(string prefabPath, string instanceName, string categoryId)
     {
+        CardShelf existing = FindCabinetInScene(categoryId);
+        if (existing != null)
+        {
+            Selection.activeGameObject = existing.gameObject;
+            EditorGUIUtility.PingObject(existing.gameObject);
+            Debug.Log(
+                "TCG Card Caos: Scene already has a "
+                + CardShelfCategories.GetDisplayName(categoryId)
+                + " cabinet. Selected the existing one instead of placing a duplicate.");
+            return;
+        }
+
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         if (prefab == null)
         {
@@ -559,6 +572,19 @@ public static class FirstPersonSceneSetup
             + ". Edit the prefab at Assets/Prefabs/Cabinets/, then save.");
     }
 
+    static CardShelf FindCabinetInScene(string categoryId)
+    {
+        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(FindObjectsSortMode.None);
+        for (int i = 0; i < shelves.Length; i++)
+        {
+            CardShelf shelf = shelves[i];
+            if (shelf != null && shelf.CategoryId == categoryId)
+                return shelf;
+        }
+
+        return null;
+    }
+
     [MenuItem("TCG Card Caos/Place Cabinet Normal Common In Scene", true)]
     [MenuItem("TCG Card Caos/Place Cabinet Normal Uncommon In Scene", true)]
     static bool PlaceCabinetInSceneValidate()
@@ -588,12 +614,31 @@ public static class FirstPersonSceneSetup
     [MenuItem("TCG Card Caos/Spawn Test Cards In Scene")]
     public static void SpawnTestCardsMenu()
     {
+        SpawnAllTestCardsInScene();
+    }
+
+    [MenuItem("TCG Card Caos/Spawn Normal Uncommon Test Cards In Scene")]
+    public static void SpawnNormalUncommonTestCardsMenu()
+    {
+        SpawnAllTestCardsInScene();
+    }
+
+    static void SpawnAllTestCardsInScene()
+    {
         EnsureCardArtReady();
-        CardScatterUtility.ClearTestCards();
-        CardScatterUtility.SpawnScatteredCards();
+        AssetDatabase.Refresh();
+        CardCatalog.Reload();
+        CardScatterUtility.SpawnAllTestCards();
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
-        Debug.Log("Spawned " + CardScatterUtility.DefaultScatterCount + " test cards on the ground.");
+        Debug.Log(
+            "Spawned "
+            + CardScatterUtility.FullScatterCount
+            + " test cards on the ground ("
+            + CardScatterUtility.DefaultScatterCount
+            + " Normal Common + "
+            + CardScatterUtility.UncommonScatterCount
+            + " Normal Uncommon).");
     }
 
     [MenuItem("TCG Card Caos/Spawn 5000 Stress Test Cards")]
