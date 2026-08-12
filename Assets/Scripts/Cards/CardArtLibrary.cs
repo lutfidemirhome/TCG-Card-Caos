@@ -37,6 +37,12 @@ public static class CardArtLibrary
     /// <summary>Cancels horizontal mirror for upright shelf cards (left-right text).</summary>
     public static readonly Vector3 ShelfVisualScale = new Vector3(-1f, 1f, 1f);
 
+    /// <summary>Shader UV scale/offset for shared back materials (cancels mesh back flipU + visual scale X = -1).</summary>
+    public static readonly Vector2 BackTextureUScale = new Vector2(-1f, 1f);
+
+    /// <summary>Shader UV offset paired with <see cref="BackTextureUScale"/>.</summary>
+    public static readonly Vector2 BackTextureUOffset = new Vector2(1f, 0f);
+
     public static readonly Quaternion ModelCorrectionRotation = WorldVisualRotation;
 
     static Mesh _cardMesh;
@@ -120,9 +126,11 @@ public static class CardArtLibrary
     public static Material GetBackMaterial(CardTextureQuality quality)
     {
         EnsureLoaded();
-        return quality == CardTextureQuality.World
+        Material material = quality == CardTextureQuality.World
             ? _sharedBackWorldTemplate
             : _sharedBackDetailTemplate;
+        ApplyBackTextureUFlip(material);
+        return material;
     }
 
     public static Material GetFrontMaterial(int paletteIndex, CardTextureQuality quality = CardTextureQuality.Detail)
@@ -284,19 +292,16 @@ public static class CardArtLibrary
         if (material == null)
             return;
 
-        var scale = new Vector2(-1f, 1f);
-        var offset = new Vector2(1f, 0f);
-
         if (material.HasProperty("_BaseMap"))
         {
-            material.SetTextureScale("_BaseMap", scale);
-            material.SetTextureOffset("_BaseMap", offset);
+            material.SetTextureScale("_BaseMap", BackTextureUScale);
+            material.SetTextureOffset("_BaseMap", BackTextureUOffset);
         }
 
         if (material.HasProperty("_MainTex"))
         {
-            material.SetTextureScale("_MainTex", scale);
-            material.SetTextureOffset("_MainTex", offset);
+            material.SetTextureScale("_MainTex", BackTextureUScale);
+            material.SetTextureOffset("_MainTex", BackTextureUOffset);
         }
     }
 

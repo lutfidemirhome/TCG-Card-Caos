@@ -5,7 +5,9 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Creates placeholder <see cref="CardDefinition"/> assets before card art is imported.
+/// Creates and imports <see cref="CardDefinition"/> assets from card art folders.
+/// New cards only need a front PNG + definition; the shared back material orientation is applied
+/// automatically by <see cref="CardArtLibrary"/> (no per-card back setup).
 /// </summary>
 public static class CardDefinitionSetup
 {
@@ -107,6 +109,8 @@ public static class CardDefinitionSetup
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         CardCatalog.Reload();
+        CardArtLibrary.ResetCache();
+        CardArtLibrary.EnsureLoaded();
         Debug.Log(
             "TCG Card Caos: Imported "
             + shelfCategoryId

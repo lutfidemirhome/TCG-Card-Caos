@@ -21,6 +21,9 @@ public static class CardArtSetup
             return;
         }
 
+        // Shared back template must keep horizontal U flip — all future card imports reuse these materials.
+        CardArtLibrary.ApplyBackTextureUFlip(backMaterialTemplate);
+
         try
         {
             EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking texture LOD assets...", 0.2f);
