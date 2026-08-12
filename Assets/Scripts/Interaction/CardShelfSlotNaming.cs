@@ -1,6 +1,6 @@
 /// <summary>
 /// Parses slot object names created by the shelf authoring tools.
-/// Example: CardShelfSlot_3_7 → row 3, column 7, slot number 8.
+/// Example: CardShelfSlot_3_7 → row 3, column 7, slot number 3 (customer left = 1).
 /// </summary>
 public static class CardShelfSlotNaming
 {

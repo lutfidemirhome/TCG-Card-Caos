@@ -248,73 +248,12 @@ public static class FirstPersonSceneSetup
             shelf = selected.AddComponent<CardShelf>();
 
         shelf.RefreshSlotCache();
-        EnsureCategoryLabel(shelf);
         MarkShelfAuthoringDirty(selected);
 
         Debug.Log(
             "TCG Card Caos: CardShelf on '"
             + selected.name
-            + "'. Next: Create Card Shelf Slot Grid, duplicate ShelfSlots_Level per board, Equalize if needed, then Save.");
-    }
-
-    [MenuItem("TCG Card Caos/Setup Category Label On Selection")]
-    public static void SetupCategoryLabelOnSelection()
-    {
-        GameObject selected = Selection.activeGameObject;
-        if (selected == null)
-        {
-            Debug.LogWarning("TCG Card Caos: Select a cabinet with CardShelf first.");
-            return;
-        }
-
-        CardShelf shelf = selected.GetComponent<CardShelf>();
-        if (shelf == null)
-            shelf = selected.GetComponentInParent<CardShelf>();
-
-        if (shelf == null)
-        {
-            Debug.LogWarning("TCG Card Caos: No CardShelf on selection.");
-            return;
-        }
-
-        if (!EnsureCategoryLabel(shelf))
-            return;
-
-        MarkShelfAuthoringDirty(shelf.gameObject);
-        Debug.Log(
-            "TCG Card Caos: Category label ready on '"
-            + shelf.gameObject.name
-            + "'. Set Category Id on CardShelf. Save prefab/scene (Ctrl/Cmd+S).");
-    }
-
-    static bool EnsureCategoryLabel(CardShelf shelf)
-    {
-        if (shelf == null)
-            return false;
-
-        CardShelfCategoryLabel label = shelf.GetComponent<CardShelfCategoryLabel>();
-        if (label == null)
-            label = shelf.gameObject.AddComponent<CardShelfCategoryLabel>();
-
-        if (!Application.isPlaying && !CardShelfCategoryLabel.CanAuthorLabelHierarchy(shelf.gameObject))
-        {
-            Debug.LogWarning(
-                "TCG Card Caos: Open '"
-                + shelf.gameObject.name
-                + "' in Prefab Mode (double-click the prefab), then run Setup Category Label again to bake the label.");
-            return false;
-        }
-
-        label.RebuildLabel();
-
-        Transform labelRoot = shelf.transform.Find("CategoryLabel");
-        if (labelRoot == null)
-        {
-            Debug.LogWarning("TCG Card Caos: Label hierarchy was not created. Try again in Prefab Mode.");
-            return false;
-        }
-
-        return true;
+            + "'. Add Sign_04h2fw as CategorySign child, assign category material, then create slot grid and save.");
     }
 
     [MenuItem("TCG Card Caos/Add Card Shelf Slot")]
@@ -563,19 +502,19 @@ public static class FirstPersonSceneSetup
         return int.TryParse(name.Substring(open + 1, close - open - 1), out index);
     }
 
-    [MenuItem("TCG Card Caos/Place Shelf_kicg9f In Scene")]
+    [MenuItem("TCG Card Caos/Place Cabinet Normal Common In Scene")]
     public static void PlaceCardShelfInScene()
     {
-        const string prefabPath = "Assets/ModernSupermarket/Prefabs/Furniture/Shelf_kicg9f.prefab";
+        const string prefabPath = "Assets/Prefabs/Cabinets/Cabinet_NormalCommon.prefab";
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         if (prefab == null)
         {
-            Debug.LogError("TCG Card Caos: Missing shelf prefab at " + prefabPath);
+            Debug.LogError("TCG Card Caos: Missing cabinet prefab at " + prefabPath);
             return;
         }
 
         GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-        instance.name = "Shelf_kicg9f";
+        instance.name = "Cabinet_NormalCommon";
         instance.transform.position = new Vector3(2f, 0f, 3f);
 
         FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
@@ -593,13 +532,11 @@ public static class FirstPersonSceneSetup
         if (shelf == null)
             shelf = instance.AddComponent<CardShelf>();
         shelf.RefreshSlotCache();
-        EnsureCategoryLabel(shelf);
 
         Selection.activeGameObject = instance;
         MarkShelfAuthoringDirty(instance);
         Debug.Log(
-            "TCG Card Caos: Placed Shelf_kicg9f. Prefer editing slots on the prefab asset "
-            + "(open Prefab → Setup Card Shelf → Create Slot Grid), then drop into MainScene.");
+            "TCG Card Caos: Placed Cabinet_NormalCommon. Edit the prefab at Assets/Prefabs/Cabinets/, then save.");
     }
 
     static void MarkShelfAuthoringDirty(GameObject target)

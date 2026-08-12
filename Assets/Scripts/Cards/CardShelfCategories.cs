@@ -1,5 +1,5 @@
 /// <summary>
-/// Cabinet category ids. Labels use display names for now; UI symbols will replace text later.
+/// Cabinet category ids. Each shelf prefab uses a <see cref="CardShelfCategoryDefinition"/> for symbols + id.
 /// </summary>
 public static class CardShelfCategories
 {
@@ -23,5 +23,14 @@ public static class CardShelfCategories
     public static bool IsValidSlotNumber(int slotNumber)
     {
         return slotNumber >= MinSlotNumber && slotNumber <= MaxSlotNumber;
+    }
+
+    /// <summary>
+    /// Maps authored column index (0 at shelf local -X) to customer-facing slot 1–10 (1 = left).
+    /// </summary>
+    public static int ColumnToSlotNumber(int columnIndex)
+    {
+        int clampedColumn = UnityEngine.Mathf.Clamp(columnIndex, 0, SlotsPerRow - 1);
+        return MaxSlotNumber - clampedColumn;
     }
 }

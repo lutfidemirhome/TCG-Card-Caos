@@ -22,6 +22,9 @@ public static class CardArtLibrary
     /// <summary>Lays the imported upright card model flat on the table.</summary>
     public static readonly Quaternion WorldVisualRotation = Quaternion.Euler(-90f, 0f, 0f);
 
+    /// <summary>Cancels horizontal mirror for flat ground cards (left-right text).</summary>
+    public static readonly Vector3 WorldVisualScale = new Vector3(-1f, 1f, 1f);
+
     /// <summary>Orientates the textured face toward the camera in the hand fan.</summary>
     public static readonly Quaternion HandVisualRotation = Quaternion.Euler(-90f, 180f, 0f);
 

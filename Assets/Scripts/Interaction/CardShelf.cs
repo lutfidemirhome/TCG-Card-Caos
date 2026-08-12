@@ -14,6 +14,8 @@ public class CardShelf : MonoBehaviour, IInteractable
     [SerializeField] float surfacePadding = 0.003f;
 
     [Header("Cabinet category")]
+    [Tooltip("Category asset for this cabinet (id + sign material). When set, overrides Category Id below.")]
+    [SerializeField] CardShelfCategoryDefinition categoryDefinition;
     [Tooltip("Only cards with the same Shelf Category Id can be placed here.")]
     [SerializeField] string categoryId = CardShelfCategories.NormalCommon;
 
@@ -39,7 +41,8 @@ public class CardShelf : MonoBehaviour, IInteractable
 #if UNITY_EDITOR
     void OnValidate()
     {
-        GetComponent<CardShelfCategoryLabel>()?.ScheduleRebuild();
+        if (categoryDefinition != null && !string.IsNullOrWhiteSpace(categoryDefinition.CategoryId))
+            categoryId = categoryDefinition.CategoryId;
     }
 #endif
 
@@ -77,13 +80,18 @@ public class CardShelf : MonoBehaviour, IInteractable
         return fallback.normalized;
     }
 
-    public string CategoryId => categoryId;
+    public string CategoryId =>
+        categoryDefinition != null && !string.IsNullOrWhiteSpace(categoryDefinition.CategoryId)
+            ? categoryDefinition.CategoryId
+            : categoryId;
 
-    public string CategoryDisplayName => CardShelfCategories.GetDisplayName(categoryId);
+    public CardShelfCategoryDefinition CategoryDefinition => categoryDefinition;
+
+    public string CategoryDisplayName => CardShelfCategories.GetDisplayName(CategoryId);
 
     public bool AcceptsDefinition(CardDefinition definition)
     {
-        return CardShelfRules.CanPlaceOnShelf(categoryId, definition);
+        return CardShelfRules.CanPlaceOnShelf(CategoryId, definition);
     }
 
     public bool AcceptsCard(WorldCard card)
@@ -101,7 +109,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (card == null || slot == null)
             return false;
 
-        return CardShelfRules.IsCorrectShelfPlacement(categoryId, card.Definition, slot);
+        return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot);
     }
 
     public void SetAimHit(RaycastHit hit)

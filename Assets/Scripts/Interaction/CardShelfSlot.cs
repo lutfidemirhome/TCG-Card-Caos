@@ -48,11 +48,11 @@ public class CardShelfSlot : MonoBehaviour
     /// <summary>Row on the cabinet (0 = first ShelfSlots_Level).</summary>
     public int RowIndex => rowIndex;
 
-    /// <summary>Column on the row (0 = leftmost).</summary>
+    /// <summary>Column on the row (0 at shelf local -X).</summary>
     public int ColumnIndex => columnIndex;
 
-    /// <summary>Player-facing slot number 1–10 (1 = leftmost).</summary>
-    public int SlotNumber => columnIndex + 1;
+    /// <summary>Customer-facing slot number 1–10 (1 = leftmost when facing the cabinet).</summary>
+    public int SlotNumber => CardShelfCategories.ColumnToSlotNumber(columnIndex);
 
     public void ConfigureIndices(int row, int column)
     {

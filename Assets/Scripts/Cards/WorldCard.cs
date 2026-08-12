@@ -531,7 +531,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         _cardVisual.localRotation = CardArtLibrary.WorldVisualRotation;
-        _cardVisual.localScale = Vector3.one;
+        _cardVisual.localScale = CardArtLibrary.WorldVisualScale;
     }
 
     void ApplyShelfVisualOrientation()
@@ -569,9 +569,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         }
 
         if (isCorrect)
-            _shelfPlacementFlashRoutine = StartCoroutine(ShelfPlacementSuccessFlashRoutine());
+            _shelfPlacementFlashRoutine = StartCoroutine(ShelfPlacementFlashRoutine(ShelfPlacementStatus.Correct));
         else
-            SetShelfPlacementStatus(ShelfPlacementStatus.Incorrect);
+            _shelfPlacementFlashRoutine = StartCoroutine(ShelfPlacementFlashRoutine(ShelfPlacementStatus.Incorrect));
     }
 
     public void ClearShelfPlacementStatus()
@@ -587,23 +587,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         RefreshRenderMode();
     }
 
-    void SetShelfPlacementStatus(ShelfPlacementStatus status)
-    {
-        _shelfPlacementStatus = status;
-        EnsureShelfStatusOutline();
-        ApplyShelfStatusOutlineMaterial(status);
-        if (_shelfStatusOutlineObject != null)
-            _shelfStatusOutlineObject.SetActive(true);
-        RefreshRenderMode();
-    }
-
-    System.Collections.IEnumerator ShelfPlacementSuccessFlashRoutine()
+    System.Collections.IEnumerator ShelfPlacementFlashRoutine(ShelfPlacementStatus flashStatus)
     {
         EnsureShelfStatusOutline();
 
         for (int pulse = 0; pulse < ShelfPlacementFlashPulses; pulse++)
         {
-            ApplyShelfStatusOutlineMaterial(ShelfPlacementStatus.None, CardVisualResources.InteractionOutlineMaterial);
+            ApplyShelfStatusOutlineMaterial(flashStatus);
             if (_shelfStatusOutlineObject != null)
                 _shelfStatusOutlineObject.SetActive(true);
 
@@ -615,8 +605,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             yield return new WaitForSeconds(ShelfPlacementFlashOffSeconds);
         }
 
-        SetShelfPlacementStatus(ShelfPlacementStatus.Correct);
+        _shelfPlacementStatus = ShelfPlacementStatus.None;
+        ReleaseShelfStatusOutline();
         _shelfPlacementFlashRoutine = null;
+        RefreshRenderMode();
     }
 
     void RefreshRenderMode()
@@ -652,8 +644,29 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         EnsureCardVisual();
         ApplyCardVisualTextureQuality();
+        ApplyActiveVisualOrientation();
 
         RefreshInteractionOutline();
+    }
+
+    void ApplyActiveVisualOrientation()
+    {
+        if (_cardVisual == null)
+            return;
+
+        if (_handState == HandState.Held || _handState == HandState.FlyingToHand)
+        {
+            ApplyHandVisualOrientation();
+            return;
+        }
+
+        if (GetComponentInParent<CardShelfSlot>() != null)
+        {
+            ApplyShelfVisualOrientation();
+            return;
+        }
+
+        ApplyWorldVisualOrientation();
     }
 
     void RefreshInteractionOutline()
