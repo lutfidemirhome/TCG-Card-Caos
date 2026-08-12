@@ -17,6 +17,23 @@ public static class FirstPersonSceneSetup
     [MenuItem("TCG Card Caos/Create Empty Card Shop Scene")]
     public static void SetupPlayground()
     {
+        if (System.IO.File.Exists(ScenePath))
+        {
+            bool confirmed = EditorUtility.DisplayDialog(
+                "MainScene zaten var",
+                "Bu islem MainScene'i acip oda kabugunu yeniden kurar.\n\n"
+                + "Dolaplar, tavan, supermarket objeleri ve sahne duzenin SILINMEZ ama "
+                + "Floor/Wall/Room yeniden olusturulur ve Wall materyali varsayilan renge donebilir.\n\n"
+                + "Supermarket sahnesinden donduysan BU MENUYU KULLANMA.\n"
+                + "Sadece File > Open Scene > MainScene ile geri don.\n\n"
+                + "Yine de devam edilsin mi?",
+                "Devam et",
+                "Iptal");
+
+            if (!confirmed)
+                return;
+        }
+
         EnsureFolder("Assets/Scenes");
         EnsureFolder("Assets/Prefabs");
 
