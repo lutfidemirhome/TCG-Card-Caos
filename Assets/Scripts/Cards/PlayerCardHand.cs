@@ -164,7 +164,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool TryPickup(WorldCard card)
     {
-        if (card == null || card.IsInHand || IsFull)
+        if (card == null || card.IsInHand || card.IsFlyingToShelf || IsFull)
             return false;
 
         EnsureHandAnchor();

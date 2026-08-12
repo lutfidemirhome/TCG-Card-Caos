@@ -11,6 +11,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         World,
         FlyingToHand,
+        FlyingToShelf,
         Held,
     }
 
@@ -48,6 +49,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Quaternion _flightStartWorldRot;
     float _flightArcHeight;
     System.Action _onPickupFlightComplete;
+    Transform _shelfFlightSlot;
+    float _shelfFlightSurfacePadding;
+    System.Action _onShelfFlightComplete;
     float _scaleFrom = 1f;
     float _scaleTo = 1f;
     float _scaleTransitionElapsed;
@@ -58,7 +62,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public bool IsHeld => _handState == HandState.Held;
     public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
-    public bool IsInHand => _handState != HandState.World;
+    public bool IsFlyingToShelf => _handState == HandState.FlyingToShelf;
+    public bool IsInHand => _handState == HandState.Held || _handState == HandState.FlyingToHand;
     public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
@@ -184,6 +189,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         while (_scaleTransitionActive
                && _handState != HandState.FlyingToHand
+               && _handState != HandState.FlyingToShelf
                && _handState != HandState.Held)
         {
             _scaleTransitionElapsed += Time.deltaTime;
@@ -231,7 +237,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void SetPlayerAimFocus(bool focused)
     {
-        if (IsInHand || _rigidbody != null)
+        if (IsInHand || IsFlyingToShelf || _rigidbody != null)
             return;
 
         SetWorldColliderEnabled(focused);
@@ -253,7 +259,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public string GetPromptText()
     {
-        if (IsInHand)
+        if (IsInHand || IsFlyingToShelf)
             return string.Empty;
 
         PlayerCardHand hand = Object.FindFirstObjectByType<PlayerCardHand>();
@@ -265,7 +271,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void Interact(GameObject interactor)
     {
-        if (IsInHand)
+        if (IsInHand || IsFlyingToShelf)
             return;
 
         PlayerCardHand hand = interactor.GetComponent<PlayerCardHand>();
@@ -323,18 +329,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_handState != HandState.FlyingToHand)
             return;
 
-        _flightElapsed += Time.deltaTime;
-        float t = Mathf.Clamp01(_flightElapsed / _flightDuration);
-        float smoothT = t * t * (3f - 2f * t);
+        AdvanceFlightToward(targetWorldPos, targetWorldRot);
 
-        Vector3 pos = Vector3.Lerp(_flightStartWorldPos, targetWorldPos, smoothT);
-        pos += Vector3.up * (Mathf.Sin(smoothT * Mathf.PI) * _flightArcHeight);
-
-        transform.SetPositionAndRotation(pos, Quaternion.Slerp(_flightStartWorldRot, targetWorldRot, smoothT));
-        float scale = Mathf.Lerp(_flightStartWorldScale, _flightTargetHandScale, smoothT);
-        transform.localScale = Vector3.one * scale;
-
-        if (t >= 1f)
+        if (_flightElapsed >= _flightDuration)
             CompletePickupFlight();
     }
 
@@ -349,6 +346,82 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         System.Action callback = _onPickupFlightComplete;
         _onPickupFlightComplete = null;
         callback?.Invoke();
+    }
+
+    public void BeginShelfFlight(
+        Transform slot,
+        float targetWorldScale,
+        float duration,
+        float arcHeight,
+        float surfacePadding,
+        System.Action onComplete = null)
+    {
+        if (slot == null)
+            return;
+
+        _handState = HandState.FlyingToShelf;
+        _handAnchor = null;
+        _flightTargetHandScale = targetWorldScale;
+        _flightDuration = Mathf.Max(0.05f, duration);
+        _flightElapsed = 0f;
+        _flightStartWorldPos = transform.position;
+        _flightStartWorldRot = transform.rotation;
+        _flightStartWorldScale = transform.localScale.x;
+        _flightArcHeight = arcHeight;
+        _shelfFlightSlot = slot;
+        _shelfFlightSurfacePadding = surfacePadding;
+        _onShelfFlightComplete = onComplete;
+
+        SetInteractionHighlight(false);
+        SetHandSelected(false);
+        RemovePhysics();
+
+        if (_collider != null)
+            _collider.enabled = false;
+
+        transform.SetParent(null, true);
+        EnsureCardVisual();
+        ApplyShelfVisualOrientation();
+        RefreshRenderMode();
+    }
+
+    public void UpdateShelfFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
+    {
+        if (_handState != HandState.FlyingToShelf)
+            return;
+
+        AdvanceFlightToward(targetWorldPos, targetWorldRot);
+
+        if (_flightElapsed >= _flightDuration)
+            CompleteShelfFlight();
+    }
+
+    void CompleteShelfFlight()
+    {
+        Transform slot = _shelfFlightSlot;
+        float surfacePadding = _shelfFlightSurfacePadding;
+        _shelfFlightSlot = null;
+
+        if (slot != null)
+            PlaceOnShelfSlot(slot, surfacePadding);
+
+        System.Action callback = _onShelfFlightComplete;
+        _onShelfFlightComplete = null;
+        callback?.Invoke();
+    }
+
+    void AdvanceFlightToward(Vector3 targetWorldPos, Quaternion targetWorldRot)
+    {
+        _flightElapsed += Time.deltaTime;
+        float t = Mathf.Clamp01(_flightElapsed / _flightDuration);
+        float smoothT = t * t * (3f - 2f * t);
+
+        Vector3 pos = Vector3.Lerp(_flightStartWorldPos, targetWorldPos, smoothT);
+        pos += Vector3.up * (Mathf.Sin(smoothT * Mathf.PI) * _flightArcHeight);
+
+        transform.SetPositionAndRotation(pos, Quaternion.Slerp(_flightStartWorldRot, targetWorldRot, smoothT));
+        float scale = Mathf.Lerp(_flightStartWorldScale, _flightTargetHandScale, smoothT);
+        transform.localScale = Vector3.one * scale;
     }
 
     public void DropWithPhysics(Vector3 velocity, float worldScaleTransitionDuration = 0.12f)
@@ -723,6 +796,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
+        if (_handState == HandState.FlyingToShelf)
+        {
+            ApplyShelfVisualOrientation();
+            return;
+        }
+
         if (GetComponentInParent<CardShelfSlot>() != null)
         {
             ApplyShelfVisualOrientation();
@@ -820,7 +899,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshRenderer == null)
             return;
 
-        CardTextureQuality quality = IsInHand || _handState == HandState.FlyingToHand
+        CardTextureQuality quality = IsInHand || _handState == HandState.FlyingToShelf
             ? CardTextureQuality.Detail
             : CardTextureQuality.World;
 

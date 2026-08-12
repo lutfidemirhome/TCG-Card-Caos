@@ -13,6 +13,10 @@ public class CardShelf : MonoBehaviour, IInteractable
     [SerializeField] float levelYTolerance = 0.28f;
     [SerializeField] float surfacePadding = 0.003f;
 
+    [Header("Placement flight")]
+    [SerializeField] float shelfFlightDuration = 0.4f;
+    [SerializeField] float shelfFlightArcHeight = 0.22f;
+
     [Header("Cabinet category")]
     [Tooltip("Category asset for this cabinet (id + sign material). When set, overrides Category Id below.")]
     [SerializeField] CardShelfCategoryDefinition categoryDefinition;
@@ -20,6 +24,15 @@ public class CardShelf : MonoBehaviour, IInteractable
     [SerializeField] string categoryId = CardShelfCategories.NormalCommon;
 
     readonly List<CardShelfSlot> _slots = new List<CardShelfSlot>(32);
+
+    struct ShelfFlightEntry
+    {
+        public WorldCard Card;
+        public CardShelfSlot Slot;
+        public bool IsCorrect;
+    }
+
+    readonly List<ShelfFlightEntry> _shelfFlights = new List<ShelfFlightEntry>(4);
 
     Vector3 _aimWorldPoint;
     bool _hasAimPoint;
@@ -36,6 +49,11 @@ public class CardShelf : MonoBehaviour, IInteractable
     void OnDestroy()
     {
         DestroyPlacementOutline();
+    }
+
+    void LateUpdate()
+    {
+        UpdateShelfFlights();
     }
 
 #if UNITY_EDITOR
@@ -194,7 +212,10 @@ public class CardShelf : MonoBehaviour, IInteractable
                 return;
             }
 
-            PlaceCardInSlot(card, slot);
+            bool isCorrect = IsCorrectPlacement(card, slot);
+            HidePlacementOutline();
+            slot.Occupy(card);
+            BeginShelfFlight(card, slot, isCorrect);
             ClearAim();
             return;
         }
@@ -213,9 +234,72 @@ public class CardShelf : MonoBehaviour, IInteractable
             return;
 
         bool isCorrect = IsCorrectPlacement(card, slot);
-        card.PlaceOnShelfSlot(slot.transform, surfacePadding);
         slot.Occupy(card);
+        card.PlaceOnShelfSlot(slot.transform, surfacePadding);
         card.NotifyShelfPlacement(isCorrect);
+    }
+
+    void BeginShelfFlight(WorldCard card, CardShelfSlot slot, bool isCorrect)
+    {
+        if (card == null || slot == null)
+            return;
+
+        _shelfFlights.Add(new ShelfFlightEntry
+        {
+            Card = card,
+            Slot = slot,
+            IsCorrect = isCorrect,
+        });
+
+        card.BeginShelfFlight(
+            slot.transform,
+            CardDimensions.WorldCardScale,
+            shelfFlightDuration,
+            shelfFlightArcHeight,
+            surfacePadding,
+            () =>
+            {
+                RemoveShelfFlight(card);
+                card.NotifyShelfPlacement(isCorrect);
+            });
+    }
+
+    void RemoveShelfFlight(WorldCard card)
+    {
+        for (int i = _shelfFlights.Count - 1; i >= 0; i--)
+        {
+            if (_shelfFlights[i].Card == card)
+                _shelfFlights.RemoveAt(i);
+        }
+    }
+
+    void UpdateShelfFlights()
+    {
+        for (int i = 0; i < _shelfFlights.Count; i++)
+        {
+            ShelfFlightEntry flight = _shelfFlights[i];
+            WorldCard card = flight.Card;
+            CardShelfSlot slot = flight.Slot;
+            if (card == null || slot == null || !card.IsFlyingToShelf)
+                continue;
+
+            GetSlotFlightPose(slot.transform, out Vector3 targetPos, out Quaternion targetRot);
+            card.UpdateShelfFlight(targetPos, targetRot);
+        }
+
+        for (int i = _shelfFlights.Count - 1; i >= 0; i--)
+        {
+            WorldCard card = _shelfFlights[i].Card;
+            if (card == null || !card.IsFlyingToShelf)
+                _shelfFlights.RemoveAt(i);
+        }
+    }
+
+    void GetSlotFlightPose(Transform slot, out Vector3 position, out Quaternion rotation)
+    {
+        float halfHeight = CardDimensions.Height * CardDimensions.WorldCardScale * 0.5f;
+        rotation = slot.rotation;
+        position = slot.position + slot.up * (halfHeight + surfacePadding);
     }
 
     void RefreshPlacementPreview()
