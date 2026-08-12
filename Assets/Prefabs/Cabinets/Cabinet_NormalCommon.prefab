@@ -18485,6 +18485,8 @@ MonoBehaviour:
   placementRoot: {fileID: 0}
   levelYTolerance: 0.28
   surfacePadding: 0.003
+  shelfFlightDuration: 0.4
+  shelfFlightArcHeight: 0.22
   categoryDefinition: {fileID: 11400000, guid: c7d2a9e14b8f5420a91de3f4b5c6d789, type: 2}
   categoryId: normal_common
 --- !u!1 &6033688285233135534
