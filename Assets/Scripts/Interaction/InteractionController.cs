@@ -3,7 +3,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Raycast from screen center, show prompt, interact with E.
-/// Looking at a ground card also shows a large readable inspect preview on the middle-right.
+/// Ground cards are found via math raycast (no mass physics colliders).
+/// Only the aimed card keeps its collider enabled.
 /// </summary>
 public class InteractionController : MonoBehaviour
 {
@@ -26,6 +27,9 @@ public class InteractionController : MonoBehaviour
         if (viewCamera == null)
             viewCamera = GetComponent<Camera>();
 
+        CardLayers.EnsureInitialized();
+        interactMask &= ~CardLayers.WorldCardMask;
+
         _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
         BuildPromptUI();
     }
@@ -45,6 +49,15 @@ public class InteractionController : MonoBehaviour
     void UpdateTarget()
     {
         Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+
+        WorldCard aimedCard = null;
+        float aimedCardDistance = float.MaxValue;
+        if (CardGroundQuery.TryRaycastWorldCard(ray, interactDistance, out WorldCard cardHit, out float cardDistance))
+        {
+            aimedCard = cardHit;
+            aimedCardDistance = cardDistance;
+        }
+
         int hitCount = Physics.RaycastNonAlloc(
             ray,
             HitBuffer,
@@ -52,13 +65,9 @@ public class InteractionController : MonoBehaviour
             interactMask,
             QueryTriggerInteraction.Ignore);
 
-        if (hitCount <= 0)
-        {
-            ClearTarget();
-            return;
-        }
+        IInteractable interactable = ResolveBestInteractable(HitBuffer, hitCount, aimedCard, aimedCardDistance);
+        UpdateCardFocus(interactable);
 
-        IInteractable interactable = ResolveBestInteractable(HitBuffer, hitCount);
         if (interactable == null)
         {
             ClearTarget();
@@ -102,14 +111,23 @@ public class InteractionController : MonoBehaviour
         }
     }
 
-    IInteractable ResolveBestInteractable(RaycastHit[] hits, int hitCount)
+    static void UpdateCardFocus(IInteractable interactable)
+    {
+        if (interactable is WorldCard worldCard && !worldCard.IsInHand)
+            CardInteractionFocus.SetFocusedCard(worldCard);
+        else
+            CardInteractionFocus.ClearFocus();
+    }
+
+    IInteractable ResolveBestInteractable(
+        RaycastHit[] hits,
+        int hitCount,
+        WorldCard aimedCard,
+        float aimedCardDistance)
     {
         PlayerCardHand hand = GetComponentInParent<PlayerCardHand>();
         if (hand == null)
             hand = transform.root.GetComponentInChildren<PlayerCardHand>();
-
-        WorldCard bestCard = null;
-        float bestCardDistance = float.MaxValue;
 
         CardShelf bestShelf = null;
         float bestShelfDistance = float.MaxValue;
@@ -122,18 +140,6 @@ public class InteractionController : MonoBehaviour
             Collider collider = hits[i].collider;
             if (collider == null)
                 continue;
-
-            WorldCard worldCard = collider.GetComponentInParent<WorldCard>();
-            if (worldCard != null && !worldCard.IsInHand)
-            {
-                if (hits[i].distance < bestCardDistance)
-                {
-                    bestCardDistance = hits[i].distance;
-                    bestCard = worldCard;
-                }
-
-                continue;
-            }
 
             CardShelf shelf = collider.GetComponentInParent<CardShelf>();
             if (shelf != null)
@@ -158,16 +164,21 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        if (bestCard != null)
-            return bestCard;
-
-        if (bestShelf != null && hand != null)
+        if (hand != null && hand.HasSelectedHeldCard() && bestShelf != null)
         {
-            Vector3 aim = FindShelfHit(hits, hitCount, bestShelf).point;
+            Vector3 aim = hitCount > 0
+                ? FindShelfHit(hits, hitCount, bestShelf).point
+                : bestShelf.transform.position;
 
-            if (hand.HasSelectedHeldCard() && !bestShelf.IsAimOnOccupiedSlot(aim))
+            if (!bestShelf.IsAimOnOccupiedSlot(aim))
                 return bestShelf;
         }
+
+        if (aimedCard != null)
+            return aimedCard;
+
+        if (bestShelf != null)
+            return bestShelf;
 
         return bestOther;
     }
@@ -186,24 +197,7 @@ public class InteractionController : MonoBehaviour
                 return hits[i];
         }
 
-        return hits[0];
-    }
-
-    IInteractable ResolveInteractable(RaycastHit hit)
-    {
-        // While holding a card, prefer placing on a shelf even if the ray hits a card on it.
-        PlayerCardHand hand = GetComponentInParent<PlayerCardHand>();
-        if (hand == null)
-            hand = transform.root.GetComponentInChildren<PlayerCardHand>();
-
-        if (hand != null && hand.HasSelectedHeldCard())
-        {
-            CardShelf shelf = hit.collider.GetComponentInParent<CardShelf>();
-            if (shelf != null)
-                return shelf;
-        }
-
-        return hit.collider.GetComponentInParent<IInteractable>();
+        return default;
     }
 
     void HandleInput()
@@ -220,6 +214,7 @@ public class InteractionController : MonoBehaviour
         if (_currentTarget is CardShelf shelf)
             shelf.ClearAim();
 
+        CardInteractionFocus.ClearFocus();
         ClearHighlight();
         _currentTarget = null;
         if (_promptRoot != null)

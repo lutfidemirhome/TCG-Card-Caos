@@ -2,16 +2,22 @@ using UnityEngine;
 
 /// <summary>
 /// Ensures player hand systems and test cards exist in Play mode.
+/// Heavy card setup runs asynchronously so Play mode opens immediately.
 /// </summary>
 static class GamePlayBootstrap
 {
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void BeforeSceneLoad()
+    {
+        CardInstancedRenderManager.BeginBulkGroundLoad();
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Initialize()
     {
         EnsureCameraSystems();
         EnsurePlayerHand();
-        EnsureCardInstancedRenderer();
-        EnsureTestCards();
+        CardInstancedRenderManager.EnsureExists().SchedulePlayModeSetup();
     }
 
     static void EnsureCameraSystems()
@@ -37,23 +43,5 @@ static class GamePlayBootstrap
 
         if (player.GetComponent<PlayerCardHand>() == null)
             player.gameObject.AddComponent<PlayerCardHand>();
-    }
-
-    static void EnsureCardInstancedRenderer()
-    {
-        CardInstancedRenderManager.EnsureExists();
-    }
-
-    static void EnsureTestCards()
-    {
-        CardArtLibrary.EnsureLoaded();
-
-        if (!CardScatterUtility.SceneNeedsScatterRefresh())
-        {
-            CardScatterUtility.SnapCardsToFloor();
-            return;
-        }
-
-        CardScatterUtility.SpawnAllTestCards();
     }
 }

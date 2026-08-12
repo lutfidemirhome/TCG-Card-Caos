@@ -3,16 +3,21 @@ using UnityEngine;
 
 /// <summary>
 /// Keeps overlapping flat world cards at distinct heights (GPU instancing stays enabled).
-/// Only the top card in a pile keeps its collider for interaction.
+/// Small counts use overlap clusters; dense scatters use per-cell piles (no floor-wide chains).
 /// </summary>
 public static class CardGroundStack
 {
     const float StackGap = 0.008f;
     const float HeightEpsilon = 0.0002f;
+    const float LayerMicroBias = 0.00004f;
+    const int BulkFlatStackThreshold = 256;
 
     static readonly List<WorldCard> GroundCards = new List<WorldCard>(512);
+    static readonly HashSet<WorldCard> GroundCardSet = new HashSet<WorldCard>();
     static readonly List<WorldCard> ClusterScratch = new List<WorldCard>(16);
     static readonly List<WorldCard> OpenScratch = new List<WorldCard>(16);
+    static readonly List<WorldCard> CellScratch = new List<WorldCard>(32);
+    static readonly Dictionary<long, List<WorldCard>> SpatialBuckets = new Dictionary<long, List<WorldCard>>(512);
 
     public static float StackStep =>
         CardDimensions.Thickness * CardDimensions.WorldCardScale + StackGap;
@@ -24,7 +29,7 @@ public static class CardGroundStack
 
     public static void Track(WorldCard card)
     {
-        if (card == null || GroundCards.Contains(card))
+        if (card == null || !GroundCardSet.Add(card))
             return;
 
         GroundCards.Add(card);
@@ -32,21 +37,190 @@ public static class CardGroundStack
 
     public static void Untrack(WorldCard card)
     {
-        if (card == null)
+        if (card == null || !GroundCardSet.Remove(card))
             return;
 
-        var affected = new List<WorldCard>(4);
-        for (int i = 0; i < GroundCards.Count; i++)
+        Vector3 removedPos = card.transform.position;
+        bool bulk = GroundCards.Count >= BulkFlatStackThreshold;
+
+        if (!bulk)
         {
-            WorldCard other = GroundCards[i];
-            if (other != null && other != card && OverlapsOnGround(card, other))
-                affected.Add(other);
+            var affected = new List<WorldCard>(4);
+            for (int i = 0; i < GroundCards.Count; i++)
+            {
+                WorldCard other = GroundCards[i];
+                if (other != null && other != card && OverlapsOnGround(card, other))
+                    affected.Add(other);
+            }
+
+            RemoveFromList(card);
+            for (int i = 0; i < affected.Count; i++)
+                RefreshCluster(affected[i]);
+            return;
         }
 
-        GroundCards.Remove(card);
+        RemoveFromList(card);
+        RefreshCellAt(removedPos);
+    }
 
-        for (int i = 0; i < affected.Count; i++)
-            RefreshCluster(affected[i]);
+    static void RemoveFromList(WorldCard card)
+    {
+        for (int i = GroundCards.Count - 1; i >= 0; i--)
+        {
+            if (GroundCards[i] != card)
+                continue;
+
+            int last = GroundCards.Count - 1;
+            if (i != last)
+                GroundCards[i] = GroundCards[last];
+
+            GroundCards.RemoveAt(last);
+            return;
+        }
+    }
+
+    public static void ClearAll()
+    {
+        GroundCards.Clear();
+        GroundCardSet.Clear();
+        SpatialBuckets.Clear();
+    }
+
+    public static void ForEachTracked(System.Action<WorldCard> visit)
+    {
+        if (visit == null)
+            return;
+
+        for (int i = 0; i < GroundCards.Count; i++)
+        {
+            WorldCard card = GroundCards[i];
+            if (card != null)
+                visit(card);
+        }
+    }
+
+    public static int TrackedCount => GroundCards.Count;
+
+    public static WorldCard GetTracked(int index) => GroundCards[index];
+
+    public static void RebuildAll()
+    {
+        if (GroundCards.Count >= BulkFlatStackThreshold)
+        {
+            RebuildCellPiles();
+            return;
+        }
+
+        RebuildClustered();
+    }
+
+    /// <summary>
+    /// One pile per XZ cell — never flood-fills across the floor (that launched cards into the sky).
+    /// </summary>
+    static void RebuildCellPiles()
+    {
+        RebuildSpatialBuckets();
+        foreach (KeyValuePair<long, List<WorldCard>> pair in SpatialBuckets)
+            ApplyPileLayers(pair.Value);
+    }
+
+    static void RebuildSpatialBuckets()
+    {
+        SpatialBuckets.Clear();
+        float cellSize = SpatialCellSize;
+
+        for (int i = 0; i < GroundCards.Count; i++)
+        {
+            WorldCard card = GroundCards[i];
+            if (card == null || card.IsInHand)
+                continue;
+
+            long key = CellKey(card.transform.position, cellSize);
+            if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
+            {
+                bucket = new List<WorldCard>(8);
+                SpatialBuckets[key] = bucket;
+            }
+
+            bucket.Add(card);
+        }
+    }
+
+    static void RefreshCellAt(Vector3 worldPos)
+    {
+        float cellSize = SpatialCellSize;
+        long key = CellKey(worldPos, cellSize);
+        CellScratch.Clear();
+
+        for (int i = 0; i < GroundCards.Count; i++)
+        {
+            WorldCard card = GroundCards[i];
+            if (card == null || card.IsInHand)
+                continue;
+            if (CellKey(card.transform.position, cellSize) != key)
+                continue;
+
+            CellScratch.Add(card);
+        }
+
+        ApplyPileLayers(CellScratch);
+    }
+
+    static void ApplyPileLayers(List<WorldCard> pile)
+    {
+        if (pile == null || pile.Count == 0)
+            return;
+
+        pile.Sort(CompareGroundOrder);
+        for (int layer = 0; layer < pile.Count; layer++)
+        {
+            WorldCard card = pile[layer];
+            if (card == null || card.IsInHand)
+                continue;
+
+            card.SetGroundStackLayer(layer);
+            Vector3 position = card.transform.position;
+            int bias = Mathf.Abs(card.GetInstanceID()) % 10;
+            position.y = GetStackedWorldY(layer) + bias * LayerMicroBias;
+            card.transform.position = position;
+        }
+    }
+
+    /// <summary>Matches scatter pile radius so one pile ≈ one cell, not a giant tower.</summary>
+    static float SpatialCellSize
+    {
+        get
+        {
+            float footprint = Mathf.Max(CardDimensions.Width, CardDimensions.Height)
+                * CardDimensions.WorldCardScale;
+            return Mathf.Max(0.09f, footprint * 0.4f);
+        }
+    }
+
+    static long CellKey(Vector3 worldPos, float cellSize)
+    {
+        int x = Mathf.FloorToInt(worldPos.x / cellSize);
+        int z = Mathf.FloorToInt(worldPos.z / cellSize);
+        return ((long)x << 32) ^ (uint)z;
+    }
+
+    static void RebuildClustered()
+    {
+        var processed = new HashSet<WorldCard>();
+        for (int i = 0; i < GroundCards.Count; i++)
+        {
+            WorldCard seed = GroundCards[i];
+            if (seed == null || seed.IsInHand || processed.Contains(seed))
+                continue;
+
+            BuildCluster(seed, ClusterScratch);
+            ApplyPileLayers(ClusterScratch);
+            for (int c = 0; c < ClusterScratch.Count; c++)
+            {
+                if (ClusterScratch[c] != null)
+                    processed.Add(ClusterScratch[c]);
+            }
+        }
     }
 
     public static void ApplyStackHeight(WorldCard card)
@@ -55,11 +229,25 @@ public static class CardGroundStack
             return;
 
         Track(card);
+        if (GroundCards.Count >= BulkFlatStackThreshold)
+        {
+            // Morning-style stack for the dropped card only: direct overlaps, no floor-wide reshuffle.
+            RefreshDirectOverlaps(card);
+            return;
+        }
+
         RefreshCluster(card);
     }
 
     public static void RefreshCluster(WorldCard seed)
     {
+        if (GroundCards.Count >= BulkFlatStackThreshold)
+        {
+            if (seed != null)
+                RefreshDirectOverlaps(seed);
+            return;
+        }
+
         if (seed == null || seed.IsInHand)
             return;
 
@@ -67,21 +255,64 @@ public static class CardGroundStack
         if (ClusterScratch.Count == 0)
             return;
 
-        ClusterScratch.Sort(CompareGroundOrder);
+        ApplyPileLayers(ClusterScratch);
+    }
 
-        for (int i = 0; i < ClusterScratch.Count; i++)
+    /// <summary>
+    /// Restack only the seed and cards that actually overlap it (same feel as morning clusters, O(neighbors)).
+    /// </summary>
+    static void RefreshDirectOverlaps(WorldCard seed)
+    {
+        if (seed == null || seed.IsInHand)
+            return;
+
+        RebuildSpatialBuckets();
+        CollectNeighborhood(seed.transform.position, CellScratch);
+        ClusterScratch.Clear();
+        ClusterScratch.Add(seed);
+
+        for (int i = 0; i < CellScratch.Count; i++)
         {
-            WorldCard card = ClusterScratch[i];
-            if (card == null || card.IsInHand)
+            WorldCard other = CellScratch[i];
+            if (other == null || other == seed || other.IsInHand)
+                continue;
+            if (other.GetComponent<Rigidbody>() != null)
+                continue;
+            if (!OverlapsOnGround(seed, other))
                 continue;
 
-            card.SetGroundStackLayer(i);
+            ClusterScratch.Add(other);
+        }
 
-            Vector3 position = card.transform.position;
-            position.y = GetStackedWorldY(i);
-            card.transform.position = position;
+        ApplyPileLayers(ClusterScratch);
+    }
+
+    static void CollectNeighborhood(Vector3 worldPos, List<WorldCard> results)
+    {
+        results.Clear();
+        float cellSize = SpatialCellSize;
+        int cx = Mathf.FloorToInt(worldPos.x / cellSize);
+        int cz = Mathf.FloorToInt(worldPos.z / cellSize);
+
+        for (int dz = -1; dz <= 1; dz++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                long key = PackCell(cx + dx, cz + dz);
+                if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
+                    continue;
+
+                for (int i = 0; i < bucket.Count; i++)
+                {
+                    WorldCard card = bucket[i];
+                    if (card != null && !card.IsInHand)
+                        results.Add(card);
+                }
+            }
         }
     }
+
+    static long PackCell(int x, int z) => ((long)x << 32) ^ (uint)z;
 
     static int CompareGroundOrder(WorldCard a, WorldCard b)
     {

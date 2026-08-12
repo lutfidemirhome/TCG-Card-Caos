@@ -75,9 +75,42 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         && !_scaleTransitionActive
         && _rigidbody == null
         && _cardVisual == null
-        && !UsesDefinitionFrontArt;
+        && !IsGroundFaceDown
+        && GetComponentInParent<CardShelfSlot>() == null;
+
+    public bool CanUseInstancedBackRendering =>
+        Application.isPlaying
+        && _handState == HandState.World
+        && !_scaleTransitionActive
+        && _rigidbody == null
+        && _cardVisual == null
+        && IsGroundFaceDown
+        && GetComponentInParent<CardShelfSlot>() == null;
+
+    public bool IsGroundFaceDown
+    {
+        get
+        {
+            if (_cardVisual != null)
+                return _cardVisual.forward.y < 0f;
+
+            float pitch = transform.rotation.eulerAngles.x;
+            return pitch > 90f && pitch < 270f;
+        }
+    }
 
     bool UsesDefinitionFrontArt => definition != null && definition.FrontTexture != null;
+
+    public string GetInstancedBatchKey()
+    {
+        if (CanUseInstancedBackRendering)
+            return CardInstancedRenderManager.BackBatchKey;
+
+        if (UsesDefinitionFrontArt && definition != null)
+            return definition.DefinitionId;
+
+        return CardInstancedRenderManager.PaletteBatchPrefix + PaletteIndex;
+    }
 
     public void SetGroundStackLayer(int layer)
     {
@@ -114,10 +147,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         Transform existingVisual = transform.Find("CardVisual");
         if (existingVisual != null)
             _cardVisual = existingVisual;
+
+        SetWorldColliderEnabled(false);
     }
 
     void OnEnable()
     {
+        if (CardInstancedRenderManager.DeferGroundRegistration)
+            return;
+
         TryRegisterInstancedRendering();
     }
 
@@ -191,6 +229,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         ApplyWorldColliderState();
     }
 
+    public void SetPlayerAimFocus(bool focused)
+    {
+        if (IsInHand || _rigidbody != null)
+            return;
+
+        SetWorldColliderEnabled(focused);
+    }
+
     void ApplyWorldColliderState()
     {
         if (_collider == null || IsInHand)
@@ -255,6 +301,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             shelfSlot.ClearIfMatches(this);
 
         ClearShelfPlacementStatus();
+        CardInteractionFocus.ClearFocus();
+        CardGroundQuery.UntrackShelfCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
 
         SetInteractionHighlight(false);
@@ -314,8 +362,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         ApplyFlatWorldCollider();
 
-        if (_collider != null)
+        // Morning factory cards were solid (isTrigger=false). Current ground cards are triggers
+        // for 5000-card perf — restore solid for the throw so physics lands on the floor.
+        if (_collider is BoxCollider boxCollider)
+        {
+            boxCollider.isTrigger = false;
+            boxCollider.enabled = true;
+        }
+        else if (_collider != null)
+        {
             _collider.enabled = true;
+        }
 
         BeginScaleTransition(transform.localScale.x, CardDimensions.WorldCardScale, worldScaleTransitionDuration);
         RefreshRenderMode();
@@ -439,6 +496,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         CardGroundStack.ApplyStackHeight(this);
         ResolveWorldPenetration();
         CardGroundStack.ApplyStackHeight(this);
+
+        // Back to ground-card mode (trigger, off) used by 5000-card aim focus.
+        if (_collider is BoxCollider box)
+            box.isTrigger = true;
+        SetWorldColliderEnabled(false);
     }
 
     void ResolveWorldPenetration(Rigidbody body = null)
@@ -464,10 +526,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     bool IsCardFaceUp()
     {
-        if (_cardVisual == null)
-            return true;
+        if (_cardVisual != null)
+            return _cardVisual.forward.y >= 0f;
 
-        return _cardVisual.forward.y >= 0f;
+        return !IsGroundFaceDown;
     }
 
     void RemovePhysics()
@@ -615,7 +677,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         CardInstancedRenderManager.Instance?.Unregister(this);
 
-        if (CanUseInstancedRendering)
+        if (CanUseInstancedRendering || CanUseInstancedBackRendering)
         {
             ReleaseCardVisual();
 
@@ -638,6 +700,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                 ReleaseInteractionOutline();
             }
 
+            SetWorldColliderEnabled(false);
             CardInstancedRenderManager.Instance?.Register(this);
             return;
         }
@@ -699,6 +762,25 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             ReleaseInteractionOutline();
         }
+    }
+
+    public void RefreshGroundRendering()
+    {
+        RegisterForInstancedGround();
+    }
+
+    /// <summary>Lightweight ground setup: no mesh, GPU instanced draw, collider off until player is near.</summary>
+    public void RegisterForInstancedGround()
+    {
+        if (IsInHand)
+            return;
+
+        CardInstancedRenderManager.EnsureExists();
+        ReleaseCardVisual();
+        ReleaseInteractionOutline();
+        ReleaseShelfStatusOutline();
+        SetWorldColliderEnabled(false);
+        CardInstancedRenderManager.Instance?.Register(this);
     }
 
     void TryRegisterInstancedRendering()
@@ -1007,7 +1089,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         if (_collider != null)
         {
-            _collider.enabled = true;
             if (_collider is BoxCollider boxCollider)
             {
                 boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Height, CardDimensions.Thickness);
@@ -1021,7 +1102,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.localPosition = Vector3.zero;
 
         AlignBottomToSlotPlane(slot, surfacePadding);
-
+        CardGroundQuery.TrackShelfCard(this);
+        SetPlayerAimFocus(false);
         RefreshRenderMode();
     }
 

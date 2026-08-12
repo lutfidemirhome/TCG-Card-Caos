@@ -14,6 +14,7 @@ public static class CardArtLibrary
 
     public const string RuntimeMeshResourcePath = "Cards/TradingCardMesh";
     public const string RuntimeInstancedMeshResourcePath = "Cards/InstancedCardMesh";
+    public const string RuntimeInstancedBackMeshResourcePath = "Cards/InstancedCardBackMesh";
     public const string RuntimeFrontWorldMaterialResourcePath = "Cards/CardFrontWorld";
     public const string RuntimeBackWorldMaterialResourcePath = "Cards/CardBackWorld";
     public const string RuntimeFrontDetailMaterialResourcePath = "Cards/CardFrontDetail";
@@ -47,6 +48,7 @@ public static class CardArtLibrary
 
     static Mesh _cardMesh;
     static Mesh _instancedCardMesh;
+    static Mesh _instancedCardBackMesh;
     static Material _sharedFrontWorldTemplate;
     static Material _sharedBackWorldTemplate;
     static Material _sharedFrontDetailTemplate;
@@ -102,6 +104,16 @@ public static class CardArtLibrary
         {
             EnsureLoaded();
             return _instancedCardMesh != null ? _instancedCardMesh : _cardMesh;
+        }
+    }
+
+    /// <summary>Lightweight back-face quad for GPU-instanced face-down ground cards.</summary>
+    public static Mesh InstancedCardBackMesh
+    {
+        get
+        {
+            EnsureLoaded();
+            return _instancedCardBackMesh != null ? _instancedCardBackMesh : _instancedCardMesh;
         }
     }
 
@@ -225,6 +237,7 @@ public static class CardArtLibrary
     {
         _cardMesh = null;
         _instancedCardMesh = null;
+        _instancedCardBackMesh = null;
         _sharedFrontWorldTemplate = null;
         _sharedBackWorldTemplate = null;
         _sharedFrontDetailTemplate = null;
@@ -260,6 +273,9 @@ public static class CardArtLibrary
     {
         _cardMesh = Resources.Load<Mesh>(RuntimeMeshResourcePath);
         _instancedCardMesh = Resources.Load<Mesh>(RuntimeInstancedMeshResourcePath);
+        _instancedCardBackMesh = Resources.Load<Mesh>(RuntimeInstancedBackMeshResourcePath);
+        if (_instancedCardBackMesh == null)
+            _instancedCardBackMesh = CardMeshBuilder.CreatePrototypeInstancedBackQuad();
         _sharedFrontWorldTemplate = Resources.Load<Material>(RuntimeFrontWorldMaterialResourcePath);
         _sharedBackWorldTemplate = Resources.Load<Material>(RuntimeBackWorldMaterialResourcePath);
         _sharedFrontDetailTemplate = Resources.Load<Material>(RuntimeFrontDetailMaterialResourcePath);

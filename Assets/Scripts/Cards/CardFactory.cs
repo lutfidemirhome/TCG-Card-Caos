@@ -15,21 +15,26 @@ public static class CardFactory
         Quaternion rotation,
         CardDefinition cardDefinition,
         int paletteIndex,
-        string cardName = null)
+        string cardName = null,
+        bool ensureArtLoaded = true)
     {
-        CardArtLibrary.EnsureLoaded();
+        if (ensureArtLoaded)
+            CardArtLibrary.EnsureLoaded();
 
         string resolvedName = cardName;
         if (string.IsNullOrWhiteSpace(resolvedName))
             resolvedName = cardDefinition != null ? cardDefinition.DisplayName : "Card";
 
         var root = new GameObject(resolvedName);
+        CardLayers.ApplyToGameObject(root);
         root.transform.SetPositionAndRotation(position, rotation);
         root.transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
 
         var collider = root.AddComponent<BoxCollider>();
         collider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
         collider.center = Vector3.zero;
+        collider.isTrigger = true;
+        collider.enabled = false;
         CardCollisionUtility.ApplyToCollider(collider);
 
         var card = root.AddComponent<WorldCard>();
@@ -97,10 +102,14 @@ public static class CardFactory
         bool foundPlane = false;
 
         Collider[] colliders = Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
+        CardLayers.EnsureInitialized();
+        int worldCardLayer = CardLayers.WorldCard;
         for (int i = 0; i < colliders.Length; i++)
         {
             Collider col = colliders[i];
             if (col == null || !col.enabled || col.isTrigger)
+                continue;
+            if (col.gameObject.layer == worldCardLayer)
                 continue;
             if (ShouldIgnoreGroundCandidate(col))
                 continue;

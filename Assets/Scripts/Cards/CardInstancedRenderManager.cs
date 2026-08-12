@@ -1,32 +1,102 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
 /// GPU-instanced draws for static world cards that share mesh/material batches.
+/// Definition-art cards batch by <see cref="CardDefinition.DefinitionId"/>; face-down cards share one back batch.
 /// </summary>
 public class CardInstancedRenderManager : MonoBehaviour
 {
+    public const string BackBatchKey = "__back__";
+    public const string PaletteBatchPrefix = "palette:";
+
     const int MaxInstancesPerBatch = 1023;
+    const int CardsRegisteredPerFrame = 400;
 
     [SerializeField] float drawDistance = 40f;
-    [SerializeField] float colliderDistance = 25f;
-    [SerializeField] float colliderUpdateInterval = 0.25f;
 
     static CardInstancedRenderManager _instance;
 
-    readonly HashSet<WorldCard>[] _cardsByPalette = new HashSet<WorldCard>[CardPalette.Count];
+    readonly Dictionary<string, HashSet<WorldCard>> _cardsByBatchKey = new Dictionary<string, HashSet<WorldCard>>(160);
+    readonly Dictionary<WorldCard, string> _batchKeyByCard = new Dictionary<WorldCard, string>(2048);
     readonly Matrix4x4[] _matrixBuffer = new Matrix4x4[MaxInstancesPerBatch];
-    readonly List<int> _scratchPaletteIndices = new List<int>(CardPalette.Count);
-    readonly List<WorldCard> _drawSortScratch = new List<WorldCard>(512);
+    readonly List<string> _scratchBatchKeys = new List<string>(160);
+    readonly List<WorldCard> _drawSortScratch = new List<WorldCard>(2048);
     readonly Plane[] _frustumPlanes = new Plane[6];
 
     Camera _camera;
-    float _colliderUpdateTimer;
     float _drawDistanceSq;
-    float _colliderDistanceSq;
+    Coroutine _playModeSetupRoutine;
 
     public static CardInstancedRenderManager Instance => _instance;
+
+    public static bool DeferGroundRegistration { get; private set; }
+
+    public static void BeginBulkGroundLoad()
+    {
+        DeferGroundRegistration = true;
+    }
+
+    public void SchedulePlayModeSetup()
+    {
+        if (_playModeSetupRoutine != null)
+            StopCoroutine(_playModeSetupRoutine);
+
+        _playModeSetupRoutine = StartCoroutine(PlayModeSetupRoutine());
+    }
+
+    IEnumerator PlayModeSetupRoutine()
+    {
+        yield return null;
+
+        CardArtLibrary.EnsureLoaded();
+        int runtimeTarget = CardScatterUtility.ConsumeRuntimePlayScatterCount();
+        if (runtimeTarget > 0)
+        {
+            yield return CardScatterUtility.SpawnScatteredCardsAsync(runtimeTarget);
+        }
+        else if (CardScatterUtility.SceneNeedsScatterRefresh())
+        {
+            CardScatterUtility.SpawnAllTestCards();
+        }
+        else
+        {
+            CardScatterUtility.SnapScatterCardsToFloor();
+        }
+
+        DeferGroundRegistration = false;
+        yield return RegisterAllGroundCardsRoutine();
+        CardGroundStack.RebuildAll();
+
+        Debug.Log(
+            "TCG Card Caos: Play mode card setup complete ("
+            + CardScatterUtility.CountScatterCards()
+            + " scattered cards).");
+
+        _playModeSetupRoutine = null;
+    }
+
+    IEnumerator RegisterAllGroundCardsRoutine()
+    {
+        Transform scatterRoot = GameObject.Find(CardScatterUtility.ScatterRootName)?.transform;
+        if (scatterRoot == null)
+            yield break;
+
+        int processed = 0;
+        for (int i = 0; i < scatterRoot.childCount; i++)
+        {
+            WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+            if (card == null || card.IsInHand)
+                continue;
+
+            card.RegisterForInstancedGround();
+            processed++;
+            if (processed % CardsRegisteredPerFrame == 0)
+                yield return null;
+        }
+    }
 
     public static CardInstancedRenderManager EnsureExists()
     {
@@ -65,13 +135,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     void EnsureBucketsInitialized()
     {
-        for (int i = 0; i < _cardsByPalette.Length; i++)
-        {
-            if (_cardsByPalette[i] == null)
-                _cardsByPalette[i] = new HashSet<WorldCard>();
-        }
-
-        if (_drawDistanceSq <= 0f || _colliderDistanceSq <= 0f)
+        if (_drawDistanceSq <= 0f)
             CacheDistances();
     }
 
@@ -89,9 +153,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     void CacheDistances()
     {
         drawDistance = Mathf.Max(4f, drawDistance);
-        colliderDistance = Mathf.Max(2f, colliderDistance);
         _drawDistanceSq = drawDistance * drawDistance;
-        _colliderDistanceSq = colliderDistance * colliderDistance;
     }
 
     void LateUpdate()
@@ -100,7 +162,6 @@ public class CardInstancedRenderManager : MonoBehaviour
             _camera = Camera.main;
 
         DrawInstancedCards();
-        UpdateColliderStates();
     }
 
     public void Register(WorldCard card)
@@ -110,12 +171,25 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         EnsureBucketsInitialized();
         CardGroundStack.Track(card);
-        CardGroundStack.RefreshCluster(card);
 
-        if (!card.CanUseInstancedRendering)
+        if (!card.CanUseInstancedRendering && !card.CanUseInstancedBackRendering)
             return;
 
-        _cardsByPalette[GetPaletteIndex(card)].Add(card);
+        string batchKey = card.GetInstancedBatchKey();
+        if (!_cardsByBatchKey.TryGetValue(batchKey, out HashSet<WorldCard> bucket))
+        {
+            bucket = new HashSet<WorldCard>();
+            _cardsByBatchKey[batchKey] = bucket;
+        }
+
+        if (_batchKeyByCard.TryGetValue(card, out string previousKey) && previousKey != batchKey)
+        {
+            if (_cardsByBatchKey.TryGetValue(previousKey, out HashSet<WorldCard> previousBucket))
+                previousBucket.Remove(card);
+        }
+
+        bucket.Add(card);
+        _batchKeyByCard[card] = batchKey;
     }
 
     public void Unregister(WorldCard card)
@@ -124,9 +198,13 @@ public class CardInstancedRenderManager : MonoBehaviour
             return;
 
         EnsureBucketsInitialized();
-        HashSet<WorldCard> bucket = _cardsByPalette[GetPaletteIndex(card)];
-        if (bucket != null)
+        if (!_batchKeyByCard.TryGetValue(card, out string batchKey))
+            return;
+
+        if (_cardsByBatchKey.TryGetValue(batchKey, out HashSet<WorldCard> bucket))
             bucket.Remove(card);
+
+        _batchKeyByCard.Remove(card);
     }
 
     public static void ReleaseFromGround(WorldCard card)
@@ -143,32 +221,38 @@ public class CardInstancedRenderManager : MonoBehaviour
         EnsureBucketsInitialized();
         CardArtLibrary.EnsureLoaded();
 
-        Mesh mesh = CardArtLibrary.InstancedCardMesh;
-        if (mesh == null)
+        Mesh frontMesh = CardArtLibrary.InstancedCardMesh;
+        Mesh backMesh = CardArtLibrary.InstancedCardBackMesh;
+        if (frontMesh == null)
             return;
 
         GeometryUtility.CalculateFrustumPlanes(_camera, _frustumPlanes);
-        _scratchPaletteIndices.Clear();
+        _scratchBatchKeys.Clear();
 
-        for (int paletteIndex = 0; paletteIndex < _cardsByPalette.Length; paletteIndex++)
+        foreach (KeyValuePair<string, HashSet<WorldCard>> pair in _cardsByBatchKey)
         {
-            HashSet<WorldCard> bucket = _cardsByPalette[paletteIndex];
-            if (bucket != null && bucket.Count > 0)
-                _scratchPaletteIndices.Add(paletteIndex);
+            if (pair.Value != null && pair.Value.Count > 0)
+                _scratchBatchKeys.Add(pair.Key);
         }
 
-        for (int i = 0; i < _scratchPaletteIndices.Count; i++)
+        for (int i = 0; i < _scratchBatchKeys.Count; i++)
         {
-            int paletteIndex = _scratchPaletteIndices[i];
-            HashSet<WorldCard> cards = _cardsByPalette[paletteIndex];
-            Material frontMaterial = CardArtLibrary.GetFrontMaterial(paletteIndex, CardTextureQuality.World);
-            if (frontMaterial == null)
+            string batchKey = _scratchBatchKeys[i];
+            if (!_cardsByBatchKey.TryGetValue(batchKey, out HashSet<WorldCard> cards))
+                continue;
+
+            bool backFace = batchKey == BackBatchKey;
+            Material material = ResolveBatchMaterial(batchKey);
+            Mesh mesh = backFace ? backMesh : frontMesh;
+            if (material == null || mesh == null)
                 continue;
 
             _drawSortScratch.Clear();
             foreach (WorldCard card in cards)
             {
-                if (card == null || !card.CanUseInstancedRendering)
+                if (card == null)
+                    continue;
+                if (backFace ? !card.CanUseInstancedBackRendering : !card.CanUseInstancedRendering)
                     continue;
                 if (!ShouldRenderCard(card))
                     continue;
@@ -176,7 +260,11 @@ public class CardInstancedRenderManager : MonoBehaviour
                 _drawSortScratch.Add(card);
             }
 
-            _drawSortScratch.Sort(CompareDrawOrder);
+            if (_drawSortScratch.Count == 0)
+                continue;
+
+            if (_drawSortScratch.Count <= 256)
+                _drawSortScratch.Sort(CompareDrawOrder);
 
             int writeIndex = 0;
             for (int c = 0; c < _drawSortScratch.Count; c++)
@@ -185,13 +273,31 @@ public class CardInstancedRenderManager : MonoBehaviour
                 if (writeIndex < MaxInstancesPerBatch)
                     continue;
 
-                DrawBatch(mesh, frontMaterial, _matrixBuffer, writeIndex);
+                DrawBatch(mesh, material, _matrixBuffer, writeIndex);
                 writeIndex = 0;
             }
 
             if (writeIndex > 0)
-                DrawBatch(mesh, frontMaterial, _matrixBuffer, writeIndex);
+                DrawBatch(mesh, material, _matrixBuffer, writeIndex);
         }
+    }
+
+    static Material ResolveBatchMaterial(string batchKey)
+    {
+        if (batchKey == BackBatchKey)
+            return CardArtLibrary.GetBackMaterial(CardTextureQuality.World);
+
+        if (batchKey.StartsWith(PaletteBatchPrefix))
+        {
+            string paletteText = batchKey.Substring(PaletteBatchPrefix.Length);
+            if (int.TryParse(paletteText, out int paletteIndex))
+                return CardArtLibrary.GetFrontMaterial(paletteIndex, CardTextureQuality.World);
+        }
+
+        if (CardCatalog.TryGetById(batchKey, out CardDefinition definition))
+            return CardArtLibrary.GetFrontMaterial(definition, CardTextureQuality.World);
+
+        return null;
     }
 
     static int CompareDrawOrder(WorldCard a, WorldCard b)
@@ -216,65 +322,16 @@ public class CardInstancedRenderManager : MonoBehaviour
         return (closestPoint - _camera.transform.position).sqrMagnitude <= _drawDistanceSq;
     }
 
-    void UpdateColliderStates()
-    {
-        if (_camera == null)
-            return;
-
-        EnsureBucketsInitialized();
-        _colliderUpdateTimer -= Time.deltaTime;
-        if (_colliderUpdateTimer > 0f)
-            return;
-
-        _colliderUpdateTimer = colliderUpdateInterval;
-        Vector3 cameraPosition = _camera.transform.position;
-        GeometryUtility.CalculateFrustumPlanes(_camera, _frustumPlanes);
-
-        for (int paletteIndex = 0; paletteIndex < _cardsByPalette.Length; paletteIndex++)
-        {
-            HashSet<WorldCard> cards = _cardsByPalette[paletteIndex];
-            if (cards == null)
-                continue;
-
-            foreach (WorldCard card in cards)
-            {
-                if (card == null || !card.CanUseInstancedRendering)
-                    continue;
-
-                Bounds bounds = card.GetInstancedCullBounds();
-                bool inView = GeometryUtility.TestPlanesAABB(_frustumPlanes, bounds);
-                if (!inView)
-                {
-                    card.SetWorldColliderEnabled(false);
-                    continue;
-                }
-
-                Vector3 closestPoint = bounds.ClosestPoint(cameraPosition);
-                bool nearEnough = (closestPoint - cameraPosition).sqrMagnitude <= _colliderDistanceSq;
-                card.SetWorldColliderEnabled(nearEnough);
-            }
-        }
-    }
-
-    static void DrawBatch(Mesh mesh, Material frontMaterial, Matrix4x4[] matrices, int count)
+    static void DrawBatch(Mesh mesh, Material material, Matrix4x4[] matrices, int count)
     {
         Graphics.DrawMeshInstanced(
             mesh,
             0,
-            frontMaterial,
+            material,
             matrices,
             count,
             properties: null,
             ShadowCastingMode.Off,
             receiveShadows: false);
-    }
-
-    static int GetPaletteIndex(WorldCard card)
-    {
-        int paletteIndex = card.PaletteIndex % CardPalette.Count;
-        if (paletteIndex < 0)
-            paletteIndex += CardPalette.Count;
-
-        return paletteIndex;
     }
 }

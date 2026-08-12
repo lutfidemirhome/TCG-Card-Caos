@@ -97,8 +97,12 @@ public class CardShelfSlot : MonoBehaviour
 
     public void ClearIfMatches(WorldCard card)
     {
-        if (occupiedCard == card)
-            occupiedCard = null;
+        if (occupiedCard != card)
+            return;
+
+        occupiedCard = null;
+        CardGroundQuery.UntrackShelfCard(card);
+        card?.SetPlayerAimFocus(false);
         RefreshPreviewVisibility();
     }
 

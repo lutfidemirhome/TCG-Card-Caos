@@ -64,6 +64,9 @@ public static class CardArtSetup
             Vector2[] instancedUvs = instancedMesh.uv;
             SaveMeshAsset(instancedMesh, ResourcesCardsFolder + "/InstancedCardMesh.asset");
 
+            Mesh instancedBackMesh = CardMeshBuilder.CreatePrototypeInstancedBackQuad();
+            SaveMeshAsset(instancedBackMesh, ResourcesCardsFolder + "/InstancedCardBackMesh.asset");
+
             EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking detail card mesh...", 0.8f);
 
             Mesh detailMesh = CardMeshBuilder.CreatePrototypeCardMesh();

@@ -92,6 +92,38 @@ public static class CardMeshBuilder
         return mesh;
     }
 
+    /// <summary>Back-face quad for GPU-instanced face-down ground cards (2 tris).</summary>
+    public static Mesh CreateInstancedGroundCardBackQuad(float width, float height, float thickness)
+    {
+        float hw = width * 0.5f;
+        float hh = height * 0.5f;
+        float z = thickness * 0.5f;
+
+        var vertices = new[]
+        {
+            new Vector3(hw, -hh, -z),
+            new Vector3(-hw, -hh, -z),
+            new Vector3(-hw, hh, -z),
+            new Vector3(hw, hh, -z),
+        };
+        var uvs = new[]
+        {
+            new Vector2(1f, 0f),
+            new Vector2(0f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+        };
+
+        var mesh = new Mesh { name = "InstancedGroundCardBackMesh" };
+        mesh.vertices = vertices;
+        mesh.uv = uvs;
+        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        mesh.subMeshCount = 1;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
     public static Mesh CreatePrototypeCardMesh()
     {
         return CreateBoxCardMesh(
@@ -103,6 +135,14 @@ public static class CardMeshBuilder
     public static Mesh CreatePrototypeInstancedQuad()
     {
         return CreateInstancedGroundCardQuad(
+            CardModelDimensions.Width,
+            CardModelDimensions.Height,
+            CardModelDimensions.Thickness);
+    }
+
+    public static Mesh CreatePrototypeInstancedBackQuad()
+    {
+        return CreateInstancedGroundCardBackQuad(
             CardModelDimensions.Width,
             CardModelDimensions.Height,
             CardModelDimensions.Thickness);
