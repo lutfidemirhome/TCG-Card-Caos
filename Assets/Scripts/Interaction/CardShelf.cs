@@ -50,6 +50,11 @@ public class CardShelf : MonoBehaviour, IInteractable
     {
         _slots.Clear();
         GetComponentsInChildren(true, _slots);
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            if (_slots[i] != null)
+                _slots[i].SyncIndicesFromHierarchy();
+        }
     }
 
     /// <summary>Horizontal direction customers face when reading cards on this shelf.</summary>
@@ -109,7 +114,10 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (card == null || slot == null)
             return false;
 
-        return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot);
+        if (_slots.Count == 0)
+            RefreshSlotCache();
+
+        return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot, _slots);
     }
 
     public void SetAimHit(RaycastHit hit)
@@ -199,9 +207,10 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (card == null || slot == null)
             return;
 
+        bool isCorrect = IsCorrectPlacement(card, slot);
         card.PlaceOnShelfSlot(slot.transform, surfacePadding);
         slot.Occupy(card);
-        card.NotifyShelfPlacement(IsCorrectPlacement(card, slot));
+        card.NotifyShelfPlacement(isCorrect);
     }
 
     void RefreshPlacementPreview()

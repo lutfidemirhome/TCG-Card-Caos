@@ -34,4 +34,27 @@ public static class CardShelfSlotNaming
         columnIndex = UnityEngine.Mathf.Clamp(columnIndex, 0, CardShelfCategories.SlotsPerRow - 1);
         return true;
     }
+
+    /// <summary>ShelfSlots_Level → 0, ShelfSlots_Level (3) → 3.</summary>
+    public static bool TryParseLevelRowIndex(string levelObjectName, out int rowIndex)
+    {
+        rowIndex = 0;
+        const string prefix = "ShelfSlots_Level";
+        if (string.IsNullOrWhiteSpace(levelObjectName) || !levelObjectName.StartsWith(prefix))
+            return false;
+
+        if (levelObjectName.Length == prefix.Length)
+            return true;
+
+        int open = levelObjectName.LastIndexOf('(');
+        int close = levelObjectName.LastIndexOf(')');
+        if (open < 0 || close <= open)
+            return false;
+
+        if (!int.TryParse(levelObjectName.Substring(open + 1, close - open - 1), out rowIndex))
+            return false;
+
+        rowIndex = UnityEngine.Mathf.Max(0, rowIndex);
+        return true;
+    }
 }

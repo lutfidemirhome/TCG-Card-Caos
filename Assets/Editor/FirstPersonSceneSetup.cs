@@ -343,9 +343,13 @@ public static class FirstPersonSceneSetup
             levelRoot = root.transform;
         }
 
+        int levelRow = 0;
+        if (levelRoot != null && CardShelfSlotNaming.TryParseLevelRowIndex(levelRoot.name, out int parsedRow))
+            levelRow = parsedRow;
+
         for (int col = 0; col < columns; col++)
         {
-            var slotGo = new GameObject("CardShelfSlot_0_" + col);
+            var slotGo = new GameObject(CardShelfSlotNaming.BuildName(levelRow, col));
             Undo.RegisterCreatedObjectUndo(slotGo, "Create Card Shelf Slot");
             slotGo.transform.SetParent(levelRoot, false);
             slotGo.transform.localPosition = new Vector3(originX + col * spacingX, 0f, 0f);

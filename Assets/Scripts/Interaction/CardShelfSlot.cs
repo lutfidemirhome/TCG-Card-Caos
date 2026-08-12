@@ -62,8 +62,20 @@ public class CardShelfSlot : MonoBehaviour
 
     public void SyncIndicesFromName()
     {
-        if (CardShelfSlotNaming.TryParse(gameObject.name, out int row, out int column))
-            ConfigureIndices(row, column);
+        if (CardShelfSlotNaming.TryParse(gameObject.name, out int _, out int column))
+            columnIndex = column;
+    }
+
+    public void SyncIndicesFromHierarchy()
+    {
+        Transform levelRoot = transform.parent;
+        if (levelRoot != null
+            && CardShelfSlotNaming.TryParseLevelRowIndex(levelRoot.name, out int levelRow))
+        {
+            rowIndex = levelRow;
+        }
+
+        SyncIndicesFromName();
     }
 
     public void Occupy(WorldCard card)
@@ -88,7 +100,7 @@ public class CardShelfSlot : MonoBehaviour
 
     void OnEnable()
     {
-        SyncIndicesFromName();
+        SyncIndicesFromHierarchy();
         EnsurePreview();
         RefreshPreviewVisibility();
     }
