@@ -46,6 +46,8 @@ public static class CardArtLibrary
     static Rect? _frontArtUvRect;
     static readonly Dictionary<int, Material> FrontWorldMaterialsByPalette = new Dictionary<int, Material>();
     static readonly Dictionary<int, Material> FrontDetailMaterialsByPalette = new Dictionary<int, Material>();
+    static readonly Dictionary<string, Material> FrontWorldMaterialsByDefinition = new Dictionary<string, Material>();
+    static readonly Dictionary<string, Material> FrontDetailMaterialsByDefinition = new Dictionary<string, Material>();
 
     public static float FlatWidth => FlatSize.x;
     public static float FlatHeight => FlatSize.z;
@@ -144,6 +146,46 @@ public static class CardArtLibrary
         return frontMaterial;
     }
 
+    public static Material GetFrontMaterial(CardDefinition definition, CardTextureQuality quality = CardTextureQuality.Detail)
+    {
+        EnsureLoaded();
+
+        if (definition == null || definition.FrontTexture == null)
+            return GetFrontMaterial(0, quality);
+
+        Dictionary<string, Material> cache = quality == CardTextureQuality.World
+            ? FrontWorldMaterialsByDefinition
+            : FrontDetailMaterialsByDefinition;
+
+        Material template = quality == CardTextureQuality.World
+            ? _sharedFrontWorldTemplate
+            : _sharedFrontDetailTemplate;
+
+        string cacheKey = definition.DefinitionId + ":" + (int)quality;
+        if (!cache.TryGetValue(cacheKey, out Material frontMaterial))
+        {
+            frontMaterial = new Material(template);
+            ApplyFrontTexture(frontMaterial, definition.FrontTexture);
+            if (quality == CardTextureQuality.World)
+                frontMaterial.enableInstancing = true;
+
+            cache[cacheKey] = frontMaterial;
+        }
+
+        return frontMaterial;
+    }
+
+    static void ApplyFrontTexture(Material material, Texture2D texture)
+    {
+        if (material == null || texture == null)
+            return;
+
+        if (material.HasProperty("_BaseMap"))
+            material.SetTexture("_BaseMap", texture);
+        if (material.HasProperty("_MainTex"))
+            material.SetTexture("_MainTex", texture);
+    }
+
     public static Material[] GetCardMaterials(int paletteIndex, CardTextureQuality quality = CardTextureQuality.Detail)
     {
         return new[]
@@ -151,6 +193,21 @@ public static class CardArtLibrary
             GetFrontMaterial(paletteIndex, quality),
             GetBackMaterial(quality),
         };
+    }
+
+    public static Material[] GetCardMaterials(CardDefinition definition, CardTextureQuality quality = CardTextureQuality.Detail)
+    {
+        EnsureLoaded();
+        return new[]
+        {
+            GetFrontMaterial(definition, quality),
+            GetBackMaterial(quality),
+        };
+    }
+
+    public static Texture2D GetDefinitionFrontTexture(CardDefinition definition)
+    {
+        return definition != null ? definition.FrontTexture : null;
     }
 
     public static void ResetCache()
@@ -165,6 +222,8 @@ public static class CardArtLibrary
         _frontArtUvRect = null;
         FrontWorldMaterialsByPalette.Clear();
         FrontDetailMaterialsByPalette.Clear();
+        FrontWorldMaterialsByDefinition.Clear();
+        FrontDetailMaterialsByDefinition.Clear();
         CardVisualResources.ResetOutlineCache();
     }
 

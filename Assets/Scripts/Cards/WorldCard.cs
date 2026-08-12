@@ -74,7 +74,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         && _handState == HandState.World
         && !_scaleTransitionActive
         && _rigidbody == null
-        && _cardVisual == null;
+        && _cardVisual == null
+        && !UsesDefinitionFrontArt;
+
+    bool UsesDefinitionFrontArt => definition != null && definition.FrontTexture != null;
 
     public void SetGroundStackLayer(int layer)
     {
@@ -726,7 +729,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             ? CardTextureQuality.Detail
             : CardTextureQuality.World;
 
-        meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(paletteIndex, quality);
+        if (UsesDefinitionFrontArt)
+            meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(definition, quality);
+        else
+            meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(paletteIndex, quality);
     }
 
     void ReleaseCardVisual()

@@ -46,12 +46,15 @@ static class GamePlayBootstrap
 
     static void EnsureTestCards()
     {
-        if (Object.FindFirstObjectByType<WorldCard>() != null)
+        CardArtLibrary.EnsureLoaded();
+
+        if (!CardScatterUtility.SceneNeedsScatterRefresh())
         {
             CardScatterUtility.SnapCardsToFloor();
             return;
         }
 
+        CardScatterUtility.ClearTestCards();
         CardScatterUtility.SpawnScatteredCards();
     }
 }

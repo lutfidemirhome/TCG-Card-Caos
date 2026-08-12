@@ -6,33 +6,78 @@ public static class CardScatterUtility
     public const int DefaultScatterCount = 100;
     public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
-    public const string TestCardPrefix = "TestCard_";
+    public const string TestCardPrefix = "Card_";
 
     public static void SpawnScatteredCards(int count = DefaultScatterCount)
     {
+        CardCatalog.Reload();
+        List<CardDefinition> definitions = BuildScatterDefinitions();
+        if (definitions.Count == 0)
+        {
+            Debug.LogError(
+                "CardScatterUtility: No CardDefinition assets found. "
+                + "Run Tools/generate_card_definitions.py or TCG Card Caos → Import Normal Common Cards From Art.");
+            return;
+        }
+
         CardFactory.InvalidateGroundCache();
         Transform scatterRoot = EnsureScatterRoot();
         float groundY = CardFactory.GroundHeightOffset();
-        var positions = GenerateScatterPositions(count);
+        int spawnCount = Mathf.Min(count, definitions.Count);
+        var positions = GenerateScatterPositions(spawnCount);
 
-        for (int i = 0; i < count; i++)
+        Debug.Log(
+            "CardScatterUtility: Spawning "
+            + spawnCount
+            + " cards (catalog "
+            + CardCatalog.Count
+            + " definitions).");
+
+        for (int i = 0; i < spawnCount; i++)
         {
             Vector2 xz = positions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
             var rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            int paletteIndex = i % CardPalette.Count;
-            int slotNumber = (i % CardShelfCategories.SlotsPerRow) + 1;
-            CardCatalog.TryGetByCategorySlot(CardShelfCategories.NormalCommon, slotNumber, out CardDefinition definition);
+            CardDefinition definition = definitions[i];
 
             WorldCard card = CardFactory.CreateWorldCard(
                 position,
                 rotation,
                 definition,
-                paletteIndex,
-                cardName: TestCardPrefix + (i + 1));
+                paletteIndex: 0,
+                cardName: TestCardPrefix + definition.DefinitionId);
 
             card.transform.SetParent(scatterRoot, true);
         }
+    }
+
+    static List<CardDefinition> BuildScatterDefinitions()
+    {
+        var definitions = new List<CardDefinition>(CardCatalog.Count);
+        IReadOnlyList<CardDefinition> loaded = CardCatalog.All;
+        for (int i = 0; i < loaded.Count; i++)
+        {
+            CardDefinition definition = loaded[i];
+            if (definition != null)
+                definitions.Add(definition);
+        }
+
+        definitions.Sort((a, b) => string.CompareOrdinal(a.DefinitionId, b.DefinitionId));
+        return definitions;
+    }
+
+    public static int CountScatterCards()
+    {
+        int count = 0;
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
+        for (int i = 0; i < cards.Length; i++)
+        {
+            WorldCard card = cards[i];
+            if (card != null && IsScatterCard(card.name))
+                count++;
+        }
+
+        return count;
     }
 
     /// <summary>Move settled world cards onto the current floor top (after placing Floor tiles).</summary>
@@ -66,21 +111,11 @@ public static class CardScatterUtility
 
     public static void ClearTestCards()
     {
-        Transform scatterRoot = GameObject.Find(ScatterRootName)?.transform;
-        if (scatterRoot != null)
-        {
-            if (Application.isPlaying)
-                Object.Destroy(scatterRoot.gameObject);
-            else
-                Object.DestroyImmediate(scatterRoot.gameObject);
-
-            return;
-        }
-
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
-        foreach (WorldCard card in cards)
+        for (int i = 0; i < cards.Length; i++)
         {
-            if (!card.name.StartsWith(TestCardPrefix))
+            WorldCard card = cards[i];
+            if (card == null || !IsScatterCard(card.name))
                 continue;
 
             if (Application.isPlaying)
@@ -88,6 +123,15 @@ public static class CardScatterUtility
             else
                 Object.DestroyImmediate(card.gameObject);
         }
+
+        GameObject scatterRoot = GameObject.Find(ScatterRootName);
+        if (scatterRoot == null)
+            return;
+
+        if (Application.isPlaying)
+            Object.Destroy(scatterRoot);
+        else
+            Object.DestroyImmediate(scatterRoot);
     }
 
     static Transform EnsureScatterRoot()
@@ -126,14 +170,43 @@ public static class CardScatterUtility
             }
 
             if (!found)
-            {
                 candidate = GetGridFallbackPosition(i, count);
-            }
 
             positions.Add(candidate);
         }
 
         return positions;
+    }
+
+    static bool IsScatterCard(string objectName)
+    {
+        return objectName.StartsWith(TestCardPrefix) || objectName.StartsWith("TestCard_");
+    }
+
+    public static bool IsScatterCardObject(string objectName) => IsScatterCard(objectName);
+
+    public static bool SceneNeedsScatterRefresh()
+    {
+        if (CountScatterCards() < DefaultScatterCount)
+            return true;
+
+        return HasInvalidScatterCards();
+    }
+
+    static bool HasInvalidScatterCards()
+    {
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
+        for (int i = 0; i < cards.Length; i++)
+        {
+            WorldCard card = cards[i];
+            if (card == null || !IsScatterCard(card.name))
+                continue;
+
+            if (card.Definition == null)
+                return true;
+        }
+
+        return false;
     }
 
     static bool IsFarEnough(Vector2 candidate, List<Vector2> existing, float minSpacingSq)

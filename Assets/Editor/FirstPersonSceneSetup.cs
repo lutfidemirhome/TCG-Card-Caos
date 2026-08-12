@@ -130,7 +130,7 @@ public static class FirstPersonSceneSetup
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
         for (int i = 0; i < cards.Length; i++)
         {
-            if (cards[i].name.StartsWith(CardScatterUtility.TestCardPrefix))
+            if (CardScatterUtility.IsScatterCardObject(cards[i].name))
                 count++;
         }
 

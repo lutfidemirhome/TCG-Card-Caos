@@ -13,7 +13,7 @@ public class CardInspectPreview : MonoBehaviour
     Canvas _canvas;
     RectTransform _previewRoot;
     RawImage _cardImage;
-    int _shownPaletteIndex = int.MinValue;
+    string _shownDefinitionId;
 
     public static CardInspectPreview EnsureOn(Camera camera)
     {
@@ -42,7 +42,7 @@ public class CardInspectPreview : MonoBehaviour
         }
 
         EnsurePreviewUI();
-        ApplyPalette(card.PaletteIndex);
+        ApplyCardArt(card);
 
         if (_previewRoot != null)
             _previewRoot.gameObject.SetActive(true);
@@ -50,7 +50,7 @@ public class CardInspectPreview : MonoBehaviour
 
     public void Hide()
     {
-        _shownPaletteIndex = int.MinValue;
+        _shownDefinitionId = null;
         if (_previewRoot != null)
             _previewRoot.gameObject.SetActive(false);
     }
@@ -114,22 +114,32 @@ public class CardInspectPreview : MonoBehaviour
             BuildPreviewUI();
     }
 
-    void ApplyPalette(int paletteIndex)
+    void ApplyCardArt(WorldCard card)
     {
-        if (_cardImage == null)
+        if (_cardImage == null || card == null)
             return;
 
-        if (_shownPaletteIndex == paletteIndex && _cardImage.texture != null)
+        CardDefinition definition = card.Definition;
+        string definitionId = definition != null ? definition.DefinitionId : string.Empty;
+        if (definitionId == _shownDefinitionId && _cardImage.texture != null)
             return;
 
         CardArtLibrary.EnsureLoaded();
-        Material front = CardArtLibrary.GetFrontMaterial(paletteIndex, CardTextureQuality.Detail);
-        Texture texture = front != null ? front.GetTexture("_BaseMap") : null;
-        if (texture == null && front != null)
-            texture = front.mainTexture;
+        Texture texture = definition != null ? definition.FrontTexture : null;
+        if (texture == null)
+        {
+            Material front = CardArtLibrary.GetFrontMaterial(card.PaletteIndex, CardTextureQuality.Detail);
+            texture = front != null ? front.GetTexture("_BaseMap") : null;
+            if (texture == null && front != null)
+                texture = front.mainTexture;
+            _cardImage.uvRect = CardArtLibrary.FrontArtUvRect;
+        }
+        else
+        {
+            _cardImage.uvRect = new Rect(0f, 0f, 1f, 1f);
+        }
 
         _cardImage.texture = texture;
-        _cardImage.uvRect = CardArtLibrary.FrontArtUvRect;
-        _shownPaletteIndex = paletteIndex;
+        _shownDefinitionId = definitionId;
     }
 }
