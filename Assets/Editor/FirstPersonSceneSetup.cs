@@ -248,12 +248,73 @@ public static class FirstPersonSceneSetup
             shelf = selected.AddComponent<CardShelf>();
 
         shelf.RefreshSlotCache();
+        EnsureCategoryLabel(shelf);
         MarkShelfAuthoringDirty(selected);
 
         Debug.Log(
             "TCG Card Caos: CardShelf on '"
             + selected.name
             + "'. Next: Create Card Shelf Slot Grid, duplicate ShelfSlots_Level per board, Equalize if needed, then Save.");
+    }
+
+    [MenuItem("TCG Card Caos/Setup Category Label On Selection")]
+    public static void SetupCategoryLabelOnSelection()
+    {
+        GameObject selected = Selection.activeGameObject;
+        if (selected == null)
+        {
+            Debug.LogWarning("TCG Card Caos: Select a cabinet with CardShelf first.");
+            return;
+        }
+
+        CardShelf shelf = selected.GetComponent<CardShelf>();
+        if (shelf == null)
+            shelf = selected.GetComponentInParent<CardShelf>();
+
+        if (shelf == null)
+        {
+            Debug.LogWarning("TCG Card Caos: No CardShelf on selection.");
+            return;
+        }
+
+        if (!EnsureCategoryLabel(shelf))
+            return;
+
+        MarkShelfAuthoringDirty(shelf.gameObject);
+        Debug.Log(
+            "TCG Card Caos: Category label ready on '"
+            + shelf.gameObject.name
+            + "'. Set Category Id on CardShelf. Save prefab/scene (Ctrl/Cmd+S).");
+    }
+
+    static bool EnsureCategoryLabel(CardShelf shelf)
+    {
+        if (shelf == null)
+            return false;
+
+        CardShelfCategoryLabel label = shelf.GetComponent<CardShelfCategoryLabel>();
+        if (label == null)
+            label = shelf.gameObject.AddComponent<CardShelfCategoryLabel>();
+
+        if (!Application.isPlaying && !CardShelfCategoryLabel.CanAuthorLabelHierarchy(shelf.gameObject))
+        {
+            Debug.LogWarning(
+                "TCG Card Caos: Open '"
+                + shelf.gameObject.name
+                + "' in Prefab Mode (double-click the prefab), then run Setup Category Label again to bake the label.");
+            return false;
+        }
+
+        label.RebuildLabel();
+
+        Transform labelRoot = shelf.transform.Find("CategoryLabel");
+        if (labelRoot == null)
+        {
+            Debug.LogWarning("TCG Card Caos: Label hierarchy was not created. Try again in Prefab Mode.");
+            return false;
+        }
+
+        return true;
     }
 
     [MenuItem("TCG Card Caos/Add Card Shelf Slot")]
@@ -532,6 +593,7 @@ public static class FirstPersonSceneSetup
         if (shelf == null)
             shelf = instance.AddComponent<CardShelf>();
         shelf.RefreshSlotCache();
+        EnsureCategoryLabel(shelf);
 
         Selection.activeGameObject = instance;
         MarkShelfAuthoringDirty(instance);

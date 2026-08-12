@@ -13,13 +13,17 @@ public static class CardFactory
     public static WorldCard CreateWorldCard(
         Vector3 position,
         Quaternion rotation,
+        CardDefinition cardDefinition,
         int paletteIndex,
-        int cardDefinitionId,
-        string cardName = "Card")
+        string cardName = null)
     {
         CardArtLibrary.EnsureLoaded();
 
-        var root = new GameObject(cardName);
+        string resolvedName = cardName;
+        if (string.IsNullOrWhiteSpace(resolvedName))
+            resolvedName = cardDefinition != null ? cardDefinition.DisplayName : "Card";
+
+        var root = new GameObject(resolvedName);
         root.transform.SetPositionAndRotation(position, rotation);
         root.transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
 
@@ -29,8 +33,19 @@ public static class CardFactory
         CardCollisionUtility.ApplyToCollider(collider);
 
         var card = root.AddComponent<WorldCard>();
-        card.Initialize(cardDefinitionId, paletteIndex);
+        card.Initialize(cardDefinition, paletteIndex);
         return card;
+    }
+
+    public static WorldCard CreateWorldCard(
+        Vector3 position,
+        Quaternion rotation,
+        int paletteIndex,
+        int cardDefinitionId,
+        string cardName = "Card")
+    {
+        CardDefinition definition = ResolveDefinition(cardDefinitionId);
+        return CreateWorldCard(position, rotation, definition, paletteIndex, cardName);
     }
 
     public static WorldCard CreateWorldCard(Vector3 position, Quaternion rotation, Color frontColor, string cardName = "Card")
@@ -184,5 +199,18 @@ public static class CardFactory
 
         return name.StartsWith("Floor", System.StringComparison.OrdinalIgnoreCase)
             || name.Equals("Ground", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    static CardDefinition ResolveDefinition(int cardDefinitionId)
+    {
+        string id = CardShelfCategories.NormalCommon + "_" + (cardDefinitionId + 1).ToString("00");
+        if (CardCatalog.TryGetById(id, out CardDefinition byId))
+            return byId;
+
+        int slot = (cardDefinitionId % CardShelfCategories.SlotsPerRow) + 1;
+        if (CardCatalog.TryGetByCategorySlot(CardShelfCategories.NormalCommon, slot, out CardDefinition bySlot))
+            return bySlot;
+
+        return null;
     }
 }

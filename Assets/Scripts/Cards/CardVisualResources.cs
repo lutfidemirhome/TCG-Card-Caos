@@ -10,11 +10,15 @@ static class CardVisualResources
 {
     static readonly Color InteractionOutlineColor = new Color(1f, 0.88f, 0.12f);
     static readonly Color HandSelectionOutlineColor = Color.white;
+    static readonly Color ShelfCorrectOutlineColor = new Color(0.28f, 0.92f, 0.38f);
+    static readonly Color ShelfIncorrectOutlineColor = new Color(0.95f, 0.22f, 0.22f);
 
     static Mesh _interactionBorderFrameMesh;
     static Mesh _handSelectionBorderFrameMesh;
     static Material _outlineMaterial;
     static Material _handSelectionOutlineMaterial;
+    static Material _shelfCorrectOutlineMaterial;
+    static Material _shelfIncorrectOutlineMaterial;
 
     const int CornerSegments = 10;
 
@@ -45,6 +49,24 @@ static class CardVisualResources
         }
     }
 
+    public static Material ShelfCorrectOutlineMaterial
+    {
+        get
+        {
+            EnsureInitialized();
+            return _shelfCorrectOutlineMaterial;
+        }
+    }
+
+    public static Material ShelfIncorrectOutlineMaterial
+    {
+        get
+        {
+            EnsureInitialized();
+            return _shelfIncorrectOutlineMaterial;
+        }
+    }
+
     public static Mesh HandSelectionBorderFrameMesh
     {
         get
@@ -65,7 +87,8 @@ static class CardVisualResources
         CardArtLibrary.EnsureLoaded();
 
         if (_interactionBorderFrameMesh != null && _handSelectionBorderFrameMesh != null
-            && _outlineMaterial != null && _handSelectionOutlineMaterial != null)
+            && _outlineMaterial != null && _handSelectionOutlineMaterial != null
+            && _shelfCorrectOutlineMaterial != null && _shelfIncorrectOutlineMaterial != null)
             return;
 
         _interactionBorderFrameMesh ??= BuildBorderFrameMesh(CardDimensions.InteractionOutlineThickness);
@@ -78,6 +101,14 @@ static class CardVisualResources
             HandSelectionOutlineColor,
             enableInstancing: true,
             renderQueue: (int)RenderQueue.Geometry + 2);
+        _shelfCorrectOutlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
+            ShelfCorrectOutlineColor,
+            enableInstancing: true,
+            renderQueue: (int)RenderQueue.Geometry + 1);
+        _shelfIncorrectOutlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
+            ShelfIncorrectOutlineColor,
+            enableInstancing: true,
+            renderQueue: (int)RenderQueue.Geometry + 1);
     }
 
     static Mesh BuildBorderFrameMesh(float borderThickness)

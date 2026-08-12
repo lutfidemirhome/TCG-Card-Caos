@@ -13,6 +13,10 @@ public class CardShelf : MonoBehaviour, IInteractable
     [SerializeField] float levelYTolerance = 0.28f;
     [SerializeField] float surfacePadding = 0.003f;
 
+    [Header("Cabinet category")]
+    [Tooltip("Only cards with the same Shelf Category Id can be placed here.")]
+    [SerializeField] string categoryId = CardShelfCategories.NormalCommon;
+
     readonly List<CardShelfSlot> _slots = new List<CardShelfSlot>(32);
 
     Vector3 _aimWorldPoint;
@@ -32,10 +36,72 @@ public class CardShelf : MonoBehaviour, IInteractable
         DestroyPlacementOutline();
     }
 
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        GetComponent<CardShelfCategoryLabel>()?.ScheduleRebuild();
+    }
+#endif
+
     public void RefreshSlotCache()
     {
         _slots.Clear();
         GetComponentsInChildren(true, _slots);
+    }
+
+    /// <summary>Horizontal direction customers face when reading cards on this shelf.</summary>
+    public Vector3 GetCustomerFacingDirection()
+    {
+        if (_slots.Count == 0)
+            RefreshSlotCache();
+
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null)
+                continue;
+
+            // Slot blue axis = card face toward the aisle.
+            Vector3 face = slot.transform.forward;
+            face.y = 0f;
+            if (face.sqrMagnitude > 0.0001f)
+                return face.normalized;
+        }
+
+        Transform root = placementRoot != null ? placementRoot : transform;
+        Vector3 fallback = root.forward;
+        fallback.y = 0f;
+        if (fallback.sqrMagnitude < 0.0001f)
+            return Vector3.forward;
+
+        return fallback.normalized;
+    }
+
+    public string CategoryId => categoryId;
+
+    public string CategoryDisplayName => CardShelfCategories.GetDisplayName(categoryId);
+
+    public bool AcceptsDefinition(CardDefinition definition)
+    {
+        return CardShelfRules.CanPlaceOnShelf(categoryId, definition);
+    }
+
+    public bool AcceptsCard(WorldCard card)
+    {
+        return card != null && card.HasShelfRules && AcceptsDefinition(card.Definition);
+    }
+
+    public bool CanPlaceCardInSlot(WorldCard card, CardShelfSlot slot)
+    {
+        return card != null && slot != null && slot.IsEmpty;
+    }
+
+    public bool IsCorrectPlacement(WorldCard card, CardShelfSlot slot)
+    {
+        if (card == null || slot == null)
+            return false;
+
+        return CardShelfRules.IsCorrectShelfPlacement(categoryId, card.Definition, slot);
     }
 
     public void SetAimHit(RaycastHit hit)
@@ -63,8 +129,16 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         if (hand.HasSelectedHeldCard() && !aimOnOccupied)
         {
+            WorldCard selectedCard = hand.SelectedHeldCard;
+            if (selectedCard == null)
+            {
+                HidePlacementOutline();
+                return string.Empty;
+            }
+
             RefreshOccupancy();
-            if (FindTargetSlot() == null)
+            CardShelfSlot slot = FindAimTargetSlot();
+            if (slot == null)
             {
                 HidePlacementOutline();
                 return HasAnySlots() ? "Shelf Full" : "No Shelf Slots";
@@ -92,17 +166,16 @@ public class CardShelf : MonoBehaviour, IInteractable
                 return;
 
             RefreshOccupancy();
-            CardShelfSlot slot = FindTargetSlot();
-            if (slot == null)
+            CardShelfSlot slot = FindAimTargetSlot();
+            if (slot == null || !CanPlaceCardInSlot(card, slot))
             {
-                Vector3 fallback = _hasAimPoint ? _aimWorldPoint : transform.position;
-                card.PlaceUprightOnShelf(placementRoot, fallback, GetFaceDirection(fallback));
-                ClearAim();
+                hand.TryPickup(card);
                 return;
             }
 
             PlaceCardInSlot(card, slot);
             ClearAim();
+            return;
         }
     }
 
@@ -120,6 +193,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         card.PlaceOnShelfSlot(slot.transform, surfacePadding);
         slot.Occupy(card);
+        card.NotifyShelfPlacement(IsCorrectPlacement(card, slot));
     }
 
     void RefreshPlacementPreview()
@@ -138,7 +212,14 @@ public class CardShelf : MonoBehaviour, IInteractable
         }
 
         RefreshOccupancy();
-        CardShelfSlot slot = FindTargetSlot();
+        WorldCard selectedCard = hand.SelectedHeldCard;
+        if (selectedCard == null)
+        {
+            HidePlacementOutline();
+            return;
+        }
+
+        CardShelfSlot slot = FindAimTargetSlot();
         if (slot == null)
         {
             HidePlacementOutline();
@@ -149,18 +230,15 @@ public class CardShelf : MonoBehaviour, IInteractable
         ShowPlacementOutline(slot);
     }
 
-    CardShelfSlot FindTargetSlot()
+    CardShelfSlot FindAimTargetSlot()
     {
         if (!HasAnySlots())
             return null;
 
-        // 1) Prefer empty slots on the aimed shelf level (similar Y).
+        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
+
         CardShelfSlot bestOnLevel = null;
         float bestOnLevelDist = float.MaxValue;
-        CardShelfSlot bestAny = null;
-        float bestAnyDist = float.MaxValue;
-
-        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
 
         for (int i = 0; i < _slots.Count; i++)
         {
@@ -169,16 +247,10 @@ public class CardShelf : MonoBehaviour, IInteractable
                 continue;
 
             Vector3 slotPos = slot.transform.position;
-            float dist = (slotPos - aim).sqrMagnitude;
-            if (dist < bestAnyDist)
-            {
-                bestAnyDist = dist;
-                bestAny = slot;
-            }
-
             if (!_hasAimPoint || Mathf.Abs(slotPos.y - aim.y) > levelYTolerance)
                 continue;
 
+            float dist = (slotPos - aim).sqrMagnitude;
             if (dist < bestOnLevelDist)
             {
                 bestOnLevelDist = dist;
@@ -186,10 +258,7 @@ public class CardShelf : MonoBehaviour, IInteractable
             }
         }
 
-        // Nearest empty seat on the looked-at board; otherwise nearest empty anywhere.
-        if (bestOnLevel != null)
-            return bestOnLevel;
-        return bestAny;
+        return bestOnLevel;
     }
 
     CardShelfSlot FindClosestSlot(Vector3 aim)

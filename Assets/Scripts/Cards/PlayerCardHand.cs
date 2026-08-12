@@ -201,6 +201,8 @@ public class PlayerCardHand : MonoBehaviour
         return GetSelectedHeldCard() != null;
     }
 
+    public WorldCard SelectedHeldCard => GetSelectedHeldCard();
+
     /// <summary>
     /// Removes the selected held card from the hand without throwing it.
     /// Used for placing onto shelves / surfaces.

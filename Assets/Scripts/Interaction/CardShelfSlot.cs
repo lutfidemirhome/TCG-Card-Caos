@@ -19,6 +19,8 @@ public class CardShelfSlot : MonoBehaviour
     static Material _sharedEdgeMaterial;
 
     [SerializeField] WorldCard occupiedCard;
+    [SerializeField] int rowIndex;
+    [SerializeField] int columnIndex;
 
     Transform _previewRoot;
     MeshRenderer _fillRenderer;
@@ -43,6 +45,27 @@ public class CardShelfSlot : MonoBehaviour
 
     public WorldCard OccupiedCard => occupiedCard;
 
+    /// <summary>Row on the cabinet (0 = first ShelfSlots_Level).</summary>
+    public int RowIndex => rowIndex;
+
+    /// <summary>Column on the row (0 = leftmost).</summary>
+    public int ColumnIndex => columnIndex;
+
+    /// <summary>Player-facing slot number 1–10 (1 = leftmost).</summary>
+    public int SlotNumber => columnIndex + 1;
+
+    public void ConfigureIndices(int row, int column)
+    {
+        rowIndex = Mathf.Max(0, row);
+        columnIndex = Mathf.Clamp(column, 0, CardShelfCategories.SlotsPerRow - 1);
+    }
+
+    public void SyncIndicesFromName()
+    {
+        if (CardShelfSlotNaming.TryParse(gameObject.name, out int row, out int column))
+            ConfigureIndices(row, column);
+    }
+
     public void Occupy(WorldCard card)
     {
         occupiedCard = card;
@@ -65,6 +88,7 @@ public class CardShelfSlot : MonoBehaviour
 
     void OnEnable()
     {
+        SyncIndicesFromName();
         EnsurePreview();
         RefreshPreviewVisibility();
     }

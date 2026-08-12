@@ -21,12 +21,14 @@ public static class CardScatterUtility
             var position = new Vector3(xz.x, groundY, xz.y);
             var rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
             int paletteIndex = i % CardPalette.Count;
+            int slotNumber = (i % CardShelfCategories.SlotsPerRow) + 1;
+            CardCatalog.TryGetByCategorySlot(CardShelfCategories.NormalCommon, slotNumber, out CardDefinition definition);
 
             WorldCard card = CardFactory.CreateWorldCard(
                 position,
                 rotation,
+                definition,
                 paletteIndex,
-                cardDefinitionId: i,
                 cardName: TestCardPrefix + (i + 1));
 
             card.transform.SetParent(scatterRoot, true);

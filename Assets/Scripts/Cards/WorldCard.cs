@@ -14,8 +14,19 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         Held,
     }
 
+    enum ShelfPlacementStatus
+    {
+        None,
+        Correct,
+        Incorrect,
+    }
+
+    const int ShelfPlacementFlashPulses = 2;
+    const float ShelfPlacementFlashOnSeconds = 0.12f;
+    const float ShelfPlacementFlashOffSeconds = 0.1f;
+
     [SerializeField] string cardLabel = "Pick Up";
-    [SerializeField] int cardDefinitionId;
+    [SerializeField] CardDefinition definition;
     [SerializeField] int paletteIndex;
 
     Collider _collider;
@@ -23,6 +34,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Transform _cardVisual;
     GameObject _outlineObject;
     GameObject _handSelectionOutlineObject;
+    GameObject _shelfStatusOutlineObject;
+    ShelfPlacementStatus _shelfPlacementStatus = ShelfPlacementStatus.None;
+    Coroutine _shelfPlacementFlashRoutine;
     HandState _handState = HandState.World;
     Transform _handAnchor;
     bool _interactionHighlighted;
@@ -45,9 +59,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool IsHeld => _handState == HandState.Held;
     public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
     public bool IsInHand => _handState != HandState.World;
-    public int CardDefinitionId => cardDefinitionId;
+    public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
+    public CardDefinition Definition => definition;
+    public bool HasShelfRules => definition != null;
+    public string ShelfCategoryId => definition != null ? definition.ShelfCategoryId : string.Empty;
+    public int ShelfSlotNumber => definition != null ? definition.ShelfSlotNumber : 0;
+    public bool HasShelfPlacementFeedback =>
+        _shelfPlacementStatus != ShelfPlacementStatus.None || _shelfPlacementFlashRoutine != null;
 
     public bool CanUseInstancedRendering =>
         Application.isPlaying
@@ -61,10 +81,27 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _groundStackLayer = Mathf.Max(0, layer);
     }
 
+    public void Initialize(CardDefinition cardDefinition, int palette)
+    {
+        definition = cardDefinition;
+        paletteIndex = palette;
+
+        if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
+            cardLabel = "Pick Up " + definition.DisplayName;
+    }
+
     public void Initialize(int definitionId, int palette)
     {
-        cardDefinitionId = definitionId;
         paletteIndex = palette;
+        if (CardCatalog.TryGetById(definitionId.ToString(), out CardDefinition found))
+        {
+            Initialize(found, palette);
+            return;
+        }
+
+        CardDefinition legacy = Resources.Load<CardDefinition>("Cards/Definitions/" + definitionId);
+        if (legacy != null)
+            Initialize(legacy, palette);
     }
 
     void Awake()
@@ -214,6 +251,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (shelfSlot != null)
             shelfSlot.ClearIfMatches(this);
 
+        ClearShelfPlacementStatus();
         CardInstancedRenderManager.ReleaseFromGround(this);
 
         SetInteractionHighlight(false);
@@ -519,6 +557,65 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             _handSelectionOutlineObject.SetActive(selected && IsHeld);
     }
 
+    public void NotifyShelfPlacement(bool isCorrect)
+    {
+        if (_shelfPlacementFlashRoutine != null)
+        {
+            StopCoroutine(_shelfPlacementFlashRoutine);
+            _shelfPlacementFlashRoutine = null;
+        }
+
+        if (isCorrect)
+            _shelfPlacementFlashRoutine = StartCoroutine(ShelfPlacementSuccessFlashRoutine());
+        else
+            SetShelfPlacementStatus(ShelfPlacementStatus.Incorrect);
+    }
+
+    public void ClearShelfPlacementStatus()
+    {
+        if (_shelfPlacementFlashRoutine != null)
+        {
+            StopCoroutine(_shelfPlacementFlashRoutine);
+            _shelfPlacementFlashRoutine = null;
+        }
+
+        _shelfPlacementStatus = ShelfPlacementStatus.None;
+        ReleaseShelfStatusOutline();
+        RefreshRenderMode();
+    }
+
+    void SetShelfPlacementStatus(ShelfPlacementStatus status)
+    {
+        _shelfPlacementStatus = status;
+        EnsureShelfStatusOutline();
+        ApplyShelfStatusOutlineMaterial(status);
+        if (_shelfStatusOutlineObject != null)
+            _shelfStatusOutlineObject.SetActive(true);
+        RefreshRenderMode();
+    }
+
+    System.Collections.IEnumerator ShelfPlacementSuccessFlashRoutine()
+    {
+        EnsureShelfStatusOutline();
+
+        for (int pulse = 0; pulse < ShelfPlacementFlashPulses; pulse++)
+        {
+            ApplyShelfStatusOutlineMaterial(ShelfPlacementStatus.None, CardVisualResources.InteractionOutlineMaterial);
+            if (_shelfStatusOutlineObject != null)
+                _shelfStatusOutlineObject.SetActive(true);
+
+            yield return new WaitForSeconds(ShelfPlacementFlashOnSeconds);
+
+            if (_shelfStatusOutlineObject != null)
+                _shelfStatusOutlineObject.SetActive(false);
+
+            yield return new WaitForSeconds(ShelfPlacementFlashOffSeconds);
+        }
+
+        SetShelfPlacementStatus(ShelfPlacementStatus.Correct);
+        _shelfPlacementFlashRoutine = null;
+    }
+
     void RefreshRenderMode()
     {
         CardInstancedRenderManager.Instance?.Unregister(this);
@@ -527,7 +624,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             ReleaseCardVisual();
 
-            if (_interactionHighlighted)
+            if (HasShelfPlacementFeedback)
+            {
+                EnsureShelfStatusOutline();
+                ApplyShelfStatusOutlineMaterial(_shelfPlacementStatus);
+                if (_shelfStatusOutlineObject != null)
+                    _shelfStatusOutlineObject.SetActive(true);
+                ReleaseInteractionOutline();
+            }
+            else if (_interactionHighlighted)
             {
                 EnsureInteractionOutlineRenderer();
                 if (_outlineObject != null)
@@ -544,6 +649,29 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         EnsureCardVisual();
         ApplyCardVisualTextureQuality();
+
+        RefreshInteractionOutline();
+    }
+
+    void RefreshInteractionOutline()
+    {
+        if (_shelfPlacementFlashRoutine != null)
+        {
+            ReleaseInteractionOutline();
+            return;
+        }
+
+        if (HasShelfPlacementFeedback)
+        {
+            ReleaseInteractionOutline();
+            EnsureShelfStatusOutline();
+            ApplyShelfStatusOutlineMaterial(_shelfPlacementStatus);
+            if (_shelfStatusOutlineObject != null)
+                _shelfStatusOutlineObject.SetActive(true);
+            return;
+        }
+
+        ReleaseShelfStatusOutline();
 
         if (_interactionHighlighted)
         {
@@ -699,6 +827,56 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _handSelectionOutlineObject = null;
     }
 
+    void EnsureShelfStatusOutline()
+    {
+        if (_shelfStatusOutlineObject != null)
+            return;
+
+        _shelfStatusOutlineObject = new GameObject("ShelfStatusOutline");
+        _shelfStatusOutlineObject.transform.SetParent(GetOutlineParent(), false);
+
+        var meshFilter = _shelfStatusOutlineObject.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
+
+        var meshRenderer = _shelfStatusOutlineObject.AddComponent<MeshRenderer>();
+        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        meshRenderer.receiveShadows = false;
+    }
+
+    void ApplyShelfStatusOutlineMaterial(ShelfPlacementStatus status, Material overrideMaterial = null)
+    {
+        if (_shelfStatusOutlineObject == null)
+            return;
+
+        var meshRenderer = _shelfStatusOutlineObject.GetComponent<MeshRenderer>();
+        if (meshRenderer == null)
+            return;
+
+        if (overrideMaterial != null)
+        {
+            meshRenderer.sharedMaterial = overrideMaterial;
+            return;
+        }
+
+        Material material = status == ShelfPlacementStatus.Correct
+            ? CardVisualResources.ShelfCorrectOutlineMaterial
+            : CardVisualResources.ShelfIncorrectOutlineMaterial;
+        meshRenderer.sharedMaterial = material;
+    }
+
+    void ReleaseShelfStatusOutline()
+    {
+        if (_shelfStatusOutlineObject == null)
+            return;
+
+        if (Application.isPlaying)
+            Destroy(_shelfStatusOutlineObject);
+        else
+            DestroyImmediate(_shelfStatusOutlineObject);
+
+        _shelfStatusOutlineObject = null;
+    }
+
     public void SetWorldPose(Vector3 position, Quaternion rotation)
     {
         PlaceOnSurface(null, position, rotation);
@@ -710,6 +888,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public void PlaceOnSurface(Transform parent, Vector3 worldPosition, Quaternion worldRotation)
     {
         _handState = HandState.World;
+        ClearShelfPlacementStatus();
         SetInteractionHighlight(false);
         SetHandSelected(false);
         RemovePhysics();
