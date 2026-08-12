@@ -94,6 +94,11 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     public string CategoryDisplayName => CardShelfCategories.GetDisplayName(CategoryId);
 
+    public int SlotsPerRow =>
+        categoryDefinition != null
+            ? categoryDefinition.SlotsPerRow
+            : CardShelfCategories.GetDefaultSlotsPerRow(categoryId);
+
     public bool AcceptsDefinition(CardDefinition definition)
     {
         return CardShelfRules.CanPlaceOnShelf(CategoryId, definition);

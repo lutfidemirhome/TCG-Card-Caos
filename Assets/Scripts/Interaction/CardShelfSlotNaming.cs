@@ -31,7 +31,7 @@ public static class CardShelfSlotNaming
             return false;
 
         rowIndex = UnityEngine.Mathf.Max(0, rowIndex);
-        columnIndex = UnityEngine.Mathf.Clamp(columnIndex, 0, CardShelfCategories.SlotsPerRow - 1);
+        columnIndex = UnityEngine.Mathf.Clamp(columnIndex, 0, CardShelfCategories.MaxSlotNumber - 1);
         return true;
     }
 

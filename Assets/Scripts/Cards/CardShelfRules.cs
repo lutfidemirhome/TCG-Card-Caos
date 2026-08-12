@@ -13,9 +13,17 @@ public static class CardShelfRules
         return string.Equals(shelfCategoryId, cardCategoryId, System.StringComparison.Ordinal);
     }
 
+    public static bool SlotMatches(int slotNumber, int requiredSlotNumber, int slotsPerRow)
+    {
+        if (!CardShelfCategories.IsValidSlotNumber(requiredSlotNumber, slotsPerRow))
+            return false;
+
+        return slotNumber == CardCatalog.NormalizeSlotNumber(requiredSlotNumber);
+    }
+
     public static bool SlotMatches(int slotNumber, int requiredSlotNumber)
     {
-        return slotNumber == CardCatalog.NormalizeSlotNumber(requiredSlotNumber);
+        return SlotMatches(slotNumber, requiredSlotNumber, CardShelfCategories.DefaultSlotsPerRow);
     }
 
     public static bool CanPlaceOnShelf(string shelfCategoryId, CardDefinition definition)
@@ -34,7 +42,7 @@ public static class CardShelfRules
         if (!CanPlaceOnShelf(shelfCategoryId, definition))
             return false;
 
-        return SlotMatches(slot.SlotNumber, definition.ShelfSlotNumber);
+        return SlotMatches(slot.SlotNumber, definition.ShelfSlotNumber, slot.OwnerShelfSlotsPerRow);
     }
 
     public static bool IsCorrectShelfPlacement(

@@ -300,8 +300,8 @@ public static class FirstPersonSceneSetup
         if (shelf == null)
             shelf = parent.AddComponent<CardShelf>();
 
-        // One row: 10 seats side-by-side along local X, with side margins (no depth stacking).
-        const int columns = 10;
+        // One row of seats side-by-side along local X, with side margins (no depth stacking).
+        int columns = Mathf.Clamp(shelf.SlotsPerRow, 1, CardShelfCategories.MaxSlotNumber);
         const float usableWidth = 1.8f; // ~0.1m inset each side on a ~2m board
         float spacingX = columns > 1 ? usableWidth / (columns - 1) : 0f;
         float originX = -0.5f * usableWidth;
@@ -507,9 +507,23 @@ public static class FirstPersonSceneSetup
     }
 
     [MenuItem("TCG Card Caos/Place Cabinet Normal Common In Scene")]
-    public static void PlaceCardShelfInScene()
+    public static void PlaceNormalCommonCabinetInScene()
     {
-        const string prefabPath = "Assets/Prefabs/Cabinets/Cabinet_NormalCommon.prefab";
+        PlaceCabinetInScene(
+            "Assets/Prefabs/Cabinets/Cabinet_NormalCommon.prefab",
+            "Cabinet_NormalCommon");
+    }
+
+    [MenuItem("TCG Card Caos/Place Cabinet Normal Uncommon In Scene")]
+    public static void PlaceNormalUncommonCabinetInScene()
+    {
+        PlaceCabinetInScene(
+            "Assets/Prefabs/Cabinets/Cabinet_NormalUncommon.prefab",
+            "Cabinet_NormalUncommon");
+    }
+
+    static void PlaceCabinetInScene(string prefabPath, string instanceName)
+    {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         if (prefab == null)
         {
@@ -518,7 +532,7 @@ public static class FirstPersonSceneSetup
         }
 
         GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-        instance.name = "Cabinet_NormalCommon";
+        instance.name = instanceName;
         instance.transform.position = new Vector3(2f, 0f, 3f);
 
         FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
@@ -540,7 +554,16 @@ public static class FirstPersonSceneSetup
         Selection.activeGameObject = instance;
         MarkShelfAuthoringDirty(instance);
         Debug.Log(
-            "TCG Card Caos: Placed Cabinet_NormalCommon. Edit the prefab at Assets/Prefabs/Cabinets/, then save.");
+            "TCG Card Caos: Placed "
+            + instanceName
+            + ". Edit the prefab at Assets/Prefabs/Cabinets/, then save.");
+    }
+
+    [MenuItem("TCG Card Caos/Place Cabinet Normal Common In Scene", true)]
+    [MenuItem("TCG Card Caos/Place Cabinet Normal Uncommon In Scene", true)]
+    static bool PlaceCabinetInSceneValidate()
+    {
+        return !Application.isPlaying;
     }
 
     static void MarkShelfAuthoringDirty(GameObject target)

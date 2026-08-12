@@ -4,10 +4,12 @@
 public static class CardShelfCategories
 {
     public const string NormalCommon = "normal_common";
+    public const string NormalUncommon = "normal_uncommon";
 
     public const int MinSlotNumber = 1;
     public const int MaxSlotNumber = 10;
-    public const int SlotsPerRow = 10;
+    public const int DefaultSlotsPerRow = 10;
+    public const int SlotsPerRow = DefaultSlotsPerRow;
 
     public static string GetDisplayName(string categoryId)
     {
@@ -17,20 +19,43 @@ public static class CardShelfCategories
         if (categoryId == NormalCommon)
             return "Normal Common";
 
+        if (categoryId == NormalUncommon)
+            return "Normal Uncommon";
+
         return categoryId.Replace('_', ' ');
+    }
+
+    public static int GetDefaultSlotsPerRow(string categoryId)
+    {
+        if (categoryId == NormalUncommon)
+            return 5;
+
+        return DefaultSlotsPerRow;
+    }
+
+    public static bool IsValidSlotNumber(int slotNumber, int slotsPerRow)
+    {
+        slotsPerRow = UnityEngine.Mathf.Clamp(slotsPerRow, MinSlotNumber, MaxSlotNumber);
+        return slotNumber >= MinSlotNumber && slotNumber <= slotsPerRow;
     }
 
     public static bool IsValidSlotNumber(int slotNumber)
     {
-        return slotNumber >= MinSlotNumber && slotNumber <= MaxSlotNumber;
+        return IsValidSlotNumber(slotNumber, MaxSlotNumber);
     }
 
     /// <summary>
-    /// Maps authored column index (0 at shelf local -X) to customer-facing slot 1–10 (1 = left).
+    /// Maps authored column index (0 at shelf local -X) to customer-facing slot number (1 = left).
     /// </summary>
+    public static int ColumnToSlotNumber(int columnIndex, int slotsPerRow)
+    {
+        slotsPerRow = UnityEngine.Mathf.Clamp(slotsPerRow, MinSlotNumber, MaxSlotNumber);
+        int clampedColumn = UnityEngine.Mathf.Clamp(columnIndex, 0, slotsPerRow - 1);
+        return slotsPerRow - clampedColumn;
+    }
+
     public static int ColumnToSlotNumber(int columnIndex)
     {
-        int clampedColumn = UnityEngine.Mathf.Clamp(columnIndex, 0, SlotsPerRow - 1);
-        return MaxSlotNumber - clampedColumn;
+        return ColumnToSlotNumber(columnIndex, DefaultSlotsPerRow);
     }
 }

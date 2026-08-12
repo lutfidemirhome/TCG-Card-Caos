@@ -51,13 +51,24 @@ public class CardShelfSlot : MonoBehaviour
     /// <summary>Column on the row (0 at shelf local -X).</summary>
     public int ColumnIndex => columnIndex;
 
-    /// <summary>Customer-facing slot number 1–10 (1 = leftmost when facing the cabinet).</summary>
-    public int SlotNumber => CardShelfCategories.ColumnToSlotNumber(columnIndex);
+    /// <summary>Customer-facing slot number (1 = leftmost when facing the cabinet).</summary>
+    public int SlotNumber => CardShelfCategories.ColumnToSlotNumber(columnIndex, OwnerShelfSlotsPerRow);
+
+    public int OwnerShelfSlotsPerRow
+    {
+        get
+        {
+            CardShelf shelf = GetComponentInParent<CardShelf>();
+            return shelf != null
+                ? shelf.SlotsPerRow
+                : CardShelfCategories.DefaultSlotsPerRow;
+        }
+    }
 
     public void ConfigureIndices(int row, int column)
     {
         rowIndex = Mathf.Max(0, row);
-        columnIndex = Mathf.Clamp(column, 0, CardShelfCategories.SlotsPerRow - 1);
+        columnIndex = Mathf.Clamp(column, 0, OwnerShelfSlotsPerRow - 1);
     }
 
     public void SyncIndicesFromName()
