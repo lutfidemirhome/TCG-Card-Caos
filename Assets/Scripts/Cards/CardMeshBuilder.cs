@@ -74,12 +74,14 @@ public static class CardMeshBuilder
             new Vector3(hw, hh, z),
             new Vector3(-hw, hh, z),
         };
+        // Horizontal U flip cancels the mirror from WorldVisualRotation without negative draw scale
+        // (negative scale in instanced TRS culls the front face).
         var uvs = new[]
         {
-            new Vector2(0f, 0f),
             new Vector2(1f, 0f),
-            new Vector2(1f, 1f),
+            new Vector2(0f, 0f),
             new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
         };
 
         var mesh = new Mesh { name = "InstancedGroundCardMesh" };

@@ -273,6 +273,7 @@ public static class CardArtLibrary
     {
         _cardMesh = Resources.Load<Mesh>(RuntimeMeshResourcePath);
         _instancedCardMesh = Resources.Load<Mesh>(RuntimeInstancedMeshResourcePath);
+        _instancedCardMesh = PrepareInstancedFrontMesh(_instancedCardMesh);
         _instancedCardBackMesh = Resources.Load<Mesh>(RuntimeInstancedBackMeshResourcePath);
         if (_instancedCardBackMesh == null)
             _instancedCardBackMesh = CardMeshBuilder.CreatePrototypeInstancedBackQuad();
@@ -297,6 +298,32 @@ public static class CardArtLibrary
         ApplyBackTextureUFlip(_sharedBackDetailTemplate);
 
         return _cardMesh != null && _sharedFrontDetailTemplate != null && _sharedBackDetailTemplate != null;
+    }
+
+    /// <summary>
+    /// Baked instanced quads ship with legacy UVs; flip U at runtime so ground fronts read correctly
+    /// without negative instanced scale (which backface-culls the quad).
+    /// </summary>
+    static Mesh PrepareInstancedFrontMesh(Mesh source)
+    {
+        if (source == null)
+            return CardMeshBuilder.CreatePrototypeInstancedQuad();
+
+        Vector2[] uvs = source.uv;
+        if (uvs == null || uvs.Length < 4)
+            return source;
+
+        // Already flipped: first corner maps to U=1 on the left vertex.
+        if (Mathf.Approximately(uvs[0].x, 1f) && Mathf.Approximately(uvs[1].x, 0f))
+            return source;
+
+        var flipped = Object.Instantiate(source);
+        flipped.name = source.name + "_FrontUFlipped";
+        Vector2[] flippedUvs = flipped.uv;
+        for (int i = 0; i < flippedUvs.Length; i++)
+            flippedUvs[i] = new Vector2(1f - flippedUvs[i].x, flippedUvs[i].y);
+        flipped.uv = flippedUvs;
+        return flipped;
     }
 
     /// <summary>
