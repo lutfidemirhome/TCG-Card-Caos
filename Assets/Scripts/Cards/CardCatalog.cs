@@ -10,6 +10,7 @@ public static class CardCatalog
     const string ResourcePath = "Cards/Definitions";
 
     static readonly List<CardDefinition> Definitions = new List<CardDefinition>(64);
+    static readonly HashSet<CardDefinition> DefinitionSet = new HashSet<CardDefinition>();
     static readonly Dictionary<string, CardDefinition> ById = new Dictionary<string, CardDefinition>(64);
     static readonly Dictionary<CategorySlotKey, CardDefinition> ByCategorySlot =
         new Dictionary<CategorySlotKey, CardDefinition>(64);
@@ -103,6 +104,7 @@ public static class CardCatalog
 
         _loaded = true;
         Definitions.Clear();
+        DefinitionSet.Clear();
         ById.Clear();
         ByCategorySlot.Clear();
 
@@ -118,7 +120,7 @@ public static class CardCatalog
         if (definition == null)
             return;
 
-        if (!Definitions.Contains(definition))
+        if (DefinitionSet.Add(definition))
             Definitions.Add(definition);
 
         if (!string.IsNullOrWhiteSpace(definition.DefinitionId))

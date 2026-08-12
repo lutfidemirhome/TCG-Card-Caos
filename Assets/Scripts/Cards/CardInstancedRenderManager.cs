@@ -205,7 +205,15 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     bool ShouldRenderCard(WorldCard card)
     {
-        return GeometryUtility.TestPlanesAABB(_frustumPlanes, card.GetInstancedCullBounds());
+        Bounds bounds = card.GetInstancedCullBounds();
+        if (!GeometryUtility.TestPlanesAABB(_frustumPlanes, bounds))
+            return false;
+
+        if (_camera == null)
+            return true;
+
+        Vector3 closestPoint = bounds.ClosestPoint(_camera.transform.position);
+        return (closestPoint - _camera.transform.position).sqrMagnitude <= _drawDistanceSq;
     }
 
     void UpdateColliderStates()

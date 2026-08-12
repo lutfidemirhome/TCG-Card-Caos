@@ -269,7 +269,35 @@ public static class CardArtLibrary
         if (_sharedBackWorldTemplate == null)
             _sharedBackWorldTemplate = _sharedBackDetailTemplate;
 
+        ApplyBackTextureUFlip(_sharedBackWorldTemplate);
+        ApplyBackTextureUFlip(_sharedBackDetailTemplate);
+
         return _cardMesh != null && _sharedFrontDetailTemplate != null && _sharedBackDetailTemplate != null;
+    }
+
+    /// <summary>
+    /// Back submesh UVs are pre-flipped; combined with World/Shelf/Hand scale X = -1 the art reads mirrored.
+    /// Shader U flip cancels the mesh flip so the back matches the front left-right orientation.
+    /// </summary>
+    public static void ApplyBackTextureUFlip(Material material)
+    {
+        if (material == null)
+            return;
+
+        var scale = new Vector2(-1f, 1f);
+        var offset = new Vector2(1f, 0f);
+
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTextureScale("_BaseMap", scale);
+            material.SetTextureOffset("_BaseMap", offset);
+        }
+
+        if (material.HasProperty("_MainTex"))
+        {
+            material.SetTextureScale("_MainTex", scale);
+            material.SetTextureOffset("_MainTex", offset);
+        }
     }
 
     static Vector3 ComputeFlatSize(Mesh mesh)

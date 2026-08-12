@@ -148,6 +148,9 @@ public static class CardArtSetup
         if (texture != null)
             material.SetTexture("_BaseMap", texture);
 
+        if (materialName.StartsWith("CardBack"))
+            CardArtLibrary.ApplyBackTextureUFlip(material);
+
         material.enableInstancing = enableInstancing;
         return material;
     }

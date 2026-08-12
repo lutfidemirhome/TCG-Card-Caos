@@ -37,7 +37,8 @@ public static class CardScatterUtility
         CardFactory.InvalidateGroundCache();
         Transform scatterRoot = EnsureScatterRoot();
         float groundY = CardFactory.GroundHeightOffset();
-        int spawnCount = Mathf.Min(count, definitions.Count);
+        bool reuseDefinitions = count > definitions.Count;
+        int spawnCount = reuseDefinitions ? count : Mathf.Min(count, definitions.Count);
         var positions = GenerateScatterPositions(spawnCount);
 
         Debug.Log(
@@ -45,14 +46,18 @@ public static class CardScatterUtility
             + spawnCount
             + " cards (catalog "
             + CardCatalog.Count
-            + " definitions).");
+            + " definitions"
+            + (reuseDefinitions ? ", reusing definitions" : string.Empty)
+            + ").");
 
         for (int i = 0; i < spawnCount; i++)
         {
             Vector2 xz = positions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
             var rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            CardDefinition definition = definitions[i];
+            CardDefinition definition = reuseDefinitions
+                ? definitions[i % definitions.Count]
+                : definitions[i];
 
             WorldCard card = CardFactory.CreateWorldCard(
                 position,
@@ -90,12 +95,14 @@ public static class CardScatterUtility
 
     public static int CountScatterCards()
     {
+        Transform scatterRoot = FindScatterRootTransform();
+        if (scatterRoot == null)
+            return 0;
+
         int count = 0;
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
-        for (int i = 0; i < cards.Length; i++)
+        for (int i = 0; i < scatterRoot.childCount; i++)
         {
-            WorldCard card = cards[i];
-            if (card != null && IsScatterCard(card.name))
+            if (scatterRoot.GetChild(i).GetComponent<WorldCard>() != null)
                 count++;
         }
 
@@ -133,37 +140,40 @@ public static class CardScatterUtility
 
     public static void ClearTestCards()
     {
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
-        for (int i = 0; i < cards.Length; i++)
-        {
-            WorldCard card = cards[i];
-            if (card == null || !IsScatterCard(card.name))
-                continue;
-
-            if (Application.isPlaying)
-                Object.Destroy(card.gameObject);
-            else
-                Object.DestroyImmediate(card.gameObject);
-        }
-
-        GameObject scatterRoot = GameObject.Find(ScatterRootName);
+        Transform scatterRoot = FindScatterRootTransform();
         if (scatterRoot == null)
             return;
 
+        for (int i = scatterRoot.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = scatterRoot.GetChild(i).gameObject;
+            if (Application.isPlaying)
+                Object.Destroy(child);
+            else
+                Object.DestroyImmediate(child);
+        }
+
+        GameObject rootObject = scatterRoot.gameObject;
         if (Application.isPlaying)
-            Object.Destroy(scatterRoot);
+            Object.Destroy(rootObject);
         else
-            Object.DestroyImmediate(scatterRoot);
+            Object.DestroyImmediate(rootObject);
     }
 
     static Transform EnsureScatterRoot()
     {
-        GameObject existing = GameObject.Find(ScatterRootName);
+        Transform existing = FindScatterRootTransform();
         if (existing != null)
-            return existing.transform;
+            return existing;
 
         var root = new GameObject(ScatterRootName);
         return root.transform;
+    }
+
+    static Transform FindScatterRootTransform()
+    {
+        GameObject existing = GameObject.Find(ScatterRootName);
+        return existing != null ? existing.transform : null;
     }
 
     static List<Vector2> GenerateScatterPositions(int count)
@@ -200,12 +210,27 @@ public static class CardScatterUtility
         return positions;
     }
 
-    static bool IsScatterCard(string objectName)
+    public static bool IsScatterCard(WorldCard card)
+    {
+        if (card == null)
+            return false;
+
+        Transform parent = card.transform.parent;
+        while (parent != null)
+        {
+            if (parent.name == ScatterRootName)
+                return true;
+
+            parent = parent.parent;
+        }
+
+        return false;
+    }
+
+    public static bool IsScatterCardObject(string objectName)
     {
         return objectName.StartsWith(TestCardPrefix) || objectName.StartsWith("TestCard_");
     }
-
-    public static bool IsScatterCardObject(string objectName) => IsScatterCard(objectName);
 
     public static bool SceneNeedsScatterRefresh()
     {
@@ -217,14 +242,14 @@ public static class CardScatterUtility
 
     static bool HasInvalidScatterCards()
     {
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
-        for (int i = 0; i < cards.Length; i++)
-        {
-            WorldCard card = cards[i];
-            if (card == null || !IsScatterCard(card.name))
-                continue;
+        Transform scatterRoot = FindScatterRootTransform();
+        if (scatterRoot == null)
+            return true;
 
-            if (card.Definition == null)
+        for (int i = 0; i < scatterRoot.childCount; i++)
+        {
+            WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+            if (card != null && card.Definition == null)
                 return true;
         }
 

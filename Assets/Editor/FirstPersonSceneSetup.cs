@@ -62,7 +62,7 @@ public static class FirstPersonSceneSetup
         CardInstancedRenderManager.EnsureExists();
         EnsureCardArtReady();
 
-        int cardCount = CountTestCards();
+        int cardCount = CardScatterUtility.CountScatterCards();
         if (cardCount != CardScatterUtility.FullScatterCount)
         {
             CardScatterUtility.ClearTestCards();
@@ -122,19 +122,6 @@ public static class FirstPersonSceneSetup
             + " with walk settings + "
             + CardScatterUtility.FullScatterCount
             + " cards. Drop furniture from Assets/ModernSupermarket/Prefabs. Press Play to test.");
-    }
-
-    static int CountTestCards()
-    {
-        int count = 0;
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
-        for (int i = 0; i < cards.Length; i++)
-        {
-            if (CardScatterUtility.IsScatterCardObject(cards[i].name))
-                count++;
-        }
-
-        return count;
     }
 
     static void DestroyNamedRoots(params string[] names)
@@ -645,11 +632,16 @@ public static class FirstPersonSceneSetup
     public static void SpawnStressTestCardsMenu()
     {
         EnsureCardArtReady();
+        AssetDatabase.Refresh();
+        CardCatalog.Reload();
         CardScatterUtility.ClearTestCards();
         CardScatterUtility.SpawnScatteredCards(CardScatterUtility.StressTestScatterCount);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
-        Debug.Log("Spawned " + CardScatterUtility.StressTestScatterCount + " instanced stress-test cards.");
+        Debug.Log(
+            "Spawned "
+            + CardScatterUtility.CountScatterCards()
+            + " stress-test cards on the ground (reusing catalog definitions).");
     }
 
     [MenuItem("TCG Card Caos/Setup Card Art")]
