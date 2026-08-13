@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Cabinet_NormalUncommon3.prefab from Uncommon by removing slot columns 3-4 (keep 3 seats per row)."""
+"""Build Cabinet_NormalRare.prefab from Uncommon by removing slot columns 3-4 (keep 3 seats per row)."""
 
 import copy
 import re
@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "Assets/Prefabs/Cabinets/Cabinet_NormalUncommon.prefab"
-DST = ROOT / "Assets/Prefabs/Cabinets/Cabinet_NormalUncommon3.prefab"
+DST = ROOT / "Assets/Prefabs/Cabinets/Cabinet_NormalRare.prefab"
 
 SLOT_NAME_RE = re.compile(r"^CardShelfSlot_\d+_(\d+)$")
 REMOVE_COLUMN_MIN = 3
@@ -19,6 +19,8 @@ GO_FILEID_RE = re.compile(r"^  m_GameObject: \{fileID: (\d+)\}")
 
 NEW_CATEGORY_GUID = "7f3a9c2e1b4d6f8a9c0e5d2b4f7a3c01"
 OLD_CATEGORY_GUID = "f8761c6dee694106a48ac6f7b53e3540"
+OLD_SIGN_MAT_GUID = "68a0d08112704ebd803d29166bd14653"
+NEW_SIGN_MAT_GUID = "da76f1683bcd4e568167bc2e05d3d2b5"
 GUID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
@@ -159,6 +161,8 @@ def rebuild(header, blocks):
 def main():
     assert_valid_guid(NEW_CATEGORY_GUID, "NEW_CATEGORY_GUID")
     assert_valid_guid(OLD_CATEGORY_GUID, "OLD_CATEGORY_GUID")
+    assert_valid_guid(OLD_SIGN_MAT_GUID, "OLD_SIGN_MAT_GUID")
+    assert_valid_guid(NEW_SIGN_MAT_GUID, "NEW_SIGN_MAT_GUID")
 
     text = SRC.read_text(encoding="utf-8")
     header, blocks = parse_blocks(text)
@@ -180,10 +184,15 @@ def main():
     kept_blocks = clean_kept_blocks(blocks, remove_ids)
     out_text = rebuild(header, kept_blocks)
 
-    out_text = out_text.replace("Cabinet_NormalUncommon", "Cabinet_NormalUncommon3")
+    out_text = out_text.replace("Cabinet_NormalUncommon", "Cabinet_NormalRare")
+    out_text = out_text.replace("categoryId: normal_uncommon", "categoryId: normal_rare")
     out_text = out_text.replace(
         f"guid: {OLD_CATEGORY_GUID}",
         f"guid: {NEW_CATEGORY_GUID}",
+    )
+    out_text = out_text.replace(
+        f"guid: {OLD_SIGN_MAT_GUID}",
+        f"guid: {NEW_SIGN_MAT_GUID}",
     )
 
     DST.write_text(out_text, encoding="utf-8")
