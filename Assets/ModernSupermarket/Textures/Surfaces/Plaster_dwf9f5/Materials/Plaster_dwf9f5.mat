@@ -142,8 +142,8 @@ Material:
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:
-    - _BaseColor: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
-    - _Color: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
+    - _BaseColor: {r: 0.5058824, g: 0.4862745, b: 0.5019608, a: 1}
+    - _Color: {r: 0.5058824, g: 0.48627448, b: 0.5019608, a: 1}
     - _ColorMask: {r: 1, g: 1, b: 1, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
