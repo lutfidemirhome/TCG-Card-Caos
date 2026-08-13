@@ -18,6 +18,7 @@ static class GamePlayBootstrap
         EnsureCameraSystems();
         EnsurePlayerHand();
         StoreLighting.EnsureExists();
+        BackgroundMusic.EnsureExists();
         CardInstancedRenderManager.EnsureExists().SchedulePlayModeSetup();
     }
 
