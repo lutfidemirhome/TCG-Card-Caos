@@ -8,6 +8,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class ExteriorTrafficCar : MonoBehaviour
 {
+    static int _activeCount;
+
+    public static int ActiveCount => _activeCount;
     struct SpinningWheel
     {
         public Transform Transform;
@@ -39,6 +42,16 @@ public class ExteriorTrafficCar : MonoBehaviour
         DisablePhysics();
         CacheWheels();
         ApplyTransform(instantRotation: true);
+    }
+
+    void OnEnable()
+    {
+        _activeCount++;
+    }
+
+    void OnDestroy()
+    {
+        _activeCount = Mathf.Max(0, _activeCount - 1);
     }
 
     void Update()

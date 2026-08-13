@@ -489,7 +489,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     static PlayerCardHand FindHand()
     {
-        return FindFirstObjectByType<PlayerCardHand>();
+        return PlayerCardHand.Instance;
     }
 
     static PlayerCardHand ResolveHand(GameObject interactor)

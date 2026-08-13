@@ -56,6 +56,7 @@ public class PlayerCardHand : MonoBehaviour
     readonly List<WorldCard> _cards = new List<WorldCard>();
 
     public int Count => _cards.Count;
+    public static PlayerCardHand Instance { get; private set; }
     public bool IsFull => _cards.Count >= CardDimensions.MaxHandSize;
     public int AvailableSlots => CardDimensions.MaxHandSize - _cards.Count;
     public int SelectedIndex => _selectedIndex;
@@ -63,8 +64,15 @@ public class PlayerCardHand : MonoBehaviour
 
     void Awake()
     {
+        Instance = this;
         _camera = Camera.main;
         EnsureHandAnchor();
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
     }
 
     void Update()

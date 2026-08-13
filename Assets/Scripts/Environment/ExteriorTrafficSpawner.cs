@@ -70,7 +70,7 @@ public class ExteriorTrafficSpawner : MonoBehaviour
 
     int CountActiveCars()
     {
-        return FindObjectsByType<ExteriorTrafficCar>(FindObjectsSortMode.None).Length;
+        return ExteriorTrafficCar.ActiveCount;
     }
 
     void SpawnCar()

@@ -262,7 +262,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (IsInHand || IsFlyingToShelf)
             return string.Empty;
 
-        PlayerCardHand hand = Object.FindFirstObjectByType<PlayerCardHand>();
+        PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null && hand.IsFull)
             return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
 

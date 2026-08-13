@@ -240,13 +240,9 @@ public class StoreLighting : MonoBehaviour
     {
         StoreLighting existing = FindFirstObjectByType<StoreLighting>();
         if (existing != null)
-        {
-            existing.Rebuild();
             return existing;
-        }
 
         var root = new GameObject("StoreLighting");
-        StoreLighting created = root.AddComponent<StoreLighting>();
-        return created;
+        return root.AddComponent<StoreLighting>();
     }
 }

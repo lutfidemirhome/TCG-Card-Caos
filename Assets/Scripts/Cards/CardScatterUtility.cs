@@ -238,6 +238,8 @@ public static class CardScatterUtility
     {
         int snapped = SnapScatterCardsToFloor();
         WorldCard[] shelfCards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
+        CardFactory.InvalidateGroundCache();
+        float groundY = CardFactory.GroundHeightOffset();
         for (int i = 0; i < shelfCards.Length; i++)
         {
             WorldCard card = shelfCards[i];
@@ -246,8 +248,6 @@ public static class CardScatterUtility
             if (card.GetComponent<Rigidbody>() != null)
                 continue;
 
-            CardFactory.InvalidateGroundCache();
-            float groundY = CardFactory.GroundHeightOffset();
             Vector3 p = card.transform.position;
             if (Mathf.Abs(p.y - groundY) < 0.0005f)
                 continue;
