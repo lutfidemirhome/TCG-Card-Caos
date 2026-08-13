@@ -19,6 +19,6 @@ static class ExteriorWallToonBootstrap
         if (wallTemplate == null)
             return;
 
-        ExteriorWallToonUtility.ApplyAll(wallTemplate, useSharedMaterials: false);
+        ExteriorWallToonUtility.ApplyAll(wallTemplate, useSharedMaterials: true);
     }
 }

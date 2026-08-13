@@ -39,6 +39,9 @@ public static class ExteriorWallToonUtility
             if (renderer == null || !ShouldApplyToRenderer(renderer))
                 continue;
 
+            if (!RendererNeedsToonConversion(renderer, wallTemplate))
+                continue;
+
             if (!processedRenderers.Add(renderer.GetInstanceID()))
                 continue;
 
@@ -62,7 +65,26 @@ public static class ExteriorWallToonUtility
         for (int i = 0; i < sourceMaterials.Length; i++)
         {
             Material source = sourceMaterials[i];
-            if (source == null || AlreadyUsesTemplate(source, wallTemplate))
+            if (source == null)
+            {
+                targetMaterials[i] = source;
+                continue;
+            }
+
+            if (IsPlinthMaterial(source))
+            {
+                if (AlreadyUsesPlinthStyle(source, wallTemplate))
+                {
+                    targetMaterials[i] = source;
+                    continue;
+                }
+
+                targetMaterials[i] = CreatePlinthToonMaterial(wallTemplate, source);
+                changed++;
+                continue;
+            }
+
+            if (AlreadyUsesTemplate(source, wallTemplate))
             {
                 targetMaterials[i] = source;
                 continue;
@@ -99,6 +121,85 @@ public static class ExteriorWallToonUtility
         CopyColor(source, toonMaterial, "_Color");
 
         return toonMaterial;
+    }
+
+    public static Material CreatePlinthToonMaterial(Material wallTemplate, Material source = null)
+    {
+        Material plinthMaterial = new Material(wallTemplate)
+        {
+            name = source != null && !string.IsNullOrEmpty(source.name)
+                ? source.name
+                : "Plinths_Toon"
+        };
+
+        ClearTexture(plinthMaterial, "_BaseMap");
+        ClearTexture(plinthMaterial, "_MainTex");
+        ClearTexture(plinthMaterial, "_BumpMap");
+        ClearTexture(plinthMaterial, "_MetallicGlossMap");
+        ClearTexture(plinthMaterial, "_OcclusionMap");
+
+        Color baseColor = Color.black;
+        Color shadowColor = new Color(0.12f, 0.12f, 0.12f, 1f);
+        Color highlightColor = new Color(0.22f, 0.22f, 0.22f, 1f);
+
+        if (source != null && source.shader == wallTemplate.shader)
+        {
+            CopyColor(source, plinthMaterial, "_BaseColor");
+            CopyColor(source, plinthMaterial, "_Color");
+            CopyColor(source, plinthMaterial, "_SColor");
+            CopyColor(source, plinthMaterial, "_HColor");
+        }
+        else
+        {
+            plinthMaterial.SetColor("_BaseColor", baseColor);
+            plinthMaterial.SetColor("_Color", baseColor);
+
+            if (plinthMaterial.HasProperty("_SColor"))
+                plinthMaterial.SetColor("_SColor", shadowColor);
+
+            if (plinthMaterial.HasProperty("_HColor"))
+                plinthMaterial.SetColor("_HColor", highlightColor);
+        }
+
+        return plinthMaterial;
+    }
+
+    public static bool RendererNeedsToonConversion(MeshRenderer renderer, Material wallTemplate)
+    {
+        if (renderer == null || wallTemplate == null)
+            return false;
+
+        Material[] materials = renderer.sharedMaterials;
+        if (materials == null || materials.Length == 0)
+            return false;
+
+        for (int i = 0; i < materials.Length; i++)
+        {
+            Material source = materials[i];
+            if (source == null)
+                continue;
+
+            if (IsPlinthMaterial(source))
+            {
+                if (!AlreadyUsesPlinthStyle(source, wallTemplate))
+                    return true;
+
+                continue;
+            }
+
+            if (!AlreadyUsesTemplate(source, wallTemplate))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsPlinthMaterial(Material material)
+    {
+        if (material == null || string.IsNullOrEmpty(material.name))
+            return false;
+
+        return material.name.IndexOf("Plinth", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     public static bool ShouldApplyToRenderer(Renderer renderer)
@@ -162,6 +263,25 @@ public static class ExteriorWallToonUtility
     static bool AlreadyUsesTemplate(Material material, Material wallTemplate)
     {
         return material.shader == wallTemplate.shader;
+    }
+
+    static bool AlreadyUsesPlinthStyle(Material material, Material wallTemplate)
+    {
+        if (material.shader != wallTemplate.shader || !IsPlinthMaterial(material))
+            return false;
+
+        if (material.HasProperty("_BaseMap") && material.GetTexture("_BaseMap") != null)
+            return false;
+
+        return true;
+    }
+
+    static void ClearTexture(Material material, string propertyName)
+    {
+        if (!material.HasProperty(propertyName))
+            return;
+
+        material.SetTexture(propertyName, null);
     }
 
     static void CopyTexture(Material source, Material destination, string propertyName)
