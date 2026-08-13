@@ -2,9 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Scene-authored floor area where scattered cards spawn.
-/// Resize with the Scale tool (R) in top view — green box, collider, and spawn area stay aligned.
+/// Resize with the Scale tool (R) in top view. Visible only as a Scene gizmo (Gizmos on).
 /// </summary>
-[ExecuteAlways]
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider))]
 public class CardScatterZone : MonoBehaviour
@@ -12,12 +11,8 @@ public class CardScatterZone : MonoBehaviour
     const float MinFootprint = 0.25f;
     const float MinHeight = 0.02f;
 
-    [SerializeField] bool showVolume = true;
-
     BoxCollider _boxCollider;
     bool _volumeNormalized;
-
-    public bool ShowVolume => showVolume;
 
     void Reset()
     {
@@ -32,18 +27,6 @@ public class CardScatterZone : MonoBehaviour
     void OnValidate()
     {
         EnsureSetup();
-    }
-
-    void Start()
-    {
-        DisableVisual();
-    }
-
-    void DisableVisual()
-    {
-        MeshRenderer renderer = GetComponent<MeshRenderer>();
-        if (renderer != null)
-            renderer.enabled = false;
     }
 
     public void EnsureSetup(bool forceDefaultSize = false)
@@ -67,7 +50,7 @@ public class CardScatterZone : MonoBehaviour
             NormalizeVolume();
         }
 
-        SyncVisual();
+        RemoveVisualComponents();
     }
 
     void NormalizeVolume()
@@ -75,9 +58,7 @@ public class CardScatterZone : MonoBehaviour
         Vector3 combined = Vector3.Scale(_boxCollider.size, transform.localScale);
         bool needsDefault = combined.x < MinFootprint || combined.z < MinFootprint;
         if (needsDefault && !_volumeNormalized)
-        {
             combined = new Vector3(6f, MinHeight, 4f);
-        }
 
         Vector3 targetScale = new Vector3(
             Mathf.Max(combined.x, MinFootprint),
@@ -96,30 +77,29 @@ public class CardScatterZone : MonoBehaviour
         _volumeNormalized = true;
     }
 
-    void SyncVisual()
+    void RemoveVisualComponents()
     {
-        if (Application.isPlaying || !showVolume)
+        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        if (renderer != null)
         {
-            DisableVisual();
-            return;
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                DestroyImmediate(renderer);
+            else
+#endif
+                Destroy(renderer);
         }
 
         MeshFilter meshFilter = GetComponent<MeshFilter>();
-        if (meshFilter == null)
-            meshFilter = gameObject.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-
-        MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
-        if (meshRenderer == null)
-            meshRenderer = gameObject.AddComponent<MeshRenderer>();
-
-        Material zoneMaterial = Resources.Load<Material>("CardScatterZoneMaterial");
-        if (zoneMaterial != null)
-            meshRenderer.sharedMaterial = zoneMaterial;
-
-        meshRenderer.enabled = true;
-        meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        meshRenderer.receiveShadows = false;
+        if (meshFilter != null)
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                DestroyImmediate(meshFilter);
+            else
+#endif
+                Destroy(meshFilter);
+        }
     }
 
     public static CardScatterZone FindActive()
@@ -160,8 +140,11 @@ public class CardScatterZone : MonoBehaviour
     }
 
 #if UNITY_EDITOR
-    void OnDrawGizmosSelected()
+    void OnDrawGizmos()
     {
+        if (Application.isPlaying)
+            return;
+
         BoxCollider box = _boxCollider != null ? _boxCollider : GetComponent<BoxCollider>();
         if (box == null)
             return;
