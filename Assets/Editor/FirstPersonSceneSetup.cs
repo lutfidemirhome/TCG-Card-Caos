@@ -10,6 +10,18 @@ public static class FirstPersonSceneSetup
 {
     const string ScenePath = "Assets/Scenes/MainScene.unity";
 
+    [MenuItem("TCG Card Caos/Open Main Scene")]
+    public static void OpenMainScene()
+    {
+        if (EditorSceneManager.GetActiveScene().path == ScenePath)
+            return;
+
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+
+        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+    }
+
     // Plane is 10 units; scale 2 → ~20x20 m (fits 100-card scatter + furniture).
     const float FloorScale = 2f;
     const float WallHeight = 3f;
