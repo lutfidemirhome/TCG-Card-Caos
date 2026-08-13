@@ -5909,9 +5909,8 @@ MonoBehaviour:
   paths:
   - {fileID: 2014177790}
   alternateDirection: 1
-  minSpawnInterval: 5
-  maxSpawnInterval: 11
-  initialDelay: 2
+  spawnDelay: 5
+  initialDelay: 5
   maxActiveCars: 1
   minSpeed: 7
   maxSpeed: 11

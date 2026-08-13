@@ -1,7 +1,8 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// Spawns AE_New_York cars on exterior road paths at random intervals.
+/// Spawns AE_New_York cars on exterior road paths after the previous car has cleared.
 /// </summary>
 [DisallowMultipleComponent]
 public class ExteriorTrafficSpawner : MonoBehaviour
@@ -14,22 +15,23 @@ public class ExteriorTrafficSpawner : MonoBehaviour
     [SerializeField] bool alternateDirection = true;
 
     [Header("Timing")]
-    [SerializeField] float minSpawnInterval = 5f;
-    [SerializeField] float maxSpawnInterval = 11f;
-    [SerializeField] float initialDelay = 2f;
+    [FormerlySerializedAs("minSpawnInterval")]
+    [SerializeField] float spawnDelay = 5f;
+    [SerializeField] float initialDelay = 5f;
     [SerializeField] int maxActiveCars = 1;
 
     [Header("Movement")]
     [SerializeField] float minSpeed = 7f;
     [SerializeField] float maxSpeed = 11f;
 
-    float _nextSpawnTime;
     bool _spawnReverse;
     int _nextCarIndex;
+    bool _slotWasOccupied;
+    float _spawnAllowedTime;
 
     void Start()
     {
-        ScheduleNextSpawn(initialDelay);
+        _spawnAllowedTime = Time.time + initialDelay;
     }
 
     void Update()
@@ -37,11 +39,22 @@ public class ExteriorTrafficSpawner : MonoBehaviour
         if (!CanSpawn())
             return;
 
-        if (Time.time < _nextSpawnTime)
+        if (CountActiveCars() >= maxActiveCars)
+        {
+            _slotWasOccupied = true;
+            return;
+        }
+
+        if (_slotWasOccupied)
+        {
+            _slotWasOccupied = false;
+            _spawnAllowedTime = Time.time + spawnDelay;
+        }
+
+        if (Time.time < _spawnAllowedTime)
             return;
 
         SpawnCar();
-        ScheduleNextSpawn(Random.Range(minSpawnInterval, maxSpawnInterval));
     }
 
     bool CanSpawn()
@@ -52,7 +65,7 @@ public class ExteriorTrafficSpawner : MonoBehaviour
         if (paths == null || paths.Length == 0)
             return false;
 
-        return CountActiveCars() < maxActiveCars;
+        return true;
     }
 
     int CountActiveCars()
@@ -123,10 +136,5 @@ public class ExteriorTrafficSpawner : MonoBehaviour
         }
 
         return paths[Random.Range(0, paths.Length)];
-    }
-
-    void ScheduleNextSpawn(float delay)
-    {
-        _nextSpawnTime = Time.time + Mathf.Max(0.5f, delay);
     }
 }
