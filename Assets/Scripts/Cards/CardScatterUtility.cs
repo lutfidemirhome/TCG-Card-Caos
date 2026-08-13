@@ -309,6 +309,7 @@ public static class CardScatterUtility
         if (count >= BulkGridScatterThreshold)
             return GeneratePiledScatterPositions(count);
 
+        ScatterRegion region = ScatterRegion.FromScene();
         var positions = new List<Vector2>(count);
         float minSpacing = CardDimensions.ScatterMinSpacing;
         float minSpacingSq = minSpacing * minSpacing;
@@ -321,9 +322,7 @@ public static class CardScatterUtility
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                candidate = new Vector2(
-                    Random.Range(CardDimensions.ScatterMinX, CardDimensions.ScatterMaxX),
-                    Random.Range(CardDimensions.ScatterMinZ, CardDimensions.ScatterMaxZ));
+                candidate = region.RandomXZ();
 
                 if (IsFarEnough(candidate, positions, minSpacingSq))
                 {
@@ -333,9 +332,9 @@ public static class CardScatterUtility
             }
 
             if (!found)
-                candidate = GetGridFallbackPosition(i, count);
+                candidate = GetGridFallbackPosition(i, count, region);
 
-            positions.Add(candidate);
+            positions.Add(region.Clamp(candidate));
         }
 
         return positions;
@@ -346,14 +345,11 @@ public static class CardScatterUtility
     /// </summary>
     static List<Vector2> GeneratePiledScatterPositions(int count)
     {
+        ScatterRegion region = ScatterRegion.FromScene();
         int pileCount = Mathf.Clamp(count / 7, 48, 900);
         var pileCenters = new Vector2[pileCount];
         for (int i = 0; i < pileCount; i++)
-        {
-            pileCenters[i] = new Vector2(
-                Random.Range(CardDimensions.ScatterMinX, CardDimensions.ScatterMaxX),
-                Random.Range(CardDimensions.ScatterMinZ, CardDimensions.ScatterMaxZ));
-        }
+            pileCenters[i] = region.RandomXZ();
 
         float pileRadius = Mathf.Max(
             CardDimensions.Width,
@@ -364,7 +360,7 @@ public static class CardScatterUtility
         {
             Vector2 center = pileCenters[Random.Range(0, pileCount)];
             Vector2 offset = Random.insideUnitCircle * pileRadius;
-            positions.Add(center + offset);
+            positions.Add(region.Clamp(center + offset));
         }
 
         return positions;
@@ -435,18 +431,86 @@ public static class CardScatterUtility
         return true;
     }
 
-    static Vector2 GetGridFallbackPosition(int index, int count)
+    static Vector2 GetGridFallbackPosition(int index, int count, ScatterRegion region)
     {
+        float width = Mathf.Max(0.01f, region.MaxX - region.MinX);
+        float depth = Mathf.Max(0.01f, region.MaxZ - region.MinZ);
         float spacing = GetBulkScatterSpacing();
-        int columns = Mathf.Max(1, Mathf.CeilToInt(Mathf.Sqrt(count)));
+
+        int columns = Mathf.Max(1, Mathf.FloorToInt(width / spacing) + 1);
+        int rows = Mathf.Max(1, Mathf.CeilToInt(count / (float)columns));
+
+        if (rows > 1 && (rows - 1) * spacing > depth)
+            spacing = depth / (rows - 1);
+
+        if (columns > 1 && (columns - 1) * spacing > width)
+        {
+            spacing = width / (columns - 1);
+            columns = Mathf.Max(1, Mathf.FloorToInt(width / spacing) + 1);
+            rows = Mathf.Max(1, Mathf.CeilToInt(count / (float)columns));
+        }
+
         int row = index / columns;
         int column = index % columns;
 
-        float centerX = (CardDimensions.ScatterMinX + CardDimensions.ScatterMaxX) * 0.5f;
-        float centerZ = (CardDimensions.ScatterMinZ + CardDimensions.ScatterMaxZ) * 0.5f;
-        float startX = centerX - (columns - 1) * spacing * 0.5f;
-        float startZ = centerZ - (Mathf.CeilToInt(count / (float)columns) - 1) * spacing * 0.5f;
+        float startX = region.MinX + spacing * 0.5f;
+        float startZ = region.MinZ + spacing * 0.5f;
 
-        return new Vector2(startX + column * spacing, startZ + row * spacing);
+        return region.Clamp(new Vector2(startX + column * spacing, startZ + row * spacing));
+    }
+
+    readonly struct ScatterRegion
+    {
+        public readonly float MinX;
+        public readonly float MaxX;
+        public readonly float MinZ;
+        public readonly float MaxZ;
+        public readonly CardScatterZone Zone;
+
+        ScatterRegion(float minX, float maxX, float minZ, float maxZ, CardScatterZone zone)
+        {
+            MinX = minX;
+            MaxX = maxX;
+            MinZ = minZ;
+            MaxZ = maxZ;
+            Zone = zone;
+        }
+
+        public static ScatterRegion FromScene()
+        {
+            CardScatterZone zone = CardScatterZone.FindActive();
+            if (zone != null)
+            {
+                zone.GetWorldAabb(out float minX, out float maxX, out float minZ, out float maxZ);
+                return new ScatterRegion(minX, maxX, minZ, maxZ, zone);
+            }
+
+            return new ScatterRegion(
+                CardDimensions.ScatterMinX,
+                CardDimensions.ScatterMaxX,
+                CardDimensions.ScatterMinZ,
+                CardDimensions.ScatterMaxZ,
+                null);
+        }
+
+        public Vector2 RandomXZ()
+        {
+            if (Zone != null)
+                return Zone.GetRandomXZ();
+
+            return new Vector2(
+                Random.Range(MinX, MaxX),
+                Random.Range(MinZ, MaxZ));
+        }
+
+        public Vector2 Clamp(Vector2 xz)
+        {
+            if (Zone != null)
+                return Zone.ClampXZ(xz);
+
+            return new Vector2(
+                Mathf.Clamp(xz.x, MinX, MaxX),
+                Mathf.Clamp(xz.y, MinZ, MaxZ));
+        }
     }
 }
