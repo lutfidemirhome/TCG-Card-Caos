@@ -8,6 +8,9 @@ using UnityEngine;
 public static class ExteriorWallToonUtility
 {
     const string WallTemplatePath = "Assets/Art/Materials/Wall.mat";
+    const string HiddenSubmeshShaderName = "TCG/HiddenSubmesh";
+
+    static Material _runtimeHiddenBackingMaterial;
 
     static readonly string[] ProtectedRootNames =
     {
@@ -39,10 +42,12 @@ public static class ExteriorWallToonUtility
             if (renderer == null || !ShouldApplyToRenderer(renderer))
                 continue;
 
-            if (!RendererNeedsToonConversion(renderer, wallTemplate))
+            if (!processedRenderers.Add(renderer.GetInstanceID()))
                 continue;
 
-            if (!processedRenderers.Add(renderer.GetInstanceID()))
+            changedMaterialSlots += HideBackingLayersOnRenderer(renderer, useSharedMaterials);
+
+            if (!RendererNeedsToonConversion(renderer, wallTemplate))
                 continue;
 
             changedMaterialSlots += ApplyToRenderer(renderer, wallTemplate, useSharedMaterials);
@@ -66,6 +71,12 @@ public static class ExteriorWallToonUtility
         {
             Material source = sourceMaterials[i];
             if (source == null)
+            {
+                targetMaterials[i] = source;
+                continue;
+            }
+
+            if (IsBrickBackingMaterial(source))
             {
                 targetMaterials[i] = source;
                 continue;
@@ -179,6 +190,9 @@ public static class ExteriorWallToonUtility
             if (source == null)
                 continue;
 
+            if (IsBrickBackingMaterial(source))
+                continue;
+
             if (IsPlinthMaterial(source))
             {
                 if (!AlreadyUsesPlinthStyle(source, wallTemplate))
@@ -200,6 +214,68 @@ public static class ExteriorWallToonUtility
             return false;
 
         return material.name.IndexOf("Plinth", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    public static bool IsBrickBackingMaterial(Material material)
+    {
+        if (material == null || string.IsNullOrEmpty(material.name))
+            return false;
+
+        if (IsPlinthMaterial(material))
+            return false;
+
+        if (material.name.IndexOf("Wallpaper", StringComparison.OrdinalIgnoreCase) >= 0)
+            return false;
+
+        if (material.name.IndexOf("Hidden", StringComparison.OrdinalIgnoreCase) >= 0)
+            return false;
+
+        string materialName = material.name.Replace("_Toon", string.Empty);
+        if (!materialName.StartsWith("House_", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return materialName.IndexOf("_Wall_", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    public static int HideBackingLayersOnRenderer(MeshRenderer renderer, bool useSharedMaterials)
+    {
+        if (renderer == null)
+            return 0;
+
+        Material hiddenMaterial = LoadHiddenBackingMaterial();
+        if (hiddenMaterial == null)
+            return 0;
+
+        Material[] sourceMaterials = useSharedMaterials ? renderer.sharedMaterials : renderer.materials;
+        if (sourceMaterials == null || sourceMaterials.Length == 0)
+            return 0;
+
+        int changed = 0;
+        Material[] targetMaterials = new Material[sourceMaterials.Length];
+        for (int i = 0; i < sourceMaterials.Length; i++)
+        {
+            Material source = sourceMaterials[i];
+            if (source != null
+                && IsBrickBackingMaterial(source)
+                && source.shader != hiddenMaterial.shader)
+            {
+                targetMaterials[i] = hiddenMaterial;
+                changed++;
+                continue;
+            }
+
+            targetMaterials[i] = source;
+        }
+
+        if (changed == 0)
+            return 0;
+
+        if (useSharedMaterials)
+            renderer.sharedMaterials = targetMaterials;
+        else
+            renderer.materials = targetMaterials;
+
+        return changed;
     }
 
     public static bool ShouldApplyToRenderer(Renderer renderer)
@@ -312,6 +388,45 @@ public static class ExteriorWallToonUtility
         MeshRenderer roomWall = FindRoomWallRenderer();
         return roomWall != null ? roomWall.sharedMaterial : null;
 #endif
+    }
+
+    public static Material LoadHiddenBackingMaterial()
+    {
+        if (_runtimeHiddenBackingMaterial != null)
+            return _runtimeHiddenBackingMaterial;
+
+        Shader shader = Shader.Find(HiddenSubmeshShaderName);
+        if (shader == null)
+            return null;
+
+        _runtimeHiddenBackingMaterial = new Material(shader)
+        {
+            name = "InteriorWallBackingHidden",
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        return _runtimeHiddenBackingMaterial;
+    }
+
+    public static int HideAllPlacedHouseWallBacking(bool useSharedMaterials = true)
+    {
+        if (LoadHiddenBackingMaterial() == null)
+            return 0;
+
+        int changedMaterialSlots = 0;
+        MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer renderer = renderers[i];
+            if (renderer == null || !ShouldApplyToRenderer(renderer))
+                continue;
+
+            changedMaterialSlots += HideBackingLayersOnRenderer(renderer, useSharedMaterials);
+        }
+
+        return changedMaterialSlots;
     }
 
     static MeshRenderer FindRoomWallRenderer()

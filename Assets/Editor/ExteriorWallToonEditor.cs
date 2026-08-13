@@ -28,6 +28,7 @@ public static class ExteriorWallToonEditor
         }
 
         int changedSlots = ExteriorWallToonUtility.ApplyAll(wallTemplate, useSharedMaterials: true);
+        changedSlots += ExteriorWallToonUtility.HideAllPlacedHouseWallBacking(useSharedMaterials: true);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
         EditorUtility.DisplayDialog(
