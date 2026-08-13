@@ -244,6 +244,8 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (card == null || slot == null)
             return;
 
+        GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
+
         _shelfFlights.Add(new ShelfFlightEntry
         {
             Card = card,
@@ -261,6 +263,7 @@ public class CardShelf : MonoBehaviour, IInteractable
             {
                 RemoveShelfFlight(card);
                 card.NotifyShelfPlacement(isCorrect);
+                GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
             });
     }
 

@@ -97,7 +97,7 @@ public class PlayerCardHand : MonoBehaviour
 
     void HandleScrollSelection()
     {
-        if (_cards.Count == 0)
+        if (_cards.Count <= 1)
             return;
 
         float scroll = Input.mouseScrollDelta.y;
@@ -105,7 +105,9 @@ public class PlayerCardHand : MonoBehaviour
             return;
 
         int direction = scroll > 0f ? 1 : -1;
-        MoveSelection(direction);
+        int steps = Mathf.Max(1, Mathf.RoundToInt(Mathf.Abs(scroll)));
+        for (int i = 0; i < steps; i++)
+            MoveSelection(direction);
     }
 
     void MoveSelection(int direction)
@@ -123,7 +125,13 @@ public class PlayerCardHand : MonoBehaviour
                 _selectedIndex += count;
 
             if (_cards[_selectedIndex].IsHeld)
+            {
+                if (_selectedIndex != start)
+                    GameSoundEffects.Play(
+                        GameSoundEffects.Id.CardHandScroll,
+                        GameSoundEffects.CardHandScrollVolume);
                 return;
+            }
         }
 
         _selectedIndex = start;
@@ -190,6 +198,7 @@ public class PlayerCardHand : MonoBehaviour
             pickupFlightDuration,
             pickupFlightArcHeight,
             () => OnCardPickupFlightComplete(newCardIndex));
+        GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
         return true;
     }
 
@@ -243,6 +252,7 @@ public class PlayerCardHand : MonoBehaviour
 
         Vector3 throwDirection = (_camera.transform.forward + _camera.transform.up * throwUpBoost).normalized;
         selectedCard.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
+        GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
         return true;
     }
 
