@@ -13,6 +13,7 @@ public class ExteriorTrafficCar : MonoBehaviour
     float _distance;
     float _speed;
     bool _reverse;
+    float _rotationSpeed = 8f;
 
     public void Initialize(ExteriorTrafficPath path, float speed, bool reverse)
     {
@@ -22,7 +23,7 @@ public class ExteriorTrafficCar : MonoBehaviour
         _distance = reverse ? path.TotalLength : 0f;
 
         DisablePhysics();
-        ApplyTransform();
+        ApplyTransform(instantRotation: true);
     }
 
     void Update()
@@ -48,10 +49,10 @@ public class ExteriorTrafficCar : MonoBehaviour
             return;
         }
 
-        ApplyTransform();
+        ApplyTransform(instantRotation: false);
     }
 
-    void ApplyTransform()
+    void ApplyTransform(bool instantRotation)
     {
         transform.position = _path.GetPositionAtDistance(_distance);
 
@@ -59,8 +60,13 @@ public class ExteriorTrafficCar : MonoBehaviour
         if (_reverse)
             direction = -direction;
 
-        if (direction.sqrMagnitude > 0.0001f)
-            transform.rotation = GetDrivingRotation(direction);
+        if (direction.sqrMagnitude <= 0.0001f)
+            return;
+
+        Quaternion targetRotation = GetDrivingRotation(direction);
+        transform.rotation = instantRotation
+            ? targetRotation
+            : Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * _rotationSpeed);
     }
 
     public static Quaternion GetDrivingRotation(Vector3 direction)

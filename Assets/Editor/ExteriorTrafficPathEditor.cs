@@ -11,7 +11,7 @@ public class ExteriorTrafficPathEditor : Editor
         EditorGUILayout.HelpBox(
             "Yol rotasi icin Path_Main altina bos noktalar koy.\n"
             + "Hierarchy sirasi = araba rotasi (Start -> donus noktalari -> End).\n"
-            + "Scene'de mavi cizgi yolu gosterir.",
+            + "Smooth Corners acikken donusler yumusak egride olur.",
             MessageType.Info);
 
         DrawDefaultInspector();
