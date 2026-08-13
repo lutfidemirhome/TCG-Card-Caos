@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -6,14 +8,26 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class ExteriorTrafficCar : MonoBehaviour
 {
+    struct SpinningWheel
+    {
+        public Transform Transform;
+        public Quaternion BaseLocalRotation;
+        public Vector3 LocalSpinAxis;
+        public int SpinSign;
+        public float Angle;
+    }
+
     // AE_New_York car meshes face +X, not Unity's default +Z forward.
     static readonly Vector3 ModelForwardAxis = Vector3.right;
+
+    [SerializeField] float wheelRadius = 0.36f;
 
     ExteriorTrafficPath _path;
     float _distance;
     float _speed;
     bool _reverse;
     float _rotationSpeed = 8f;
+    SpinningWheel[] _wheels;
 
     public void Initialize(ExteriorTrafficPath path, float speed, bool reverse)
     {
@@ -23,6 +37,7 @@ public class ExteriorTrafficCar : MonoBehaviour
         _distance = reverse ? path.TotalLength : 0f;
 
         DisablePhysics();
+        CacheWheels();
         ApplyTransform(instantRotation: true);
     }
 
@@ -35,7 +50,8 @@ public class ExteriorTrafficCar : MonoBehaviour
         }
 
         float delta = _speed * Time.deltaTime;
-        _distance += _reverse ? -delta : delta;
+        float movementDelta = _reverse ? -delta : delta;
+        _distance += movementDelta;
 
         if (!_reverse && _distance >= _path.TotalLength)
         {
@@ -50,6 +66,7 @@ public class ExteriorTrafficCar : MonoBehaviour
         }
 
         ApplyTransform(instantRotation: false);
+        UpdateWheelSpin(movementDelta);
     }
 
     void ApplyTransform(bool instantRotation)
@@ -67,6 +84,85 @@ public class ExteriorTrafficCar : MonoBehaviour
         transform.rotation = instantRotation
             ? targetRotation
             : Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * _rotationSpeed);
+    }
+
+    void CacheWheels()
+    {
+        Transform[] transforms = GetComponentsInChildren<Transform>(true);
+        var wheels = new List<SpinningWheel>();
+
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform wheelTransform = transforms[i];
+            if (wheelTransform == transform || !IsWheelTransform(wheelTransform))
+                continue;
+
+            Vector3 spinAxis = ResolveWheelSpinAxis(wheelTransform);
+            wheels.Add(new SpinningWheel
+            {
+                Transform = wheelTransform,
+                BaseLocalRotation = wheelTransform.localRotation,
+                LocalSpinAxis = spinAxis,
+                SpinSign = ResolveWheelSpinSign(spinAxis),
+                Angle = 0f
+            });
+        }
+
+        _wheels = wheels.ToArray();
+    }
+
+    static bool IsWheelTransform(Transform wheelTransform)
+    {
+        string name = wheelTransform.name;
+        return name.IndexOf("wheel", StringComparison.OrdinalIgnoreCase) >= 0
+            || name.IndexOf("whell", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    static Vector3 ResolveWheelSpinAxis(Transform wheelTransform)
+    {
+        MeshFilter meshFilter = wheelTransform.GetComponent<MeshFilter>();
+        if (meshFilter != null && meshFilter.sharedMesh != null)
+        {
+            Vector3 size = meshFilter.sharedMesh.bounds.size;
+            if (size.x <= size.y && size.x <= size.z)
+                return Vector3.right;
+
+            if (size.y <= size.x && size.y <= size.z)
+                return Vector3.up;
+
+            return Vector3.forward;
+        }
+
+        return Vector3.up;
+    }
+
+    static int ResolveWheelSpinSign(Vector3 localSpinAxis)
+    {
+        Vector3 rollDirection = Vector3.Cross(localSpinAxis, Vector3.up);
+        if (rollDirection.sqrMagnitude <= 0.0001f)
+            rollDirection = Vector3.Cross(localSpinAxis, Vector3.forward);
+
+        rollDirection.Normalize();
+        return Vector3.Dot(rollDirection, ModelForwardAxis) >= 0f ? 1 : -1;
+    }
+
+    void UpdateWheelSpin(float movementDelta)
+    {
+        if (_wheels == null || _wheels.Length == 0 || wheelRadius <= 0.0001f)
+            return;
+
+        float angleDelta = movementDelta / wheelRadius * Mathf.Rad2Deg;
+        for (int i = 0; i < _wheels.Length; i++)
+        {
+            SpinningWheel wheel = _wheels[i];
+            if (wheel.Transform == null)
+                continue;
+
+            wheel.Angle += angleDelta * wheel.SpinSign;
+            wheel.Transform.localRotation = wheel.BaseLocalRotation
+                * Quaternion.AngleAxis(wheel.Angle, wheel.LocalSpinAxis);
+            _wheels[i] = wheel;
+        }
     }
 
     public static Quaternion GetDrivingRotation(Vector3 direction)

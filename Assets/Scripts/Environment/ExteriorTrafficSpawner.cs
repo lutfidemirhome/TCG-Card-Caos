@@ -25,6 +25,7 @@ public class ExteriorTrafficSpawner : MonoBehaviour
 
     float _nextSpawnTime;
     bool _spawnReverse;
+    int _nextCarIndex;
 
     void Start()
     {
@@ -65,7 +66,7 @@ public class ExteriorTrafficSpawner : MonoBehaviour
         if (path == null || path.PointCount < 2)
             return;
 
-        GameObject prefab = carPrefabs[Random.Range(0, carPrefabs.Length)];
+        GameObject prefab = GetNextCarPrefab();
         if (prefab == null)
             return;
 
@@ -90,6 +91,22 @@ public class ExteriorTrafficSpawner : MonoBehaviour
 
         if (alternateDirection)
             _spawnReverse = !_spawnReverse;
+    }
+
+    GameObject GetNextCarPrefab()
+    {
+        if (carPrefabs == null || carPrefabs.Length == 0)
+            return null;
+
+        for (int attempt = 0; attempt < carPrefabs.Length; attempt++)
+        {
+            GameObject prefab = carPrefabs[_nextCarIndex];
+            _nextCarIndex = (_nextCarIndex + 1) % carPrefabs.Length;
+            if (prefab != null)
+                return prefab;
+        }
+
+        return null;
     }
 
     ExteriorTrafficPath ResolvePath()
