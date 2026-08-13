@@ -7,9 +7,10 @@ public static class GameAudioSettings
 {
     public const string MusicEnabledPlayerPrefsKey = "TCGCardCaos.MusicEnabled";
     public const string MusicVolumePlayerPrefsKey = "TCGCardCaos.MusicVolume";
+    public const float DefaultMusicVolume = 0.6f;
 
     static bool _musicEnabled = true;
-    static float _musicVolume = 1f;
+    static float _musicVolume = DefaultMusicVolume;
     static bool _loaded;
 
     public static bool MusicEnabled
@@ -63,7 +64,7 @@ public static class GameAudioSettings
         _loaded = true;
         _musicEnabled = UnityEngine.PlayerPrefs.GetInt(MusicEnabledPlayerPrefsKey, 1) == 1;
         _musicVolume = UnityEngine.Mathf.Clamp01(
-            UnityEngine.PlayerPrefs.GetFloat(MusicVolumePlayerPrefsKey, 1f));
+            UnityEngine.PlayerPrefs.GetFloat(MusicVolumePlayerPrefsKey, DefaultMusicVolume));
     }
 
     static void Save()

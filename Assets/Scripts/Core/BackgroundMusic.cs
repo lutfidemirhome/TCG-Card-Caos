@@ -1,22 +1,16 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Sequential in-game playlist: Resources/Audio/1 … 5, then back to 1.
+/// Looped in-game music from Resources/Audio/game_music_ingame/1-11.
 /// </summary>
 public class BackgroundMusic : MonoBehaviour
 {
-    public const string ClipResourceFolder = "Audio/game_music_ingame";
-    public const int TrackCount = 5;
+    public const string ClipResourcePath = "Audio/game_music_ingame/1-11";
 
     static BackgroundMusic _instance;
 
-    readonly List<AudioClip> _tracks = new List<AudioClip>(TrackCount);
     AudioSource _source;
-    Coroutine _playlistRoutine;
-    int _currentTrackIndex;
-    bool _warnedMissingTracks;
+    bool _warnedMissingClip;
 
     public static BackgroundMusic EnsureExists()
     {
@@ -45,7 +39,7 @@ public class BackgroundMusic : MonoBehaviour
         _instance = this;
 
         _source = gameObject.AddComponent<AudioSource>();
-        _source.loop = false;
+        _source.loop = true;
         _source.playOnAwake = false;
         _source.spatialBlend = 0f;
         _source.priority = 0;
@@ -66,23 +60,15 @@ public class BackgroundMusic : MonoBehaviour
         if (!Application.isPlaying)
             return;
 
-        LoadTracks();
-        ApplySettings();
-    }
-
-    void LoadTracks()
-    {
-        _tracks.Clear();
-
-        for (int i = 1; i <= TrackCount; i++)
+        AudioClip clip = Resources.Load<AudioClip>(ClipResourcePath);
+        if (clip == null)
         {
-            AudioClip clip = Resources.Load<AudioClip>(ClipResourceFolder + "/" + i);
-            if (clip != null)
-                _tracks.Add(clip);
+            WarnMissingClipOnce();
+            return;
         }
 
-        if (_tracks.Count == 0)
-            WarnMissingTracksOnce();
+        _source.clip = clip;
+        ApplySettings();
     }
 
     void ApplySettings()
@@ -92,66 +78,24 @@ public class BackgroundMusic : MonoBehaviour
 
         _source.volume = GameAudioSettings.MusicVolume;
 
-        if (_tracks.Count == 0)
+        if (_source.clip == null)
             return;
 
-        if (GameAudioSettings.MusicEnabled)
-            StartPlaylistIfNeeded();
-        else
-            StopPlaylist();
-    }
-
-    void StartPlaylistIfNeeded()
-    {
-        if (_playlistRoutine != null)
-            return;
-
-        _playlistRoutine = StartCoroutine(PlayPlaylistLoop());
-    }
-
-    void StopPlaylist()
-    {
-        if (_playlistRoutine != null)
-        {
-            StopCoroutine(_playlistRoutine);
-            _playlistRoutine = null;
-        }
-
-        if (_source.isPlaying)
+        if (GameAudioSettings.MusicEnabled && !_source.isPlaying)
+            _source.Play();
+        else if (!GameAudioSettings.MusicEnabled && _source.isPlaying)
             _source.Stop();
     }
 
-    IEnumerator PlayPlaylistLoop()
+    void WarnMissingClipOnce()
     {
-        while (true)
-        {
-            if (!GameAudioSettings.MusicEnabled || _tracks.Count == 0)
-            {
-                _playlistRoutine = null;
-                yield break;
-            }
-
-            _currentTrackIndex = Mathf.Clamp(_currentTrackIndex, 0, _tracks.Count - 1);
-            AudioClip clip = _tracks[_currentTrackIndex];
-            _source.clip = clip;
-            _source.volume = GameAudioSettings.MusicVolume;
-            _source.Play();
-
-            yield return new WaitWhile(() => _source.isPlaying);
-
-            _currentTrackIndex = (_currentTrackIndex + 1) % _tracks.Count;
-        }
-    }
-
-    void WarnMissingTracksOnce()
-    {
-        if (_warnedMissingTracks)
+        if (_warnedMissingClip)
             return;
 
-        _warnedMissingTracks = true;
+        _warnedMissingClip = true;
         Debug.LogWarning(
-            "BackgroundMusic: No tracks found. Add 1.wav … "
-            + TrackCount
-            + ".wav under Assets/Resources/Audio/game_music_ingame/ (names: 1, 2, 3, …).");
+            "BackgroundMusic: No clip at Resources/"
+            + ClipResourcePath
+            + ". Add 1-11.mp3 under Assets/Resources/Audio/game_music_ingame/.");
     }
 }
