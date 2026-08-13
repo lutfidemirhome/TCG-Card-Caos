@@ -106,7 +106,7 @@ Material:
     m_Floats:
     - _AmbientOcclusion: 0.31
     - _Ambient_Occlusion: 0.7
-    - _Amplitude: 0.101
+    - _Amplitude: 0
     - _BlendOp: 0
     - _BrightnessMultiplier: 2.679832
     - _BumpScale: 1
@@ -155,12 +155,12 @@ Material:
     - _Tilling_Color: 1.49
     - _UVSec: 0
     - _UltraDetailScale: 110
-    - _Wind: 5.89
-    - _WindPower: 0.098
-    - _WindScale: 0.201
-    - _WindSpeed: 0.246
-    - _Wind_Size: 0.258
-    - _Wind_Speed: 4.39
+    - _Wind: 0
+    - _WindPower: 0
+    - _WindScale: 0
+    - _WindSpeed: 0
+    - _Wind_Size: 0
+    - _Wind_Speed: 0
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:

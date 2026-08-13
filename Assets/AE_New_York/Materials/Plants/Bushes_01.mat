@@ -90,7 +90,7 @@ Material:
     m_Floats:
     - _ASEOutlineWidth: 0
     - _Ambient_Occlusion: 0.83
-    - _Amplitude: 0.15
+    - _Amplitude: 0
     - _BumpScale: 1
     - _Cutoff: 0.75
     - _DetailNormalMapScale: 1
@@ -110,12 +110,12 @@ Material:
     - _SrcBlend: 1
     - _Tilling_Color: 1.49
     - _UVSec: 0
-    - _Wind: 2.24
-    - _WindPower: 0.075
-    - _WindScale: 0.131
-    - _WindSpeed: 0.274
-    - _Wind_Size: 0.337
-    - _Wind_Speed: 1.31
+    - _Wind: 0
+    - _WindPower: 0
+    - _WindScale: 0
+    - _WindSpeed: 0
+    - _Wind_Size: 0
+    - _Wind_Speed: 0
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:

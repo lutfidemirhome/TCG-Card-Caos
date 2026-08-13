@@ -89,7 +89,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _Ambient_Occlusion: 0.68
-    - _Amplitude: 0.067
+    - _Amplitude: 0
     - _BumpScale: 1
     - _ChromaticAberration: 0.1
     - _Cutoff: 0.5
@@ -116,12 +116,12 @@ Material:
     - _TransShadow: 0.921
     - _Translucency: 0.2
     - _UVSec: 0
-    - _Wind: 5.8
-    - _WindPower: 0.056
-    - _WindScale: 0.162
-    - _WindSpeed: 0.175
-    - _Wind_Size: 0.185
-    - _Wind_Speed: 1.28
+    - _Wind: 0
+    - _WindPower: 0
+    - _WindScale: 0
+    - _WindSpeed: 0
+    - _Wind_Size: 0
+    - _Wind_Speed: 0
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:

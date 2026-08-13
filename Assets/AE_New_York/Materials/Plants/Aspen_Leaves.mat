@@ -127,7 +127,7 @@ Material:
     - _AlphaCutoff: 0.5
     - _AmbientOcclusion: -0.09306223
     - _Ambient_Occlusion: 0.7
-    - _Amplitude: 0.0874
+    - _Amplitude: 0
     - _BlendOp: 0
     - _BumpScale: 1
     - _CameraFadingEnabled: 0
@@ -183,13 +183,13 @@ Material:
     - _TranslucencyViewDependency: 0.7
     - _UVSec: 0
     - _UltraDetailScale: 261
-    - _Wind: 1.6
-    - _WindNoiseTiling: 0.5
-    - _WindPower: 0.122
-    - _WindScale: 0.374
-    - _WindSpeed: 0.202
-    - _Wind_Size: 0.164
-    - _Wind_Speed: 2.82
+    - _Wind: 0
+    - _WindNoiseTiling: 0
+    - _WindPower: 0
+    - _WindScale: 0
+    - _WindSpeed: 0
+    - _Wind_Size: 0
+    - _Wind_Speed: 0
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:
