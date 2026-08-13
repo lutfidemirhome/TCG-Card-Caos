@@ -5,6 +5,7 @@ public static class CardShelfCategories
 {
     public const string NormalCommon = "normal_common";
     public const string NormalUncommon = "normal_uncommon";
+    public const string NormalRare = "normal_rare";
 
     public const int MinSlotNumber = 1;
     public const int MaxSlotNumber = 10;
@@ -22,6 +23,9 @@ public static class CardShelfCategories
         if (categoryId == NormalUncommon)
             return "Normal Uncommon";
 
+        if (categoryId == NormalRare)
+            return "Normal Rare";
+
         return categoryId.Replace('_', ' ');
     }
 
@@ -29,6 +33,9 @@ public static class CardShelfCategories
     {
         if (categoryId == NormalUncommon)
             return 5;
+
+        if (categoryId == NormalRare)
+            return 3;
 
         return DefaultSlotsPerRow;
     }

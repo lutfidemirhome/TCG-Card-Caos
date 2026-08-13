@@ -6,7 +6,8 @@ public static class CardScatterUtility
 {
     public const int DefaultScatterCount = 100;
     public const int UncommonScatterCount = 50;
-    public const int FullScatterCount = DefaultScatterCount + UncommonScatterCount;
+    public const int RareScatterCount = 30;
+    public const int FullScatterCount = DefaultScatterCount + UncommonScatterCount + RareScatterCount;
     public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "Card_";
@@ -62,7 +63,7 @@ public static class CardScatterUtility
             Debug.LogError(
                 "CardScatterUtility: No CardDefinition assets found"
                 + (string.IsNullOrWhiteSpace(shelfCategoryId) ? "." : " for category '" + shelfCategoryId + "'.")
-                + " Run TCG Card Caos → Import Normal Common/Uncommon Cards From Art.");
+                + " Run TCG Card Caos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
             return;
         }
 
@@ -115,7 +116,7 @@ public static class CardScatterUtility
             Debug.LogError(
                 "CardScatterUtility: No CardDefinition assets found"
                 + (string.IsNullOrWhiteSpace(shelfCategoryId) ? "." : " for category '" + shelfCategoryId + "'.")
-                + " Run TCG Card Caos → Import Normal Common/Uncommon Cards From Art.");
+                + " Run TCG Card Caos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
             yield break;
         }
 
