@@ -27,7 +27,8 @@ public static class ExteriorColliderCleanupEditor
             "Exterior collider temizligi",
             $"Kaldirilan collider: {removedColliders}\n"
             + $"Kaldirilan rigidbody: {removedRigidbodies}\n\n"
-            + "Room, duvarlar ve Door_c5bu08 dokunulmadi.",
+            + "Room, shop duvarlari (Wall_*) ve Door_c5bu08 dokunulmadi.\n"
+            + "House_*_Wall_* ic duvar collider'lari korundu.",
             "Tamam");
     }
 
@@ -52,6 +53,9 @@ public static class ExteriorColliderCleanupEditor
     static bool ShouldStripInEditor(GameObject gameObject)
     {
         if (ExteriorColliderCleanup.IsProtectedTransform(gameObject.transform))
+            return false;
+
+        if (ExteriorColliderCleanup.IsPlacedHouseWallTransform(gameObject.transform))
             return false;
 
         if (ExteriorColliderCleanup.IsExteriorObject(gameObject))

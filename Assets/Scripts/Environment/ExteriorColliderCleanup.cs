@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -46,6 +47,7 @@ public static class ExteriorColliderCleanup
     {
         RemoveMatchingComponents<Collider>();
         RemoveMatchingComponents<Rigidbody>();
+        EnsurePlacedHouseWallColliders();
     }
 
     public static bool ShouldStrip(GameObject gameObject)
@@ -56,7 +58,64 @@ public static class ExteriorColliderCleanup
         if (IsProtectedTransform(gameObject.transform))
             return false;
 
+        if (IsPlacedHouseWallTransform(gameObject.transform))
+            return false;
+
         return IsExteriorObject(gameObject);
+    }
+
+    public static bool IsPlacedHouseWallName(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+            return false;
+
+        if (!objectName.StartsWith("House_", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return objectName.IndexOf("_Wall_", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    public static bool IsPlacedHouseWallTransform(Transform transform)
+    {
+        Transform current = transform;
+        while (current != null)
+        {
+            if (IsPlacedHouseWallName(current.name))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    public static void EnsurePlacedHouseWallColliders()
+    {
+        MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer renderer = renderers[i];
+            if (renderer == null || IsProtectedTransform(renderer.transform))
+                continue;
+
+            if (!IsPlacedHouseWallTransform(renderer.transform))
+                continue;
+
+            if (renderer.GetComponent<Collider>() != null)
+                continue;
+
+            MeshFilter meshFilter = renderer.GetComponent<MeshFilter>();
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+                continue;
+
+            BoxCollider boxCollider = renderer.gameObject.AddComponent<BoxCollider>();
+            Bounds bounds = meshFilter.sharedMesh.bounds;
+            boxCollider.center = bounds.center;
+            boxCollider.size = bounds.size;
+        }
     }
 
     public static bool IsProtectedTransform(Transform transform)
@@ -122,14 +181,14 @@ public static class ExteriorColliderCleanup
 
     static void RemoveMatchingComponents<T>() where T : Component
     {
-        T[] components = Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        T[] components = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < components.Length; i++)
         {
             T component = components[i];
             if (component == null || !ShouldStrip(component.gameObject))
                 continue;
 
-            Object.Destroy(component);
+            UnityEngine.Object.Destroy(component);
         }
     }
 }
