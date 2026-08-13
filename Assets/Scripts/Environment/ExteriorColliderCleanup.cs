@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -48,6 +49,7 @@ public static class ExteriorColliderCleanup
         RemoveMatchingComponents<Collider>();
         RemoveMatchingComponents<Rigidbody>();
         EnsurePlacedHouseWallColliders();
+        EnsurePlacedColumnColliders();
     }
 
     public static bool ShouldStrip(GameObject gameObject)
@@ -59,6 +61,9 @@ public static class ExteriorColliderCleanup
             return false;
 
         if (IsPlacedHouseWallTransform(gameObject.transform))
+            return false;
+
+        if (IsPlacedColumnTransform(gameObject.transform))
             return false;
 
         return IsExteriorObject(gameObject);
@@ -116,6 +121,95 @@ public static class ExteriorColliderCleanup
             boxCollider.center = bounds.center;
             boxCollider.size = bounds.size;
         }
+    }
+
+    public static bool IsPlacedColumnName(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+            return false;
+
+        return objectName.StartsWith("Column", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsPlacedColumnTransform(Transform transform)
+    {
+        Transform current = transform;
+        while (current != null)
+        {
+            if (IsPlacedColumnName(current.name))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    public static int EnsurePlacedColumnColliders()
+    {
+        var processedRoots = new HashSet<int>();
+        int added = 0;
+
+        MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            Transform columnRoot = FindColumnRoot(renderer.transform);
+            if (columnRoot == null || IsProtectedTransform(columnRoot))
+                continue;
+
+            if (!processedRoots.Add(columnRoot.GetInstanceID()))
+                continue;
+
+            if (columnRoot.GetComponent<Collider>() != null)
+                continue;
+
+            if (TryAddBoxColliderFromRenderers(columnRoot))
+                added++;
+        }
+
+        return added;
+    }
+
+    static Transform FindColumnRoot(Transform transform)
+    {
+        Transform columnRoot = null;
+        Transform current = transform;
+        while (current != null)
+        {
+            if (IsPlacedColumnName(current.name))
+                columnRoot = current;
+
+            current = current.parent;
+        }
+
+        return columnRoot;
+    }
+
+    static bool TryAddBoxColliderFromRenderers(Transform root)
+    {
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length == 0)
+            return false;
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+            bounds.Encapsulate(renderers[i].bounds);
+
+        BoxCollider boxCollider = root.gameObject.AddComponent<BoxCollider>();
+        Vector3 localSize = root.InverseTransformVector(bounds.size);
+        boxCollider.center = root.InverseTransformPoint(bounds.center);
+        boxCollider.size = new Vector3(
+            Mathf.Abs(localSize.x),
+            Mathf.Abs(localSize.y),
+            Mathf.Abs(localSize.z));
+        return true;
     }
 
     public static bool IsProtectedTransform(Transform transform)

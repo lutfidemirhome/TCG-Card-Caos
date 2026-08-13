@@ -28,7 +28,30 @@ public static class ExteriorColliderCleanupEditor
             $"Kaldirilan collider: {removedColliders}\n"
             + $"Kaldirilan rigidbody: {removedRigidbodies}\n\n"
             + "Room, shop duvarlari (Wall_*) ve Door_c5bu08 dokunulmadi.\n"
-            + "House_*_Wall_* ic duvar collider'lari korundu.",
+            + "House_*_Wall_* ic duvar collider'lari korundu.\n"
+            + "Column_* kolon collider'lari korundu.",
+            "Tamam");
+    }
+
+    [MenuItem("TCG Card Caos/Ensure Column Colliders")]
+    public static void EnsureColumnCollidersInMainScene()
+    {
+        if (EditorSceneManager.GetActiveScene().path != ScenePath)
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
+            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        }
+
+        int added = ExteriorColliderCleanup.EnsurePlacedColumnColliders();
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+
+        EditorUtility.DisplayDialog(
+            "Kolon collider",
+            added > 0
+                ? $"Column objelerine {added} collider eklendi."
+                : "Column objelerinde collider zaten var veya Column bulunamadi.",
             "Tamam");
     }
 
@@ -58,6 +81,9 @@ public static class ExteriorColliderCleanupEditor
         if (ExteriorColliderCleanup.IsPlacedHouseWallTransform(gameObject.transform))
             return false;
 
+        if (ExteriorColliderCleanup.IsPlacedColumnTransform(gameObject.transform))
+            return false;
+
         if (ExteriorColliderCleanup.IsExteriorObject(gameObject))
             return true;
 
@@ -66,6 +92,9 @@ public static class ExteriorColliderCleanupEditor
             return false;
 
         if (ExteriorColliderCleanup.IsProtectedTransform(prefabRoot.transform))
+            return false;
+
+        if (ExteriorColliderCleanup.IsPlacedColumnTransform(prefabRoot.transform))
             return false;
 
         string prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(prefabRoot);
