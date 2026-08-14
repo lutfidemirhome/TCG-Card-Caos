@@ -66,6 +66,12 @@ public class InteractionController : MonoBehaviour
             aimedCardDistance = cardDistance;
         }
 
+        if (aimedCard != null && InteractionOcclusion.IsOccluded(ray, aimedCardDistance, interactDistance))
+        {
+            aimedCard = null;
+            aimedCardDistance = float.MaxValue;
+        }
+
         _raycastAimedCard = aimedCard != null && !aimedCard.IsInHand ? aimedCard : null;
 
         int hitCount = Physics.RaycastNonAlloc(
@@ -75,7 +81,7 @@ public class InteractionController : MonoBehaviour
             interactMask,
             QueryTriggerInteraction.Ignore);
 
-        IInteractable interactable = ResolveBestInteractable(HitBuffer, hitCount, aimedCard, aimedCardDistance);
+        IInteractable interactable = ResolveBestInteractable(ray, HitBuffer, hitCount, aimedCard);
         UpdateCardFocus(_raycastAimedCard);
 
         if (interactable == null)
@@ -129,10 +135,10 @@ public class InteractionController : MonoBehaviour
     }
 
     IInteractable ResolveBestInteractable(
+        Ray ray,
         RaycastHit[] hits,
         int hitCount,
-        WorldCard aimedCard,
-        float aimedCardDistance)
+        WorldCard aimedCard)
     {
         PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
 
@@ -173,21 +179,27 @@ public class InteractionController : MonoBehaviour
 
         if (hand != null && hand.HasSelectedHeldCard() && bestShelf != null)
         {
-            Vector3 aim = hitCount > 0
-                ? FindShelfHit(hits, hitCount, bestShelf).point
-                : bestShelf.transform.position;
+            if (!InteractionOcclusion.IsOccluded(ray, bestShelfDistance, interactDistance))
+            {
+                Vector3 aim = hitCount > 0
+                    ? FindShelfHit(hits, hitCount, bestShelf).point
+                    : bestShelf.transform.position;
 
-            if (!bestShelf.IsAimOnOccupiedSlot(aim))
-                return bestShelf;
+                if (!bestShelf.IsAimOnOccupiedSlot(aim))
+                    return bestShelf;
+            }
         }
 
         if (aimedCard != null)
             return aimedCard;
 
-        if (bestShelf != null)
+        if (bestShelf != null && !InteractionOcclusion.IsOccluded(ray, bestShelfDistance, interactDistance))
             return bestShelf;
 
-        return bestOther;
+        if (bestOther != null && !InteractionOcclusion.IsOccluded(ray, bestOtherDistance, interactDistance))
+            return bestOther;
+
+        return null;
     }
 
     void ClearShelfAimForNonShelfTarget(IInteractable interactable)
