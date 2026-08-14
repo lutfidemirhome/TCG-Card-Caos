@@ -7,9 +7,8 @@ using UnityEngine;
 /// </summary>
 public static class CardGroundStack
 {
-    const float StackGap = 0.012f;
-    const float HeightEpsilon = 0.0002f;
-    const float UniqueDepthBiasRange = 0.0025f;
+    const float StackGap = 0.00015f;
+    const float UniqueDepthBiasRange = 0.0004f;
     const int UniqueDepthBiasSteps = 4096;
     const int BulkFlatStackThreshold = 256;
 
@@ -18,6 +17,7 @@ public static class CardGroundStack
     static readonly List<WorldCard> ClusterScratch = new List<WorldCard>(16);
     static readonly List<WorldCard> OpenScratch = new List<WorldCard>(16);
     static readonly List<WorldCard> CellScratch = new List<WorldCard>(32);
+    static readonly List<WorldCard> LandingColliderScratch = new List<WorldCard>(32);
     static readonly Dictionary<long, List<WorldCard>> SpatialBuckets = new Dictionary<long, List<WorldCard>>(512);
 
     public static float StackStep =>
@@ -46,7 +46,11 @@ public static class CardGroundStack
         if (card == null)
             return CardFactory.GroundHeightOffset();
 
-        return GetStackedWorldY(card.GroundStackLayer) + GetUniqueDepthBias(card);
+        float y = GetStackedWorldY(card.GroundStackLayer);
+        if (card.GroundStackLayer == 0)
+            y += GetUniqueDepthBias(card);
+
+        return y;
     }
 
     public static void Track(WorldCard card)
@@ -63,26 +67,10 @@ public static class CardGroundStack
             return;
 
         Vector3 removedPos = card.transform.position;
-        bool bulk = GroundCards.Count >= BulkFlatStackThreshold;
-
-        if (!bulk)
-        {
-            var affected = new List<WorldCard>(4);
-            for (int i = 0; i < GroundCards.Count; i++)
-            {
-                WorldCard other = GroundCards[i];
-                if (other != null && other != card && OverlapsOnGround(card, other))
-                    affected.Add(other);
-            }
-
-            RemoveFromList(card);
-            for (int i = 0; i < affected.Count; i++)
-                RefreshCluster(affected[i]);
-            return;
-        }
-
         RemoveFromList(card);
-        RefreshCellAt(removedPos);
+
+        if (GroundCards.Count >= BulkFlatStackThreshold)
+            RefreshCellAt(removedPos);
     }
 
     static void RemoveFromList(WorldCard card)
@@ -188,13 +176,7 @@ public static class CardGroundStack
 
     public static void RebuildAll()
     {
-        if (GroundCards.Count >= BulkFlatStackThreshold)
-        {
-            RebuildCellPiles();
-            return;
-        }
-
-        RebuildClustered();
+        RebuildCellPiles();
     }
 
     /// <summary>
@@ -281,6 +263,40 @@ public static class CardGroundStack
         }
     }
 
+    /// <summary>Turn nearby ground cards into solid surfaces while a card is in flight.</summary>
+    public static void EnableLandingCollidersNear(Vector3 worldPos, float radius)
+    {
+        RestoreLandingColliders();
+
+        float radiusSq = radius * radius;
+        for (int i = 0; i < GroundCards.Count; i++)
+        {
+            WorldCard card = GroundCards[i];
+            if (card == null || card.IsInHand)
+                continue;
+
+            Vector3 delta = card.transform.position - worldPos;
+            delta.y *= 0.35f;
+            if (delta.sqrMagnitude > radiusSq)
+                continue;
+
+            card.EnableLandingCollider();
+            LandingColliderScratch.Add(card);
+        }
+    }
+
+    public static void RestoreLandingColliders()
+    {
+        for (int i = 0; i < LandingColliderScratch.Count; i++)
+        {
+            WorldCard card = LandingColliderScratch[i];
+            if (card != null)
+                card.RestoreGroundCollider();
+        }
+
+        LandingColliderScratch.Clear();
+    }
+
     /// <summary>Cell size for neighbor queries — sized to card footprint, not pile radius.</summary>
     static float SpatialCellSize
     {
@@ -299,28 +315,8 @@ public static class CardGroundStack
         return ((long)x << 32) ^ (uint)z;
     }
 
-    static void RebuildClustered()
-    {
-        var processed = new HashSet<WorldCard>();
-        for (int i = 0; i < GroundCards.Count; i++)
-        {
-            WorldCard seed = GroundCards[i];
-            if (seed == null || seed.IsInHand || processed.Contains(seed))
-                continue;
-
-            BuildCluster(seed, ClusterScratch);
-            ApplyPileLayers(ClusterScratch);
-            for (int c = 0; c < ClusterScratch.Count; c++)
-            {
-                if (ClusterScratch[c] != null)
-                    processed.Add(ClusterScratch[c]);
-            }
-        }
-    }
-
     /// <summary>
-    /// Restack overlapping ground cards under <paramref name="card"/>.
-    /// When <paramref name="placeOnTop"/> is true (thrown/dropped card), that card becomes the top layer.
+    /// Place a dropped card on the pile. Existing cards keep their height — only this card moves.
     /// </summary>
     public static void ApplyStackHeight(WorldCard card, bool placeOnTop = false)
     {
@@ -328,59 +324,46 @@ public static class CardGroundStack
             return;
 
         Track(card);
-        if (GroundCards.Count >= BulkFlatStackThreshold)
+        if (placeOnTop)
         {
-            RefreshDirectOverlaps(card, placeOnTop ? card : null);
+            PlaceOnTopOfOverlaps(card);
             return;
         }
 
-        RefreshCluster(card, placeOnTop ? card : null);
+        RefreshCluster(card);
     }
 
-    public static void RefreshCluster(WorldCard seed, WorldCard forceOnTop = null)
+    static void PlaceOnTopOfOverlaps(WorldCard card)
     {
-        if (GroundCards.Count >= BulkFlatStackThreshold)
-        {
-            if (seed != null)
-                RefreshDirectOverlaps(seed, forceOnTop);
-            return;
-        }
-
-        if (seed == null || seed.IsInHand)
-            return;
-
-        BuildCluster(seed, ClusterScratch);
-        if (ClusterScratch.Count == 0)
-            return;
-
-        ApplyPileLayers(ClusterScratch, forceOnTop);
-    }
-
-    /// <summary>
-    /// Restack only the seed and cards that actually overlap it (same feel as morning clusters, O(neighbors)).
-    /// </summary>
-    static void RefreshDirectOverlaps(WorldCard seed, WorldCard forceOnTop = null)
-    {
-        if (seed == null || seed.IsInHand)
-            return;
-
+        int maxLayer = -1;
         RebuildSpatialBuckets();
-        CollectNeighborhood(seed.transform.position, CellScratch);
-        ClusterScratch.Clear();
-        ClusterScratch.Add(seed);
+        CollectNeighborhood(card.transform.position, CellScratch);
 
         for (int i = 0; i < CellScratch.Count; i++)
         {
             WorldCard other = CellScratch[i];
-            if (other == null || other == seed || other.IsInHand)
+            if (other == null || other == card || other.IsInHand || other.HasActivePhysics)
                 continue;
-            if (other.GetComponent<Rigidbody>() != null)
+            if (!OverlapsOnGround(card, other))
                 continue;
-            if (!OverlapsOnGround(seed, other))
-                continue;
-
-            ClusterScratch.Add(other);
+            if (other.GroundStackLayer > maxLayer)
+                maxLayer = other.GroundStackLayer;
         }
+
+        card.SetGroundStackLayer(maxLayer + 1);
+        Vector3 position = card.transform.position;
+        position.y = GetDrawWorldY(card);
+        card.transform.position = position;
+    }
+
+    public static void RefreshCluster(WorldCard seed, WorldCard forceOnTop = null)
+    {
+        if (seed == null || seed.IsInHand)
+            return;
+
+        BuildLocalPile(seed, ClusterScratch);
+        if (ClusterScratch.Count == 0)
+            return;
 
         ApplyPileLayers(ClusterScratch, forceOnTop);
     }
@@ -421,20 +404,30 @@ public static class CardGroundStack
         if (b == null)
             return -1;
 
-        float deltaY = a.transform.position.y - b.transform.position.y;
-        if (deltaY < -HeightEpsilon)
-            return -1;
-        if (deltaY > HeightEpsilon)
-            return 1;
+        int layerDelta = a.GroundStackLayer - b.GroundStackLayer;
+        if (layerDelta != 0)
+            return layerDelta;
 
         return WorldCardDrawOrder.CompareStableInstanceId(a, b);
     }
 
-    static void BuildCluster(WorldCard seed, List<WorldCard> results)
+    /// <summary>
+    /// Flood-fill overlapping cards in neighboring cells only — not the whole floor.
+    /// </summary>
+    static void BuildLocalPile(WorldCard seed, List<WorldCard> results)
     {
         results.Clear();
         if (seed == null || seed.IsInHand)
             return;
+
+        RebuildSpatialBuckets();
+        CollectNeighborhood(seed.transform.position, CellScratch);
+        for (int i = CellScratch.Count - 1; i >= 0; i--)
+        {
+            WorldCard card = CellScratch[i];
+            if (card == null || card.IsInHand || card.HasActivePhysics)
+                CellScratch.RemoveAt(i);
+        }
 
         OpenScratch.Clear();
         OpenScratch.Add(seed);
@@ -450,12 +443,10 @@ public static class CardGroundStack
 
             results.Add(current);
 
-            for (int i = 0; i < GroundCards.Count; i++)
+            for (int i = 0; i < CellScratch.Count; i++)
             {
-                WorldCard other = GroundCards[i];
+                WorldCard other = CellScratch[i];
                 if (other == null || other.IsInHand || results.Contains(other))
-                    continue;
-                if (other.GetComponent<Rigidbody>() != null)
                     continue;
                 if (!OverlapsOnGround(current, other))
                     continue;
@@ -468,12 +459,10 @@ public static class CardGroundStack
             results.Add(seed);
     }
 
-    static bool OverlapsOnGround(WorldCard a, WorldCard b)
+    public static bool OverlapsOnGround(WorldCard a, WorldCard b)
     {
         Bounds aBounds = GetHorizontalBounds(a);
         Bounds bBounds = GetHorizontalBounds(b);
-        aBounds.extents = new Vector3(aBounds.extents.x, 10f, aBounds.extents.z);
-        bBounds.extents = new Vector3(bBounds.extents.x, 10f, bBounds.extents.z);
         return aBounds.Intersects(bBounds);
     }
 

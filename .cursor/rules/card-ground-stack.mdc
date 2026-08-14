@@ -1,0 +1,34 @@
+---
+description: Do not break the settled ground-card throw, flatten, stack, and pickup system
+globs: Assets/Scripts/Cards/**/*.cs
+alwaysApply: false
+---
+
+# Ground card throw / stack (locked)
+
+This system is working. Do not "improve" it with physics-rest poses, full-pile restacks, or extra Y gaps.
+
+## Settle (WorldCard.FlattenAndSnapToGround)
+
+- Always flatten: `LookRotation(ProjectOnPlane(transform.forward), up)`. Never leave a card upright.
+- Keep landing yaw. Do **not** pick visual.up vs visual.right (that caused 90° drift and upside-down textures).
+- Face up/down from `_cardVisual.forward.y` **before** rewriting rotation, then `groundShowsBack`.
+- Then `ApplyStackHeight(this, placeOnTop: true)` once. Do not snap Y to floor first.
+
+## Stack (CardGroundStack)
+
+- Thrown card only: `PlaceOnTopOfOverlaps` — layer = max overlapping layer + 1. **Do not move other cards.**
+- `StackStep` = card thickness × world scale (+ tiny z-fight epsilon). No large `StackGap`.
+- `GetUniqueDepthBias` only on **layer 0** (scatter z-fight). Never add bias to stacked layers.
+- Do not flood-fill restack the pile on throw or pickup. `RebuildAll` / cell piles are for 5000-card scatter spawn only.
+
+## Pickup (CardGroundQuery)
+
+- Math raycast, not thousands of colliders.
+- If several overlapping cards are hit, pick the **highest GroundStackLayer**.
+- Skip cards with `HasActivePhysics`. Remove Rigidbody immediately on settle (`DestroyImmediate`).
+
+## Perf
+
+- Settled ground cards stay GPU-instanced (front/back). Do not keep a mesh visual on every thrown card.
+- Landing colliders are temporary (flight only), then restore trigger/off.
