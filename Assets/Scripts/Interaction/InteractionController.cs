@@ -12,8 +12,8 @@ public class InteractionController : MonoBehaviour
     [SerializeField] float interactDistance = 3f;
     [SerializeField] LayerMask interactMask = ~0;
     [SerializeField] KeyCode interactKey = KeyCode.E;
-    [Tooltip("Seconds to look at a card before the large inspect preview appears. 0 = instant.")]
-    [SerializeField] float inspectPreviewDelay = 0.01f;
+    [Tooltip("Seconds to look at a card before the inspect preview and Press [E] prompt appear. 0 = instant.")]
+    [SerializeField] float inspectPreviewDelay = 0.15f;
 
     static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
@@ -25,6 +25,7 @@ public class InteractionController : MonoBehaviour
     CardInspectPreview _inspectPreview;
     WorldCard _raycastAimedCard;
     WorldCard _inspectPreviewTarget;
+    IInteractable _pendingCardPromptTarget;
     float _inspectPreviewTimer;
 
     void Awake()
@@ -101,22 +102,22 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
-        if (!ReferenceEquals(interactable, _currentTarget))
+        if (interactable is WorldCard && inspectPreviewDelay > 0f)
         {
-            if (_currentTarget is CardShelf previousShelf)
-                previousShelf.ClearAim();
+            if (!ReferenceEquals(interactable, _pendingCardPromptTarget))
+            {
+                if (_currentTarget is CardShelf previousShelf)
+                    previousShelf.ClearAim();
 
-            ClearHighlight();
-            _currentTarget = interactable;
-            _currentHighlight = GetHighlight(interactable);
-            _currentHighlight?.SetInteractionHighlight(true);
-            _promptText.text = prompt;
-            _promptRoot.SetActive(true);
+                _pendingCardPromptTarget = interactable;
+                ClearPromptAndHighlight();
+            }
+
+            return;
         }
-        else if (_promptText != null)
-        {
-            _promptText.text = prompt;
-        }
+
+        _pendingCardPromptTarget = null;
+        ShowPrompt(interactable, prompt);
     }
 
     static void UpdateCardFocus(WorldCard aimedCard)
@@ -222,11 +223,40 @@ public class InteractionController : MonoBehaviour
         if (_currentTarget is CardShelf shelf)
             shelf.ClearAim();
 
+        _pendingCardPromptTarget = null;
         CardInteractionFocus.ClearFocus();
+        ClearPromptAndHighlight();
+    }
+
+    void ClearPromptAndHighlight()
+    {
         ClearHighlight();
         _currentTarget = null;
         if (_promptRoot != null)
             _promptRoot.SetActive(false);
+    }
+
+    void ShowPrompt(IInteractable interactable, string prompt)
+    {
+        if (interactable == null || string.IsNullOrEmpty(prompt))
+            return;
+
+        if (!ReferenceEquals(interactable, _currentTarget))
+        {
+            if (_currentTarget is CardShelf previousShelf)
+                previousShelf.ClearAim();
+
+            ClearHighlight();
+            _currentTarget = interactable;
+            _currentHighlight = GetHighlight(interactable);
+            _currentHighlight?.SetInteractionHighlight(true);
+            _promptText.text = prompt;
+            _promptRoot.SetActive(true);
+        }
+        else if (_promptText != null)
+        {
+            _promptText.text = prompt;
+        }
     }
 
     void UpdateInspectPreview()
@@ -254,10 +284,7 @@ public class InteractionController : MonoBehaviour
 
         if (inspectPreviewDelay <= 0f)
         {
-            if (_inspectPreview == null)
-                _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
-
-            _inspectPreview.Show(aimedCard);
+            ShowDelayedCardUi(aimedCard);
             return;
         }
 
@@ -265,10 +292,20 @@ public class InteractionController : MonoBehaviour
         if (_inspectPreviewTimer < inspectPreviewDelay)
             return;
 
+        ShowDelayedCardUi(aimedCard);
+    }
+
+    void ShowDelayedCardUi(WorldCard aimedCard)
+    {
         if (_inspectPreview == null)
             _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
 
         _inspectPreview.Show(aimedCard);
+
+        if (_pendingCardPromptTarget == null || !ReferenceEquals(aimedCard, _pendingCardPromptTarget))
+            return;
+
+        ShowPrompt(aimedCard, aimedCard.GetPromptText());
     }
 
     static IInteractionHighlight GetHighlight(IInteractable interactable)
