@@ -11,12 +11,14 @@ Usage:
 import argparse
 import re
 import shutil
+import sys
 import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TEXTURES = ROOT / "Assets/Art/ShelfSigns/Textures"
-MATERIALS = ROOT / "Assets/Art/ShelfSigns/Materials"
+sys.path.insert(0, str(ROOT / "Tools"))
+from shelf_sign_paths import material_path, texture_path
+
 SHELF_CATS = ROOT / "Assets/Data/ShelfCategories"
 GUID_RE = re.compile(r"^guid: ([0-9a-f]{32})$", re.M)
 
@@ -32,16 +34,22 @@ def new_guid():
 
 
 def copy_texture(src_stem: str, dst_stem: str) -> str:
-    shutil.copy2(TEXTURES / f"{src_stem}.png", TEXTURES / f"{dst_stem}.png")
-    meta = (TEXTURES / f"{src_stem}.png.meta").read_text(encoding="utf-8")
+    src = texture_path(src_stem)
+    dst = texture_path(dst_stem)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    meta = src.with_suffix(".png.meta").read_text(encoding="utf-8")
     guid = new_guid()
     meta = GUID_RE.sub(f"guid: {guid}", meta, count=1)
-    (TEXTURES / f"{dst_stem}.png.meta").write_text(meta, encoding="utf-8")
+    dst.with_suffix(".png.meta").write_text(meta, encoding="utf-8")
     return guid
 
 
 def copy_material(src_stem: str, dst_stem: str, texture_guid: str) -> str:
-    text = (MATERIALS / f"{src_stem}.mat").read_text(encoding="utf-8")
+    src = material_path(src_stem)
+    dst = material_path(dst_stem)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    text = src.read_text(encoding="utf-8")
     text = text.replace(f"m_Name: {src_stem}", f"m_Name: {dst_stem}")
     src_tex_guid = None
     for line in text.splitlines():
@@ -52,12 +60,12 @@ def copy_material(src_stem: str, dst_stem: str, texture_guid: str) -> str:
                 break
     if src_tex_guid:
         text = text.replace(src_tex_guid, texture_guid)
-    (MATERIALS / f"{dst_stem}.mat").write_text(text, encoding="utf-8")
+    dst.write_text(text, encoding="utf-8")
 
-    meta = (MATERIALS / f"{src_stem}.mat.meta").read_text(encoding="utf-8")
+    meta = src.with_suffix(".mat.meta").read_text(encoding="utf-8")
     mat_guid = new_guid()
     meta = GUID_RE.sub(f"guid: {mat_guid}", meta, count=1)
-    (MATERIALS / f"{dst_stem}.mat.meta").write_text(meta, encoding="utf-8")
+    dst.with_suffix(".mat.meta").write_text(meta, encoding="utf-8")
     return mat_guid
 
 

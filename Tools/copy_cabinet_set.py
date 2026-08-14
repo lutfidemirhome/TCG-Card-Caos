@@ -10,12 +10,14 @@ Usage:
 import argparse
 import re
 import shutil
+import sys
 import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TEXTURES = ROOT / "Assets/Art/ShelfSigns/Textures"
-MATERIALS = ROOT / "Assets/Art/ShelfSigns/Materials"
+sys.path.insert(0, str(ROOT / "Tools"))
+from shelf_sign_paths import material_path, texture_path
+
 SHELF_CATS = ROOT / "Assets/Data/ShelfCategories"
 CABINETS = ROOT / "Assets/Prefabs/Cabinets"
 
@@ -36,14 +38,20 @@ def write_meta(path: Path, template: Path, guid: str):
 
 
 def copy_texture(src_stem: str, dst_stem: str) -> str:
-    shutil.copy2(TEXTURES / f"{src_stem}.png", TEXTURES / f"{dst_stem}.png")
+    src = texture_path(src_stem)
+    dst = texture_path(dst_stem)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
     guid = new_guid()
-    write_meta(TEXTURES / f"{dst_stem}.png.meta", TEXTURES / f"{src_stem}.png.meta", guid)
+    write_meta(dst.with_suffix(".png.meta"), src.with_suffix(".png.meta"), guid)
     return guid
 
 
 def copy_material(src_stem: str, dst_stem: str, texture_guid: str) -> str:
-    text = (MATERIALS / f"{src_stem}.mat").read_text(encoding="utf-8")
+    src = material_path(src_stem)
+    dst = material_path(dst_stem)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    text = src.read_text(encoding="utf-8")
     text = text.replace(f"m_Name: {src_stem}", f"m_Name: {dst_stem}")
 
     src_tex_guid = None
@@ -56,9 +64,9 @@ def copy_material(src_stem: str, dst_stem: str, texture_guid: str) -> str:
     if src_tex_guid:
         text = text.replace(src_tex_guid, texture_guid)
 
-    (MATERIALS / f"{dst_stem}.mat").write_text(text, encoding="utf-8")
+    dst.write_text(text, encoding="utf-8")
     mat_guid = new_guid()
-    write_meta(MATERIALS / f"{dst_stem}.mat.meta", MATERIALS / f"{src_stem}.mat.meta", mat_guid)
+    write_meta(dst.with_suffix(".mat.meta"), src.with_suffix(".mat.meta"), mat_guid)
     return mat_guid
 
 
@@ -117,14 +125,14 @@ def main():
 
         copy_texture(src_tex, dst_tex)
         mat_guid = copy_material(src_mat, dst_mat, GUID_RE.search(
-            (TEXTURES / f"{dst_tex}.png.meta").read_text(encoding="utf-8")
+            texture_path(dst_tex).with_suffix(".png.meta").read_text(encoding="utf-8")
         ).group(1))
         cat_guid = copy_shelf_category(src_cat, dst_cat, mat_guid)
 
         src_prefab = f"Cabinets_{src_title}{rarity.title()}"
         dst_prefab = f"Cabinets_{dst_title}{rarity.title()}"
-        src_mat_guid = GUID_RE.search((MATERIALS / f"{src_mat}.mat.meta").read_text(encoding="utf-8")).group(1)
-        dst_mat_guid = GUID_RE.search((MATERIALS / f"{dst_mat}.mat.meta").read_text(encoding="utf-8")).group(1)
+        src_mat_guid = GUID_RE.search(material_path(src_mat).with_suffix(".mat.meta").read_text(encoding="utf-8")).group(1)
+        dst_mat_guid = GUID_RE.search(material_path(dst_mat).with_suffix(".mat.meta").read_text(encoding="utf-8")).group(1)
 
         src_path = src_cab_dir / f"{src_prefab}.prefab"
         dst_path = dst_cab_dir / f"{dst_prefab}.prefab"
