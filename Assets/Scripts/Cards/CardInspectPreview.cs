@@ -42,10 +42,10 @@ public class CardInspectPreview : MonoBehaviour
         }
 
         EnsurePreviewUI();
-        ApplyCardArt(card);
-
         if (_previewRoot != null)
             _previewRoot.gameObject.SetActive(true);
+
+        ApplyCardArt(card);
     }
 
     public void Hide()
@@ -124,10 +124,10 @@ public class CardInspectPreview : MonoBehaviour
         if (definitionId == _shownDefinitionId && _cardImage.texture != null)
             return;
 
-        CardArtLibrary.EnsureLoaded();
         Texture texture = definition != null ? definition.FrontTexture : null;
         if (texture == null)
         {
+            CardArtLibrary.EnsureLoaded();
             Material front = CardArtLibrary.GetFrontMaterial(card.PaletteIndex, CardTextureQuality.Detail);
             texture = front != null ? front.GetTexture("_BaseMap") : null;
             if (texture == null && front != null)

@@ -8,6 +8,7 @@ public static class CardGroundQuery
 {
     static readonly List<WorldCard> ShelfCards = new List<WorldCard>(64);
     static readonly HashSet<WorldCard> ShelfCardSet = new HashSet<WorldCard>();
+    static readonly List<WorldCard> GroundCandidateScratch = new List<WorldCard>(128);
 
     public static void TrackShelfCard(WorldCard card)
     {
@@ -36,8 +37,9 @@ public static class CardGroundQuery
         WorldCard bestCard = null;
         float bestDistance = float.MaxValue;
 
-        for (int i = 0; i < CardGroundStack.TrackedCount; i++)
-            TryUpdateBestHit(ray, maxDistance, CardGroundStack.GetTracked(i), ref bestCard, ref bestDistance);
+        CardGroundStack.CollectRayCandidates(ray, maxDistance, GroundCandidateScratch);
+        for (int i = 0; i < GroundCandidateScratch.Count; i++)
+            TryUpdateBestHit(ray, maxDistance, GroundCandidateScratch[i], ref bestCard, ref bestDistance);
 
         for (int i = 0; i < ShelfCards.Count; i++)
             TryUpdateBestHit(ray, maxDistance, ShelfCards[i], ref bestCard, ref bestDistance);
@@ -77,7 +79,12 @@ public static class CardGroundQuery
             return false;
 
         Vector3 halfExtents = GetHalfExtents(card);
-        if (!TryRayIntersectLocalBox(ray, card.transform, halfExtents, out distance))
+        bool onShelf = card.GetComponentInParent<CardShelfSlot>() != null;
+        Vector3 center = card.transform.position;
+        if (!onShelf)
+            center.y = CardGroundStack.GetDrawWorldY(card);
+
+        if (!TryRayIntersectOrientedBox(ray, center, card.transform.rotation, halfExtents, out distance))
             return false;
 
         return distance >= 0f && distance <= maxDistance;
@@ -101,10 +108,16 @@ public static class CardGroundQuery
             CardDimensions.Height * scale * 0.5f);
     }
 
-    static bool TryRayIntersectLocalBox(Ray worldRay, Transform target, Vector3 halfExtents, out float distance)
+    static bool TryRayIntersectOrientedBox(
+        Ray worldRay,
+        Vector3 center,
+        Quaternion rotation,
+        Vector3 halfExtents,
+        out float distance)
     {
-        Vector3 localOrigin = target.InverseTransformPoint(worldRay.origin);
-        Vector3 localDirection = target.InverseTransformDirection(worldRay.direction);
+        Matrix4x4 toLocal = Matrix4x4.TRS(center, rotation, Vector3.one).inverse;
+        Vector3 localOrigin = toLocal.MultiplyPoint3x4(worldRay.origin);
+        Vector3 localDirection = toLocal.MultiplyVector(worldRay.direction);
 
         float tMin = 0f;
         float tMax = float.MaxValue;

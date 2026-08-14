@@ -9993,8 +9993,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraTransform: {fileID: 0}
-  walkSpeed: 4.5
-  crouchSpeed: 2.4
+  walkSpeed: 3.15
+  crouchSpeed: 1.68
   gravity: -20
   crouchKey: 304
   crouchKeyAlt: 303

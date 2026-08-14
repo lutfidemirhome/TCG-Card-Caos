@@ -21,6 +21,8 @@ public class InteractionController : MonoBehaviour
     IInteractable _currentTarget;
     IInteractionHighlight _currentHighlight;
     CardInspectPreview _inspectPreview;
+    WorldCard _raycastAimedCard;
+    WorldCard _inspectPreviewTarget;
 
     void Awake()
     {
@@ -38,11 +40,13 @@ public class InteractionController : MonoBehaviour
     {
         if (viewCamera == null || Cursor.lockState != CursorLockMode.Locked)
         {
+            _raycastAimedCard = null;
             ClearTarget();
             return;
         }
 
         UpdateTarget();
+        UpdateInspectPreview();
         HandleInput();
     }
 
@@ -58,6 +62,8 @@ public class InteractionController : MonoBehaviour
             aimedCardDistance = cardDistance;
         }
 
+        _raycastAimedCard = aimedCard != null && !aimedCard.IsInHand ? aimedCard : null;
+
         int hitCount = Physics.RaycastNonAlloc(
             ray,
             HitBuffer,
@@ -66,7 +72,7 @@ public class InteractionController : MonoBehaviour
             QueryTriggerInteraction.Ignore);
 
         IInteractable interactable = ResolveBestInteractable(HitBuffer, hitCount, aimedCard, aimedCardDistance);
-        UpdateCardFocus(interactable);
+        UpdateCardFocus(_raycastAimedCard);
 
         if (interactable == null)
         {
@@ -103,7 +109,6 @@ public class InteractionController : MonoBehaviour
             _currentHighlight?.SetInteractionHighlight(true);
             _promptText.text = prompt;
             _promptRoot.SetActive(true);
-            RefreshInspectPreview();
         }
         else if (_promptText != null)
         {
@@ -111,10 +116,10 @@ public class InteractionController : MonoBehaviour
         }
     }
 
-    static void UpdateCardFocus(IInteractable interactable)
+    static void UpdateCardFocus(WorldCard aimedCard)
     {
-        if (interactable is WorldCard worldCard && !worldCard.IsInHand)
-            CardInteractionFocus.SetFocusedCard(worldCard);
+        if (aimedCard != null && !aimedCard.IsInHand)
+            CardInteractionFocus.SetFocusedCard(aimedCard);
         else
             CardInteractionFocus.ClearFocus();
     }
@@ -219,19 +224,30 @@ public class InteractionController : MonoBehaviour
         _currentTarget = null;
         if (_promptRoot != null)
             _promptRoot.SetActive(false);
-
-        _inspectPreview?.Hide();
     }
 
-    void RefreshInspectPreview()
+    void UpdateInspectPreview()
     {
+        WorldCard aimedCard = _raycastAimedCard;
+        if (aimedCard == null)
+        {
+            if (_inspectPreviewTarget != null)
+            {
+                _inspectPreview?.Hide();
+                _inspectPreviewTarget = null;
+            }
+
+            return;
+        }
+
+        if (ReferenceEquals(aimedCard, _inspectPreviewTarget))
+            return;
+
+        _inspectPreviewTarget = aimedCard;
         if (_inspectPreview == null)
             _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
 
-        if (_currentTarget is WorldCard worldCard && !worldCard.IsInHand)
-            _inspectPreview.Show(worldCard);
-        else
-            _inspectPreview.Hide();
+        _inspectPreview.Show(aimedCard);
     }
 
     static IInteractionHighlight GetHighlight(IInteractable interactable)

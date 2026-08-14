@@ -11,8 +11,8 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] Transform cameraTransform;
 
     [Header("Movement")]
-    [SerializeField] float walkSpeed = 4.5f;
-    [SerializeField] float crouchSpeed = 2.4f;
+    [SerializeField] float walkSpeed = 3.15f;
+    [SerializeField] float crouchSpeed = 1.68f;
     [SerializeField] float gravity = -20f;
 
     [Header("Crouch")]

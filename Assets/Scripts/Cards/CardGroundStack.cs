@@ -125,6 +125,67 @@ public static class CardGroundStack
 
     public static WorldCard GetTracked(int index) => GroundCards[index];
 
+    static readonly HashSet<WorldCard> RayCandidateSeen = new HashSet<WorldCard>();
+
+    /// <summary>Collect ground cards near a view ray (spatial cells when many cards are tracked).</summary>
+    public static void CollectRayCandidates(Ray ray, float maxDistance, List<WorldCard> results)
+    {
+        results.Clear();
+        if (GroundCards.Count == 0)
+            return;
+
+        if (GroundCards.Count < BulkFlatStackThreshold)
+        {
+            for (int i = 0; i < GroundCards.Count; i++)
+            {
+                WorldCard card = GroundCards[i];
+                if (card == null || card.IsInHand || card.GetComponentInParent<CardShelfSlot>() != null)
+                    continue;
+
+                results.Add(card);
+            }
+
+            return;
+        }
+
+        if (SpatialBuckets.Count == 0)
+            RebuildSpatialBuckets();
+
+        float cellSize = SpatialCellSize;
+        float step = Mathf.Max(cellSize * 0.75f, 0.08f);
+        int steps = Mathf.CeilToInt(maxDistance / step);
+        RayCandidateSeen.Clear();
+
+        for (int s = 0; s <= steps; s++)
+        {
+            float dist = Mathf.Min(maxDistance, s * step);
+            Vector3 point = ray.origin + ray.direction * dist;
+            int cx = Mathf.FloorToInt(point.x / cellSize);
+            int cz = Mathf.FloorToInt(point.z / cellSize);
+
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    long key = PackCell(cx + dx, cz + dz);
+                    if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
+                        continue;
+
+                    for (int i = 0; i < bucket.Count; i++)
+                    {
+                        WorldCard card = bucket[i];
+                        if (card == null || card.IsInHand || card.GetComponentInParent<CardShelfSlot>() != null)
+                            continue;
+                        if (!RayCandidateSeen.Add(card))
+                            continue;
+
+                        results.Add(card);
+                    }
+                }
+            }
+        }
+    }
+
     public static void RebuildAll()
     {
         if (GroundCards.Count >= BulkFlatStackThreshold)
