@@ -451,14 +451,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _handState = HandState.World;
         SetHandSelected(false);
         EnsureCardVisual();
-        // Bake hand pose into root so the flat collider matches the mesh during flight.
         ConvertHandVisualToWorldRoot();
         transform.SetParent(null, true);
 
         ApplyFlatWorldCollider();
 
-        // Morning factory cards were solid (isTrigger=false). Current ground cards are triggers
-        // for 5000-card perf — restore solid for the throw so physics lands on the floor.
         if (_collider is BoxCollider boxCollider)
         {
             boxCollider.isTrigger = false;
@@ -468,6 +465,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             _collider.enabled = true;
         }
+
+        IgnorePlayerCollision();
 
         BeginScaleTransition(transform.localScale.x, CardDimensions.WorldCardScale, worldScaleTransitionDuration);
         RefreshRenderMode();
@@ -481,7 +480,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (!_rigidbody.isKinematic)
         {
             _rigidbody.linearVelocity = velocity;
-            // Light spin only — heavy tumble leaves cards upright or sideways after settle.
             _rigidbody.angularVelocity = new Vector3(
                 Random.Range(-0.2f, 0.2f),
                 Random.Range(-0.35f, 0.35f),
@@ -490,6 +488,23 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         CardGroundStack.EnableLandingCollidersNear(transform.position, 2.5f);
         StartCoroutine(SettleDroppedCardRoutine());
+    }
+
+    void IgnorePlayerCollision()
+    {
+        if (_collider == null)
+            return;
+
+        FirstPersonController player = FindFirstObjectByType<FirstPersonController>();
+        if (player == null)
+            return;
+
+        Collider[] playerColliders = player.GetComponentsInChildren<Collider>();
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            if (playerColliders[i] != null)
+                Physics.IgnoreCollision(_collider, playerColliders[i], true);
+        }
     }
 
     System.Collections.IEnumerator SettleDroppedCardRoutine()

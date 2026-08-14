@@ -10945,7 +10945,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b10fb1daefe494541825eb82047ecffa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 1013727801}
   walkSpeed: 3.15
   crouchSpeed: 1.68
   gravity: -20
@@ -10957,7 +10957,7 @@ MonoBehaviour:
   jumpHeight: 1.1
   mouseSensitivity: 2
   minPitch: -80
-  maxPitch: 80
+  maxPitch: 89
   lockCursorOnStart: 1
 --- !u!143 &1273640529
 CharacterController:

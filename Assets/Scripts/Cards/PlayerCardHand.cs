@@ -47,8 +47,10 @@ public class PlayerCardHand : MonoBehaviour
     [Header("Throw")]
     [SerializeField] float dropScaleTransitionDuration = 0.12f;
     [SerializeField] float throwSpeed = 4.5f;
-    [SerializeField] float throwUpBoost = 0.2f;
+    [SerializeField] float throwAimFallbackDistance = 8f;
     [SerializeField] KeyCode dropKey = KeyCode.Q;
+
+    static readonly RaycastHit[] ThrowAimHits = new RaycastHit[8];
 
     Transform _handAnchor;
     Camera _camera;
@@ -250,10 +252,49 @@ public class PlayerCardHand : MonoBehaviour
         if (!TryTakeSelectedHeldCard(out WorldCard selectedCard))
             return false;
 
-        Vector3 throwDirection = (_camera.transform.forward + _camera.transform.up * throwUpBoost).normalized;
+        Vector3 handPos = selectedCard.transform.position;
+        Ray aimRay = _camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        Vector3 aimPoint = GetReticleAimPoint(aimRay);
+        Vector3 throwDirection = aimPoint - handPos;
+        if (throwDirection.sqrMagnitude < 0.0001f)
+            throwDirection = aimRay.direction;
+        else
+            throwDirection.Normalize();
+
         selectedCard.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
         return true;
+    }
+
+    Vector3 GetReticleAimPoint(Ray aimRay)
+    {
+        Vector3 aimPoint = aimRay.GetPoint(throwAimFallbackDistance);
+
+        CardLayers.EnsureInitialized();
+        int mask = ~CardLayers.WorldCardMask;
+        int hitCount = Physics.RaycastNonAlloc(
+            aimRay,
+            ThrowAimHits,
+            throwAimFallbackDistance,
+            mask,
+            QueryTriggerInteraction.Ignore);
+
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit hit = ThrowAimHits[i];
+            if (hit.collider == null)
+                continue;
+            if (hit.collider.GetComponentInParent<FirstPersonController>() != null)
+                continue;
+            if (hit.distance >= bestDistance)
+                continue;
+
+            bestDistance = hit.distance;
+            aimPoint = hit.point;
+        }
+
+        return aimPoint;
     }
 
     void ClampSelectionIndex()

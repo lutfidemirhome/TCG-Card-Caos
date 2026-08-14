@@ -30,7 +30,7 @@ public class FirstPersonController : MonoBehaviour
     [Header("Look")]
     [SerializeField] float mouseSensitivity = 2f;
     [SerializeField] float minPitch = -80f;
-    [SerializeField] float maxPitch = 80f;
+    [SerializeField] float maxPitch = 89f;
     [SerializeField] bool lockCursorOnStart = true;
 
     CharacterController _controller;
