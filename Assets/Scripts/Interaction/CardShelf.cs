@@ -544,25 +544,6 @@ public class CardShelf : MonoBehaviour, IInteractable
         _placementOutline = null;
     }
 
-    Vector3 GetFaceDirection(Vector3 fromPoint)
-    {
-        Camera camera = Camera.main;
-        if (camera != null)
-        {
-            Vector3 toCamera = camera.transform.position - fromPoint;
-            toCamera.y = 0f;
-            if (toCamera.sqrMagnitude > 0.0001f)
-                return toCamera.normalized;
-        }
-
-        Vector3 outward = -placementRoot.forward;
-        outward.y = 0f;
-        if (outward.sqrMagnitude > 0.0001f)
-            return outward.normalized;
-
-        return Vector3.forward;
-    }
-
     /// <summary>Editor helper: keep API for old menu; now just refreshes marker cache.</summary>
     public void RebuildLevelsFromColliders()
     {
@@ -571,24 +552,8 @@ public class CardShelf : MonoBehaviour, IInteractable
         RefreshSlotCache();
     }
 
-    static PlayerCardHand FindHand()
-    {
-        return PlayerCardHand.Instance;
-    }
+    static PlayerCardHand FindHand() => PlayerCardHand.Instance;
 
-    static PlayerCardHand ResolveHand(GameObject interactor)
-    {
-        if (interactor == null)
-            return FindHand();
-
-        PlayerCardHand hand = interactor.GetComponent<PlayerCardHand>();
-        if (hand != null)
-            return hand;
-
-        hand = interactor.GetComponentInChildren<PlayerCardHand>();
-        if (hand != null)
-            return hand;
-
-        return FindHand();
-    }
+    static PlayerCardHand ResolveHand(GameObject interactor) =>
+        PlayerCardHandResolver.FromInteractorOrInstance(interactor);
 }

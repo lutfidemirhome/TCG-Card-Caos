@@ -134,9 +134,7 @@ public class InteractionController : MonoBehaviour
         WorldCard aimedCard,
         float aimedCardDistance)
     {
-        PlayerCardHand hand = GetComponentInParent<PlayerCardHand>();
-        if (hand == null)
-            hand = transform.root.GetComponentInChildren<PlayerCardHand>();
+        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
 
         CardShelf bestShelf = null;
         float bestShelfDistance = float.MaxValue;
@@ -327,21 +325,10 @@ public class InteractionController : MonoBehaviour
 
     void BuildPromptUI()
     {
-        var canvasGo = new GameObject("InteractionPromptCanvas");
-        canvasGo.transform.SetParent(transform, false);
-
-        _canvas = canvasGo.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 90;
-
-        var scaler = canvasGo.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-
-        canvasGo.AddComponent<GraphicRaycaster>();
+        _canvas = RuntimeOverlayCanvasFactory.Create(transform, "InteractionPromptCanvas", sortingOrder: 90);
 
         _promptRoot = new GameObject("PromptPanel");
-        _promptRoot.transform.SetParent(canvasGo.transform, false);
+        _promptRoot.transform.SetParent(_canvas.transform, false);
 
         var background = _promptRoot.AddComponent<Image>();
         background.color = new Color(0f, 0f, 0f, 0.55f);

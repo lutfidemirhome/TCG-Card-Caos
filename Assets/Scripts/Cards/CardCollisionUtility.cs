@@ -38,6 +38,25 @@ public static class CardCollisionUtility
         collider.material = SharedPhysicMaterial;
     }
 
+    public static void ApplyFlatWorldSize(BoxCollider collider)
+    {
+        if (collider == null)
+            return;
+
+        collider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
+        collider.center = Vector3.zero;
+        ApplyToCollider(collider);
+    }
+
+    public static void ApplyUprightShelfSize(BoxCollider collider)
+    {
+        if (collider == null)
+            return;
+
+        collider.size = new Vector3(CardDimensions.Width, CardDimensions.Height, CardDimensions.Thickness);
+        collider.center = Vector3.zero;
+    }
+
     public static void ResolveStaticPenetration(
         Transform cardTransform,
         BoxCollider cardCollider,

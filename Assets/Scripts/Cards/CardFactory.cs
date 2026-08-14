@@ -31,11 +31,9 @@ public static class CardFactory
         root.transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
 
         var collider = root.AddComponent<BoxCollider>();
-        collider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
-        collider.center = Vector3.zero;
+        CardCollisionUtility.ApplyFlatWorldSize(collider);
         collider.isTrigger = true;
         collider.enabled = false;
-        CardCollisionUtility.ApplyToCollider(collider);
 
         var card = root.AddComponent<WorldCard>();
         card.Initialize(cardDefinition, paletteIndex);

@@ -60,22 +60,10 @@ public class CardInspectPreview : MonoBehaviour
         if (_previewRoot != null)
             return;
 
-        var canvasGo = new GameObject("CardInspectPreviewCanvas");
-        canvasGo.transform.SetParent(transform, false);
-
-        _canvas = canvasGo.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 95;
-
-        var scaler = canvasGo.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        canvasGo.AddComponent<GraphicRaycaster>();
+        _canvas = RuntimeOverlayCanvasFactory.Create(transform, "CardInspectPreviewCanvas", sortingOrder: 95, matchWidthOrHeight: 0.5f);
 
         var rootGo = new GameObject("InspectCard");
-        rootGo.transform.SetParent(canvasGo.transform, false);
+        rootGo.transform.SetParent(_canvas.transform, false);
 
         _previewRoot = rootGo.AddComponent<RectTransform>();
         _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);

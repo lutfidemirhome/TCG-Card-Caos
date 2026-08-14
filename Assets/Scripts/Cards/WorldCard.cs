@@ -204,7 +204,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             _scaleTransitionElapsed += Time.deltaTime;
             float t = Mathf.Clamp01(_scaleTransitionElapsed / _scaleTransitionDuration);
-            float smoothT = t * t * (3f - 2f * t);
+            float smoothT = Mathf.SmoothStep(0f, 1f, t);
             transform.localScale = Vector3.one * Mathf.Lerp(_scaleFrom, _scaleTo, smoothT);
 
             if (t >= 1f)
@@ -287,9 +287,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (IsInHand || IsFlyingToShelf)
             return;
 
-        PlayerCardHand hand = interactor.GetComponent<PlayerCardHand>();
-        if (hand == null)
-            hand = interactor.GetComponentInChildren<PlayerCardHand>();
+        PlayerCardHand hand = PlayerCardHandResolver.FromInteractor(interactor);
 
         if (hand == null)
             return;
@@ -427,7 +425,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         _flightElapsed += Time.deltaTime;
         float t = Mathf.Clamp01(_flightElapsed / _flightDuration);
-        float smoothT = t * t * (3f - 2f * t);
+        float smoothT = Mathf.SmoothStep(0f, 1f, t);
 
         Vector3 pos = Vector3.Lerp(_flightStartWorldPos, targetWorldPos, smoothT);
         pos += Vector3.up * (Mathf.Sin(smoothT * Mathf.PI) * _flightArcHeight);
@@ -536,11 +534,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     void ApplyFlatWorldCollider()
     {
         if (_collider is BoxCollider boxCollider)
-        {
-            boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
-            boxCollider.center = Vector3.zero;
-            CardCollisionUtility.ApplyToCollider(boxCollider);
-        }
+            CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
     }
 
     void FlattenAndSnapToGround()
@@ -1083,10 +1077,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             _collider.enabled = true;
             if (_collider is BoxCollider boxCollider)
-            {
-                boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
-                boxCollider.center = Vector3.zero;
-            }
+                CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
         }
 
         transform.SetParent(parent, true);
@@ -1121,11 +1112,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             _collider.enabled = true;
             if (_collider is BoxCollider boxCollider)
-            {
-                // Upright: height along local Y, thickness along local Z (toward viewer).
-                boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Height, CardDimensions.Thickness);
-                boxCollider.center = Vector3.zero;
-            }
+                CardCollisionUtility.ApplyUprightShelfSize(boxCollider);
         }
 
         transform.SetParent(parent, true);
@@ -1168,14 +1155,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         EnsureCardVisual();
         ApplyShelfVisualOrientation();
 
-        if (_collider != null)
-        {
-            if (_collider is BoxCollider boxCollider)
-            {
-                boxCollider.size = new Vector3(CardDimensions.Width, CardDimensions.Height, CardDimensions.Thickness);
-                boxCollider.center = Vector3.zero;
-            }
-        }
+        if (_collider != null && _collider is BoxCollider boxCollider)
+            CardCollisionUtility.ApplyUprightShelfSize(boxCollider);
 
         transform.SetParent(slot, false);
         transform.localRotation = Quaternion.identity;

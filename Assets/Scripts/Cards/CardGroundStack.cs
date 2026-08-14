@@ -427,7 +427,7 @@ public static class CardGroundStack
         if (deltaY > HeightEpsilon)
             return 1;
 
-        return a.GetInstanceID().CompareTo(b.GetInstanceID());
+        return WorldCardDrawOrder.CompareStableInstanceId(a, b);
     }
 
     static void BuildCluster(WorldCard seed, List<WorldCard> results)

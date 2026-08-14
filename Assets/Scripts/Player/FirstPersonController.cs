@@ -99,17 +99,7 @@ public class FirstPersonController : MonoBehaviour
     void UpdateCrouch()
     {
         if (Input.GetKeyDown(crouchKey) || Input.GetKeyDown(crouchKeyAlt))
-        {
-            if (_crouchToggled)
-            {
-                if (CanStand())
-                    _crouchToggled = false;
-            }
-            else
-            {
-                _crouchToggled = true;
-            }
-        }
+            ToggleCrouchInput();
 
         bool wantsCrouch = _crouchToggled || !CanStand();
 
@@ -169,17 +159,33 @@ public class FirstPersonController : MonoBehaviour
         if (!Input.GetKeyDown(jumpKey))
             return;
 
-        if (_crouchToggled || IsCrouching)
-        {
-            if (CanStand())
-                _crouchToggled = false;
+        if (TryStandUp())
             return;
-        }
 
         if (!_controller.isGrounded)
             return;
 
         _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+    }
+
+    void ToggleCrouchInput()
+    {
+        if (_crouchToggled)
+            TryStandUp();
+        else
+            _crouchToggled = true;
+    }
+
+    bool TryStandUp()
+    {
+        if (!_crouchToggled && !IsCrouching)
+            return false;
+
+        if (!CanStand())
+            return true;
+
+        _crouchToggled = false;
+        return true;
     }
 
     void HandleMove()

@@ -303,7 +303,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (layerCompare != 0)
             return layerCompare;
 
-        return a.GetInstanceID().CompareTo(b.GetInstanceID());
+        return WorldCardDrawOrder.CompareStableInstanceId(a, b);
     }
 
     bool ShouldRenderCard(WorldCard card)

@@ -25,21 +25,10 @@ public class CrosshairUI : MonoBehaviour
 
     void BuildCrosshair()
     {
-        var canvasGo = new GameObject("CrosshairCanvas");
-        canvasGo.transform.SetParent(transform, false);
-
-        _canvas = canvasGo.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 100;
-
-        var scaler = canvasGo.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-
-        canvasGo.AddComponent<GraphicRaycaster>();
+        _canvas = RuntimeOverlayCanvasFactory.Create(transform, "CrosshairCanvas", sortingOrder: 100);
 
         var dotGo = new GameObject("CrosshairDot");
-        dotGo.transform.SetParent(canvasGo.transform, false);
+        dotGo.transform.SetParent(_canvas.transform, false);
 
         var dot = dotGo.AddComponent<Image>();
         dot.sprite = CreateDotSprite(32, color);
