@@ -52,7 +52,17 @@ public class CardShelfSlot : MonoBehaviour
     public int ColumnIndex => columnIndex;
 
     /// <summary>Customer-facing slot number (1 = leftmost when facing the cabinet).</summary>
-    public int SlotNumber => CardShelfCategories.ColumnToSlotNumber(columnIndex, OwnerShelfSlotsPerRow);
+    public int SlotNumber
+    {
+        get
+        {
+            CardShelf shelf = GetComponentInParent<CardShelf>();
+            if (shelf != null)
+                return shelf.ResolveSlotNumber(this);
+
+            return CardShelfCategories.ColumnToSlotNumber(columnIndex, OwnerShelfSlotsPerRow);
+        }
+    }
 
     public int OwnerShelfSlotsPerRow
     {

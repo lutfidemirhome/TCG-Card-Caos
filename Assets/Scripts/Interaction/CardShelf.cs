@@ -24,6 +24,7 @@ public class CardShelf : MonoBehaviour, IInteractable
     [SerializeField] string categoryId = CardShelfCategories.NormalCommon;
 
     readonly List<CardShelfSlot> _slots = new List<CardShelfSlot>(32);
+    readonly Dictionary<CardShelfSlot, int> _resolvedSlotNumbers = new Dictionary<CardShelfSlot, int>(32);
 
     struct ShelfFlightEntry
     {
@@ -67,11 +68,91 @@ public class CardShelf : MonoBehaviour, IInteractable
     public void RefreshSlotCache()
     {
         _slots.Clear();
+        _resolvedSlotNumbers.Clear();
         GetComponentsInChildren(true, _slots);
         for (int i = 0; i < _slots.Count; i++)
         {
-            if (_slots[i] != null)
-                _slots[i].SyncIndicesFromHierarchy();
+            CardShelfSlot slot = _slots[i];
+            if (slot == null)
+                continue;
+
+            slot.SyncIndicesFromHierarchy();
+            if (!slot.gameObject.activeInHierarchy)
+            {
+                _slots[i] = null;
+            }
+        }
+
+        _slots.RemoveAll(slot => slot == null);
+        RebuildResolvedSlotNumbers();
+    }
+
+    /// <summary>
+    /// Customer-facing slot number (1 = leftmost along the row when standing in the aisle).
+    /// Derived from world layout so cabinet rotation does not invert numbering.
+    /// </summary>
+    public int ResolveSlotNumber(CardShelfSlot slot)
+    {
+        if (slot == null)
+            return 0;
+
+        if (_resolvedSlotNumbers.Count == 0)
+            RebuildResolvedSlotNumbers();
+
+        if (_resolvedSlotNumbers.TryGetValue(slot, out int number))
+            return number;
+
+        return CardShelfCategories.ColumnToSlotNumber(slot.ColumnIndex, SlotsPerRow);
+    }
+
+    void RebuildResolvedSlotNumbers()
+    {
+        _resolvedSlotNumbers.Clear();
+        if (_slots.Count == 0)
+            return;
+
+        var slotsByRow = new Dictionary<int, List<CardShelfSlot>>(8);
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || !slot.gameObject.activeInHierarchy)
+                continue;
+
+            if (!slotsByRow.TryGetValue(slot.RowIndex, out List<CardShelfSlot> rowSlots))
+            {
+                rowSlots = new List<CardShelfSlot>(8);
+                slotsByRow.Add(slot.RowIndex, rowSlots);
+            }
+
+            rowSlots.Add(slot);
+        }
+
+        Vector3 customerView = -GetCustomerFacingDirection();
+        customerView.y = 0f;
+        if (customerView.sqrMagnitude < 0.0001f)
+            customerView = Vector3.forward;
+        else
+            customerView.Normalize();
+
+        Vector3 right = Vector3.Cross(Vector3.up, customerView);
+        if (right.sqrMagnitude < 0.0001f)
+            return;
+        right.Normalize();
+
+        int slotsPerRow = SlotsPerRow;
+        foreach (KeyValuePair<int, List<CardShelfSlot>> entry in slotsByRow)
+        {
+            List<CardShelfSlot> rowSlots = entry.Value;
+            rowSlots.Sort((a, b) =>
+            {
+                float aDot = Vector3.Dot(a.transform.position, right);
+                float bDot = Vector3.Dot(b.transform.position, right);
+                return aDot.CompareTo(bDot);
+            });
+
+            int numberedSlots = Mathf.Min(rowSlots.Count, slotsPerRow);
+            for (int i = 0; i < numberedSlots; i++)
+                _resolvedSlotNumbers[rowSlots[i]] = i + 1;
         }
     }
 
