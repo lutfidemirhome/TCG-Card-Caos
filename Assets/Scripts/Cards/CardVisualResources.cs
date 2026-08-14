@@ -9,7 +9,7 @@ using UnityEngine.Rendering;
 static class CardVisualResources
 {
     static readonly Color InteractionOutlineColor = new Color(1f, 0.88f, 0.12f);
-    static readonly Color HandSelectionOutlineColor = Color.white;
+    static readonly Color HandSelectionOutlineColor = InteractionOutlineColor;
     static readonly Color ShelfCorrectOutlineColor = new Color(0.28f, 0.92f, 0.38f);
     static readonly Color ShelfIncorrectOutlineColor = new Color(0.95f, 0.22f, 0.22f);
 
@@ -20,7 +20,7 @@ static class CardVisualResources
     static Material _shelfCorrectOutlineMaterial;
     static Material _shelfIncorrectOutlineMaterial;
 
-    const int CornerSegments = 10;
+    const int CornerSegments = 12;
 
     public static Material InteractionOutlineMaterial
     {

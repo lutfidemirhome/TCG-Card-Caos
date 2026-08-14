@@ -14,5 +14,9 @@ public static class CardModelDimensions
     /// <summary>Edge thickness in metres (~4 mm).</summary>
     public const float Thickness = 0.004f;
 
-    public const float CornerRadius = 0f;
+    /// <summary>Visible rounded corner on 1024×1434 card art (measured from PNG alpha).</summary>
+    public const float ArtCornerRadiusPixels = 27.3f;
+
+    /// <summary>Corner radius in mesh-local metres, matching the PNG silhouette.</summary>
+    public static float CornerRadius => ArtCornerRadiusPixels / ArtWidthPixels * Width;
 }
