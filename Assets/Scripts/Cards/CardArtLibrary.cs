@@ -162,6 +162,7 @@ public static class CardArtLibrary
                 enableInstancing = true,
             };
             ApplyIdentityTextureTransform(_instancedGroundBackMaterial);
+            ConfigureGroundWorldMaterial(_instancedGroundBackMaterial);
         }
 
         return _instancedGroundBackMaterial;
@@ -183,7 +184,10 @@ public static class CardArtLibrary
         {
             frontMaterial = new Material(template);
             if (quality == CardTextureQuality.World)
+            {
                 frontMaterial.enableInstancing = true;
+                ConfigureGroundWorldMaterial(frontMaterial);
+            }
 
             cache[paletteIndex] = frontMaterial;
         }
@@ -212,7 +216,10 @@ public static class CardArtLibrary
             frontMaterial = new Material(template);
             ApplyFrontTexture(frontMaterial, definition.FrontTexture);
             if (quality == CardTextureQuality.World)
+            {
                 frontMaterial.enableInstancing = true;
+                ConfigureGroundWorldMaterial(frontMaterial);
+            }
 
             cache[cacheKey] = frontMaterial;
         }
@@ -320,8 +327,30 @@ public static class CardArtLibrary
 
         ApplyBackTextureUFlip(_sharedBackWorldTemplate);
         ApplyBackTextureUFlip(_sharedBackDetailTemplate);
+        ConfigureGroundWorldMaterial(_sharedFrontWorldTemplate);
+        ConfigureGroundWorldMaterial(_sharedBackWorldTemplate);
 
         return _cardMesh != null && _sharedFrontDetailTemplate != null && _sharedBackDetailTemplate != null;
+    }
+
+    /// <summary>
+    /// Ground cards skip SSAO / contact darkening so wall inner shadows stay, floor cards do not halo.
+    /// Drawn after opaque SSAO (queue 2501) with ZWrite so stacks still occlude each other.
+    /// </summary>
+    static void ConfigureGroundWorldMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_ReceiveShadows"))
+            material.SetFloat("_ReceiveShadows", 0f);
+
+        material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+        material.SetShaderPassEnabled("ShadowCaster", false);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 1f);
+
+        material.renderQueue = 2501;
     }
 
     /// <summary>

@@ -949,7 +949,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshRenderer == null)
             return;
 
-        CardTextureQuality quality = IsInHand || _handState == HandState.FlyingToShelf
+        CardTextureQuality quality = IsInHand
+            || _handState == HandState.FlyingToShelf
+            || GetComponentInParent<CardShelfSlot>() != null
             ? CardTextureQuality.Detail
             : CardTextureQuality.World;
 

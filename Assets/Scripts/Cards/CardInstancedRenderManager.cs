@@ -329,6 +329,7 @@ public class CardInstancedRenderManager : MonoBehaviour
             count,
             properties: null,
             ShadowCastingMode.Off,
-            receiveShadows: false);
+            receiveShadows: false,
+            CardLayers.WorldCard);
     }
 }
