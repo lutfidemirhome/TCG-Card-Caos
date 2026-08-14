@@ -53,6 +53,7 @@ public static class CardArtLibrary
     static Material _sharedBackWorldTemplate;
     static Material _sharedFrontDetailTemplate;
     static Material _sharedBackDetailTemplate;
+    static Material _instancedGroundBackMaterial;
     static Vector3? _flatSize;
     static Rect? _frontArtUvRect;
     static readonly Dictionary<int, Material> FrontWorldMaterialsByPalette = new Dictionary<int, Material>();
@@ -143,6 +144,26 @@ public static class CardArtLibrary
             : _sharedBackDetailTemplate;
         ApplyBackTextureUFlip(material);
         return material;
+    }
+
+    /// <summary>
+    /// Instanced face-down ground cards: mesh UVs are U-flipped like fronts, with no WorldVisualScale.x = -1.
+    /// Do not use <see cref="ApplyBackTextureUFlip"/> here — that flip is only for shelf/hand/detail back faces.
+    /// </summary>
+    public static Material GetInstancedGroundBackMaterial()
+    {
+        EnsureLoaded();
+        if (_instancedGroundBackMaterial == null)
+        {
+            _instancedGroundBackMaterial = new Material(_sharedBackWorldTemplate)
+            {
+                name = "CardBackWorldInstancedGround",
+                enableInstancing = true,
+            };
+            ApplyIdentityTextureTransform(_instancedGroundBackMaterial);
+        }
+
+        return _instancedGroundBackMaterial;
     }
 
     public static Material GetFrontMaterial(int paletteIndex, CardTextureQuality quality = CardTextureQuality.Detail)
@@ -238,6 +259,7 @@ public static class CardArtLibrary
         _cardMesh = null;
         _instancedCardMesh = null;
         _instancedCardBackMesh = null;
+        _instancedGroundBackMaterial = null;
         _sharedFrontWorldTemplate = null;
         _sharedBackWorldTemplate = null;
         _sharedFrontDetailTemplate = null;
@@ -277,6 +299,7 @@ public static class CardArtLibrary
         _instancedCardBackMesh = Resources.Load<Mesh>(RuntimeInstancedBackMeshResourcePath);
         if (_instancedCardBackMesh == null)
             _instancedCardBackMesh = CardMeshBuilder.CreatePrototypeInstancedBackQuad();
+        _instancedCardBackMesh = PrepareInstancedFrontMesh(_instancedCardBackMesh);
         _sharedFrontWorldTemplate = Resources.Load<Material>(RuntimeFrontWorldMaterialResourcePath);
         _sharedBackWorldTemplate = Resources.Load<Material>(RuntimeBackWorldMaterialResourcePath);
         _sharedFrontDetailTemplate = Resources.Load<Material>(RuntimeFrontDetailMaterialResourcePath);
@@ -327,8 +350,9 @@ public static class CardArtLibrary
     }
 
     /// <summary>
-    /// Back submesh UVs are pre-flipped; combined with World/Shelf/Hand scale X = -1 the art reads mirrored.
-    /// Shader U flip cancels the mesh flip so the back matches the front left-right orientation.
+    /// Detail/shelf/hand backs: mesh flipU + WorldVisualScale.x = -1 mirror the art horizontally.
+    /// Shader U flip cancels that mirror. Instanced ground backs skip this — use
+    /// <see cref="GetInstancedGroundBackMaterial"/> instead.
     /// </summary>
     public static void ApplyBackTextureUFlip(Material material)
     {
@@ -345,6 +369,24 @@ public static class CardArtLibrary
         {
             material.SetTextureScale("_MainTex", BackTextureUScale);
             material.SetTextureOffset("_MainTex", BackTextureUOffset);
+        }
+    }
+
+    static void ApplyIdentityTextureTransform(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTextureScale("_BaseMap", Vector2.one);
+            material.SetTextureOffset("_BaseMap", Vector2.zero);
+        }
+
+        if (material.HasProperty("_MainTex"))
+        {
+            material.SetTextureScale("_MainTex", Vector2.one);
+            material.SetTextureOffset("_MainTex", Vector2.zero);
         }
     }
 

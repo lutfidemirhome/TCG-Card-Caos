@@ -14,6 +14,7 @@ public static class CardScatterUtility
 
     const int CardsPerSpawnFrame = 250;
     const int BulkGridScatterThreshold = 256;
+    const float GroundFaceDownRatio = 0.2f;
     const string RuntimePlayScatterSessionKey = "TCGCardCaos.RuntimePlayScatterCount";
 
 #if !UNITY_EDITOR
@@ -73,6 +74,7 @@ public static class CardScatterUtility
         bool reuseDefinitions = count > definitions.Count;
         int spawnCount = reuseDefinitions ? count : Mathf.Min(count, definitions.Count);
         var positions = GenerateScatterPositions(spawnCount);
+        HashSet<int> backFacingIndices = PickBackFacingIndices(spawnCount);
 
         Debug.Log(
             "CardScatterUtility: Spawning "
@@ -81,13 +83,16 @@ public static class CardScatterUtility
             + CardCatalog.Count
             + " definitions"
             + (reuseDefinitions ? ", reusing definitions" : string.Empty)
+            + ", "
+            + backFacingIndices.Count
+            + " showing back"
             + ").");
 
         for (int i = 0; i < spawnCount; i++)
         {
             Vector2 xz = positions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
-            var rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            var rotation = GenerateScatterRotation();
             CardDefinition definition = reuseDefinitions
                 ? definitions[i % definitions.Count]
                 : definitions[i];
@@ -100,6 +105,7 @@ public static class CardScatterUtility
                 cardName: TestCardPrefix + definition.DefinitionId,
                 ensureArtLoaded: false);
 
+            card.SetGroundShowsBack(backFacingIndices.Contains(i));
             card.transform.SetParent(scatterRoot, true);
         }
 
@@ -126,6 +132,7 @@ public static class CardScatterUtility
         bool reuseDefinitions = count > definitions.Count;
         int spawnCount = reuseDefinitions ? count : Mathf.Min(count, definitions.Count);
         var positions = GenerateScatterPositions(spawnCount);
+        HashSet<int> backFacingIndices = PickBackFacingIndices(spawnCount);
 
         Debug.Log(
             "CardScatterUtility: Spawning "
@@ -134,13 +141,16 @@ public static class CardScatterUtility
             + CardCatalog.Count
             + " definitions"
             + (reuseDefinitions ? ", reusing definitions" : string.Empty)
+            + ", "
+            + backFacingIndices.Count
+            + " showing back"
             + ").");
 
         for (int i = 0; i < spawnCount; i++)
         {
             Vector2 xz = positions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
-            var rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            var rotation = GenerateScatterRotation();
             CardDefinition definition = reuseDefinitions
                 ? definitions[i % definitions.Count]
                 : definitions[i];
@@ -153,10 +163,64 @@ public static class CardScatterUtility
                 cardName: TestCardPrefix + definition.DefinitionId,
                 ensureArtLoaded: false);
 
+            card.SetGroundShowsBack(backFacingIndices.Contains(i));
             card.transform.SetParent(scatterRoot, true);
 
             if (i > 0 && i % CardsPerSpawnFrame == 0)
                 yield return null;
+        }
+    }
+
+    static HashSet<int> PickBackFacingIndices(int spawnCount)
+    {
+        int backFacingCount = Mathf.Clamp(Mathf.RoundToInt(spawnCount * GroundFaceDownRatio), 0, spawnCount);
+        var indices = new int[spawnCount];
+        for (int i = 0; i < spawnCount; i++)
+            indices[i] = i;
+
+        for (int i = 0; i < backFacingCount; i++)
+        {
+            int swapIndex = Random.Range(i, spawnCount);
+            int temp = indices[i];
+            indices[i] = indices[swapIndex];
+            indices[swapIndex] = temp;
+        }
+
+        var backFacingIndices = new HashSet<int>(backFacingCount);
+        for (int i = 0; i < backFacingCount; i++)
+            backFacingIndices.Add(indices[i]);
+
+        return backFacingIndices;
+    }
+
+    static Quaternion GenerateScatterRotation()
+    {
+        return Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+    }
+
+    public static void ApplyGroundFaceDownDistribution()
+    {
+        Transform scatterRoot = FindScatterRootTransform();
+        if (scatterRoot == null)
+            return;
+
+        var cards = new List<WorldCard>(scatterRoot.childCount);
+        for (int i = 0; i < scatterRoot.childCount; i++)
+        {
+            WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+            if (card != null && !card.IsInHand)
+                cards.Add(card);
+        }
+
+        if (cards.Count == 0)
+            return;
+
+        HashSet<int> backFacingIndices = PickBackFacingIndices(cards.Count);
+        for (int i = 0; i < cards.Count; i++)
+        {
+            float yaw = cards[i].transform.rotation.eulerAngles.y;
+            cards[i].transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            cards[i].SetGroundShowsBack(backFacingIndices.Contains(i));
         }
     }
 

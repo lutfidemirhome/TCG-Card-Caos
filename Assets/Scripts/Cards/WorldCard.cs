@@ -59,6 +59,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     bool _scaleTransitionActive;
     int _groundStackLayer;
     bool _worldColliderRequested;
+    [SerializeField] bool groundShowsBack;
 
     public bool IsHeld => _handState == HandState.Held;
     public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
@@ -99,8 +100,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             if (_cardVisual != null)
                 return _cardVisual.forward.y < 0f;
 
-            float pitch = transform.rotation.eulerAngles.x;
-            return pitch > 90f && pitch < 270f;
+            return groundShowsBack;
         }
     }
 
@@ -120,6 +120,16 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public void SetGroundStackLayer(int layer)
     {
         _groundStackLayer = Mathf.Max(0, layer);
+    }
+
+    public void SetGroundShowsBack(bool showsBack)
+    {
+        if (groundShowsBack == showsBack)
+            return;
+
+        groundShowsBack = showsBack;
+        if (Application.isPlaying && _handState == HandState.World)
+            RefreshRenderMode();
     }
 
     public void Initialize(CardDefinition cardDefinition, int palette)
@@ -212,6 +222,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         Vector3 scale = transform.lossyScale;
         Quaternion visualRotation = transform.rotation * CardArtLibrary.WorldVisualRotation;
+        if (IsGroundFaceDown)
+            visualRotation *= Quaternion.Euler(180f, 0f, 0f);
+
         Vector3 position = transform.position;
         position.y = CardGroundStack.GetStackedWorldY(_groundStackLayer);
         return Matrix4x4.TRS(position, visualRotation, scale);

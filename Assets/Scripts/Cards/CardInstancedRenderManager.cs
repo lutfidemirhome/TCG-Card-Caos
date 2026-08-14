@@ -64,6 +64,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         else
         {
             CardScatterUtility.SnapScatterCardsToFloor();
+            CardScatterUtility.ApplyGroundFaceDownDistribution();
         }
 
         DeferGroundRegistration = false;
@@ -285,7 +286,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     static Material ResolveBatchMaterial(string batchKey)
     {
         if (batchKey == BackBatchKey)
-            return CardArtLibrary.GetBackMaterial(CardTextureQuality.World);
+            return CardArtLibrary.GetInstancedGroundBackMaterial();
 
         if (batchKey.StartsWith(PaletteBatchPrefix))
         {
