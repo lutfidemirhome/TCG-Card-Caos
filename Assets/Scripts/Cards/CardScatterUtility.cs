@@ -12,7 +12,11 @@ public static class CardScatterUtility
     public const int FireUncommonScatterCount = 50;
     public const int FireRareScatterCount = 30;
     public const int FireScatterCount = FireCommonScatterCount + FireUncommonScatterCount + FireRareScatterCount;
-    public const int FullScatterCount = NormalScatterCount + FireScatterCount;
+    public const int GrassCommonScatterCount = 100;
+    public const int GrassUncommonScatterCount = 50;
+    public const int GrassRareScatterCount = 30;
+    public const int GrassScatterCount = GrassCommonScatterCount + GrassUncommonScatterCount + GrassRareScatterCount;
+    public const int FullScatterCount = NormalScatterCount + FireScatterCount + GrassScatterCount;
     public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "Card_";
