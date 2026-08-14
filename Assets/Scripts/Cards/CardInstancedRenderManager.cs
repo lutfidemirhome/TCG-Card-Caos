@@ -57,14 +57,10 @@ public class CardInstancedRenderManager : MonoBehaviour
         {
             yield return CardScatterUtility.SpawnScatteredCardsAsync(runtimeTarget);
         }
-        else if (CardScatterUtility.SceneNeedsScatterRefresh())
-        {
-            CardScatterUtility.SpawnAllTestCards();
-        }
         else
         {
-            CardScatterUtility.SnapScatterCardsToFloor();
-            CardScatterUtility.ApplyGroundFaceDownDistribution();
+            // Always rebuild scatter so spawn layout changes (random vs grid/piles) apply immediately.
+            CardScatterUtility.SpawnAllTestCards();
         }
 
         DeferGroundRegistration = false;

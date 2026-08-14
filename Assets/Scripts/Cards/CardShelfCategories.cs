@@ -7,6 +7,10 @@ public static class CardShelfCategories
     public const string NormalUncommon = "normal_uncommon";
     public const string NormalRare = "normal_rare";
 
+    public const string FireCommon = "fire_common";
+    public const string FireUncommon = "fire_uncommon";
+    public const string FireRare = "fire_rare";
+
     public const int MinSlotNumber = 1;
     public const int MaxSlotNumber = 10;
     public const int DefaultSlotsPerRow = 10;
@@ -26,15 +30,24 @@ public static class CardShelfCategories
         if (categoryId == NormalRare)
             return "Normal Rare";
 
+        if (categoryId == FireCommon)
+            return "Fire Common";
+
+        if (categoryId == FireUncommon)
+            return "Fire Uncommon";
+
+        if (categoryId == FireRare)
+            return "Fire Rare";
+
         return categoryId.Replace('_', ' ');
     }
 
     public static int GetDefaultSlotsPerRow(string categoryId)
     {
-        if (categoryId == NormalUncommon)
+        if (categoryId == NormalUncommon || categoryId == FireUncommon)
             return 5;
 
-        if (categoryId == NormalRare)
+        if (categoryId == NormalRare || categoryId == FireRare)
             return 3;
 
         return DefaultSlotsPerRow;

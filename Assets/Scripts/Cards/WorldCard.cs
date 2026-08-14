@@ -226,7 +226,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             visualRotation *= Quaternion.Euler(180f, 0f, 0f);
 
         Vector3 position = transform.position;
-        position.y = CardGroundStack.GetStackedWorldY(_groundStackLayer);
+        position.y = CardGroundStack.GetDrawWorldY(this);
         return Matrix4x4.TRS(position, visualRotation, scale);
     }
 
@@ -238,7 +238,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             CardDimensions.Thickness * scale * 4f,
             CardDimensions.Height * scale);
         Vector3 center = transform.position;
-        center.y = CardGroundStack.GetStackedWorldY(_groundStackLayer);
+        center.y = CardGroundStack.GetDrawWorldY(this);
         return new Bounds(center, size);
     }
 
@@ -568,9 +568,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         groundShowsBack = !frontFaceUp;
         ApplyWorldVisualOrientation();
-        CardGroundStack.ApplyStackHeight(this);
+        CardGroundStack.ApplyStackHeight(this, placeOnTop: true);
         ResolveWorldPenetration();
-        CardGroundStack.ApplyStackHeight(this);
+        CardGroundStack.ApplyStackHeight(this, placeOnTop: true);
 
         // Back to ground-card mode (trigger, off) used by 5000-card aim focus.
         if (_collider is BoxCollider box)

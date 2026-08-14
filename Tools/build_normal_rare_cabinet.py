@@ -6,8 +6,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "Assets/Prefabs/Cabinets/Cabinet_NormalUncommon.prefab"
-DST = ROOT / "Assets/Prefabs/Cabinets/Cabinet_NormalRare.prefab"
+SRC = ROOT / "Assets/Prefabs/Cabinets/Cabinets_Normal/Cabinets_NormalUncommon.prefab"
+DST = ROOT / "Assets/Prefabs/Cabinets/Cabinets_Normal/Cabinets_NormalRare.prefab"
 
 SLOT_NAME_RE = re.compile(r"^CardShelfSlot_\d+_(\d+)$")
 REMOVE_COLUMN_MIN = 3
@@ -184,7 +184,7 @@ def main():
     kept_blocks = clean_kept_blocks(blocks, remove_ids)
     out_text = rebuild(header, kept_blocks)
 
-    out_text = out_text.replace("Cabinet_NormalUncommon", "Cabinet_NormalRare")
+    out_text = out_text.replace("Cabinets_NormalUncommon", "Cabinets_NormalRare")
     out_text = out_text.replace("categoryId: normal_uncommon", "categoryId: normal_rare")
     out_text = out_text.replace(
         f"guid: {OLD_CATEGORY_GUID}",

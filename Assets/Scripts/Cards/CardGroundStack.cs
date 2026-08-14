@@ -3,13 +3,14 @@ using UnityEngine;
 
 /// <summary>
 /// Keeps overlapping flat world cards at distinct heights (GPU instancing stays enabled).
-/// Small counts use overlap clusters; dense scatters use per-cell piles (no floor-wide chains).
+/// Every ground card also gets a unique micro depth bias so same-layer cards never z-fight.
 /// </summary>
 public static class CardGroundStack
 {
-    const float StackGap = 0.008f;
+    const float StackGap = 0.012f;
     const float HeightEpsilon = 0.0002f;
-    const float LayerMicroBias = 0.00004f;
+    const float UniqueDepthBiasRange = 0.0025f;
+    const int UniqueDepthBiasSteps = 4096;
     const int BulkFlatStackThreshold = 256;
 
     static readonly List<WorldCard> GroundCards = new List<WorldCard>(512);
@@ -25,6 +26,27 @@ public static class CardGroundStack
     public static float GetStackedWorldY(int layer)
     {
         return CardFactory.GroundHeightOffset() + Mathf.Max(0, layer) * StackStep;
+    }
+
+    /// <summary>
+    /// Stable per-card depth offset so thousands of layer-0 cards do not share the exact same Y.
+    /// Must be used by GPU instanced draw matrices (transform.y alone is overwritten there).
+    /// </summary>
+    public static float GetUniqueDepthBias(WorldCard card)
+    {
+        if (card == null)
+            return 0f;
+
+        int id = Mathf.Abs(card.GetInstanceID());
+        return (id % UniqueDepthBiasSteps) * (UniqueDepthBiasRange / UniqueDepthBiasSteps);
+    }
+
+    public static float GetDrawWorldY(WorldCard card)
+    {
+        if (card == null)
+            return CardFactory.GroundHeightOffset();
+
+        return GetStackedWorldY(card.GroundStackLayer) + GetUniqueDepthBias(card);
     }
 
     public static void Track(WorldCard card)
@@ -166,12 +188,25 @@ public static class CardGroundStack
         ApplyPileLayers(CellScratch);
     }
 
-    static void ApplyPileLayers(List<WorldCard> pile)
+    static void ApplyPileLayers(List<WorldCard> pile, WorldCard forceOnTop = null)
     {
         if (pile == null || pile.Count == 0)
             return;
 
         pile.Sort(CompareGroundOrder);
+        if (forceOnTop != null)
+        {
+            for (int i = pile.Count - 1; i >= 0; i--)
+            {
+                if (pile[i] != forceOnTop)
+                    continue;
+                pile.RemoveAt(i);
+                break;
+            }
+
+            pile.Add(forceOnTop);
+        }
+
         for (int layer = 0; layer < pile.Count; layer++)
         {
             WorldCard card = pile[layer];
@@ -180,20 +215,19 @@ public static class CardGroundStack
 
             card.SetGroundStackLayer(layer);
             Vector3 position = card.transform.position;
-            int bias = Mathf.Abs(card.GetInstanceID()) % 10;
-            position.y = GetStackedWorldY(layer) + bias * LayerMicroBias;
+            position.y = GetDrawWorldY(card);
             card.transform.position = position;
         }
     }
 
-    /// <summary>Matches scatter pile radius so one pile ≈ one cell, not a giant tower.</summary>
+    /// <summary>Cell size for neighbor queries — sized to card footprint, not pile radius.</summary>
     static float SpatialCellSize
     {
         get
         {
             float footprint = Mathf.Max(CardDimensions.Width, CardDimensions.Height)
                 * CardDimensions.WorldCardScale;
-            return Mathf.Max(0.09f, footprint * 0.4f);
+            return Mathf.Max(0.12f, footprint * 0.85f);
         }
     }
 
@@ -223,7 +257,11 @@ public static class CardGroundStack
         }
     }
 
-    public static void ApplyStackHeight(WorldCard card)
+    /// <summary>
+    /// Restack overlapping ground cards under <paramref name="card"/>.
+    /// When <paramref name="placeOnTop"/> is true (thrown/dropped card), that card becomes the top layer.
+    /// </summary>
+    public static void ApplyStackHeight(WorldCard card, bool placeOnTop = false)
     {
         if (card == null || card.IsInHand)
             return;
@@ -231,20 +269,19 @@ public static class CardGroundStack
         Track(card);
         if (GroundCards.Count >= BulkFlatStackThreshold)
         {
-            // Morning-style stack for the dropped card only: direct overlaps, no floor-wide reshuffle.
-            RefreshDirectOverlaps(card);
+            RefreshDirectOverlaps(card, placeOnTop ? card : null);
             return;
         }
 
-        RefreshCluster(card);
+        RefreshCluster(card, placeOnTop ? card : null);
     }
 
-    public static void RefreshCluster(WorldCard seed)
+    public static void RefreshCluster(WorldCard seed, WorldCard forceOnTop = null)
     {
         if (GroundCards.Count >= BulkFlatStackThreshold)
         {
             if (seed != null)
-                RefreshDirectOverlaps(seed);
+                RefreshDirectOverlaps(seed, forceOnTop);
             return;
         }
 
@@ -255,13 +292,13 @@ public static class CardGroundStack
         if (ClusterScratch.Count == 0)
             return;
 
-        ApplyPileLayers(ClusterScratch);
+        ApplyPileLayers(ClusterScratch, forceOnTop);
     }
 
     /// <summary>
     /// Restack only the seed and cards that actually overlap it (same feel as morning clusters, O(neighbors)).
     /// </summary>
-    static void RefreshDirectOverlaps(WorldCard seed)
+    static void RefreshDirectOverlaps(WorldCard seed, WorldCard forceOnTop = null)
     {
         if (seed == null || seed.IsInHand)
             return;
@@ -284,7 +321,7 @@ public static class CardGroundStack
             ClusterScratch.Add(other);
         }
 
-        ApplyPileLayers(ClusterScratch);
+        ApplyPileLayers(ClusterScratch, forceOnTop);
     }
 
     static void CollectNeighborhood(Vector3 worldPos, List<WorldCard> results)

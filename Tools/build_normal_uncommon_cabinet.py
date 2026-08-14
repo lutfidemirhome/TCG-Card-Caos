@@ -6,8 +6,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "Assets/Prefabs/Cabinets/Cabinet_NormalCommon.prefab"
-DST = ROOT / "Assets/Prefabs/Cabinets/Cabinet_NormalUncommon.prefab"
+SRC = ROOT / "Assets/Prefabs/Cabinets/Cabinets_Normal/Cabinets_NormalCommon.prefab"
+DST = ROOT / "Assets/Prefabs/Cabinets/Cabinets_Normal/Cabinets_NormalUncommon.prefab"
 
 SLOT_NAME_RE = re.compile(r"^CardShelfSlot_\d+_(\d+)$")
 REMOVE_COLUMN_MIN = 5
@@ -158,7 +158,7 @@ def main():
     out_text = rebuild(header, kept_blocks)
     out_text = strip_fileid_refs(out_text, remove_ids)
 
-    out_text = out_text.replace("Cabinet_NormalCommon", "Cabinet_NormalUncommon")
+    out_text = out_text.replace("Cabinets_NormalCommon", "Cabinets_NormalUncommon")
     out_text = out_text.replace("categoryId: normal_common", "categoryId: normal_uncommon")
     out_text = out_text.replace(
         "guid: c7d2a9e14b8f5420a91de3f4b5c6d789",

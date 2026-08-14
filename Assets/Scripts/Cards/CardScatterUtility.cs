@@ -7,13 +7,17 @@ public static class CardScatterUtility
     public const int DefaultScatterCount = 100;
     public const int UncommonScatterCount = 50;
     public const int RareScatterCount = 30;
-    public const int FullScatterCount = DefaultScatterCount + UncommonScatterCount + RareScatterCount;
+    public const int NormalScatterCount = DefaultScatterCount + UncommonScatterCount + RareScatterCount;
+    public const int FireCommonScatterCount = 100;
+    public const int FireUncommonScatterCount = 50;
+    public const int FireRareScatterCount = 30;
+    public const int FireScatterCount = FireCommonScatterCount + FireUncommonScatterCount + FireRareScatterCount;
+    public const int FullScatterCount = NormalScatterCount + FireScatterCount;
     public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "Card_";
 
     const int CardsPerSpawnFrame = 250;
-    const int BulkGridScatterThreshold = 256;
     const float GroundFaceDownRatio = 0.2f;
     const string RuntimePlayScatterSessionKey = "TCGCardCaos.RuntimePlayScatterCount";
 
@@ -368,28 +372,44 @@ public static class CardScatterUtility
         return existing != null ? existing.transform : null;
     }
 
+    /// <summary>
+    /// Irregular random scatter across the full zone with a soft minimum spacing
+    /// (no neat rows, no intentional piles). Spacing compresses if the zone is full.
+    /// </summary>
     static List<Vector2> GenerateScatterPositions(int count)
     {
-        // Dense stress tests intentionally overlap so random piles form.
-        if (count >= BulkGridScatterThreshold)
-            return GeneratePiledScatterPositions(count);
-
         ScatterRegion region = ScatterRegion.FromScene();
-        var positions = new List<Vector2>(count);
-        float minSpacing = CardDimensions.ScatterMinSpacing;
-        float minSpacingSq = minSpacing * minSpacing;
+        float width = Mathf.Max(0.01f, region.MaxX - region.MinX);
+        float depth = Mathf.Max(0.01f, region.MaxZ - region.MinZ);
+        float area = width * depth;
 
-        int maxAttempts = Mathf.Max(24, count * 4);
+        // Target spacing from preferred card size, then compress if needed to fit count.
+        float preferred = GetPreferredScatterSpacing();
+        float packingSpacing = Mathf.Sqrt(area / Mathf.Max(1, count));
+        float minSpacing = Mathf.Min(preferred, packingSpacing * 0.92f);
+        minSpacing = Mathf.Max(0.08f, minSpacing);
+
+        var positions = new List<Vector2>(count);
+        int maxAttempts = Mathf.Max(40, count * 12);
+
         for (int i = 0; i < count; i++)
         {
             Vector2 candidate = Vector2.zero;
             bool found = false;
+            float spacing = minSpacing;
+            float spacingSq = spacing * spacing;
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                candidate = region.RandomXZ();
+                // Soften spacing late so remaining cards still land randomly, not on a grid.
+                if (attempt > 0 && attempt % 16 == 0)
+                {
+                    spacing = Mathf.Max(0.06f, spacing * 0.92f);
+                    spacingSq = spacing * spacing;
+                }
 
-                if (IsFarEnough(candidate, positions, minSpacingSq))
+                candidate = region.RandomXZ();
+                if (IsFarEnough(candidate, positions, spacingSq))
                 {
                     found = true;
                     break;
@@ -397,7 +417,16 @@ public static class CardScatterUtility
             }
 
             if (!found)
-                candidate = GetGridFallbackPosition(i, count, region);
+            {
+                // Last resort: random point with tiny offset from a random existing card —
+                // still irregular, never a row/column lattice.
+                candidate = region.RandomXZ();
+                if (positions.Count > 0)
+                {
+                    Vector2 near = positions[Random.Range(0, positions.Count)];
+                    candidate = region.Clamp(near + Random.insideUnitCircle * (minSpacing * 0.75f));
+                }
+            }
 
             positions.Add(region.Clamp(candidate));
         }
@@ -405,33 +434,18 @@ public static class CardScatterUtility
         return positions;
     }
 
-    /// <summary>
-    /// Random pile centers inside the shop scatter box; several cards land near each center.
-    /// </summary>
-    static List<Vector2> GeneratePiledScatterPositions(int count)
+    static bool IsFarEnough(Vector2 candidate, List<Vector2> existing, float minSpacingSq)
     {
-        ScatterRegion region = ScatterRegion.FromScene();
-        int pileCount = Mathf.Clamp(count / 7, 48, 900);
-        var pileCenters = new Vector2[pileCount];
-        for (int i = 0; i < pileCount; i++)
-            pileCenters[i] = region.RandomXZ();
-
-        float pileRadius = Mathf.Max(
-            CardDimensions.Width,
-            CardDimensions.Height) * CardDimensions.WorldCardScale * 0.35f;
-
-        var positions = new List<Vector2>(count);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < existing.Count; i++)
         {
-            Vector2 center = pileCenters[Random.Range(0, pileCount)];
-            Vector2 offset = Random.insideUnitCircle * pileRadius;
-            positions.Add(region.Clamp(center + offset));
+            if ((existing[i] - candidate).sqrMagnitude < minSpacingSq)
+                return false;
         }
 
-        return positions;
+        return true;
     }
 
-    static float GetBulkScatterSpacing()
+    static float GetPreferredScatterSpacing()
     {
         float diagonal = Mathf.Sqrt(
             CardDimensions.Width * CardDimensions.Width
@@ -466,7 +480,11 @@ public static class CardScatterUtility
         if (CountScatterCards() < FullScatterCount)
             return true;
 
-        return HasInvalidScatterCards();
+        if (HasInvalidScatterCards())
+            return true;
+
+        // Old pile-based scatters stay spread-broken until refreshed.
+        return HasClusteredScatterCards();
     }
 
     static bool HasInvalidScatterCards()
@@ -485,43 +503,49 @@ public static class CardScatterUtility
         return false;
     }
 
-    static bool IsFarEnough(Vector2 candidate, List<Vector2> existing, float minSpacingSq)
+    static bool HasClusteredScatterCards()
     {
-        for (int i = 0; i < existing.Count; i++)
+        Transform scatterRoot = FindScatterRootTransform();
+        if (scatterRoot == null)
+            return true;
+
+        float clusterDist = GetPreferredScatterSpacing() * 0.5f;
+        float clusterDistSq = clusterDist * clusterDist;
+        var positions = new List<Vector2>(scatterRoot.childCount);
+        for (int i = 0; i < scatterRoot.childCount; i++)
         {
-            if ((existing[i] - candidate).sqrMagnitude < minSpacingSq)
-                return false;
+            WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+            if (card == null)
+                continue;
+
+            Vector3 p = card.transform.position;
+            positions.Add(new Vector2(p.x, p.z));
         }
 
-        return true;
-    }
+        if (positions.Count < 8)
+            return false;
 
-    static Vector2 GetGridFallbackPosition(int index, int count, ScatterRegion region)
-    {
-        float width = Mathf.Max(0.01f, region.MaxX - region.MinX);
-        float depth = Mathf.Max(0.01f, region.MaxZ - region.MinZ);
-        float spacing = GetBulkScatterSpacing();
-
-        int columns = Mathf.Max(1, Mathf.FloorToInt(width / spacing) + 1);
-        int rows = Mathf.Max(1, Mathf.CeilToInt(count / (float)columns));
-
-        if (rows > 1 && (rows - 1) * spacing > depth)
-            spacing = depth / (rows - 1);
-
-        if (columns > 1 && (columns - 1) * spacing > width)
+        int crowded = 0;
+        for (int i = 0; i < positions.Count; i++)
         {
-            spacing = width / (columns - 1);
-            columns = Mathf.Max(1, Mathf.FloorToInt(width / spacing) + 1);
-            rows = Mathf.Max(1, Mathf.CeilToInt(count / (float)columns));
+            int neighbors = 0;
+            for (int j = 0; j < positions.Count; j++)
+            {
+                if (i == j)
+                    continue;
+                if ((positions[i] - positions[j]).sqrMagnitude > clusterDistSq)
+                    continue;
+
+                neighbors++;
+                if (neighbors >= 3)
+                {
+                    crowded++;
+                    break;
+                }
+            }
         }
 
-        int row = index / columns;
-        int column = index % columns;
-
-        float startX = region.MinX + spacing * 0.5f;
-        float startZ = region.MinZ + spacing * 0.5f;
-
-        return region.Clamp(new Vector2(startX + column * spacing, startZ + row * spacing));
+        return crowded > positions.Count / 8;
     }
 
     readonly struct ScatterRegion
