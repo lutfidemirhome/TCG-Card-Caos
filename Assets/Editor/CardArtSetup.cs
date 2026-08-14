@@ -6,6 +6,18 @@ public static class CardArtSetup
 {
     const string ResourcesCardsFolder = "Assets/Resources/Cards";
 
+    [MenuItem("TCG Card Caos/Setup Card Art")]
+    public static void SetupCardArtMenu()
+    {
+        SetupCardArt();
+    }
+
+    [MenuItem("TCG Card Caos/Refresh Card Textures From Templates")]
+    public static void RefreshBakedTexturesMenu()
+    {
+        RefreshBakedTextures();
+    }
+
     public static void SetupCardArt()
     {
         EnsureFolder("Assets/Resources");
@@ -27,36 +39,7 @@ public static class CardArtSetup
         try
         {
             EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking texture LOD assets...", 0.2f);
-
-            Texture2D frontWorldTexture = CopyTextureWithMaxSize(
-                CardArtLibrary.FrontTextureAssetPath,
-                ResourcesCardsFolder + "/card_front_world.png",
-                CardTextureSettings.WorldMaxSize);
-            Texture2D backWorldTexture = CopyTextureWithMaxSize(
-                CardArtLibrary.BackTextureAssetPath,
-                ResourcesCardsFolder + "/card_back_world.png",
-                CardTextureSettings.WorldMaxSize);
-            Texture2D frontDetailTexture = CopyTextureWithMaxSize(
-                CardArtLibrary.FrontTextureAssetPath,
-                ResourcesCardsFolder + "/card_front_detail.png",
-                CardTextureSettings.DetailMaxSize);
-            Texture2D backDetailTexture = CopyTextureWithMaxSize(
-                CardArtLibrary.BackTextureAssetPath,
-                ResourcesCardsFolder + "/card_back_detail.png",
-                CardTextureSettings.DetailMaxSize);
-
-            SaveMaterialAsset(
-                CreateMaterial(frontMaterialTemplate, frontWorldTexture, "CardFrontWorld", enableInstancing: true),
-                ResourcesCardsFolder + "/CardFrontWorld.mat");
-            SaveMaterialAsset(
-                CreateMaterial(backMaterialTemplate, backWorldTexture, "CardBackWorld", enableInstancing: true),
-                ResourcesCardsFolder + "/CardBackWorld.mat");
-            SaveMaterialAsset(
-                CreateMaterial(frontMaterialTemplate, frontDetailTexture, "CardFrontDetail", enableInstancing: false),
-                ResourcesCardsFolder + "/CardFrontDetail.mat");
-            SaveMaterialAsset(
-                CreateMaterial(backMaterialTemplate, backDetailTexture, "CardBackDetail", enableInstancing: false),
-                ResourcesCardsFolder + "/CardBackDetail.mat");
+            BakeRuntimeTexturesAndMaterials(frontMaterialTemplate, backMaterialTemplate);
 
             EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking box card mesh...", 0.55f);
 
@@ -101,6 +84,79 @@ public static class CardArtSetup
         {
             EditorUtility.ClearProgressBar();
         }
+    }
+
+    /// <summary>
+    /// Re-bakes Resources card textures/materials from Art/Cards templates (no mesh rebuild).
+    /// Called automatically when kart_arka_template or the front template PNG is reimported.
+    /// </summary>
+    public static void RefreshBakedTextures()
+    {
+        EnsureFolder("Assets/Resources");
+        EnsureFolder(ResourcesCardsFolder);
+
+        Material frontMaterialTemplate = AssetDatabase.LoadAssetAtPath<Material>(CardArtLibrary.FrontMaterialAssetPath);
+        Material backMaterialTemplate = AssetDatabase.LoadAssetAtPath<Material>(CardArtLibrary.BackMaterialAssetPath);
+        if (frontMaterialTemplate == null || backMaterialTemplate == null)
+        {
+            Debug.LogError(
+                "TCG Card Caos: Texture refresh failed. Ensure CardFront.mat and CardBack.mat exist under Assets/Art/Cards.");
+            return;
+        }
+
+        CardArtLibrary.ApplyBackTextureUFlip(backMaterialTemplate);
+
+        try
+        {
+            EditorUtility.DisplayProgressBar("TCG Card Caos", "Refreshing card textures...", 0.5f);
+            BakeRuntimeTexturesAndMaterials(frontMaterialTemplate, backMaterialTemplate);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            CardArtLibrary.ResetCache();
+            Debug.Log(
+                "TCG Card Caos: Refreshed runtime card textures from "
+                + CardArtLibrary.FrontTextureAssetPath
+                + " and "
+                + CardArtLibrary.BackTextureAssetPath
+                + ".");
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+    }
+
+    static void BakeRuntimeTexturesAndMaterials(Material frontMaterialTemplate, Material backMaterialTemplate)
+    {
+        Texture2D frontWorldTexture = CopyTextureWithMaxSize(
+            CardArtLibrary.FrontTextureAssetPath,
+            ResourcesCardsFolder + "/card_front_world.png",
+            CardTextureSettings.WorldMaxSize);
+        Texture2D backWorldTexture = CopyTextureWithMaxSize(
+            CardArtLibrary.BackTextureAssetPath,
+            ResourcesCardsFolder + "/card_back_world.png",
+            CardTextureSettings.WorldMaxSize);
+        Texture2D frontDetailTexture = CopyTextureWithMaxSize(
+            CardArtLibrary.FrontTextureAssetPath,
+            ResourcesCardsFolder + "/card_front_detail.png",
+            CardTextureSettings.DetailMaxSize);
+        Texture2D backDetailTexture = CopyTextureWithMaxSize(
+            CardArtLibrary.BackTextureAssetPath,
+            ResourcesCardsFolder + "/card_back_detail.png",
+            CardTextureSettings.DetailMaxSize);
+
+        SaveMaterialAsset(
+            CreateMaterial(frontMaterialTemplate, frontWorldTexture, "CardFrontWorld", enableInstancing: true),
+            ResourcesCardsFolder + "/CardFrontWorld.mat");
+        SaveMaterialAsset(
+            CreateMaterial(backMaterialTemplate, backWorldTexture, "CardBackWorld", enableInstancing: true),
+            ResourcesCardsFolder + "/CardBackWorld.mat");
+        SaveMaterialAsset(
+            CreateMaterial(frontMaterialTemplate, frontDetailTexture, "CardFrontDetail", enableInstancing: false),
+            ResourcesCardsFolder + "/CardFrontDetail.mat");
+        SaveMaterialAsset(
+            CreateMaterial(backMaterialTemplate, backDetailTexture, "CardBackDetail", enableInstancing: false),
+            ResourcesCardsFolder + "/CardBackDetail.mat");
     }
 
     static string FormatUv(Vector2 uv)

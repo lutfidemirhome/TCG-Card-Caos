@@ -529,19 +529,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         // Flat on the floor — shelf tilt must not carry over after a throw.
         RemovePhysics();
         FlattenAndSnapToGround();
-
-        if (IsCardFaceUp())
-        {
-            ReleaseCardVisual();
-            RefreshRenderMode();
-        }
-        else
-        {
-            // Instanced ground quads only draw the front — keep the full mesh so CardBack stays visible.
-            EnsureCardVisual();
-            ApplyWorldVisualOrientation();
-            CardInstancedRenderManager.Instance?.Unregister(this);
-        }
+        ReleaseCardVisual();
+        RefreshRenderMode();
     }
 
     void ApplyFlatWorldCollider()
@@ -576,8 +565,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         widthAxis.Normalize();
 
         float yaw = Mathf.Atan2(widthAxis.x, widthAxis.z) * Mathf.Rad2Deg;
-        float pitch = frontFaceUp ? 0f : 180f;
-        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        groundShowsBack = !frontFaceUp;
         ApplyWorldVisualOrientation();
         CardGroundStack.ApplyStackHeight(this);
         ResolveWorldPenetration();

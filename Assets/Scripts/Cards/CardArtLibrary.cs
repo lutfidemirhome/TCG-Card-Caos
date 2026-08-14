@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Loads the shared trading-card mesh and front/back materials.
-/// Run "TCG Card Caos → Setup Card Art" once in the editor to bake runtime assets.
+/// Run "TCG Card Caos → Refresh Card Textures From Templates" after editing template PNGs
+/// (or reimport the PNG — copies under Assets/Resources/Cards update automatically).
 /// </summary>
 public static class CardArtLibrary
 {
