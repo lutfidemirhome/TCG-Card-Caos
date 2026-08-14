@@ -8,15 +8,11 @@ using UnityEngine.Rendering;
 /// </summary>
 static class CardVisualResources
 {
-    static readonly Color InteractionOutlineColor = new Color(1f, 0.88f, 0.12f);
-    static readonly Color HandSelectionOutlineColor = InteractionOutlineColor;
-    static readonly Color ShelfCorrectOutlineColor = new Color(0.28f, 0.92f, 0.38f);
-    static readonly Color ShelfIncorrectOutlineColor = new Color(0.95f, 0.22f, 0.22f);
-
     static Mesh _interactionBorderFrameMesh;
     static Mesh _handSelectionBorderFrameMesh;
     static Material _outlineMaterial;
     static Material _handSelectionOutlineMaterial;
+    static Material _shelfPlacementOutlineMaterial;
     static Material _shelfCorrectOutlineMaterial;
     static Material _shelfIncorrectOutlineMaterial;
 
@@ -28,6 +24,15 @@ static class CardVisualResources
         {
             EnsureInitialized();
             return _outlineMaterial;
+        }
+    }
+
+    public static Material ShelfPlacementOutlineMaterial
+    {
+        get
+        {
+            EnsureInitialized();
+            return _shelfPlacementOutlineMaterial;
         }
     }
 
@@ -80,6 +85,29 @@ static class CardVisualResources
     {
         _interactionBorderFrameMesh = null;
         _handSelectionBorderFrameMesh = null;
+        _outlineMaterial = null;
+        _handSelectionOutlineMaterial = null;
+        _shelfPlacementOutlineMaterial = null;
+        _shelfCorrectOutlineMaterial = null;
+        _shelfIncorrectOutlineMaterial = null;
+    }
+
+    public static void ApplyOutlineSettings(CardOutlineSettings settings)
+    {
+        if (settings == null)
+            return;
+
+        ApplyPalette(settings.GetPalette());
+    }
+
+    public static void ApplyPalette(CardOutlineSettings.Palette palette)
+    {
+        EnsureInitialized();
+        SetMaterialColor(_outlineMaterial, palette.cardHover);
+        SetMaterialColor(_handSelectionOutlineMaterial, palette.handSelection);
+        SetMaterialColor(_shelfPlacementOutlineMaterial, palette.shelfPlacement);
+        SetMaterialColor(_shelfCorrectOutlineMaterial, palette.shelfCorrect);
+        SetMaterialColor(_shelfIncorrectOutlineMaterial, palette.shelfIncorrect);
     }
 
     static void EnsureInitialized()
@@ -88,27 +116,44 @@ static class CardVisualResources
 
         if (_interactionBorderFrameMesh != null && _handSelectionBorderFrameMesh != null
             && _outlineMaterial != null && _handSelectionOutlineMaterial != null
+            && _shelfPlacementOutlineMaterial != null
             && _shelfCorrectOutlineMaterial != null && _shelfIncorrectOutlineMaterial != null)
             return;
 
         _interactionBorderFrameMesh ??= BuildBorderFrameMesh(CardDimensions.InteractionOutlineThickness);
         _handSelectionBorderFrameMesh ??= BuildBorderFrameMesh(CardDimensions.HandSelectionOutlineThickness);
         _outlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
-            InteractionOutlineColor,
+            CardOutlineSettings.GetPaletteOrDefaults().cardHover,
             enableInstancing: true,
             renderQueue: (int)RenderQueue.Geometry + 1);
         _handSelectionOutlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
-            HandSelectionOutlineColor,
+            CardOutlineSettings.GetPaletteOrDefaults().handSelection,
             enableInstancing: true,
             renderQueue: (int)RenderQueue.Geometry + 2);
+        _shelfPlacementOutlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
+            CardOutlineSettings.GetPaletteOrDefaults().shelfPlacement,
+            enableInstancing: true,
+            renderQueue: (int)RenderQueue.Geometry + 1);
         _shelfCorrectOutlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
-            ShelfCorrectOutlineColor,
+            CardOutlineSettings.GetPaletteOrDefaults().shelfCorrect,
             enableInstancing: true,
             renderQueue: (int)RenderQueue.Geometry + 1);
         _shelfIncorrectOutlineMaterial ??= RuntimeMaterialUtility.CreateUnlitMaterial(
-            ShelfIncorrectOutlineColor,
+            CardOutlineSettings.GetPaletteOrDefaults().shelfIncorrect,
             enableInstancing: true,
             renderQueue: (int)RenderQueue.Geometry + 1);
+    }
+
+    static void SetMaterialColor(Material material, Color color)
+    {
+        if (material == null)
+            return;
+
+        material.color = color;
+        if (material.HasProperty("_BaseColor"))
+            material.SetColor("_BaseColor", color);
+        if (material.HasProperty("_Color"))
+            material.SetColor("_Color", color);
     }
 
     static Mesh BuildBorderFrameMesh(float borderThickness)

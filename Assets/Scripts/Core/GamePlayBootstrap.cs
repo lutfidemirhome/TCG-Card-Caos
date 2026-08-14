@@ -20,6 +20,8 @@ static class GamePlayBootstrap
         StoreLighting.EnsureExists();
         BackgroundMusic.EnsureExists();
         GameSoundEffects.EnsureExists();
+        CardVisualResources.ApplyOutlineSettings(
+            Resources.Load<CardOutlineSettings>(CardOutlineSettings.ResourcePath));
         CardInstancedRenderManager.EnsureExists().SchedulePlayModeSetup();
     }
 

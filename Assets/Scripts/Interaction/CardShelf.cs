@@ -445,7 +445,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
 
         var meshRenderer = _placementOutline.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = CardVisualResources.InteractionOutlineMaterial;
+        meshRenderer.sharedMaterial = CardVisualResources.ShelfPlacementOutlineMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
     }
