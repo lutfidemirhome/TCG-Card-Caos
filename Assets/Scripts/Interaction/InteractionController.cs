@@ -12,6 +12,8 @@ public class InteractionController : MonoBehaviour
     [SerializeField] float interactDistance = 3f;
     [SerializeField] LayerMask interactMask = ~0;
     [SerializeField] KeyCode interactKey = KeyCode.E;
+    [Tooltip("Seconds to look at a card before the large inspect preview appears. 0 = instant.")]
+    [SerializeField] float inspectPreviewDelay = 0.01f;
 
     static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
@@ -23,6 +25,7 @@ public class InteractionController : MonoBehaviour
     CardInspectPreview _inspectPreview;
     WorldCard _raycastAimedCard;
     WorldCard _inspectPreviewTarget;
+    float _inspectPreviewTimer;
 
     void Awake()
     {
@@ -235,15 +238,33 @@ public class InteractionController : MonoBehaviour
             {
                 _inspectPreview?.Hide();
                 _inspectPreviewTarget = null;
+                _inspectPreviewTimer = 0f;
             }
 
             return;
         }
 
-        if (ReferenceEquals(aimedCard, _inspectPreviewTarget))
+        if (!ReferenceEquals(aimedCard, _inspectPreviewTarget))
+        {
+            _inspectPreviewTarget = aimedCard;
+            _inspectPreviewTimer = 0f;
+            if (inspectPreviewDelay > 0f)
+                _inspectPreview?.Hide();
+        }
+
+        if (inspectPreviewDelay <= 0f)
+        {
+            if (_inspectPreview == null)
+                _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
+
+            _inspectPreview.Show(aimedCard);
+            return;
+        }
+
+        _inspectPreviewTimer += Time.deltaTime;
+        if (_inspectPreviewTimer < inspectPreviewDelay)
             return;
 
-        _inspectPreviewTarget = aimedCard;
         if (_inspectPreview == null)
             _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
 
