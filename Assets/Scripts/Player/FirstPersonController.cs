@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Basic first-person movement: WASD walk, mouse look, hold Shift to crouch.
+/// Basic first-person movement: WASD walk, mouse look, tap Shift to toggle crouch, Space to jump.
+/// Space while crouched stands up first; jump only when already standing.
 /// Attach to a CharacterController root with a child Camera at eye height.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
@@ -22,6 +23,10 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] float crouchHeight = 1.0f;
     [SerializeField] float crouchTransitionSpeed = 12f;
 
+    [Header("Jump")]
+    [SerializeField] KeyCode jumpKey = KeyCode.Space;
+    [SerializeField] float jumpHeight = 1.1f;
+
     [Header("Look")]
     [SerializeField] float mouseSensitivity = 2f;
     [SerializeField] float minPitch = -80f;
@@ -33,6 +38,7 @@ public class FirstPersonController : MonoBehaviour
     float _verticalVelocity;
     bool _cursorLocked;
     float _crouchBlend;
+    bool _crouchToggled;
     float _standingHeight;
     float _standingCenterY;
     float _standingCameraLocalY;
@@ -65,6 +71,7 @@ public class FirstPersonController : MonoBehaviour
         HandleCursorToggle();
         HandleLook();
         UpdateCrouch();
+        HandleJump();
         HandleMove();
     }
 
@@ -91,9 +98,20 @@ public class FirstPersonController : MonoBehaviour
 
     void UpdateCrouch()
     {
-        bool wantsCrouch = Input.GetKey(crouchKey) || Input.GetKey(crouchKeyAlt);
-        if (!wantsCrouch && !CanStand())
-            wantsCrouch = true;
+        if (Input.GetKeyDown(crouchKey) || Input.GetKeyDown(crouchKeyAlt))
+        {
+            if (_crouchToggled)
+            {
+                if (CanStand())
+                    _crouchToggled = false;
+            }
+            else
+            {
+                _crouchToggled = true;
+            }
+        }
+
+        bool wantsCrouch = _crouchToggled || !CanStand();
 
         float targetBlend = wantsCrouch ? 1f : 0f;
         _crouchBlend = Mathf.MoveTowards(_crouchBlend, targetBlend, crouchTransitionSpeed * Time.deltaTime);
@@ -144,6 +162,24 @@ public class FirstPersonController : MonoBehaviour
         }
 
         return true;
+    }
+
+    void HandleJump()
+    {
+        if (!Input.GetKeyDown(jumpKey))
+            return;
+
+        if (_crouchToggled || IsCrouching)
+        {
+            if (CanStand())
+                _crouchToggled = false;
+            return;
+        }
+
+        if (!_controller.isGrounded)
+            return;
+
+        _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
     }
 
     void HandleMove()
