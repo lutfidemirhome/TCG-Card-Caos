@@ -23,7 +23,7 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float cardPitchDegrees = 0f;
     [SerializeField] float heldCardScale = 1.036f;
     [Tooltip("Hand cards render this much smaller than heldCardScale (layout uses the reduced size too).")]
-    [SerializeField] [Range(0f, 0.5f)] float handScaleReductionPercent = 0.2305f;
+    [SerializeField] [Range(0f, 0.5f)] float handScaleReductionPercent = 0.1536f;
     [SerializeField] float cardDepthStep = 0.0025f;
     [SerializeField] float cardVisualOffsetY = 0f;
 

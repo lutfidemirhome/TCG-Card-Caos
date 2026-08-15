@@ -19309,7 +19309,7 @@ MonoBehaviour:
   verticalCurve: 0.018
   cardPitchDegrees: 0
   heldCardScale: 1.036
-  handScaleReductionPercent: 0.2305
+  handScaleReductionPercent: 0.1536
   cardDepthStep: 0.0025
   cardVisualOffsetY: 0
   maxWidth: 0.462
