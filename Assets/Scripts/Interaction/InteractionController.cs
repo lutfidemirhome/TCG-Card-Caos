@@ -256,11 +256,11 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        if (hand != null && hand.IsPackSelected)
+        if (hand != null && hand.HasHeldPack)
         {
-            if (Input.GetKeyDown(KeyCode.Return))
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
-                hand.TryOpenSelectedPack();
+                hand.TryOpenHeldPackFromInput();
                 ClearTarget();
                 return;
             }
@@ -286,7 +286,7 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        if (!clearOnly && hand != null && hand.IsPackSelected)
+        if (!clearOnly && hand != null && (hand.IsPackSelected || hand.HasHeldPack))
         {
             string prompt = hand.GetSelectedPackPromptText();
             if (!string.IsNullOrEmpty(prompt))

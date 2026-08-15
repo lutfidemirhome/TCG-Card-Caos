@@ -165,11 +165,13 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (hand == null)
             return "Press [E] To Pick Up Pack";
 
-        if (hand.HasHeldPack)
-            return "Already Holding A Pack";
-
         if (!hand.CanPickUpPack)
-            return "Need " + CardDimensions.CardsPerBoosterPack + " Free Hand Slots To Pick Up Pack";
+        {
+            if (hand.AvailableSlots <= 0)
+                return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
+
+            return "Hand Full";
+        }
 
         return "Press [E] To Pick Up Pack";
     }

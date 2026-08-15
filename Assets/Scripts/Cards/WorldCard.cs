@@ -289,16 +289,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return string.Empty;
 
         PlayerCardHand hand = PlayerCardHand.Instance;
-        if (hand != null && hand.HasHeldPack && hand.Count >= CardDimensions.MaxCardsWhileHoldingPack)
-        {
-            return "Hand Full With Pack ("
-                + CardDimensions.MaxCardsWhileHoldingPack
-                + "/"
-                + CardDimensions.MaxCardsWhileHoldingPack
-                + " cards)";
-        }
-
         if (hand != null && hand.IsFull)
+            return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
+
+        if (hand != null && hand.AvailableSlots <= 0)
             return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
 
         return "Press [E] To " + cardLabel;

@@ -214,7 +214,7 @@ public static class PackOpenSequence
         }
 
         Object.Destroy(revealRoot.gameObject);
-        hand.ClearHeldPackReference();
+        hand.ClearHeldPackReference(pack);
         hand.SetHandInputLocked(false);
     }
 

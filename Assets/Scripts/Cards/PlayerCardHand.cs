@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Holds up to 10 cards in a bottom-center fan. Newest card goes to the right.
-/// A held booster pack occupies the rightmost fan slot (scroll-selectable, not shelf-placeable).
+/// Each held booster pack uses one fan slot (scroll-selectable, not shelf-placeable).
 /// </summary>
 public class PlayerCardHand : MonoBehaviour
 {
@@ -64,7 +64,7 @@ public class PlayerCardHand : MonoBehaviour
     Camera _camera;
     int _selectedIndex;
     readonly List<WorldCard> _cards = new List<WorldCard>();
-    WorldBoosterPack _heldPack;
+    readonly List<WorldBoosterPack> _heldPacks = new List<WorldBoosterPack>();
     bool _handInputLocked;
     bool _isOpeningPack;
     bool _awaitingRevealCollect;
@@ -73,15 +73,13 @@ public class PlayerCardHand : MonoBehaviour
 
     public int Count => _cards.Count;
     public static PlayerCardHand Instance { get; private set; }
-    public bool IsFull => _cards.Count >= CardDimensions.MaxHandSize;
-    public int AvailableSlots => CardDimensions.MaxHandSize - _cards.Count;
+    public bool IsFull => OccupiedHandSlots >= CardDimensions.MaxHandSize;
+    public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots();
+    public int AvailableSlots => CardDimensions.MaxHandSize - OccupiedHandSlots;
     public int SelectedIndex => _selectedIndex;
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
-    public bool HasHeldPack =>
-        _heldPack != null
-        && (_heldPack.IsHeld || _heldPack.State == WorldBoosterPack.PackState.FlyingToHand);
-    public bool IsPackSelected =>
-        HasHeldPack && _heldPack.IsHeld && _selectedIndex == GetPackFanIndex();
+    public bool HasHeldPack => CountOccupiedPackSlots() > 0;
+    public bool IsPackSelected => GetSelectedHeldPack() != null;
     public bool IsOpeningPack => _isOpeningPack;
     public bool IsAwaitingRevealCollect => _awaitingRevealCollect;
     public bool IsHandInputLocked => _handInputLocked || _isOpeningPack;
@@ -93,13 +91,16 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool CanPickUpPack =>
         !IsHandInputLocked
-        && _heldPack == null
-        && AvailableSlots >= CardDimensions.CardsPerBoosterPack;
+        && AvailableSlots >= CardDimensions.HandSlotsPerBoosterPack;
+
+    /// <summary>Free slots after the selected pack leaves the hand (it occupies one slot until open starts).</summary>
+    public int AvailableSlotsAfterOpeningSelectedPack =>
+        AvailableSlots + CardDimensions.HandSlotsPerBoosterPack;
 
     public bool CanOpenSelectedPack =>
         IsPackSelected
         && !IsHandInputLocked
-        && AvailableSlots >= CardDimensions.CardsPerBoosterPack;
+        && AvailableSlotsAfterOpeningSelectedPack >= CardDimensions.CardsPerBoosterPack;
 
     void Awake()
     {
@@ -130,8 +131,8 @@ public class PlayerCardHand : MonoBehaviour
 
         HandleScrollSelection();
 
-        if (Input.GetKeyDown(openPackKey) && IsPackSelected)
-            TryOpenSelectedPack();
+        if (Input.GetKeyDown(openPackKey) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            TryOpenHeldPackFromInput();
 
         if (Input.GetKeyDown(dropKey))
         {
@@ -195,8 +196,11 @@ public class PlayerCardHand : MonoBehaviour
 
     bool IsHandFanIndexSelectable(int fanIndex)
     {
-        if (fanIndex == GetPackFanIndex())
-            return _heldPack != null && _heldPack.IsHeld;
+        if (fanIndex >= CountHeldCards())
+        {
+            WorldBoosterPack pack = GetHeldPackAtFanIndex(fanIndex);
+            return pack != null && pack.IsHeld;
+        }
 
         return GetHeldCardAtFanIndex(fanIndex) != null;
     }
@@ -220,17 +224,67 @@ public class PlayerCardHand : MonoBehaviour
 
     int GetHandFanCount()
     {
-        int count = CountHeldCards();
-        if (_heldPack != null
-            && (_heldPack.IsHeld || _heldPack.State == WorldBoosterPack.PackState.FlyingToHand))
-            count++;
-
-        return count;
+        return CountHeldCards() + CountOccupiedPackSlots();
     }
 
-    int GetPackFanIndex()
+    WorldBoosterPack GetHeldPackAtFanIndex(int fanIndex)
     {
-        return CountHeldCards();
+        int packIndex = fanIndex - CountHeldCards();
+        if (packIndex < 0 || packIndex >= _heldPacks.Count)
+            return null;
+
+        return _heldPacks[packIndex];
+    }
+
+    WorldBoosterPack GetSelectedHeldPack()
+    {
+        int packIndex = _selectedIndex - CountHeldCards();
+        if (packIndex < 0 || packIndex >= _heldPacks.Count)
+            return null;
+
+        WorldBoosterPack pack = _heldPacks[packIndex];
+        return pack.IsHeld ? pack : null;
+    }
+
+    WorldBoosterPack ResolveHeldPackToOpen()
+    {
+        WorldBoosterPack selected = GetSelectedHeldPack();
+        if (selected != null)
+            return selected;
+
+        for (int i = _heldPacks.Count - 1; i >= 0; i--)
+        {
+            WorldBoosterPack pack = _heldPacks[i];
+            if (pack.IsHeld)
+                return pack;
+        }
+
+        return null;
+    }
+
+    bool CanOpenHeldPack(WorldBoosterPack pack)
+    {
+        return pack != null
+            && pack.IsHeld
+            && !IsHandInputLocked
+            && AvailableSlotsAfterOpeningSelectedPack >= CardDimensions.CardsPerBoosterPack;
+    }
+
+    int CountOccupiedPackSlots()
+    {
+        int count = 0;
+        for (int i = 0; i < _heldPacks.Count; i++)
+        {
+            WorldBoosterPack pack = _heldPacks[i];
+            if (pack.IsHeld
+                || pack.State == WorldBoosterPack.PackState.FlyingToHand
+                || pack.State == WorldBoosterPack.PackState.Opening)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     void EnsureHandAnchor()
@@ -282,9 +336,6 @@ public class PlayerCardHand : MonoBehaviour
         if (IsFull)
             return false;
 
-        if (_heldPack != null && _cards.Count >= CardDimensions.MaxCardsWhileHoldingPack)
-            return false;
-
         EnsureHandAnchor();
         UpdateHandAnchorTransform();
 
@@ -312,8 +363,7 @@ public class PlayerCardHand : MonoBehaviour
         if (!_cards[cardIndex].IsHeld)
             return;
 
-        if (!HasHeldPack)
-            _selectedIndex = GetFanIndexForCard(_cards[cardIndex]);
+        _selectedIndex = GetFanIndexForCard(_cards[cardIndex]);
     }
 
     int GetFanIndexForCard(WorldCard card)
@@ -359,29 +409,38 @@ public class PlayerCardHand : MonoBehaviour
 
         EnsureHandAnchor();
         UpdateHandAnchorTransform();
-        _heldPack = pack;
+        _heldPacks.Add(pack);
+        int packListIndex = _heldPacks.Count - 1;
 
         pack.BeginPickupFlight(
             _handAnchor,
             EffectiveHeldScale,
             pickupFlightDuration,
             pickupFlightArcHeight,
-            OnPackPickupFlightComplete);
+            () => OnPackPickupFlightComplete(packListIndex));
         GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
         return true;
     }
 
-    void OnPackPickupFlightComplete()
+    void OnPackPickupFlightComplete(int packListIndex)
     {
-        if (_heldPack == null || !_heldPack.IsHeld)
+        if (packListIndex < 0 || packListIndex >= _heldPacks.Count)
             return;
 
-        _selectedIndex = GetPackFanIndex();
+        WorldBoosterPack pack = _heldPacks[packListIndex];
+        if (!pack.IsHeld)
+            return;
+
+        _selectedIndex = CountHeldCards() + packListIndex;
     }
 
-    public bool TryOpenSelectedPack()
+    public bool TryOpenHeldPackFromInput()
     {
-        if (!CanOpenSelectedPack || _openPackRoutine != null)
+        if (HasHeldPack && !IsPackSelected)
+            SelectLastHeldPack();
+
+        WorldBoosterPack pack = ResolveHeldPackToOpen();
+        if (!CanOpenHeldPack(pack) || _openPackRoutine != null)
             return false;
 
         if (_camera == null)
@@ -391,21 +450,46 @@ public class PlayerCardHand : MonoBehaviour
             return false;
 
         _isOpeningPack = true;
-        _openPackRoutine = StartCoroutine(OpenHeldPackRoutine());
+        _openPackRoutine = StartCoroutine(OpenHeldPackRoutine(pack));
         return true;
     }
 
-    System.Collections.IEnumerator OpenHeldPackRoutine()
+    public bool TryOpenSelectedPack()
     {
-        WorldBoosterPack pack = _heldPack;
+        WorldBoosterPack pack = ResolveHeldPackToOpen();
+        if (!CanOpenHeldPack(pack) || _openPackRoutine != null)
+            return false;
+
+        if (_camera == null)
+            _camera = Camera.main;
+
+        if (_camera == null)
+            return false;
+
+        _isOpeningPack = true;
+        _openPackRoutine = StartCoroutine(OpenHeldPackRoutine(pack));
+        return true;
+    }
+
+    System.Collections.IEnumerator OpenHeldPackRoutine(WorldBoosterPack pack)
+    {
+        if (pack == null || !pack.IsHeld)
+        {
+            _isOpeningPack = false;
+            _openPackRoutine = null;
+            yield break;
+        }
+
+        _heldPacks.Remove(pack);
         yield return PackOpenSequence.Run(this, pack, _camera);
         _isOpeningPack = false;
         _openPackRoutine = null;
     }
 
-    public void ClearHeldPackReference()
+    public void ClearHeldPackReference(WorldBoosterPack pack = null)
     {
-        _heldPack = null;
+        if (pack != null)
+            _heldPacks.Remove(pack);
         ClampSelectionIndex();
     }
 
@@ -451,7 +535,6 @@ public class PlayerCardHand : MonoBehaviour
 
         _cards.Add(card);
         int newCardIndex = _cards.Count - 1;
-        _selectedIndex = newCardIndex;
 
         card.BeginPickupFlight(
             _handAnchor,
@@ -472,8 +555,11 @@ public class PlayerCardHand : MonoBehaviour
         if (_camera == null)
             return false;
 
-        WorldBoosterPack pack = _heldPack;
-        _heldPack = null;
+        WorldBoosterPack pack = GetSelectedHeldPack();
+        if (pack == null)
+            return false;
+
+        _heldPacks.Remove(pack);
         pack.SetHandSelected(false);
         ClampSelectionIndex();
 
@@ -493,30 +579,52 @@ public class PlayerCardHand : MonoBehaviour
 
     public string GetSelectedPackPromptText()
     {
-        if (!IsPackSelected)
+        if (!HasHeldPack)
             return string.Empty;
 
-        if (CanOpenSelectedPack)
+        if (!IsHandInputLocked
+            && AvailableSlotsAfterOpeningSelectedPack >= CardDimensions.CardsPerBoosterPack)
             return "Press [Enter] To Open Pack";
 
+        int slotsNeeded = CardDimensions.CardsPerBoosterPack - CardDimensions.HandSlotsPerBoosterPack;
         return "Need "
-            + CardDimensions.CardsPerBoosterPack
+            + slotsNeeded
             + " free hand slots to open pack";
+    }
+
+    void SelectLastHeldPack()
+    {
+        int lastHeldPackFanIndex = -1;
+        for (int i = 0; i < _heldPacks.Count; i++)
+        {
+            if (_heldPacks[i].IsHeld)
+                lastHeldPackFanIndex = CountHeldCards() + i;
+        }
+
+        if (lastHeldPackFanIndex >= 0)
+            _selectedIndex = lastHeldPackFanIndex;
     }
 
     void UpdatePackPickupFlight()
     {
-        if (_heldPack == null
-            || _heldPack.State != WorldBoosterPack.PackState.FlyingToHand
-            || _handAnchor == null)
+        if (_heldPacks.Count == 0 || _handAnchor == null)
             return;
 
         HandFanLayoutSettings layout = BuildLayoutSettings();
         int fanCount = Mathf.Max(1, GetHandFanCount());
-        HandCardPose targetPose = HandFanLayout.GetPose(GetPackFanIndex(), fanCount, layout, false);
-        Vector3 targetWorldPos = _handAnchor.TransformPoint(targetPose.LocalPosition);
-        Quaternion targetWorldRot = _handAnchor.rotation * targetPose.LocalRotation;
-        _heldPack.UpdatePickupFlight(targetWorldPos, targetWorldRot);
+
+        for (int i = 0; i < _heldPacks.Count; i++)
+        {
+            WorldBoosterPack pack = _heldPacks[i];
+            if (pack.State != WorldBoosterPack.PackState.FlyingToHand)
+                continue;
+
+            int fanIndex = CountHeldCards() + i;
+            HandCardPose targetPose = HandFanLayout.GetPose(fanIndex, fanCount, layout, false);
+            Vector3 targetWorldPos = _handAnchor.TransformPoint(targetPose.LocalPosition);
+            Quaternion targetWorldRot = _handAnchor.rotation * targetPose.LocalRotation;
+            pack.UpdatePickupFlight(targetWorldPos, targetWorldRot);
+        }
     }
 
     public bool TryDropSelectedCard()
@@ -616,7 +724,7 @@ public class PlayerCardHand : MonoBehaviour
             if (!card.IsFlyingToHand)
                 continue;
 
-            HandCardPose targetPose = HandFanLayout.GetPose(i, fanCount, layout, false);
+            HandCardPose targetPose = HandFanLayout.GetPose(GetFanIndexForCard(card), fanCount, layout, false);
             Vector3 targetWorldPos = _handAnchor.TransformPoint(targetPose.LocalPosition);
             Quaternion targetWorldRot = _handAnchor.rotation * targetPose.LocalRotation;
             card.UpdatePickupFlight(targetWorldPos, targetWorldRot);
@@ -635,7 +743,8 @@ public class PlayerCardHand : MonoBehaviour
             return;
 
         HandFanLayoutSettings layout = BuildLayoutSettings();
-        bool packSelected = IsPackSelected;
+        WorldBoosterPack selectedPack = GetSelectedHeldPack();
+        bool packSelected = selectedPack != null;
         WorldCard selectedCard = packSelected ? null : GetSelectedHeldCard();
         int cardFanIndex = 0;
 
@@ -652,20 +761,27 @@ public class PlayerCardHand : MonoBehaviour
             cardFanIndex++;
         }
 
-        if (_heldPack != null && _heldPack.IsHeld && !IsOpeningPack)
+        for (int i = 0; i < _heldPacks.Count; i++)
         {
-            HandCardPose packPose = HandFanLayout.GetPose(GetPackFanIndex(), fanCount, layout, packSelected);
-            _heldPack.ApplyHeldPose(packPose.LocalPosition, packPose.LocalRotation, packPose.Scale);
-            _heldPack.SetHandSelected(packSelected);
-            _heldPack.transform.SetAsLastSibling();
-        }
-        else if (_heldPack != null)
-        {
-            _heldPack.SetHandSelected(false);
+            WorldBoosterPack pack = _heldPacks[i];
+            if (!pack.IsHeld || IsOpeningPack)
+            {
+                pack.SetHandSelected(false);
+                continue;
+            }
+
+            int fanIndex = CountHeldCards() + i;
+            bool isSelected = packSelected && pack == selectedPack;
+            HandCardPose packPose = HandFanLayout.GetPose(fanIndex, fanCount, layout, isSelected);
+            pack.ApplyHeldPose(packPose.LocalPosition, packPose.LocalRotation, packPose.Scale);
+            pack.SetHandSelected(isSelected);
+            pack.transform.SetSiblingIndex(fanIndex);
         }
 
         if (selectedCard != null)
             selectedCard.transform.SetAsLastSibling();
+        else if (selectedPack != null)
+            selectedPack.transform.SetAsLastSibling();
     }
 
     WorldCard GetSelectedHeldCard()
