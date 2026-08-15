@@ -26,10 +26,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     const string PackModelChildName = "PackVisual";
     const string DefaultPackModelResourcePath = "Cards/BoosterPack/TradingCard_BoosterPack";
     static GameObject _defaultPackModelPrefab;
-
-    // Tuned pack mesh locals relative to PackCardRef (card already supplies World/Hand rotation).
-    static readonly Vector3 DefaultPackModelLocalPosition = Vector3.zero;
-    static readonly Vector3 DefaultPackModelLocalScale = new Vector3(1.779564f, 1.3624f, 1.3624f);
+    const float PackWidthFitMultiplier = 1.06f;
 
     PackState _state = PackState.World;
     Transform _cardRef;
@@ -38,7 +35,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Rigidbody _rigidbody;
     BoxCollider _collider;
     bool _interactionHighlighted;
-    bool _usesTunedDefaultPackVisual;
     bool _groundShowsBack;
     float _packModelGroundOffsetYFaceUp;
     float _packModelGroundOffsetYFaceDown;
@@ -157,11 +153,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             var instance = Instantiate(prefab, _cardRef, false);
             instance.name = PackModelChildName;
             _packModel = instance.transform;
-
-            _usesTunedDefaultPackVisual = visualPrefab == null;
-            _visualBaseScale = _usesTunedDefaultPackVisual
-                ? DefaultPackModelLocalScale
-                : Vector3.one;
+            _visualBaseScale = Vector3.one;
 
             PackArtLibrary.ApplyPackMaterials(_packModel);
             StripVisualColliders(_packModel);
@@ -174,10 +166,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     void ConfigurePackModelFromExisting()
     {
-        _usesTunedDefaultPackVisual = visualPrefab == null;
-        _visualBaseScale = _usesTunedDefaultPackVisual
-            ? DefaultPackModelLocalScale
-            : _packModel.localScale;
+        _visualBaseScale = Vector3.one;
 
         PackArtLibrary.ApplyPackMaterials(_packModel);
         StripVisualColliders(_packModel);
@@ -227,14 +216,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packModel == null)
             return;
 
-        Vector3 basePosition = _usesTunedDefaultPackVisual
-            ? DefaultPackModelLocalPosition
-            : Vector3.zero;
-        _packModel.localPosition = basePosition + _packModelCenterOffset;
+        _packModel.localPosition = _packModelCenterOffset;
         _packModel.localRotation = Quaternion.identity;
-        _packModel.localScale = _usesTunedDefaultPackVisual
-            ? DefaultPackModelLocalScale
-            : _visualBaseScale;
+        _packModel.localScale = _visualBaseScale;
     }
 
     /// <summary>
@@ -248,9 +232,21 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return;
 
         ApplyCardRefWorldPose(faceDown: false);
-        ApplyPackModelProbePose();
 
-        if (TryMeasureRendererBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
+        _packModel.localPosition = Vector3.zero;
+        _packModel.localRotation = Quaternion.identity;
+        _packModel.localScale = Vector3.one;
+
+        if (!TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 nativeMin, out Vector3 nativeMax))
+            return;
+
+        Vector3 nativeSize = nativeMax - nativeMin;
+        Vector3 cardSize = GetCardMeshSizeInCardRefLocalSpace();
+        _visualBaseScale = ComputeCardFootprintScale(nativeSize, cardSize);
+
+        _packModel.localScale = _visualBaseScale;
+
+        if (TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
         {
             Vector3 center = (min + max) * 0.5f;
             _packModelCenterOffset = -center;
@@ -262,6 +258,62 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         RefreshPackModelGroundOffset(faceDown: false, out _packModelGroundOffsetYFaceUp);
         RefreshPackModelGroundOffset(faceDown: true, out _packModelGroundOffsetYFaceDown);
+    }
+
+    Vector3 GetCardMeshSizeInCardRefLocalSpace()
+    {
+        if (_cardRef != null
+            && TryMeasureSingleMeshBoundsInLocalSpace(_cardRef, _cardRef, out Vector3 min, out Vector3 max))
+        {
+            return max - min;
+        }
+
+        CardArtLibrary.EnsureLoaded();
+        return CardArtLibrary.MeshBounds.size;
+    }
+
+    /// <summary>
+    /// Non-uniform scale that maps pack width, height, and thickness onto the card footprint
+    /// even when the imported model's axes do not line up with the card mesh axes.
+    /// </summary>
+    static Vector3 ComputeCardFootprintScale(Vector3 nativeSize, Vector3 cardSize)
+    {
+        GetFootprintAxes(nativeSize, out int nativeThickness, out int nativeWidth, out int nativeHeight);
+        GetFootprintAxes(cardSize, out int cardThickness, out int cardWidth, out int cardHeight);
+
+        var scale = Vector3.one;
+        scale[nativeThickness] = cardSize[cardThickness] / Mathf.Max(nativeSize[nativeThickness], 0.00001f);
+        scale[nativeWidth] = (cardSize[cardWidth] * PackWidthFitMultiplier) / Mathf.Max(nativeSize[nativeWidth], 0.00001f);
+        scale[nativeHeight] = cardSize[cardHeight] / Mathf.Max(nativeSize[nativeHeight], 0.00001f);
+        return scale;
+    }
+
+    static void GetFootprintAxes(Vector3 size, out int thicknessAxis, out int widthAxis, out int heightAxis)
+    {
+        thicknessAxis = SmallestAxis(size);
+
+        int faceA = (thicknessAxis + 1) % 3;
+        int faceB = (thicknessAxis + 2) % 3;
+        if (size[faceA] <= size[faceB])
+        {
+            widthAxis = faceA;
+            heightAxis = faceB;
+        }
+        else
+        {
+            widthAxis = faceB;
+            heightAxis = faceA;
+        }
+    }
+
+    static int SmallestAxis(Vector3 size)
+    {
+        int axis = 0;
+        if (size.y < size[axis])
+            axis = 1;
+        if (size.z < size[axis])
+            axis = 2;
+        return axis;
     }
 
     float GetPackModelGroundOffsetY()
@@ -286,6 +338,15 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         groundOffsetY = (-CardDimensions.Thickness * 0.5f) - min.y;
     }
 
+    static bool IsOutlineObject(GameObject gameObject)
+    {
+        if (gameObject == null)
+            return false;
+
+        string objectName = gameObject.name;
+        return objectName == "InteractionOutline" || objectName == "HandSelectionOutline";
+    }
+
     void ApplyCardRefWorldPose(bool faceDown = false)
     {
         _cardRef.localPosition = Vector3.zero;
@@ -303,14 +364,84 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packModel == null)
             return;
 
-        _packModel.localPosition = (_usesTunedDefaultPackVisual
-                ? DefaultPackModelLocalPosition
-                : Vector3.zero)
-            + _packModelCenterOffset;
+        _packModel.localPosition = _packModelCenterOffset;
         _packModel.localRotation = Quaternion.identity;
-        _packModel.localScale = _usesTunedDefaultPackVisual
-            ? DefaultPackModelLocalScale
-            : _visualBaseScale;
+        _packModel.localScale = _visualBaseScale;
+    }
+
+    static bool TryMeasureMeshBoundsInLocalSpace(
+        Transform localSpace,
+        Transform meshRoot,
+        out Vector3 min,
+        out Vector3 max)
+    {
+        min = Vector3.positiveInfinity;
+        max = Vector3.negativeInfinity;
+        if (localSpace == null || meshRoot == null)
+            return false;
+
+        MeshFilter[] meshFilters = meshRoot.GetComponentsInChildren<MeshFilter>(true);
+        if (meshFilters.Length == 0)
+            return false;
+
+        bool hasBounds = false;
+        for (int i = 0; i < meshFilters.Length; i++)
+        {
+            MeshFilter meshFilter = meshFilters[i];
+            if (meshFilter == null || meshFilter.sharedMesh == null || IsOutlineObject(meshFilter.gameObject))
+                continue;
+
+            EncapsulateMeshBounds(localSpace, meshFilter.transform, meshFilter.sharedMesh.bounds, ref min, ref max);
+            hasBounds = true;
+        }
+
+        return hasBounds;
+    }
+
+    static bool TryMeasureSingleMeshBoundsInLocalSpace(
+        Transform localSpace,
+        Transform meshTransform,
+        out Vector3 min,
+        out Vector3 max)
+    {
+        min = Vector3.positiveInfinity;
+        max = Vector3.negativeInfinity;
+        if (localSpace == null || meshTransform == null)
+            return false;
+
+        MeshFilter meshFilter = meshTransform.GetComponent<MeshFilter>();
+        if (meshFilter == null || meshFilter.sharedMesh == null || IsOutlineObject(meshFilter.gameObject))
+            return false;
+
+        EncapsulateMeshBounds(localSpace, meshTransform, meshFilter.sharedMesh.bounds, ref min, ref max);
+        return min.x <= max.x;
+    }
+
+    static void EncapsulateMeshBounds(
+        Transform localSpace,
+        Transform meshTransform,
+        Bounds meshBounds,
+        ref Vector3 min,
+        ref Vector3 max)
+    {
+        Vector3 center = meshBounds.center;
+        Vector3 extents = meshBounds.extents;
+        for (int xi = -1; xi <= 1; xi += 2)
+        {
+            for (int yi = -1; yi <= 1; yi += 2)
+            {
+                for (int zi = -1; zi <= 1; zi += 2)
+                {
+                    Vector3 corner = center + new Vector3(
+                        extents.x * xi,
+                        extents.y * yi,
+                        extents.z * zi);
+                    Vector3 local = localSpace.InverseTransformPoint(meshTransform.TransformPoint(corner));
+                    min = Vector3.Min(min, local);
+                    max = Vector3.Max(max, local);
+                }
+            }
+        }
     }
 
     static bool TryMeasureRendererBoundsInLocalSpace(
@@ -360,18 +491,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         return hasBounds;
     }
 
-    bool TryMeasurePackRendererBoundsInRoot(out Vector3 min, out Vector3 max)
-    {
-        return TryMeasureRendererBoundsInLocalSpace(transform, _packModel, out min, out max);
-    }
-
     static bool IsOutlineRenderer(Renderer renderer)
     {
-        if (renderer == null)
-            return false;
-
-        string objectName = renderer.gameObject.name;
-        return objectName == "InteractionOutline" || objectName == "HandSelectionOutline";
+        return renderer != null && IsOutlineObject(renderer.gameObject);
     }
 
     void SetCardRefMesh(Mesh mesh)
@@ -414,7 +536,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             CardDimensions.Width,
             CardDimensions.Height,
             CardDimensions.Thickness * 2.5f);
-        _usesTunedDefaultPackVisual = false;
         visualGo.transform.localScale = _visualBaseScale;
         visualGo.transform.localRotation = Quaternion.identity;
 
@@ -535,14 +656,18 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ReleaseInteractionOutline();
     }
 
+    Transform GetOutlineParent()
+    {
+        EnsureVisual();
+        return _cardRef != null ? _cardRef : transform;
+    }
+
     void EnsureInteractionOutlineRenderer()
     {
         if (_outlineObject != null)
-        {
-            EnsureOutlineParent(_outlineObject.transform);
             return;
-        }
 
+        _ = CardVisualResources.InteractionOutlineMaterial;
         _outlineObject = new GameObject("InteractionOutline");
         _outlineObject.transform.SetParent(GetOutlineParent(), false);
 
@@ -558,11 +683,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     void EnsureHandSelectionOutlineRenderer()
     {
         if (_handSelectionOutlineObject != null)
-        {
-            EnsureOutlineParent(_handSelectionOutlineObject.transform);
             return;
-        }
 
+        _ = CardVisualResources.HandSelectionOutlineMaterial;
         _handSelectionOutlineObject = new GameObject("HandSelectionOutline");
         _handSelectionOutlineObject.transform.SetParent(GetOutlineParent(), false);
 
@@ -573,19 +696,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         meshRenderer.sharedMaterial = CardVisualResources.HandSelectionOutlineMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
-    }
-
-    Transform GetOutlineParent()
-    {
-        EnsureVisual();
-        return _cardRef != null ? _cardRef : transform;
-    }
-
-    void EnsureOutlineParent(Transform outlineTransform)
-    {
-        Transform parent = GetOutlineParent();
-        if (outlineTransform.parent != parent)
-            outlineTransform.SetParent(parent, false);
     }
 
     void ReleaseInteractionOutline()
