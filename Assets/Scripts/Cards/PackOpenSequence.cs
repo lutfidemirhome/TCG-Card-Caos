@@ -8,8 +8,14 @@ using UnityEngine;
 /// </summary>
 public static class PackOpenSequence
 {
-    const float FlipDuration = 0.16f;
-    const float FlipStagger = 0.07f;
+    const float FlipDuration = 0.28f;
+    const float FlipStagger = 0.065f;
+    const float FlipRevealPopPeak = 1.09f;
+    const float FlipRevealPopDuration = 0.14f;
+    const float RevealWavePeak = 1.14f;
+    const float RevealWavePulseDuration = 0.2f;
+    const float RevealWaveStagger = 0.05f;
+    const float RevealWaveDipHeightFactor = 0.042f;
     const float RevealScreenScaleMultiplier = 1.2f;
     const float RevealCardSpacingFactor = 1.12f;
     const float PackDriftDurationFactor = 0.11f;
@@ -161,7 +167,7 @@ public static class PackOpenSequence
             yield return null;
         }
 
-        // Flip cards one by one from back to front.
+        // Flip cards one by one — page-turn from back to front.
         for (int i = 0; i < revealCards.Count; i++)
         {
             WorldCard card = revealCards[i];
@@ -172,12 +178,13 @@ public static class PackOpenSequence
             while (flipElapsed < FlipDuration)
             {
                 flipElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, flipElapsed / FlipDuration);
+                float t = flipElapsed / FlipDuration;
                 card.SetRevealVisualFlip(t);
                 yield return null;
             }
 
             card.SetRevealVisualFlip(1f);
+            yield return RevealScalePulseRoutine(card.transform, revealScale, FlipRevealPopPeak, FlipRevealPopDuration);
 
             if (i < revealCards.Count - 1)
             {
@@ -189,6 +196,8 @@ public static class PackOpenSequence
                 }
             }
         }
+
+        yield return RevealMexicanWaveRoutine(revealCards, revealScale);
 
         // Hold the reveal screen until the player presses Enter again.
         hand.SetAwaitingRevealCollect(true);
@@ -251,5 +260,84 @@ public static class PackOpenSequence
 
         if (PackPostShakePause > 0f)
             yield return new WaitForSeconds(PackPostShakePause);
+    }
+
+    static IEnumerator RevealScalePulseRoutine(
+        Transform target,
+        float baseScale,
+        float peakMultiplier,
+        float duration)
+    {
+        if (target == null || duration <= 0f)
+            yield break;
+
+        float peakDelta = Mathf.Max(0f, peakMultiplier - 1f);
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float scaleMultiplier = 1f + peakDelta * Mathf.Sin(t * Mathf.PI);
+            target.localScale = Vector3.one * (baseScale * scaleMultiplier);
+            yield return null;
+        }
+
+        target.localScale = Vector3.one * baseScale;
+    }
+
+    static IEnumerator RevealMexicanWaveRoutine(IReadOnlyList<WorldCard> cards, float baseScale)
+    {
+        if (cards == null || cards.Count == 0)
+            yield break;
+
+        int count = cards.Count;
+        var baseLocalPositions = new Vector3[count];
+        for (int i = 0; i < count; i++)
+        {
+            WorldCard card = cards[i];
+            baseLocalPositions[i] = card != null ? card.transform.localPosition : Vector3.zero;
+        }
+
+        float peakDelta = Mathf.Max(0f, RevealWavePeak - 1f);
+        float dipAmount = CardDimensions.Height * baseScale * RevealWaveDipHeightFactor;
+        float totalDuration = RevealWavePulseDuration + RevealWaveStagger * Mathf.Max(0, count - 1);
+        float elapsed = 0f;
+
+        while (elapsed < totalDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            for (int i = 0; i < count; i++)
+            {
+                WorldCard card = cards[i];
+                if (card == null)
+                    continue;
+
+                float pulseElapsed = elapsed - i * RevealWaveStagger;
+                float scaleMultiplier = 1f;
+                float dipT = 0f;
+                if (pulseElapsed >= 0f && pulseElapsed <= RevealWavePulseDuration)
+                {
+                    float t = pulseElapsed / RevealWavePulseDuration;
+                    dipT = Mathf.Sin(t * Mathf.PI);
+                    scaleMultiplier = 1f + peakDelta * dipT;
+                }
+
+                card.transform.localScale = Vector3.one * (baseScale * scaleMultiplier);
+                card.transform.localPosition = baseLocalPositions[i] + new Vector3(0f, -dipAmount * dipT, 0f);
+            }
+
+            yield return null;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            WorldCard card = cards[i];
+            if (card == null)
+                continue;
+
+            card.transform.localScale = Vector3.one * baseScale;
+            card.transform.localPosition = baseLocalPositions[i];
+        }
     }
 }

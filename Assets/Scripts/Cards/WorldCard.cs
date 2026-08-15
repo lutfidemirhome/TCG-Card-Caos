@@ -400,6 +400,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.localRotation = localRotation;
         transform.localScale = Vector3.one * scale;
         EnsureCardVisual();
+        if (_cardVisual != null)
+            _cardVisual.localPosition = Vector3.zero;
         ApplyRevealVisualOrientation(showsBack ? 0f : 1f);
         RefreshRenderMode();
     }
@@ -411,20 +413,34 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         frontT = Mathf.Clamp01(frontT);
         SetCardVisualMesh(CardArtLibrary.HandCardMesh);
-        _cardVisual.localRotation = GetRevealVisualRotation(frontT);
+        _cardVisual.localRotation = GetRevealPageTurnRotation(frontT);
+        _cardVisual.localPosition = Vector3.zero;
         _cardVisual.localScale = CardArtLibrary.HandVisualScale;
     }
 
     /// <summary>
-    /// 0 = back toward camera (logo upright), 1 = front toward camera.
-    /// X swaps to the back face; Z keeps the shared back art right-side up on screen.
+    /// Page-turn flip around the card center: 0 = back toward camera, 1 = front toward camera.
     /// </summary>
-    public static Quaternion GetRevealVisualRotation(float frontT)
+    public static Quaternion GetRevealPageTurnRotation(float frontT)
+    {
+        frontT = EaseRevealPageTurn(frontT);
+
+        if (frontT < 0.5f)
+        {
+            float halfT = frontT * 2f;
+            float y = halfT * 90f;
+            return CardArtLibrary.RevealBackVisualLocalRotation * Quaternion.Euler(0f, y, 0f);
+        }
+
+        float frontHalfT = (frontT - 0.5f) * 2f;
+        float frontY = Mathf.Lerp(-90f, 0f, frontHalfT);
+        return CardArtLibrary.RevealFrontVisualLocalRotation * Quaternion.Euler(0f, frontY, 0f);
+    }
+
+    static float EaseRevealPageTurn(float frontT)
     {
         frontT = Mathf.Clamp01(frontT);
-        float backFlipX = Mathf.Lerp(180f, 0f, frontT);
-        float logoFixZ = Mathf.Lerp(180f, 0f, frontT);
-        return CardArtLibrary.HandVisualRotation * Quaternion.Euler(backFlipX, 0f, logoFixZ);
+        return frontT * frontT * (3f - 2f * frontT);
     }
 
     public void SetRevealVisualFlip(float frontT)
@@ -788,6 +804,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_cardVisual == null)
             return;
 
+        _cardVisual.localPosition = Vector3.zero;
         _cardVisual.localRotation = CardArtLibrary.HandVisualRotation;
         _cardVisual.localScale = CardArtLibrary.HandVisualScale;
         SetCardVisualMesh(CardArtLibrary.HandCardMesh);
