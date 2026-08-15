@@ -22,6 +22,9 @@ public static class PackOpenSequence
     const float PackExitDropFactor = 1.35f;
     const float PackDriftSwayFactor = 0.28f;
     const float PackPostShakePause = 0.05f;
+    const float RevealBackdropAlpha = 0.62f;
+    const float RevealBackdropFadeInDuration = 0.28f;
+    const float RevealBackdropFadeOutDuration = 0.32f;
 
     public static IEnumerator Run(PlayerCardHand hand, WorldBoosterPack pack, Camera camera)
     {
@@ -34,10 +37,14 @@ public static class PackOpenSequence
         pack.BeginOpening();
         hand.SetHandInputLocked(true);
 
+        float revealDistance = hand.OpenRevealDistance;
+        PackRevealBackdrop backdrop = PackRevealBackdrop.Create(camera, revealDistance);
+        if (backdrop != null)
+            yield return backdrop.FadeTo(RevealBackdropAlpha, RevealBackdropFadeInDuration);
+
         Transform revealRoot = new GameObject("PackRevealRoot").transform;
         revealRoot.SetParent(camera.transform, false);
 
-        float revealDistance = hand.OpenRevealDistance;
         float revealHeight = hand.OpenRevealHeight;
         revealRoot.localPosition = new Vector3(0f, revealHeight, revealDistance);
         revealRoot.localRotation = Quaternion.identity;
@@ -205,6 +212,12 @@ public static class PackOpenSequence
             yield return null;
         hand.SetAwaitingRevealCollect(false);
         hand.SetPackOpenMovementLocked(false);
+
+        if (backdrop != null)
+        {
+            yield return backdrop.FadeTo(0f, RevealBackdropFadeOutDuration);
+            Object.Destroy(backdrop.gameObject);
+        }
 
         // Fly cards into the hand fan.
         float flyDuration = duration * 0.35f;
