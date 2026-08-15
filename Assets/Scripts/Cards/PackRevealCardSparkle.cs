@@ -1,23 +1,35 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Multiple twinkling stars on a pack-reveal card face after it flips to the front.
+/// Regional twinkling stars on a pack-reveal card face until the player collects the cards.
 /// Drop a white star PNG at Resources/PackRevealStar.png (optional — procedural fallback exists).
 /// </summary>
 public sealed class PackRevealCardSparkle : MonoBehaviour
 {
     const string StarTextureResourcePath = "PackRevealStar";
     const float DepthInFrontOfCard = 0.006f;
-    const int MinStarCount = 10;
-    const int MaxStarCount = 17;
+    const float OutsideOverflowFraction = 0.22f;
+    const int RegionColumns = 3;
+    const int RegionRows = 3;
+    const int RegionCount = RegionColumns * RegionRows;
+    const int MaxActiveStars = 16;
+    const float SpawnIntervalMin = 0.22f;
+    const float SpawnIntervalMax = 0.48f;
+    const float InitialSpawnDelayMax = 0.18f;
+    const float LargerStarChance = 0.16f;
+    const int CenterRegionIndex = 4;
 
     static Texture2D _sharedStarTexture;
     static Shader _sharedShader;
 
-    readonly List<PackRevealTwinkleStar> _stars = new List<PackRevealTwinkleStar>(MaxStarCount);
-    bool _shown;
+    readonly List<PackRevealTwinkleStar> _activeStars = new List<PackRevealTwinkleStar>(MaxActiveStars);
+    readonly Queue<int> _regionQueue = new Queue<int>(RegionCount);
+
+    Coroutine _spawnRoutine;
+    bool _spawning;
 
     public static PackRevealCardSparkle Attach(Transform cardVisual, float revealScale)
     {
@@ -37,44 +49,115 @@ public sealed class PackRevealCardSparkle : MonoBehaviour
 
     public void Show()
     {
-        if (_shown)
+        if (_spawning)
             return;
 
-        _shown = true;
+        _spawning = true;
         gameObject.SetActive(true);
-        SpawnStars();
+        RefillRegionQueue();
+        _spawnRoutine = StartCoroutine(SpawnLoopRoutine());
     }
 
-    void SpawnStars()
+    IEnumerator SpawnLoopRoutine()
+    {
+        if (InitialSpawnDelayMax > 0f)
+            yield return new WaitForSeconds(Random.Range(0.04f, InitialSpawnDelayMax));
+
+        while (_spawning)
+        {
+            PruneFinishedStars();
+
+            if (_activeStars.Count < MaxActiveStars)
+                SpawnStarInNextRegion();
+
+            float wait = Random.Range(SpawnIntervalMin, SpawnIntervalMax);
+            yield return new WaitForSeconds(wait);
+        }
+    }
+
+    void SpawnStarInNextRegion()
     {
         Texture2D texture = GetStarTexture();
         Shader shader = GetStarShader();
         if (texture == null || shader == null)
             return;
 
-        int count = Random.Range(MinStarCount, MaxStarCount + 1);
-        float halfWidth = CardDimensions.Width * 0.4f;
-        float halfHeight = CardDimensions.Height * 0.4f;
-        float minSize = CardDimensions.Width * 0.08f;
-        float maxSize = CardDimensions.Width * 0.22f;
+        if (_regionQueue.Count == 0)
+            RefillRegionQueue();
 
-        for (int i = 0; i < count; i++)
+        int region = _regionQueue.Dequeue();
+        bool larger = Random.value < LargerStarChance;
+
+        float minSize = CardDimensions.Width * (larger ? 0.11f : 0.06f);
+        float maxSize = CardDimensions.Width * (larger ? 0.22f : 0.19f);
+        float size = Random.Range(minSize, maxSize);
+        Vector3 position = SampleRegionPosition(region);
+
+        var starObject = new GameObject(larger ? "TwinkleStar_Large" : "TwinkleStar");
+        starObject.transform.SetParent(transform, false);
+        starObject.transform.localPosition = position;
+        starObject.transform.localRotation = Quaternion.identity;
+        starObject.transform.localScale = Vector3.one * size;
+
+        var star = starObject.AddComponent<PackRevealTwinkleStar>();
+        star.Initialize(shader, texture);
+        _activeStars.Add(star);
+    }
+
+    void RefillRegionQueue()
+    {
+        _regionQueue.Clear();
+
+        var regions = new int[RegionCount - 1];
+        int index = 0;
+        for (int i = 0; i < RegionCount; i++)
         {
-            float size = Random.Range(minSize, maxSize);
-            var position = new Vector3(
-                Random.Range(-halfWidth, halfWidth),
-                Random.Range(-halfHeight, halfHeight),
-                DepthInFrontOfCard);
+            if (i == CenterRegionIndex)
+                continue;
 
-            var starObject = new GameObject("TwinkleStar");
-            starObject.transform.SetParent(transform, false);
-            starObject.transform.localPosition = position;
-            starObject.transform.localRotation = Quaternion.identity;
-            starObject.transform.localScale = Vector3.one * size;
+            regions[index++] = i;
+        }
 
-            var star = starObject.AddComponent<PackRevealTwinkleStar>();
-            star.Initialize(shader, texture);
-            _stars.Add(star);
+        for (int i = regions.Length - 1; i > 0; i--)
+        {
+            int swapIndex = Random.Range(0, i + 1);
+            (regions[i], regions[swapIndex]) = (regions[swapIndex], regions[i]);
+        }
+
+        for (int i = 0; i < regions.Length; i++)
+            _regionQueue.Enqueue(regions[i]);
+    }
+
+    Vector3 SampleRegionPosition(int region)
+    {
+        float cardHalfWidth = CardDimensions.Width * 0.5f;
+        float cardHalfHeight = CardDimensions.Height * 0.5f;
+        float extentHalfWidth = cardHalfWidth * (1f + OutsideOverflowFraction);
+        float extentHalfHeight = cardHalfHeight * (1f + OutsideOverflowFraction);
+
+        int column = region % RegionColumns;
+        int row = region / RegionColumns;
+        float cellWidth = (extentHalfWidth * 2f) / RegionColumns;
+        float cellHeight = (extentHalfHeight * 2f) / RegionRows;
+        float minX = -extentHalfWidth + column * cellWidth;
+        float minY = -extentHalfHeight + row * cellHeight;
+
+        float paddingX = cellWidth * 0.14f;
+        float paddingY = cellHeight * 0.14f;
+
+        return new Vector3(
+            Random.Range(minX + paddingX, minX + cellWidth - paddingX),
+            Random.Range(minY + paddingY, minY + cellHeight - paddingY),
+            DepthInFrontOfCard);
+    }
+
+    void PruneFinishedStars()
+    {
+        for (int i = _activeStars.Count - 1; i >= 0; i--)
+        {
+            PackRevealTwinkleStar star = _activeStars[i];
+            if (star == null)
+                _activeStars.RemoveAt(i);
         }
     }
 
@@ -132,6 +215,14 @@ public sealed class PackRevealCardSparkle : MonoBehaviour
 
     public void DestroySparkle()
     {
+        _spawning = false;
+
+        if (_spawnRoutine != null)
+        {
+            StopCoroutine(_spawnRoutine);
+            _spawnRoutine = null;
+        }
+
         if (Application.isPlaying)
             Destroy(gameObject);
         else
@@ -141,13 +232,16 @@ public sealed class PackRevealCardSparkle : MonoBehaviour
 
 sealed class PackRevealTwinkleStar : MonoBehaviour
 {
-    const float MinLifetime = 0.55f;
-    const float MaxLifetime = 1.05f;
-    const float FadeInPortion = 0.14f;
-    const float FadeOutStart = 0.32f;
+    const float HoldAtPeakDuration = 2f;
+    const float FadeInDurationMin = 0.28f;
+    const float FadeInDurationMax = 0.42f;
+    const float FadeOutDurationMin = 0.85f;
+    const float FadeOutDurationMax = 1.2f;
 
     Material _material;
     float _elapsed;
+    float _fadeInDuration;
+    float _fadeOutDuration;
     float _lifetime;
     float _twinkleSpeed;
     float _twinklePhase;
@@ -155,10 +249,12 @@ sealed class PackRevealTwinkleStar : MonoBehaviour
 
     public void Initialize(Shader shader, Texture2D texture)
     {
-        _lifetime = Random.Range(MinLifetime, MaxLifetime);
-        _twinkleSpeed = Random.Range(10f, 18f);
+        _fadeInDuration = Random.Range(FadeInDurationMin, FadeInDurationMax);
+        _fadeOutDuration = Random.Range(FadeOutDurationMin, FadeOutDurationMax);
+        _lifetime = _fadeInDuration + HoldAtPeakDuration + _fadeOutDuration;
+        _twinkleSpeed = Random.Range(4.5f, 8.5f);
         _twinklePhase = Random.Range(0f, Mathf.PI * 2f);
-        _peakAlpha = Random.Range(0.5f, 1f);
+        _peakAlpha = Random.Range(0.45f, 0.9f);
         transform.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
 
         var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -173,7 +269,7 @@ sealed class PackRevealTwinkleStar : MonoBehaviour
 
         _material = new Material(shader);
         _material.mainTexture = texture;
-        _material.color = Color.white;
+        _material.color = new Color(1f, 1f, 1f, 0f);
         _material.renderQueue = (int)RenderQueue.Transparent + 3;
 
         if (_material.HasProperty("_Surface"))
@@ -190,22 +286,35 @@ sealed class PackRevealTwinkleStar : MonoBehaviour
     void Update()
     {
         _elapsed += Time.deltaTime;
-        float t = _elapsed / _lifetime;
-        if (t >= 1f)
+        if (_elapsed >= _lifetime)
         {
             Destroy(gameObject);
             return;
         }
 
         float envelope;
-        if (t < FadeInPortion)
-            envelope = t / FadeInPortion;
-        else if (t < FadeOutStart)
+        if (_elapsed < _fadeInDuration)
+        {
+            envelope = Mathf.SmoothStep(0f, 1f, _elapsed / _fadeInDuration);
+        }
+        else if (_elapsed < _fadeInDuration + HoldAtPeakDuration)
+        {
             envelope = 1f;
+        }
         else
-            envelope = 1f - Mathf.SmoothStep(0f, 1f, (t - FadeOutStart) / (1f - FadeOutStart));
+        {
+            float fadeOutElapsed = _elapsed - _fadeInDuration - HoldAtPeakDuration;
+            envelope = 1f - Mathf.SmoothStep(0f, 1f, fadeOutElapsed / _fadeOutDuration);
+        }
 
-        float twinkle = 0.72f + 0.28f * Mathf.Sin(_elapsed * _twinkleSpeed + _twinklePhase);
+        float twinkle = envelope >= 0.98f
+            ? 0.92f + 0.08f * Mathf.Sin(_elapsed * _twinkleSpeed + _twinklePhase)
+            : 0.84f + 0.16f * Mathf.Sin(_elapsed * _twinkleSpeed + _twinklePhase);
+        float scalePulse = 1f + 0.06f * Mathf.Sin(_elapsed * (_twinkleSpeed * 0.7f) + _twinklePhase);
+
+        if (transform.childCount > 0)
+            transform.GetChild(0).localScale = Vector3.one * scalePulse;
+
         SetAlpha(_peakAlpha * envelope * twinkle);
     }
 
@@ -214,7 +323,7 @@ sealed class PackRevealTwinkleStar : MonoBehaviour
         if (_material == null)
             return;
 
-        Color color = _material.color;
+        Color color = Color.white;
         color.a = alpha;
         _material.color = color;
     }
