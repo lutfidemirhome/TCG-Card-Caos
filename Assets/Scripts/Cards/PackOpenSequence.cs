@@ -90,6 +90,7 @@ public static class PackOpenSequence
         // Spawn reveal cards in a horizontal row above the pack — backs toward the player.
         IReadOnlyList<CardDefinition> contents = pack.RollContents(CardDimensions.CardsPerBoosterPack);
         var revealCards = new List<WorldCard>(contents.Count);
+        var revealSparkles = new List<PackRevealCardSparkle>(contents.Count);
         float cardSpacing = CardDimensions.Width * revealScale * RevealCardSpacingFactor;
         float rowWidth = cardSpacing * Mathf.Max(0, contents.Count - 1);
         float halfHeight = CardDimensions.Height * revealScale * 0.5f;
@@ -119,6 +120,13 @@ public static class PackOpenSequence
                 0f,
                 showsBack: true);
             revealCards.Add(card);
+
+            PackRevealCardSparkle sparkle = card.AttachRevealSparkle(revealScale);
+            if (sparkle != null)
+            {
+                sparkle.gameObject.SetActive(false);
+                revealSparkles.Add(sparkle);
+            }
         }
 
         float spreadDuration = duration * 0.28f;
@@ -191,6 +199,10 @@ public static class PackOpenSequence
             }
 
             card.SetRevealVisualFlip(1f);
+
+            if (i < revealSparkles.Count && revealSparkles[i] != null)
+                revealSparkles[i].Show();
+
             yield return RevealScalePulseRoutine(card.transform, revealScale, FlipRevealPopPeak, FlipRevealPopDuration);
 
             if (i < revealCards.Count - 1)
@@ -218,6 +230,8 @@ public static class PackOpenSequence
             yield return backdrop.FadeTo(0f, RevealBackdropFadeOutDuration);
             Object.Destroy(backdrop.gameObject);
         }
+
+        DestroyRevealSparkles(revealSparkles);
 
         // Fly cards into the hand fan.
         float flyDuration = duration * 0.35f;
@@ -352,5 +366,20 @@ public static class PackOpenSequence
             card.transform.localScale = Vector3.one * baseScale;
             card.transform.localPosition = baseLocalPositions[i];
         }
+    }
+
+    static void DestroyRevealSparkles(List<PackRevealCardSparkle> sparkles)
+    {
+        if (sparkles == null)
+            return;
+
+        for (int i = 0; i < sparkles.Count; i++)
+        {
+            PackRevealCardSparkle sparkle = sparkles[i];
+            if (sparkle != null)
+                sparkle.DestroySparkle();
+        }
+
+        sparkles.Clear();
     }
 }

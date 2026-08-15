@@ -406,6 +406,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         RefreshRenderMode();
     }
 
+    public PackRevealCardSparkle AttachRevealSparkle(float revealScale)
+    {
+        EnsureCardVisual();
+        Transform anchor = _cardVisual != null ? _cardVisual : transform;
+        return PackRevealCardSparkle.Attach(anchor, revealScale);
+    }
+
     void ApplyRevealVisualOrientation(float frontT)
     {
         if (_cardVisual == null)
