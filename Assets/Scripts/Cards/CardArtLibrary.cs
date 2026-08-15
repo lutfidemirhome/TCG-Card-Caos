@@ -186,6 +186,7 @@ public static class CardArtLibrary
 
     /// <summary>
     /// Instanced face-down ground cards: mesh UVs are U-flipped like fronts, with no WorldVisualScale.x = -1.
+    /// V flip cancels the instanced draw's 180° X rotation; U flip keeps the back aligned with in-flight art.
     /// Do not use <see cref="ApplyBackTextureUFlip"/> here — that flip is only for shelf/hand/detail back faces.
     /// </summary>
     public static Material GetInstancedGroundBackMaterial()
@@ -198,7 +199,7 @@ public static class CardArtLibrary
                 name = "CardBackWorldInstancedGround",
                 enableInstancing = true,
             };
-            ApplyIdentityTextureTransform(_instancedGroundBackMaterial);
+            ApplyInstancedGroundBackTextureTransform(_instancedGroundBackMaterial);
             ConfigureGroundWorldMaterial(_instancedGroundBackMaterial);
         }
 
@@ -451,6 +452,27 @@ public static class CardArtLibrary
         {
             material.SetTextureScale("_MainTex", BackTextureUScale);
             material.SetTextureOffset("_MainTex", BackTextureUOffset);
+        }
+    }
+
+    static readonly Vector2 InstancedGroundBackTextureScale = new Vector2(-1f, -1f);
+    static readonly Vector2 InstancedGroundBackTextureOffset = new Vector2(1f, 1f);
+
+    static void ApplyInstancedGroundBackTextureTransform(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTextureScale("_BaseMap", InstancedGroundBackTextureScale);
+            material.SetTextureOffset("_BaseMap", InstancedGroundBackTextureOffset);
+        }
+
+        if (material.HasProperty("_MainTex"))
+        {
+            material.SetTextureScale("_MainTex", InstancedGroundBackTextureScale);
+            material.SetTextureOffset("_MainTex", InstancedGroundBackTextureOffset);
         }
     }
 
