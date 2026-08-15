@@ -393,7 +393,17 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public void BeginOpening()
     {
         _state = PackState.Opening;
+        SetHandSelected(false);
+        ReleaseInteractionOutline();
         transform.SetParent(null, true);
+    }
+
+    /// <summary>Face the player during the camera-local pack open sequence (same basis as reveal cards).</summary>
+    public void ApplyRevealOpenPose(Quaternion revealRootLocalRotation)
+    {
+        EnsureVisual();
+        transform.localRotation = revealRootLocalRotation;
+        ApplyHandVisualOrientation();
     }
 
     public void DropWithPhysics(Vector3 velocity, float worldScaleTransitionDuration = 0.12f)

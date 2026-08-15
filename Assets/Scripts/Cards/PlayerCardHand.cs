@@ -55,6 +55,7 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float openRevealDistance = 0.48f;
     [SerializeField] float openRevealHeight = 0.02f;
     [SerializeField] float openSequenceDuration = 1.35f;
+    [SerializeField] float openPackAnticipationHold = 1f;
     [SerializeField] KeyCode openPackKey = KeyCode.Return;
 
     static readonly RaycastHit[] ThrowAimHits = new RaycastHit[8];
@@ -87,6 +88,7 @@ public class PlayerCardHand : MonoBehaviour
     public float OpenRevealDistance => openRevealDistance;
     public float OpenRevealHeight => openRevealHeight;
     public float OpenSequenceDuration => openSequenceDuration;
+    public float OpenPackAnticipationHold => openPackAnticipationHold;
     public float PickupFlightArcHeight => pickupFlightArcHeight;
 
     public bool CanPickUpPack =>

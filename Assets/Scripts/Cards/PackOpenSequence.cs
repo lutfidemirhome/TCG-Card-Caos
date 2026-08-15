@@ -12,6 +12,10 @@ public static class PackOpenSequence
     const float FlipStagger = 0.07f;
     const float RevealScreenScaleMultiplier = 1.2f;
     const float RevealCardSpacingFactor = 1.12f;
+    const float PackDriftDurationFactor = 0.11f;
+    const float PackExitDropFactor = 1.35f;
+    const float PackDriftSwayFactor = 0.28f;
+    const float PackPostShakePause = 0.05f;
 
     public static IEnumerator Run(PlayerCardHand hand, WorldBoosterPack pack, Camera camera)
     {
@@ -33,45 +37,39 @@ public static class PackOpenSequence
         float revealScale = heldScale * RevealScreenScaleMultiplier;
         float duration = hand.OpenSequenceDuration;
         Quaternion revealFaceRotation = CardArtLibrary.RevealRootLocalRotation;
+        Quaternion packRevealWorldRotation = revealRoot.rotation * revealFaceRotation;
+        Vector3 packRevealLocalStart = new Vector3(0f, -CardDimensions.Height * heldScale * 0.18f, 0f);
 
-        // Move pack to screen center.
+        // Move pack toward the reveal anchor, facing the player like a held pack.
         float moveInDuration = duration * 0.22f;
         float elapsed = 0f;
         Vector3 packStartWorldPos = pack.transform.position;
         Quaternion packStartWorldRot = pack.transform.rotation;
         Vector3 packStartScale = pack.transform.localScale;
+        Vector3 packRevealWorldPos = revealRoot.TransformPoint(packRevealLocalStart);
 
         while (elapsed < moveInDuration)
         {
             elapsed += Time.deltaTime;
             float t = Mathf.SmoothStep(0f, 1f, elapsed / moveInDuration);
-            Vector3 targetWorldPos = revealRoot.TransformPoint(Vector3.zero);
-            Quaternion targetWorldRot = revealRoot.rotation;
-            pack.transform.position = Vector3.Lerp(packStartWorldPos, targetWorldPos, t);
-            pack.transform.rotation = Quaternion.Slerp(packStartWorldRot, targetWorldRot, t);
+            pack.transform.position = Vector3.Lerp(packStartWorldPos, packRevealWorldPos, t);
+            pack.transform.rotation = Quaternion.Slerp(packStartWorldRot, packRevealWorldRotation, t);
             pack.transform.localScale = Vector3.Lerp(packStartScale, Vector3.one * heldScale, t);
             yield return null;
         }
 
-        // Tear / shake.
-        float tearDuration = duration * 0.18f;
-        elapsed = 0f;
-        Transform packTransform = pack.transform;
-        Vector3 basePos = packTransform.position;
-        while (elapsed < tearDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / tearDuration;
-            float shake = (1f - t) * 0.012f;
-            packTransform.position = basePos + new Vector3(
-                Random.Range(-shake, shake),
-                Random.Range(-shake, shake),
-                Random.Range(-shake * 0.5f, shake * 0.5f));
-            packTransform.localScale = Vector3.one * heldScale * (1f + Mathf.Sin(t * Mathf.PI) * 0.04f);
-            yield return null;
-        }
+        pack.transform.SetParent(revealRoot, false);
+        pack.transform.localPosition = packRevealLocalStart;
+        pack.ApplyRevealOpenPose(revealFaceRotation);
+        pack.transform.localScale = Vector3.one * heldScale;
 
-        packTransform.position = basePos;
+        Transform packTransform = pack.transform;
+        Vector3 baseLocalPos = packTransform.localPosition;
+        yield return AnticipationHoldRoutine(
+            packTransform,
+            baseLocalPos,
+            heldScale,
+            hand.OpenPackAnticipationHold);
 
         // Spawn reveal cards in a horizontal row above the pack — backs toward the player.
         IReadOnlyList<CardDefinition> contents = pack.RollContents(CardDimensions.CardsPerBoosterPack);
@@ -79,6 +77,11 @@ public static class PackOpenSequence
         float cardSpacing = CardDimensions.Width * revealScale * RevealCardSpacingFactor;
         float rowWidth = cardSpacing * Mathf.Max(0, contents.Count - 1);
         float halfHeight = CardDimensions.Height * revealScale * 0.5f;
+        float packDriftDuration = duration * PackDriftDurationFactor;
+        float packExitLocalY = -CardDimensions.Height * heldScale * PackExitDropFactor;
+        float packDriftSwayX = CardDimensions.Width * heldScale * PackDriftSwayFactor;
+        float packDriftSwaySign = Random.value < 0.5f ? -1f : 1f;
+        bool packDestroyed = false;
 
         for (int i = 0; i < contents.Count; i++)
         {
@@ -108,7 +111,23 @@ public static class PackOpenSequence
         {
             elapsed += Time.deltaTime;
             float t = Mathf.SmoothStep(0f, 1f, elapsed / spreadDuration);
-            packTransform.localScale = Vector3.one * heldScale * (1f - t * 0.85f);
+
+            if (!packDestroyed && pack != null)
+            {
+                float packT = Mathf.Clamp01(elapsed / packDriftDuration);
+                float packFall = packT * packT;
+                float packY = Mathf.Lerp(baseLocalPos.y, packExitLocalY, packFall);
+                float packX = baseLocalPos.x
+                    + packDriftSwaySign * packDriftSwayX * Mathf.Sin(packT * Mathf.PI);
+                packTransform.localPosition = new Vector3(packX, packY, baseLocalPos.z);
+                packTransform.localScale = Vector3.one * heldScale;
+
+                if (packT >= 1f)
+                {
+                    Object.Destroy(pack.gameObject);
+                    packDestroyed = true;
+                }
+            }
 
             for (int i = 0; i < revealCards.Count; i++)
             {
@@ -122,13 +141,14 @@ public static class PackOpenSequence
             yield return null;
         }
 
+        if (!packDestroyed && pack != null)
+            Object.Destroy(pack.gameObject);
+
         for (int i = 0; i < revealCards.Count; i++)
         {
             if (revealCards[i] != null)
                 revealCards[i].transform.localScale = Vector3.one * revealScale;
         }
-
-        Object.Destroy(pack.gameObject);
 
         float settleDuration = duration * 0.12f;
         elapsed = 0f;
@@ -196,5 +216,36 @@ public static class PackOpenSequence
         Object.Destroy(revealRoot.gameObject);
         hand.ClearHeldPackReference();
         hand.SetHandInputLocked(false);
+    }
+
+    static IEnumerator AnticipationHoldRoutine(
+        Transform packTransform,
+        Vector3 baseLocalPos,
+        float heldScale,
+        float holdDuration)
+    {
+        if (packTransform == null || holdDuration <= 0f)
+            yield break;
+
+        float elapsed = 0f;
+        while (elapsed < holdDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / holdDuration);
+            float intensity = Mathf.Lerp(0.002f, 0.007f, t * t);
+            float tremor = Mathf.Sin(elapsed * 30f) * intensity * 0.25f;
+            packTransform.localPosition = baseLocalPos + new Vector3(
+                tremor + Random.Range(-intensity, intensity),
+                tremor + Random.Range(-intensity, intensity),
+                Random.Range(-intensity * 0.3f, intensity * 0.3f));
+            packTransform.localScale = Vector3.one * heldScale * (1f + Mathf.Sin(elapsed * 22f) * 0.012f * t);
+            yield return null;
+        }
+
+        packTransform.localPosition = baseLocalPos;
+        packTransform.localScale = Vector3.one * heldScale;
+
+        if (PackPostShakePause > 0f)
+            yield return new WaitForSeconds(PackPostShakePause);
     }
 }
