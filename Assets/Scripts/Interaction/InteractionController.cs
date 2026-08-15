@@ -93,10 +93,10 @@ public class InteractionController : MonoBehaviour
             QueryTriggerInteraction.Ignore);
 
         IInteractable interactable = ResolveBestInteractable(ray, HitBuffer, hitCount, aimedCard, aimedCardDistance);
-        UpdateCardFocus(_raycastAimedCard);
 
         if (interactable == null)
         {
+            ClearDelayedCardUiState();
             UpdateSelectedPackPrompt();
             return;
         }
@@ -106,12 +106,21 @@ public class InteractionController : MonoBehaviour
 
         if (interactable is CardShelf shelf)
         {
+            ClearDelayedCardUiState();
             shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf));
         }
         else
         {
             ClearShelfAimForNonShelfTarget(interactable);
         }
+
+        if (interactable is WorldCard worldCard)
+        {
+            HandleGroundCardTarget(worldCard);
+            return;
+        }
+
+        ClearDelayedCardUiState();
 
         string prompt = interactable.GetPromptText();
         if (string.IsNullOrEmpty(prompt))
@@ -122,30 +131,68 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
-        if (interactable is WorldCard && inspectPreviewDelay > 0f)
-        {
-            if (!ReferenceEquals(interactable, _pendingCardPromptTarget))
-            {
-                if (_currentTarget is CardShelf previousShelf)
-                    previousShelf.ClearAim();
-
-                _pendingCardPromptTarget = interactable;
-                ClearPromptAndHighlight();
-            }
-
-            return;
-        }
-
         _pendingCardPromptTarget = null;
         ShowPrompt(interactable, prompt);
     }
 
-    static void UpdateCardFocus(WorldCard aimedCard)
+    void HandleGroundCardTarget(WorldCard worldCard)
     {
-        if (aimedCard != null && !aimedCard.IsInHand)
-            CardInteractionFocus.SetFocusedCard(aimedCard);
-        else
+        if (worldCard == null || worldCard.IsInHand)
+        {
+            ClearDelayedCardUiState();
+            return;
+        }
+
+        if (inspectPreviewDelay <= 0f)
+        {
+            _pendingCardPromptTarget = null;
+            ShowGroundCardUi(worldCard);
+            return;
+        }
+
+        if (!ReferenceEquals(worldCard, _pendingCardPromptTarget))
+        {
+            if (_currentTarget is CardShelf previousShelf)
+                previousShelf.ClearAim();
+
+            _pendingCardPromptTarget = worldCard;
+            _inspectPreviewTarget = worldCard;
+            _inspectPreviewTimer = 0f;
+            _inspectPreview?.Hide();
+            ClearPromptAndHighlight();
             CardInteractionFocus.ClearFocus();
+        }
+    }
+
+    void ClearDelayedCardUiState()
+    {
+        _pendingCardPromptTarget = null;
+
+        if (_inspectPreviewTarget != null)
+        {
+            _inspectPreview?.Hide();
+            _inspectPreviewTarget = null;
+            _inspectPreviewTimer = 0f;
+        }
+
+        CardInteractionFocus.ClearFocus();
+
+        if (_currentTarget is WorldCard)
+            ClearPromptAndHighlight();
+    }
+
+    void ShowGroundCardUi(WorldCard worldCard)
+    {
+        if (worldCard == null || worldCard.IsInHand)
+            return;
+
+        CardInteractionFocus.SetFocusedCard(worldCard);
+
+        if (_inspectPreview == null)
+            _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
+
+        _inspectPreview.Show(worldCard);
+        ShowPrompt(worldCard, worldCard.GetPromptText());
     }
 
     IInteractable ResolveBestInteractable(
@@ -319,8 +366,7 @@ public class InteractionController : MonoBehaviour
         if (_currentTarget is CardShelf shelf)
             shelf.ClearAim();
 
-        _pendingCardPromptTarget = null;
-        CardInteractionFocus.ClearFocus();
+        ClearDelayedCardUiState();
         ClearPromptAndHighlight();
     }
 
@@ -368,29 +414,30 @@ public class InteractionController : MonoBehaviour
     void UpdateInspectPreview()
     {
         WorldCard aimedCard = _raycastAimedCard;
-        if (aimedCard == null)
+        if (aimedCard == null || aimedCard.IsInHand)
         {
-            if (_inspectPreviewTarget != null)
-            {
-                _inspectPreview?.Hide();
-                _inspectPreviewTarget = null;
-                _inspectPreviewTimer = 0f;
-            }
-
+            ClearDelayedCardUiState();
             return;
         }
+
+        if (_pendingCardPromptTarget == null || !ReferenceEquals(aimedCard, _pendingCardPromptTarget))
+            return;
 
         if (!ReferenceEquals(aimedCard, _inspectPreviewTarget))
         {
             _inspectPreviewTarget = aimedCard;
             _inspectPreviewTimer = 0f;
             if (inspectPreviewDelay > 0f)
+            {
                 _inspectPreview?.Hide();
+                ClearPromptAndHighlight();
+                CardInteractionFocus.ClearFocus();
+            }
         }
 
         if (inspectPreviewDelay <= 0f)
         {
-            ShowDelayedCardUi(aimedCard);
+            ShowGroundCardUi(aimedCard);
             return;
         }
 
@@ -398,20 +445,7 @@ public class InteractionController : MonoBehaviour
         if (_inspectPreviewTimer < inspectPreviewDelay)
             return;
 
-        ShowDelayedCardUi(aimedCard);
-    }
-
-    void ShowDelayedCardUi(WorldCard aimedCard)
-    {
-        if (_inspectPreview == null)
-            _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
-
-        _inspectPreview.Show(aimedCard);
-
-        if (_pendingCardPromptTarget == null || !ReferenceEquals(aimedCard, _pendingCardPromptTarget))
-            return;
-
-        ShowPrompt(aimedCard, aimedCard.GetPromptText());
+        ShowGroundCardUi(aimedCard);
     }
 
     static IInteractionHighlight GetHighlight(IInteractable interactable)
