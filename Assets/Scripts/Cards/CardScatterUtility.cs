@@ -20,6 +20,8 @@ public static class CardScatterUtility
     public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "Card_";
+    public const int DefaultPackScatterCount = 12;
+    public const string TestPackPrefix = "BoosterPack_";
 
     const int CardsPerSpawnFrame = 250;
     const float GroundFaceDownRatio = 0.2f;
@@ -117,6 +119,8 @@ public static class CardScatterUtility
             card.transform.SetParent(scatterRoot, true);
         }
 
+        SpawnScatteredPacks(scatterRoot, groundY, positions);
+
         CardGroundStack.RebuildAll();
     }
 
@@ -176,6 +180,41 @@ public static class CardScatterUtility
 
             if (i > 0 && i % CardsPerSpawnFrame == 0)
                 yield return null;
+        }
+
+        SpawnScatteredPacks(scatterRoot, groundY, positions);
+    }
+
+    static void SpawnScatteredPacks(Transform scatterRoot, float groundY, List<Vector2> occupiedCardPositions)
+    {
+        SpawnScatteredPacks(scatterRoot, groundY, occupiedCardPositions, DefaultPackScatterCount);
+    }
+
+    public static void SpawnScatteredPacks(
+        Transform scatterRoot,
+        float groundY,
+        List<Vector2> occupiedCardPositions,
+        int count)
+    {
+        if (count <= 0 || scatterRoot == null)
+            return;
+
+        var packPositions = GenerateScatterPositions(count, occupiedCardPositions);
+        BoosterPackDefinition definition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
+
+        for (int i = 0; i < packPositions.Count; i++)
+        {
+            Vector2 xz = packPositions[i];
+            var position = new Vector3(xz.x, groundY, xz.y);
+            var rotation = GenerateScatterRotation();
+
+            WorldBoosterPack pack = PackFactory.CreateWorldPack(
+                position,
+                rotation,
+                definition,
+                packName: TestPackPrefix + (i + 1).ToString("00"));
+            pack.transform.SetParent(scatterRoot, true);
+            CardGroundStack.ApplyStackHeight(pack, placeOnTop: true);
         }
     }
 
@@ -380,7 +419,7 @@ public static class CardScatterUtility
     /// Irregular random scatter across the full zone with a soft minimum spacing
     /// (no neat rows, no intentional piles). Spacing compresses if the zone is full.
     /// </summary>
-    static List<Vector2> GenerateScatterPositions(int count)
+    static List<Vector2> GenerateScatterPositions(int count, IReadOnlyList<Vector2> avoid = null)
     {
         ScatterRegion region = ScatterRegion.FromScene();
         float width = Mathf.Max(0.01f, region.MaxX - region.MinX);
@@ -413,7 +452,8 @@ public static class CardScatterUtility
                 }
 
                 candidate = region.RandomXZ();
-                if (IsFarEnough(candidate, positions, spacingSq))
+                if (IsFarEnough(candidate, positions, spacingSq)
+                    && IsFarEnough(candidate, avoid, spacingSq))
                 {
                     found = true;
                     break;
@@ -430,6 +470,11 @@ public static class CardScatterUtility
                     Vector2 near = positions[Random.Range(0, positions.Count)];
                     candidate = region.Clamp(near + Random.insideUnitCircle * (minSpacing * 0.75f));
                 }
+                else if (avoid != null && avoid.Count > 0)
+                {
+                    Vector2 near = avoid[Random.Range(0, avoid.Count)];
+                    candidate = region.Clamp(near + Random.insideUnitCircle * (minSpacing * 0.75f));
+                }
             }
 
             positions.Add(region.Clamp(candidate));
@@ -438,8 +483,11 @@ public static class CardScatterUtility
         return positions;
     }
 
-    static bool IsFarEnough(Vector2 candidate, List<Vector2> existing, float minSpacingSq)
+    static bool IsFarEnough(Vector2 candidate, IReadOnlyList<Vector2> existing, float minSpacingSq)
     {
+        if (existing == null || existing.Count == 0)
+            return true;
+
         for (int i = 0; i < existing.Count; i++)
         {
             if ((existing[i] - candidate).sqrMagnitude < minSpacingSq)

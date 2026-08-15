@@ -17,8 +17,12 @@ public class InteractionController : MonoBehaviour
 
     static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
+    const float DefaultPromptAnchoredY = 220f;
+    const float RevealCollectPromptAnchoredY = -50f;
+
     Canvas _canvas;
     GameObject _promptRoot;
+    RectTransform _promptPanelRect;
     Text _promptText;
     IInteractable _currentTarget;
     IInteractionHighlight _currentHighlight;
@@ -56,6 +60,13 @@ public class InteractionController : MonoBehaviour
 
     void UpdateTarget()
     {
+        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
+        if (hand != null && hand.IsAwaitingRevealCollect)
+        {
+            UpdateSelectedPackPrompt();
+            return;
+        }
+
         Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
 
         WorldCard aimedCard = null;
@@ -81,14 +92,17 @@ public class InteractionController : MonoBehaviour
             interactMask,
             QueryTriggerInteraction.Ignore);
 
-        IInteractable interactable = ResolveBestInteractable(ray, HitBuffer, hitCount, aimedCard);
+        IInteractable interactable = ResolveBestInteractable(ray, HitBuffer, hitCount, aimedCard, aimedCardDistance);
         UpdateCardFocus(_raycastAimedCard);
 
         if (interactable == null)
         {
-            ClearTarget();
+            UpdateSelectedPackPrompt();
             return;
         }
+
+        if (interactable is WorldBoosterPack)
+            UpdateSelectedPackPrompt(clearOnly: true);
 
         if (interactable is CardShelf shelf)
         {
@@ -138,7 +152,8 @@ public class InteractionController : MonoBehaviour
         Ray ray,
         RaycastHit[] hits,
         int hitCount,
-        WorldCard aimedCard)
+        WorldCard aimedCard,
+        float aimedCardDistance)
     {
         PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
 
@@ -190,6 +205,15 @@ public class InteractionController : MonoBehaviour
             }
         }
 
+        WorldBoosterPack aimedPack = bestOther as WorldBoosterPack;
+        if (aimedCard != null && aimedPack != null)
+        {
+            if (bestOtherDistance < aimedCardDistance)
+                return aimedPack;
+
+            return aimedCard;
+        }
+
         if (aimedCard != null)
             return aimedCard;
 
@@ -221,11 +245,73 @@ public class InteractionController : MonoBehaviour
 
     void HandleInput()
     {
+        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
+
+        if (hand != null && hand.IsAwaitingRevealCollect)
+        {
+            if (Input.GetKeyDown(KeyCode.Return))
+            {
+                hand.RequestRevealCollect();
+                return;
+            }
+        }
+
+        if (hand != null && hand.IsPackSelected)
+        {
+            if (Input.GetKeyDown(KeyCode.Return))
+            {
+                hand.TryOpenSelectedPack();
+                ClearTarget();
+                return;
+            }
+        }
+
         if (_currentTarget == null || !Input.GetKeyDown(interactKey))
             return;
 
         _currentTarget.Interact(gameObject.transform.root.gameObject);
         ClearTarget();
+    }
+
+    void UpdateSelectedPackPrompt(bool clearOnly = false)
+    {
+        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
+        if (!clearOnly && hand != null && hand.IsAwaitingRevealCollect)
+        {
+            string revealPrompt = hand.GetRevealCollectPromptText();
+            if (!string.IsNullOrEmpty(revealPrompt))
+            {
+                ShowPrompt(SelectedPackPromptTarget.Instance, revealPrompt, RevealCollectPromptAnchoredY, pivotCenter: true);
+                return;
+            }
+        }
+
+        if (!clearOnly && hand != null && hand.IsPackSelected)
+        {
+            string prompt = hand.GetSelectedPackPromptText();
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                ShowPrompt(SelectedPackPromptTarget.Instance, prompt);
+                return;
+            }
+        }
+
+        if (_currentTarget is SelectedPackPromptTarget)
+            ClearTarget();
+    }
+
+    sealed class SelectedPackPromptTarget : IInteractable
+    {
+        public static readonly SelectedPackPromptTarget Instance = new SelectedPackPromptTarget();
+
+        SelectedPackPromptTarget() { }
+
+        public string GetPromptText() => string.Empty;
+
+        public void Interact(GameObject interactor)
+        {
+            // Pack open / reveal collect use Enter only (see HandleInput).
+        }
     }
 
     void ClearTarget()
@@ -246,10 +332,20 @@ public class InteractionController : MonoBehaviour
             _promptRoot.SetActive(false);
     }
 
-    void ShowPrompt(IInteractable interactable, string prompt)
+    void ShowPrompt(
+        IInteractable interactable,
+        string prompt,
+        float anchoredY = DefaultPromptAnchoredY,
+        bool pivotCenter = false)
     {
         if (interactable == null || string.IsNullOrEmpty(prompt))
             return;
+
+        if (_promptPanelRect != null)
+        {
+            _promptPanelRect.pivot = pivotCenter ? new Vector2(0.5f, 0.5f) : new Vector2(0.5f, 0f);
+            _promptPanelRect.anchoredPosition = new Vector2(0f, anchoredY);
+        }
 
         if (!ReferenceEquals(interactable, _currentTarget))
         {
@@ -347,10 +443,11 @@ public class InteractionController : MonoBehaviour
         background.raycastTarget = false;
 
         RectTransform panelRect = background.rectTransform;
+        _promptPanelRect = panelRect;
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.pivot = new Vector2(0.5f, 0f);
-        panelRect.anchoredPosition = new Vector2(0f, 220f);
+        panelRect.anchoredPosition = new Vector2(0f, DefaultPromptAnchoredY);
         panelRect.sizeDelta = new Vector2(460f, 52f);
 
         var textGo = new GameObject("PromptText");

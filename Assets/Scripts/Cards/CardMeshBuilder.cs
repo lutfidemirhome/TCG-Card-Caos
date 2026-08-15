@@ -314,7 +314,10 @@ public static class CardMeshBuilder
     /// <summary>
     /// Builds a lightweight trading-card mesh from a reference mesh (silhouette + UVs preserved).
     /// </summary>
-    public static Mesh CreateTradingCardMeshFromReference(Mesh referenceMesh, int cornerSegments = DefaultCornerSegments)
+    public static Mesh CreateTradingCardMeshFromReference(
+        Mesh referenceMesh,
+        int cornerSegments = DefaultCornerSegments,
+        bool includeEdgeGeometry = true)
     {
         if (referenceMesh == null)
             return null;
@@ -332,7 +335,7 @@ public static class CardMeshBuilder
             cornerRadius,
             cornerSegments,
             referenceMesh,
-            includeEdgeGeometry: true);
+            includeEdgeGeometry);
     }
 
     public static int CountTriangles(Mesh mesh)

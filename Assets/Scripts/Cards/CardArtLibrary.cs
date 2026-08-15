@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Loads the shared trading-card mesh and front/back materials.
@@ -33,6 +34,19 @@ public static class CardArtLibrary
     /// <summary>Cancels the horizontal mirror from HandVisualRotation (left-right symmetry).</summary>
     public static readonly Vector3 HandVisualScale = new Vector3(-1f, 1f, 1f);
 
+    /// <summary>Pitches a reveal card flat toward the camera (same basis as the hand fan).</summary>
+    public static readonly Quaternion RevealRootLocalRotation =
+        Quaternion.FromToRotation(Vector3.up, -Vector3.forward);
+
+    /// <summary>Pack reveal: front submesh (+Z) toward the camera (matches the hand fan).</summary>
+    public static readonly Quaternion RevealFrontVisualLocalRotation = HandVisualRotation;
+
+    /// <summary>
+    /// Pack reveal: back toward camera, logo upright. X shows the back face; Z corrects art orientation.
+    /// </summary>
+    public static readonly Quaternion RevealBackVisualLocalRotation =
+        HandVisualRotation * Quaternion.Euler(180f, 0f, 180f);
+
     /// <summary>Upright card on shelf slots (+Y height, +Z face).</summary>
     public static readonly Quaternion ShelfVisualRotation = Quaternion.identity;
 
@@ -48,6 +62,7 @@ public static class CardArtLibrary
     public static readonly Quaternion ModelCorrectionRotation = WorldVisualRotation;
 
     static Mesh _cardMesh;
+    static Mesh _handCardMesh;
     static Mesh _instancedCardMesh;
     static Mesh _instancedCardBackMesh;
     static Material _sharedFrontWorldTemplate;
@@ -96,6 +111,28 @@ public static class CardArtLibrary
         {
             EnsureLoaded();
             return _cardMesh;
+        }
+    }
+
+    /// <summary>
+    /// Front/back faces only — no perimeter edge strips. Hand cards face the camera directly,
+    /// so edge UVs would show the art's black padding as a jagged top border.
+    /// </summary>
+    public static Mesh HandCardMesh
+    {
+        get
+        {
+            EnsureLoaded();
+            if (_handCardMesh == null && _cardMesh != null)
+            {
+                _handCardMesh = CardMeshBuilder.CreateTradingCardMeshFromReference(
+                    _cardMesh,
+                    includeEdgeGeometry: false);
+                if (_handCardMesh != null)
+                    _handCardMesh.name = "HandCardMesh";
+            }
+
+            return _handCardMesh != null ? _handCardMesh : _cardMesh;
         }
     }
 
@@ -265,6 +302,7 @@ public static class CardArtLibrary
     public static void ResetCache()
     {
         _cardMesh = null;
+        _handCardMesh = null;
         _instancedCardMesh = null;
         _instancedCardBackMesh = null;
         _instancedGroundBackMaterial = null;
@@ -337,7 +375,7 @@ public static class CardArtLibrary
     /// Ground cards skip SSAO / contact darkening so wall inner shadows stay, floor cards do not halo.
     /// Drawn after opaque SSAO (queue 2501) with ZWrite so stacks still occlude each other.
     /// </summary>
-    static void ConfigureGroundWorldMaterial(Material material)
+    public static void ConfigureGroundWorldMaterial(Material material)
     {
         if (material == null)
             return;
@@ -351,6 +389,20 @@ public static class CardArtLibrary
             material.SetFloat("_ZWrite", 1f);
 
         material.renderQueue = 2501;
+    }
+
+    public static void ApplyGroundWorldRendererSettings(Renderer renderer)
+    {
+        if (renderer == null)
+            return;
+
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+
+        Material[] materials = renderer.materials;
+        for (int i = 0; i < materials.Length; i++)
+            ConfigureGroundWorldMaterial(materials[i]);
+        renderer.materials = materials;
     }
 
     /// <summary>

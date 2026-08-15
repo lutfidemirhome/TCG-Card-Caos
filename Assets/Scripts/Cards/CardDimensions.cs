@@ -2,6 +2,12 @@ public static class CardDimensions
 {
     public const int MaxHandSize = 10;
 
+    /// <summary>Cards revealed when opening one booster pack.</summary>
+    public const int CardsPerBoosterPack = 5;
+
+    /// <summary>Max cards in hand while holding a pack (pack opening needs five free slots).</summary>
+    public const int MaxCardsWhileHoldingPack = MaxHandSize - CardsPerBoosterPack;
+
     /// <summary>Vertical gap between flat cards in hand.</summary>
     public const float HandStackSpacing = 0.002f;
 

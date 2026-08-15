@@ -135,6 +135,9 @@ public static class CardCollisionUtility
         if (otherCard != null && otherCard != self)
             return true;
 
+        if (other.GetComponentInParent<WorldBoosterPack>() != null)
+            return true;
+
         if (other.GetComponentInParent<FirstPersonController>() != null)
             return true;
 

@@ -478,4 +478,123 @@ public static class CardGroundStack
         float extentZ = width * sin + height * cos;
         return new Bounds(card.transform.position, new Vector3(extentX, 0.01f, extentZ));
     }
+
+    static readonly List<WorldBoosterPack> GroundPacks = new List<WorldBoosterPack>(32);
+    static readonly HashSet<WorldBoosterPack> GroundPackSet = new HashSet<WorldBoosterPack>();
+
+    public static void TrackPack(WorldBoosterPack pack)
+    {
+        if (pack == null || !GroundPackSet.Add(pack))
+            return;
+
+        GroundPacks.Add(pack);
+    }
+
+    public static void UntrackPack(WorldBoosterPack pack)
+    {
+        if (pack == null || !GroundPackSet.Remove(pack))
+            return;
+
+        for (int i = GroundPacks.Count - 1; i >= 0; i--)
+        {
+            if (GroundPacks[i] == pack)
+            {
+                GroundPacks.RemoveAt(i);
+                break;
+            }
+        }
+    }
+
+    public static float GetDrawWorldY(WorldBoosterPack pack)
+    {
+        if (pack == null)
+            return CardFactory.GroundHeightOffset();
+
+        float y = GetStackedWorldY(pack.GroundStackLayer);
+        if (pack.GroundStackLayer == 0)
+            y += GetUniqueDepthBiasForPack(pack);
+
+        return y;
+    }
+
+    static float GetUniqueDepthBiasForPack(WorldBoosterPack pack)
+    {
+        int id = Mathf.Abs(pack.GetInstanceID());
+        return (id % UniqueDepthBiasSteps) * (UniqueDepthBiasRange / UniqueDepthBiasSteps);
+    }
+
+    public static void ApplyStackHeight(WorldBoosterPack pack, bool placeOnTop = false)
+    {
+        if (pack == null || pack.IsInHand)
+            return;
+
+        TrackPack(pack);
+        if (placeOnTop)
+            PlacePackOnTopOfOverlaps(pack);
+    }
+
+    static void PlacePackOnTopOfOverlaps(WorldBoosterPack pack)
+    {
+        int maxLayer = -1;
+        RebuildSpatialBuckets();
+        CollectNeighborhood(pack.transform.position, CellScratch);
+
+        for (int i = 0; i < CellScratch.Count; i++)
+        {
+            WorldCard other = CellScratch[i];
+            if (other == null || other.IsInHand || other.HasActivePhysics)
+                continue;
+            if (!OverlapsOnGround(pack, other))
+                continue;
+
+            if (other.GroundStackLayer > maxLayer)
+                maxLayer = other.GroundStackLayer;
+        }
+
+        for (int i = 0; i < GroundPacks.Count; i++)
+        {
+            WorldBoosterPack other = GroundPacks[i];
+            if (other == null || other == pack || other.IsInHand || other.HasActivePhysics)
+                continue;
+            if (!OverlapsOnGround(pack, other))
+                continue;
+
+            if (other.GroundStackLayer > maxLayer)
+                maxLayer = other.GroundStackLayer;
+        }
+
+        pack.SetGroundStackLayer(maxLayer + 1);
+        Vector3 position = pack.transform.position;
+        position.y = GetDrawWorldY(pack);
+        pack.transform.position = position;
+    }
+
+    public static bool OverlapsOnGround(WorldBoosterPack pack, WorldCard card)
+    {
+        if (pack == null || card == null)
+            return false;
+
+        return GetHorizontalBounds(pack).Intersects(GetHorizontalBounds(card));
+    }
+
+    public static bool OverlapsOnGround(WorldBoosterPack a, WorldBoosterPack b)
+    {
+        if (a == null || b == null)
+            return false;
+
+        return GetHorizontalBounds(a).Intersects(GetHorizontalBounds(b));
+    }
+
+    static Bounds GetHorizontalBounds(WorldBoosterPack pack)
+    {
+        float scale = Mathf.Max(pack.transform.lossyScale.x, CardDimensions.GroundCardScale);
+        float width = CardDimensions.Width * scale;
+        float height = CardDimensions.Height * scale;
+        float yaw = pack.transform.eulerAngles.y * Mathf.Deg2Rad;
+        float cos = Mathf.Abs(Mathf.Cos(yaw));
+        float sin = Mathf.Abs(Mathf.Sin(yaw));
+        float extentX = width * cos + height * sin;
+        float extentZ = width * sin + height * cos;
+        return new Bounds(pack.transform.position, new Vector3(extentX, 0.01f, extentZ));
+    }
 }

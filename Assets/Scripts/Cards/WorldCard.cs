@@ -13,6 +13,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         FlyingToHand,
         FlyingToShelf,
         Held,
+        PackReveal,
     }
 
     enum ShelfPlacementStatus
@@ -39,6 +40,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     ShelfPlacementStatus _shelfPlacementStatus = ShelfPlacementStatus.None;
     Coroutine _shelfPlacementFlashRoutine;
     HandState _handState = HandState.World;
+    float _packRevealFlipT;
     Transform _handAnchor;
     bool _interactionHighlighted;
     float _flightStartWorldScale = 1f;
@@ -287,6 +289,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return string.Empty;
 
         PlayerCardHand hand = PlayerCardHand.Instance;
+        if (hand != null && hand.HasHeldPack && hand.Count >= CardDimensions.MaxCardsWhileHoldingPack)
+        {
+            return "Hand Full With Pack ("
+                + CardDimensions.MaxCardsWhileHoldingPack
+                + "/"
+                + CardDimensions.MaxCardsWhileHoldingPack
+                + " cards)";
+        }
+
         if (hand != null && hand.IsFull)
             return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
 
@@ -368,6 +379,68 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         System.Action callback = _onPickupFlightComplete;
         _onPickupFlightComplete = null;
         callback?.Invoke();
+    }
+
+    /// <summary>
+    /// Shows a detail card during pack reveal before the card joins the hand fan.
+    /// When <paramref name="showsBack"/> is true, the card back faces the camera first.
+    /// </summary>
+    public void BeginRevealPreview(
+        Transform parent,
+        Vector3 localPosition,
+        Quaternion localRotation,
+        float scale,
+        bool showsBack = false)
+    {
+        _handState = HandState.PackReveal;
+        _packRevealFlipT = showsBack ? 0f : 1f;
+        _handAnchor = null;
+        RemovePhysics();
+        CardInstancedRenderManager.ReleaseFromGround(this);
+
+        if (_collider != null)
+            _collider.enabled = false;
+
+        transform.SetParent(parent, false);
+        transform.localPosition = localPosition;
+        transform.localRotation = localRotation;
+        transform.localScale = Vector3.one * scale;
+        EnsureCardVisual();
+        ApplyRevealVisualOrientation(showsBack ? 0f : 1f);
+        RefreshRenderMode();
+    }
+
+    void ApplyRevealVisualOrientation(float frontT)
+    {
+        if (_cardVisual == null)
+            return;
+
+        frontT = Mathf.Clamp01(frontT);
+        SetCardVisualMesh(CardArtLibrary.HandCardMesh);
+        _cardVisual.localRotation = GetRevealVisualRotation(frontT);
+        _cardVisual.localScale = CardArtLibrary.HandVisualScale;
+    }
+
+    /// <summary>
+    /// 0 = back toward camera (logo upright), 1 = front toward camera.
+    /// X swaps to the back face; Z keeps the shared back art right-side up on screen.
+    /// </summary>
+    public static Quaternion GetRevealVisualRotation(float frontT)
+    {
+        frontT = Mathf.Clamp01(frontT);
+        float backFlipX = Mathf.Lerp(180f, 0f, frontT);
+        float logoFixZ = Mathf.Lerp(180f, 0f, frontT);
+        return CardArtLibrary.HandVisualRotation * Quaternion.Euler(backFlipX, 0f, logoFixZ);
+    }
+
+    public void SetRevealVisualFlip(float frontT)
+    {
+        if (_handState != HandState.PackReveal)
+            return;
+
+        _packRevealFlipT = frontT;
+        EnsureCardVisual();
+        ApplyRevealVisualOrientation(frontT);
     }
 
     public void BeginShelfFlight(
@@ -723,6 +796,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         _cardVisual.localRotation = CardArtLibrary.HandVisualRotation;
         _cardVisual.localScale = CardArtLibrary.HandVisualScale;
+        SetCardVisualMesh(CardArtLibrary.HandCardMesh);
     }
 
     void ApplyWorldVisualOrientation()
@@ -732,6 +806,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         _cardVisual.localRotation = CardArtLibrary.WorldVisualRotation;
         _cardVisual.localScale = CardArtLibrary.WorldVisualScale;
+        SetCardVisualMesh(CardArtLibrary.CardMesh);
     }
 
     void ApplyShelfVisualOrientation()
@@ -741,6 +816,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         _cardVisual.localRotation = CardArtLibrary.ShelfVisualRotation;
         _cardVisual.localScale = CardArtLibrary.ShelfVisualScale;
+        SetCardVisualMesh(CardArtLibrary.CardMesh);
+    }
+
+    void SetCardVisualMesh(Mesh mesh)
+    {
+        if (_cardVisual == null || mesh == null)
+            return;
+
+        var meshFilter = _cardVisual.GetComponent<MeshFilter>();
+        if (meshFilter != null && meshFilter.sharedMesh != mesh)
+            meshFilter.sharedMesh = mesh;
     }
 
     void SetVisualRotation(Quaternion localRotation)
@@ -855,6 +941,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_cardVisual == null)
             return;
 
+        if (_handState == HandState.PackReveal)
+        {
+            ApplyRevealVisualOrientation(_packRevealFlipT);
+            return;
+        }
+
         if (_handState == HandState.Held || _handState == HandState.FlyingToHand)
         {
             ApplyHandVisualOrientation();
@@ -965,6 +1057,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         CardTextureQuality quality = IsInHand
+            || _handState == HandState.PackReveal
             || _handState == HandState.FlyingToShelf
             || GetComponentInParent<CardShelfSlot>() != null
             ? CardTextureQuality.Detail
