@@ -468,7 +468,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         IgnorePlayerCollision();
 
-        BeginScaleTransition(transform.localScale.x, CardDimensions.WorldCardScale, worldScaleTransitionDuration);
+        BeginScaleTransition(transform.localScale.x, CardDimensions.GroundCardScale, worldScaleTransitionDuration);
         RefreshRenderMode();
 
         EnsureRigidbody();
@@ -1044,7 +1044,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     float GetOutlineLift()
     {
-        float halfThickness = CardDimensions.Thickness * CardDimensions.WorldCardScale * 0.5f;
+        float cardScale = GetComponentInParent<CardShelfSlot>() != null
+            ? CardDimensions.WorldCardScale
+            : CardDimensions.GroundCardScale;
+        float halfThickness = CardDimensions.Thickness * cardScale * 0.5f;
         return halfThickness + _groundStackLayer * 0.00025f;
     }
 
@@ -1153,7 +1156,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         transform.SetParent(parent, true);
         transform.SetPositionAndRotation(worldPosition, worldRotation);
-        transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
+        transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
 
         ReleaseCardVisual();
         RefreshRenderMode();

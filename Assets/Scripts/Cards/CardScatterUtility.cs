@@ -453,7 +453,7 @@ public static class CardScatterUtility
     {
         float diagonal = Mathf.Sqrt(
             CardDimensions.Width * CardDimensions.Width
-            + CardDimensions.Height * CardDimensions.Height) * CardDimensions.WorldCardScale;
+            + CardDimensions.Height * CardDimensions.Height) * CardDimensions.GroundCardScale;
         return Mathf.Max(CardDimensions.ScatterMinSpacing, diagonal + 0.04f);
     }
 

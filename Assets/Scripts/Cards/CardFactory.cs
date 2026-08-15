@@ -28,7 +28,7 @@ public static class CardFactory
         var root = new GameObject(resolvedName);
         CardLayers.ApplyToGameObject(root);
         root.transform.SetPositionAndRotation(position, rotation);
-        root.transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
+        root.transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
 
         var collider = root.AddComponent<BoxCollider>();
         CardCollisionUtility.ApplyFlatWorldSize(collider);
@@ -69,7 +69,7 @@ public static class CardFactory
     /// <summary>World Y for a flat card resting on the current floor surface.</summary>
     public static float GroundHeightOffset()
     {
-        float halfThickness = CardDimensions.Thickness * CardDimensions.WorldCardScale * 0.5f;
+        float halfThickness = CardDimensions.Thickness * CardDimensions.GroundCardScale * 0.5f;
         return GroundSurfaceY() + halfThickness + 0.002f;
     }
 

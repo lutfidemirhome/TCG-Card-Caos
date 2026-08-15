@@ -21,7 +21,7 @@ public static class CardGroundStack
     static readonly Dictionary<long, List<WorldCard>> SpatialBuckets = new Dictionary<long, List<WorldCard>>(512);
 
     public static float StackStep =>
-        CardDimensions.Thickness * CardDimensions.WorldCardScale + StackGap;
+        CardDimensions.Thickness * CardDimensions.GroundCardScale + StackGap;
 
     public static float GetStackedWorldY(int layer)
     {
@@ -303,7 +303,7 @@ public static class CardGroundStack
         get
         {
             float footprint = Mathf.Max(CardDimensions.Width, CardDimensions.Height)
-                * CardDimensions.WorldCardScale;
+                * CardDimensions.GroundCardScale;
             return Mathf.Max(0.12f, footprint * 0.85f);
         }
     }
@@ -468,7 +468,7 @@ public static class CardGroundStack
 
     static Bounds GetHorizontalBounds(WorldCard card)
     {
-        float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.WorldCardScale);
+        float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.GroundCardScale);
         float width = CardDimensions.Width * scale;
         float height = CardDimensions.Height * scale;
         float yaw = card.transform.eulerAngles.y * Mathf.Deg2Rad;

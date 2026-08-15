@@ -118,7 +118,7 @@ public static class CardGroundQuery
 
     static Vector3 GetHalfExtents(WorldCard card)
     {
-        float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.WorldCardScale);
+        float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.GroundCardScale);
         bool onShelf = card.GetComponentInParent<CardShelfSlot>() != null;
         if (onShelf)
         {

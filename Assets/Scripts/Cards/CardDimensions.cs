@@ -11,7 +11,10 @@ public static class CardDimensions
     public const float ScatterMaxZ = 8.5f;
     public const float ScatterMinSpacing = 0.24f;
 
-    /// <summary>Uniform scale for cards lying in the world (hand scale stays separate).</summary>
+    /// <summary>Uniform scale for flat cards on the ground.</summary>
+    public const float GroundCardScale = 1.3f;
+
+    /// <summary>Uniform scale for shelf-placed cards (hand scale stays separate).</summary>
     public const float WorldCardScale = 1.1f;
 
     const float InteractionOutlineThicknessPercent = 0.07f;
