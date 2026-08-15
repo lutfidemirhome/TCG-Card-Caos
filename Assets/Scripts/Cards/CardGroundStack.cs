@@ -350,6 +350,17 @@ public static class CardGroundStack
                 maxLayer = other.GroundStackLayer;
         }
 
+        for (int i = 0; i < GroundPacks.Count; i++)
+        {
+            WorldBoosterPack pack = GroundPacks[i];
+            if (pack == null || pack.IsInHand || pack.HasActivePhysics)
+                continue;
+            if (!OverlapsOnGround(pack, card))
+                continue;
+            if (pack.GroundStackLayer > maxLayer)
+                maxLayer = pack.GroundStackLayer;
+        }
+
         card.SetGroundStackLayer(maxLayer + 1);
         Vector3 position = card.transform.position;
         position.y = GetDrawWorldY(card);
@@ -530,7 +541,16 @@ public static class CardGroundStack
 
         TrackPack(pack);
         if (placeOnTop)
+        {
             PlacePackOnTopOfOverlaps(pack);
+            return;
+        }
+
+        // Scatter / ground spawn: keep packs on the floor (layer 0), never float on card piles.
+        pack.SetGroundStackLayer(0);
+        Vector3 position = pack.transform.position;
+        position.y = GetDrawWorldY(pack);
+        pack.transform.position = position;
     }
 
     static void PlacePackOnTopOfOverlaps(WorldBoosterPack pack)

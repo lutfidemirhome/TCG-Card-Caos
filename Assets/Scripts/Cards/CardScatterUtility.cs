@@ -214,7 +214,7 @@ public static class CardScatterUtility
                 definition,
                 packName: TestPackPrefix + (i + 1).ToString("00"));
             pack.transform.SetParent(scatterRoot, true);
-            CardGroundStack.ApplyStackHeight(pack, placeOnTop: true);
+            CardGroundStack.ApplyStackHeight(pack, placeOnTop: false);
         }
     }
 
