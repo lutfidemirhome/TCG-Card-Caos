@@ -69,6 +69,7 @@ public class PlayerCardHand : MonoBehaviour
     bool _isOpeningPack;
     bool _awaitingRevealCollect;
     bool _revealCollectRequested;
+    bool _packOpenMovementLocked;
     Coroutine _openPackRoutine;
 
     public int Count => _cards.Count;
@@ -83,6 +84,7 @@ public class PlayerCardHand : MonoBehaviour
     public bool IsOpeningPack => _isOpeningPack;
     public bool IsAwaitingRevealCollect => _awaitingRevealCollect;
     public bool IsHandInputLocked => _handInputLocked || _isOpeningPack;
+    public bool IsPackOpenMovementLocked => _packOpenMovementLocked;
     public float OpenRevealDistance => openRevealDistance;
     public float OpenRevealHeight => openRevealHeight;
     public float OpenSequenceDuration => openSequenceDuration;
@@ -480,8 +482,11 @@ public class PlayerCardHand : MonoBehaviour
             yield break;
         }
 
+        SetPackOpenMovementLocked(true);
         _heldPacks.Remove(pack);
         yield return PackOpenSequence.Run(this, pack, _camera);
+        if (_packOpenMovementLocked)
+            SetPackOpenMovementLocked(false);
         _isOpeningPack = false;
         _openPackRoutine = null;
     }
@@ -496,6 +501,11 @@ public class PlayerCardHand : MonoBehaviour
     public void SetHandInputLocked(bool locked)
     {
         _handInputLocked = locked;
+    }
+
+    public void SetPackOpenMovementLocked(bool locked)
+    {
+        _packOpenMovementLocked = locked;
     }
 
     public void SetAwaitingRevealCollect(bool awaiting)

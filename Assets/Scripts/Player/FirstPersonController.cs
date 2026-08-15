@@ -70,9 +70,25 @@ public class FirstPersonController : MonoBehaviour
     {
         HandleCursorToggle();
         HandleLook();
-        UpdateCrouch();
-        HandleJump();
-        HandleMove();
+
+        bool movementLocked = IsPackOpenMovementLocked();
+        if (!movementLocked)
+        {
+            UpdateCrouch();
+            HandleJump();
+        }
+        else
+        {
+            UpdateCrouchPoseOnly();
+        }
+
+        HandleMove(movementLocked);
+    }
+
+    bool IsPackOpenMovementLocked()
+    {
+        PlayerCardHand hand = PlayerCardHand.Instance;
+        return hand != null && hand.IsPackOpenMovementLocked;
     }
 
     void HandleCursorToggle()
@@ -101,6 +117,11 @@ public class FirstPersonController : MonoBehaviour
         if (Input.GetKeyDown(crouchKey) || Input.GetKeyDown(crouchKeyAlt))
             ToggleCrouchInput();
 
+        UpdateCrouchPoseOnly();
+    }
+
+    void UpdateCrouchPoseOnly()
+    {
         bool wantsCrouch = _crouchToggled || !CanStand();
 
         float targetBlend = wantsCrouch ? 1f : 0f;
@@ -156,6 +177,9 @@ public class FirstPersonController : MonoBehaviour
 
     void HandleJump()
     {
+        if (IsPackOpenMovementLocked())
+            return;
+
         if (!Input.GetKeyDown(jumpKey))
             return;
 
@@ -188,10 +212,10 @@ public class FirstPersonController : MonoBehaviour
         return true;
     }
 
-    void HandleMove()
+    void HandleMove(bool movementLocked)
     {
-        float inputX = Input.GetAxisRaw("Horizontal");
-        float inputZ = Input.GetAxisRaw("Vertical");
+        float inputX = movementLocked ? 0f : Input.GetAxisRaw("Horizontal");
+        float inputZ = movementLocked ? 0f : Input.GetAxisRaw("Vertical");
         Vector3 input = new Vector3(inputX, 0f, inputZ);
         if (input.sqrMagnitude > 1f)
             input.Normalize();

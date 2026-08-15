@@ -20,7 +20,10 @@ public static class PackOpenSequence
     public static IEnumerator Run(PlayerCardHand hand, WorldBoosterPack pack, Camera camera)
     {
         if (hand == null || pack == null || camera == null)
+        {
+            hand?.SetPackOpenMovementLocked(false);
             yield break;
+        }
 
         pack.BeginOpening();
         hand.SetHandInputLocked(true);
@@ -192,6 +195,7 @@ public static class PackOpenSequence
         while (!hand.ConsumeRevealCollectRequest())
             yield return null;
         hand.SetAwaitingRevealCollect(false);
+        hand.SetPackOpenMovementLocked(false);
 
         // Fly cards into the hand fan.
         float flyDuration = duration * 0.35f;
