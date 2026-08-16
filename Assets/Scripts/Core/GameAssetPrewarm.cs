@@ -1,0 +1,38 @@
+using System.Collections;
+using UnityEngine;
+
+/// <summary>
+/// Preloads heavy gameplay assets while the main menu is visible.
+/// </summary>
+public static class GameAssetPrewarm
+{
+    static bool _started;
+    static bool _complete;
+
+    public static bool IsComplete => _complete;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        _started = false;
+        _complete = false;
+    }
+
+    public static void Start(MonoBehaviour host)
+    {
+        if (_started || host == null)
+            return;
+
+        _started = true;
+        host.StartCoroutine(PrewarmRoutine());
+    }
+
+    static IEnumerator PrewarmRoutine()
+    {
+        yield return null;
+        CardCatalog.Reload();
+        yield return null;
+        CardArtLibrary.EnsureLoaded();
+        _complete = true;
+    }
+}

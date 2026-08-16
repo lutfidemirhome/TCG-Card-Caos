@@ -13,7 +13,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     public const string PaletteBatchPrefix = "palette:";
 
     const int MaxInstancesPerBatch = 1023;
-    const int CardsRegisteredPerFrame = 400;
+    const int CardsRegisteredPerFrame = 32;
 
     [SerializeField] float drawDistance = 40f;
 
@@ -33,6 +33,13 @@ public class CardInstancedRenderManager : MonoBehaviour
     public static CardInstancedRenderManager Instance => _instance;
 
     public static bool DeferGroundRegistration { get; private set; }
+
+    public static bool IsGameplayReady { get; private set; }
+
+    public static void ResetGameplayReady()
+    {
+        IsGameplayReady = false;
+    }
 
     public static void BeginBulkGroundLoad()
     {
@@ -59,13 +66,14 @@ public class CardInstancedRenderManager : MonoBehaviour
         }
         else
         {
-            // Always rebuild scatter so spawn layout changes (random vs grid/piles) apply immediately.
-            CardScatterUtility.SpawnAllTestCards();
+            CardScatterUtility.ClearTestCards();
+            yield return CardScatterUtility.SpawnScatteredCardsAsync(CardScatterUtility.FullScatterCount);
         }
 
         DeferGroundRegistration = false;
         yield return RegisterAllGroundCardsRoutine();
-        CardGroundStack.RebuildAll();
+        yield return CardGroundStack.RebuildAllAsync();
+        yield return null;
 
         Debug.Log(
             "TCG Card Caos: Play mode card setup complete ("
@@ -74,6 +82,7 @@ public class CardInstancedRenderManager : MonoBehaviour
             + CardScatterUtility.CountScatterPacks()
             + " packs).");
 
+        IsGameplayReady = true;
         _playModeSetupRoutine = null;
     }
 

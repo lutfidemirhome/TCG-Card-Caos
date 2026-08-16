@@ -25,7 +25,8 @@ public static class CardScatterUtility
     public static int PackReservedCardCount => DefaultPackScatterCount * CardDimensions.CardsPerBoosterPack;
     public static int GroundScatterCount => FullScatterCount - PackReservedCardCount;
 
-    const int CardsPerSpawnFrame = 250;
+    const int CardsPerSpawnFrame = 6;
+    const int PositionsPerYield = 12;
     const float GroundFaceDownRatio = 0.2f;
     const string RuntimePlayScatterSessionKey = "TCGCardCaos.RuntimePlayScatterCount";
 
@@ -255,8 +256,14 @@ public static class CardScatterUtility
 
     public static IEnumerator SpawnScatteredCardsAsync(int count, string shelfCategoryId = null)
     {
+        yield return null;
+
         CardCatalog.Reload();
+        yield return null;
+
         CardArtLibrary.EnsureLoaded();
+        yield return null;
+
         List<CardDefinition> definitions = BuildScatterDefinitions(shelfCategoryId);
         if (definitions.Count == 0)
         {
@@ -274,7 +281,10 @@ public static class CardScatterUtility
         int reserveCount = Mathf.Min(PackReservedCardCount, assignments.Count);
         ReserveRandomForPacks(assignments, reserveCount, out List<CardDefinition> groundAssignments, out List<CardDefinition> packAssignments);
 
-        var positions = GenerateScatterPositions(groundAssignments.Count);
+        yield return null;
+
+        var positions = new List<Vector2>(groundAssignments.Count);
+        yield return GenerateScatterPositionsAsync(groundAssignments.Count, positions);
         HashSet<int> backFacingIndices = PickBackFacingIndices(groundAssignments.Count);
 
         Debug.Log(
@@ -309,12 +319,11 @@ public static class CardScatterUtility
             card.SetGroundShowsBack(backFacingIndices.Contains(i));
             card.transform.SetParent(scatterRoot, true);
 
-            if (i > 0 && i % CardsPerSpawnFrame == 0)
+            if ((i + 1) % CardsPerSpawnFrame == 0)
                 yield return null;
         }
 
         SpawnScatteredPacks(scatterRoot, groundY, positions, packAssignments);
-        CardGroundStack.RebuildAll();
     }
 
     static void SpawnScatteredPacks(
@@ -663,6 +672,69 @@ public static class CardScatterUtility
         }
 
         return positions;
+    }
+
+    static IEnumerator GenerateScatterPositionsAsync(int count, List<Vector2> positions, IReadOnlyList<Vector2> avoid = null)
+    {
+        positions.Clear();
+
+        ScatterRegion region = ScatterRegion.FromScene();
+        float width = Mathf.Max(0.01f, region.MaxX - region.MinX);
+        float depth = Mathf.Max(0.01f, region.MaxZ - region.MinZ);
+        float area = width * depth;
+
+        float preferred = GetPreferredScatterSpacing();
+        float packingSpacing = Mathf.Sqrt(area / Mathf.Max(1, count));
+        float minSpacing = Mathf.Min(preferred, packingSpacing * 0.92f);
+        minSpacing = Mathf.Max(0.08f, minSpacing);
+
+        positions.Capacity = Mathf.Max(positions.Capacity, count);
+        int maxAttempts = Mathf.Max(40, count * 12);
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 candidate = Vector2.zero;
+            bool found = false;
+            float spacing = minSpacing;
+            float spacingSq = spacing * spacing;
+
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                if (attempt > 0 && attempt % 16 == 0)
+                {
+                    spacing = Mathf.Max(0.06f, spacing * 0.92f);
+                    spacingSq = spacing * spacing;
+                }
+
+                candidate = region.RandomXZ();
+                if (IsFarEnough(candidate, positions, spacingSq)
+                    && IsFarEnough(candidate, avoid, spacingSq))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                candidate = region.RandomXZ();
+                if (positions.Count > 0)
+                {
+                    Vector2 near = positions[Random.Range(0, positions.Count)];
+                    candidate = region.Clamp(near + Random.insideUnitCircle * (minSpacing * 0.75f));
+                }
+                else if (avoid != null && avoid.Count > 0)
+                {
+                    Vector2 near = avoid[Random.Range(0, avoid.Count)];
+                    candidate = region.Clamp(near + Random.insideUnitCircle * (minSpacing * 0.75f));
+                }
+            }
+
+            positions.Add(region.Clamp(candidate));
+
+            if ((i + 1) % PositionsPerYield == 0)
+                yield return null;
+        }
     }
 
     /// <summary>

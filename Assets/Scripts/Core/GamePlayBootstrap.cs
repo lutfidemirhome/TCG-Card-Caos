@@ -1,20 +1,55 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Ensures player hand systems and test cards exist in Play mode.
-/// Heavy card setup runs asynchronously so Play mode opens immediately.
+/// Ensures player hand systems and test cards exist when the gameplay scene loads.
+/// AfterSceneLoad only runs for the first scene; sceneLoaded handles menu → game transitions.
 /// </summary>
 static class GamePlayBootstrap
 {
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    static void BeforeSceneLoad()
+    static int _bootstrappedSceneHandle = -1;
+    static bool _sceneHookRegistered;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
     {
-        CardInstancedRenderManager.BeginBulkGroundLoad();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        _sceneHookRegistered = false;
+        _bootstrappedSceneHandle = -1;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Initialize()
+    static void InitializeFirstScene()
     {
+        EnsureSceneHook();
+        TryBootstrap(SceneManager.GetActiveScene());
+    }
+
+    static void EnsureSceneHook()
+    {
+        if (_sceneHookRegistered)
+            return;
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        _sceneHookRegistered = true;
+    }
+
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        TryBootstrap(scene);
+    }
+
+    static void TryBootstrap(Scene scene)
+    {
+        if (!GameScenes.IsGameScene(scene) || !scene.isLoaded)
+            return;
+
+        if (_bootstrappedSceneHandle == scene.handle)
+            return;
+
+        _bootstrappedSceneHandle = scene.handle;
+
+        CardInstancedRenderManager.BeginBulkGroundLoad();
         EnsureCameraSystems();
         EnsurePlayerHand();
         StoreLighting.EnsureExists();

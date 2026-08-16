@@ -132,6 +132,9 @@ public class StoreLighting : MonoBehaviour
 
     void BuildCeilingFixtures()
     {
+        if (!GameScenes.IsActiveGameScene())
+            return;
+
         EnsureLightsRoot();
         ClearLightsRoot();
 
@@ -140,10 +143,7 @@ public class StoreLighting : MonoBehaviour
 
         List<Transform> ceilingTiles = CollectCeilingTiles();
         if (ceilingTiles.Count == 0)
-        {
-            Debug.LogWarning("StoreLighting: No Ceiling tiles found in the scene.");
             return;
-        }
 
         for (int i = 0; i < ceilingTiles.Count; i++)
         {

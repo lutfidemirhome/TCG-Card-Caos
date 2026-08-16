@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -181,6 +182,21 @@ public static class CardGroundStack
     public static void RebuildAll()
     {
         RebuildCellPiles();
+    }
+
+    public static IEnumerator RebuildAllAsync()
+    {
+        yield return null;
+        RebuildSpatialBuckets();
+
+        int processed = 0;
+        foreach (KeyValuePair<long, List<WorldCard>> pair in SpatialBuckets)
+        {
+            ApplyPileLayers(pair.Value);
+            processed++;
+            if (processed % 24 == 0)
+                yield return null;
+        }
     }
 
     /// <summary>
