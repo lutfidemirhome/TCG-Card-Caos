@@ -27,9 +27,13 @@ public class InteractionController : MonoBehaviour
     IInteractable _currentTarget;
     IInteractionHighlight _currentHighlight;
     CardInspectPreview _inspectPreview;
+    PackInspectPreview _packInspectPreview;
     WorldCard _raycastAimedCard;
+    WorldBoosterPack _raycastAimedPack;
     WorldCard _inspectPreviewTarget;
+    WorldBoosterPack _packInspectPreviewTarget;
     IInteractable _pendingCardPromptTarget;
+    IInteractable _pendingPackPromptTarget;
     float _inspectPreviewTimer;
 
     void Awake()
@@ -41,6 +45,7 @@ public class InteractionController : MonoBehaviour
         interactMask &= ~CardLayers.WorldCardMask;
 
         _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
+        _packInspectPreview = PackInspectPreview.EnsureOn(viewCamera);
         BuildPromptUI();
     }
 
@@ -96,17 +101,22 @@ public class InteractionController : MonoBehaviour
 
         if (interactable == null)
         {
-            ClearDelayedCardUiState();
+            _raycastAimedPack = null;
+            ClearDelayedInspectUiState();
             UpdateSelectedPackPrompt();
             return;
         }
+
+        _raycastAimedPack = interactable is WorldBoosterPack aimedPack && !aimedPack.IsInHand
+            ? aimedPack
+            : null;
 
         if (interactable is WorldBoosterPack)
             UpdateSelectedPackPrompt(clearOnly: true);
 
         if (interactable is CardShelf shelf)
         {
-            ClearDelayedCardUiState();
+            ClearDelayedInspectUiState();
             shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf));
         }
         else
@@ -120,7 +130,13 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
-        ClearDelayedCardUiState();
+        if (interactable is WorldBoosterPack worldPack)
+        {
+            HandleGroundPackTarget(worldPack);
+            return;
+        }
+
+        ClearDelayedInspectUiState();
 
         string prompt = interactable.GetPromptText();
         if (string.IsNullOrEmpty(prompt))
@@ -139,9 +155,11 @@ public class InteractionController : MonoBehaviour
     {
         if (worldCard == null || worldCard.IsInHand)
         {
-            ClearDelayedCardUiState();
+            ClearDelayedInspectUiState();
             return;
         }
+
+        ClearDelayedPackUiState();
 
         if (inspectPreviewDelay <= 0f)
         {
@@ -164,6 +182,42 @@ public class InteractionController : MonoBehaviour
         }
     }
 
+    void HandleGroundPackTarget(WorldBoosterPack worldPack)
+    {
+        if (worldPack == null || worldPack.IsInHand)
+        {
+            ClearDelayedInspectUiState();
+            return;
+        }
+
+        ClearDelayedCardUiState();
+
+        if (inspectPreviewDelay <= 0f)
+        {
+            _pendingPackPromptTarget = null;
+            ShowGroundPackUi(worldPack);
+            return;
+        }
+
+        if (!ReferenceEquals(worldPack, _pendingPackPromptTarget))
+        {
+            if (_currentTarget is CardShelf previousShelf)
+                previousShelf.ClearAim();
+
+            _pendingPackPromptTarget = worldPack;
+            _packInspectPreviewTarget = worldPack;
+            _inspectPreviewTimer = 0f;
+            _packInspectPreview?.Hide();
+            ClearPromptAndHighlight();
+        }
+    }
+
+    void ClearDelayedInspectUiState()
+    {
+        ClearDelayedCardUiState();
+        ClearDelayedPackUiState();
+    }
+
     void ClearDelayedCardUiState()
     {
         _pendingCardPromptTarget = null;
@@ -181,6 +235,21 @@ public class InteractionController : MonoBehaviour
             ClearPromptAndHighlight();
     }
 
+    void ClearDelayedPackUiState()
+    {
+        _pendingPackPromptTarget = null;
+
+        if (_packInspectPreviewTarget != null)
+        {
+            _packInspectPreview?.Hide();
+            _packInspectPreviewTarget = null;
+            _inspectPreviewTimer = 0f;
+        }
+
+        if (_currentTarget is WorldBoosterPack)
+            ClearPromptAndHighlight();
+    }
+
     void ShowGroundCardUi(WorldCard worldCard)
     {
         if (worldCard == null || worldCard.IsInHand)
@@ -193,6 +262,18 @@ public class InteractionController : MonoBehaviour
 
         _inspectPreview.Show(worldCard);
         ShowPrompt(worldCard, worldCard.GetPromptText());
+    }
+
+    void ShowGroundPackUi(WorldBoosterPack worldPack)
+    {
+        if (worldPack == null || worldPack.IsInHand)
+            return;
+
+        if (_packInspectPreview == null)
+            _packInspectPreview = PackInspectPreview.EnsureOn(viewCamera);
+
+        _packInspectPreview.Show(worldPack);
+        ShowPrompt(worldPack, worldPack.GetPromptText());
     }
 
     IInteractable ResolveBestInteractable(
@@ -366,7 +447,7 @@ public class InteractionController : MonoBehaviour
         if (_currentTarget is CardShelf shelf)
             shelf.ClearAim();
 
-        ClearDelayedCardUiState();
+        ClearDelayedInspectUiState();
         ClearPromptAndHighlight();
     }
 
@@ -413,15 +494,34 @@ public class InteractionController : MonoBehaviour
 
     void UpdateInspectPreview()
     {
-        WorldCard aimedCard = _raycastAimedCard;
-        if (aimedCard == null || aimedCard.IsInHand)
+        if (_pendingCardPromptTarget is WorldCard aimedCard
+            && aimedCard != null
+            && !aimedCard.IsInHand
+            && ReferenceEquals(aimedCard, _raycastAimedCard))
         {
-            ClearDelayedCardUiState();
+            UpdateCardInspectPreview(aimedCard);
             return;
         }
 
-        if (_pendingCardPromptTarget == null || !ReferenceEquals(aimedCard, _pendingCardPromptTarget))
+        if (_pendingPackPromptTarget is WorldBoosterPack aimedPack
+            && aimedPack != null
+            && !aimedPack.IsInHand
+            && ReferenceEquals(aimedPack, _raycastAimedPack))
+        {
+            UpdatePackInspectPreview(aimedPack);
             return;
+        }
+
+        ClearDelayedInspectUiState();
+    }
+
+    void UpdateCardInspectPreview(WorldCard aimedCard)
+    {
+        if (aimedCard == null || aimedCard.IsInHand)
+        {
+            ClearDelayedInspectUiState();
+            return;
+        }
 
         if (!ReferenceEquals(aimedCard, _inspectPreviewTarget))
         {
@@ -446,6 +546,38 @@ public class InteractionController : MonoBehaviour
             return;
 
         ShowGroundCardUi(aimedCard);
+    }
+
+    void UpdatePackInspectPreview(WorldBoosterPack aimedPack)
+    {
+        if (aimedPack == null || aimedPack.IsInHand)
+        {
+            ClearDelayedInspectUiState();
+            return;
+        }
+
+        if (!ReferenceEquals(aimedPack, _packInspectPreviewTarget))
+        {
+            _packInspectPreviewTarget = aimedPack;
+            _inspectPreviewTimer = 0f;
+            if (inspectPreviewDelay > 0f)
+            {
+                _packInspectPreview?.Hide();
+                ClearPromptAndHighlight();
+            }
+        }
+
+        if (inspectPreviewDelay <= 0f)
+        {
+            ShowGroundPackUi(aimedPack);
+            return;
+        }
+
+        _inspectPreviewTimer += Time.deltaTime;
+        if (_inspectPreviewTimer < inspectPreviewDelay)
+            return;
+
+        ShowGroundPackUi(aimedPack);
     }
 
     static IInteractionHighlight GetHighlight(IInteractable interactable)

@@ -88,6 +88,7 @@ public static class CardScatterUtility
         List<CardDefinition> shuffledContents = BuildShuffledPackContents(definitions, totalCards);
         var packPositions = GeneratePackScatterPositions(packCount);
         BoosterPackDefinition definition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
+        HashSet<int> packBackFacingIndices = PickBackFacingIndices(packCount);
 
         Debug.Log(
             "CardScatterUtility: Spawning "
@@ -115,6 +116,7 @@ public static class CardScatterUtility
                 packName: PackArtLibrary.GetVariantDisplayName(variantIndex),
                 packVariantIndex: variantIndex,
                 preRolledContents: packContents);
+            pack.SetGroundShowsBack(packBackFacingIndices.Contains(i));
             pack.transform.SetParent(scatterRoot, true);
             CardGroundStack.ApplyStackHeight(pack, placeOnTop: false);
         }
@@ -327,6 +329,7 @@ public static class CardScatterUtility
         int packCount = DefaultPackScatterCount;
         var packPositions = GeneratePackScatterPositions(packCount, occupiedCardPositions);
         BoosterPackDefinition definition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
+        HashSet<int> packBackFacingIndices = PickBackFacingIndices(packCount);
 
         for (int i = 0; i < packCount; i++)
         {
@@ -353,6 +356,7 @@ public static class CardScatterUtility
                 packName: PackArtLibrary.GetVariantDisplayName(variantIndex),
                 packVariantIndex: variantIndex,
                 preRolledContents: packContents);
+            pack.SetGroundShowsBack(packBackFacingIndices.Contains(i));
             pack.transform.SetParent(scatterRoot, true);
             CardGroundStack.ApplyStackHeight(pack, placeOnTop: false);
         }
@@ -399,15 +403,37 @@ public static class CardScatterUtility
                 cards.Add(card);
         }
 
-        if (cards.Count == 0)
+        var packs = new List<WorldBoosterPack>(scatterRoot.childCount);
+        for (int i = 0; i < scatterRoot.childCount; i++)
+        {
+            WorldBoosterPack pack = scatterRoot.GetChild(i).GetComponent<WorldBoosterPack>();
+            if (pack != null && !pack.IsInHand)
+                packs.Add(pack);
+        }
+
+        if (cards.Count == 0 && packs.Count == 0)
             return;
 
-        HashSet<int> backFacingIndices = PickBackFacingIndices(cards.Count);
-        for (int i = 0; i < cards.Count; i++)
+        if (cards.Count > 0)
         {
-            float yaw = cards[i].transform.rotation.eulerAngles.y;
-            cards[i].transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-            cards[i].SetGroundShowsBack(backFacingIndices.Contains(i));
+            HashSet<int> backFacingIndices = PickBackFacingIndices(cards.Count);
+            for (int i = 0; i < cards.Count; i++)
+            {
+                float yaw = cards[i].transform.rotation.eulerAngles.y;
+                cards[i].transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                cards[i].SetGroundShowsBack(backFacingIndices.Contains(i));
+            }
+        }
+
+        if (packs.Count == 0)
+            return;
+
+        HashSet<int> packBackFacingIndices = PickBackFacingIndices(packs.Count);
+        for (int i = 0; i < packs.Count; i++)
+        {
+            float yaw = packs[i].transform.rotation.eulerAngles.y;
+            packs[i].transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            packs[i].SetGroundShowsBack(packBackFacingIndices.Contains(i));
         }
     }
 

@@ -33,6 +33,30 @@ public static class PackArtLibrary
         return VariantDisplayNames[index];
     }
 
+    /// <summary>
+    /// UI inspect preview art — one upright PNG per variant, separate from the 3D foil atlas.
+    /// Drop files at Resources/Cards/BoosterPack/Pack0N/Pack0N_Preview.png
+    /// </summary>
+    public static Texture2D GetVariantPreview(int packVariantIndex)
+    {
+        packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackVariantCount);
+        Texture2D preview = LoadVariantTexture(packVariantIndex, "Preview");
+        if (preview == null && packVariantIndex != 1)
+            preview = LoadVariantTexture(1, "Preview");
+        return preview;
+    }
+
+    public static Texture2D GetVariantBaseColor(int packVariantIndex)
+    {
+        packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackVariantCount);
+        Texture2D baseColor = LoadVariantTexture(packVariantIndex, "BaseColor");
+        if (baseColor == null && packVariantIndex != 1)
+            baseColor = LoadVariantTexture(1, "BaseColor");
+        if (baseColor == null)
+            baseColor = Resources.Load<Texture2D>(LegacyBaseColorResourcePath);
+        return baseColor;
+    }
+
     public static void ApplyPackMaterials(Renderer renderer, int packVariantIndex = 1)
     {
         if (renderer == null)
@@ -92,7 +116,15 @@ public static class PackArtLibrary
         Texture2D roughnessMap = LoadVariantTexture(packVariantIndex, "Roughness");
 
         if (baseColor == null && packVariantIndex != 1)
-            return GetWorldMaterialTemplate(1);
+        {
+            baseColor = LoadVariantTexture(1, "BaseColor");
+            if (normalMap == null)
+                normalMap = LoadVariantTexture(1, "Normal");
+            if (metallicMap == null)
+                metallicMap = LoadVariantTexture(1, "Metallic");
+            if (roughnessMap == null)
+                roughnessMap = LoadVariantTexture(1, "Roughness");
+        }
 
         if (baseColor == null)
             baseColor = Resources.Load<Texture2D>(LegacyBaseColorResourcePath);
@@ -112,12 +144,12 @@ public static class PackArtLibrary
             return null;
         }
 
-        if (normalMap == null && packVariantIndex != 1)
-            normalMap = LoadVariantTexture(1, "Normal");
-        if (metallicMap == null && packVariantIndex != 1)
-            metallicMap = LoadVariantTexture(1, "Metallic");
-        if (roughnessMap == null && packVariantIndex != 1)
-            roughnessMap = LoadVariantTexture(1, "Roughness");
+        if (normalMap == null)
+            normalMap = Resources.Load<Texture2D>(LegacyNormalResourcePath);
+        if (metallicMap == null)
+            metallicMap = Resources.Load<Texture2D>(LegacyMetallicResourcePath);
+        if (roughnessMap == null)
+            roughnessMap = Resources.Load<Texture2D>(LegacyRoughnessResourcePath);
 
         Shader shader = Shader.Find("Universal Render Pipeline/Lit");
         if (shader == null)
@@ -170,8 +202,9 @@ public static class PackArtLibrary
     }
 
     /// <summary>
-    /// Single-image pack uses the same art on both faces; render both sides so a horizontal
-    /// visual mirror (WorldVisualScale) never swaps which physical face you see.
+    /// PackCardRef uses <see cref="CardArtLibrary.WorldVisualScale"/> (X = -1), which mirrors
+    /// child geometry. Shader U flip restores left-right correct pack art on both faces.
+    /// Double-sided culling keeps front/back visible after the parent mirror.
     /// </summary>
     public static void ConfigurePackWorldMaterial(Material material)
     {
@@ -179,8 +212,29 @@ public static class PackArtLibrary
             return;
 
         CardArtLibrary.ConfigureGroundWorldMaterial(material);
+        ApplyPackTextureUFlip(material);
 
         if (material.HasProperty("_Cull"))
             material.SetFloat("_Cull", (float)CullMode.Off);
+    }
+
+    static void ApplyPackTextureUFlip(Material material)
+    {
+        CardArtLibrary.ApplyBackTextureUFlip(material);
+        ApplyTextureUFlipIfSet(material, "_BumpMap");
+        ApplyTextureUFlipIfSet(material, "_MetallicGlossMap");
+        ApplyTextureUFlipIfSet(material, "_SpecGlossMap");
+    }
+
+    static void ApplyTextureUFlipIfSet(Material material, string propertyName)
+    {
+        if (material == null || !material.HasProperty(propertyName))
+            return;
+
+        if (material.GetTexture(propertyName) == null)
+            return;
+
+        material.SetTextureScale(propertyName, CardArtLibrary.BackTextureUScale);
+        material.SetTextureOffset(propertyName, CardArtLibrary.BackTextureUOffset);
     }
 }

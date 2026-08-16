@@ -69,10 +69,21 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public BoosterPackDefinition Definition => packDefinition;
     public int PackVariantIndex => _packVariantIndex;
     public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(_packVariantIndex);
+    public bool GroundShowsBack => _groundShowsBack;
 
     public void SetGroundStackLayer(int layer)
     {
         _groundStackLayer = Mathf.Max(0, layer);
+    }
+
+    public void SetGroundShowsBack(bool showsBack)
+    {
+        if (_groundShowsBack == showsBack)
+            return;
+
+        _groundShowsBack = showsBack;
+        if (_state == PackState.World && !HasActivePhysics)
+            ApplyWorldVisualOrientation(alignPackModelToGround: true);
     }
 
     public void Initialize(
@@ -216,7 +227,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     void ApplyCardRefWorldRotation(bool alignPackModelToGround)
     {
         Quaternion rotation = CardArtLibrary.WorldVisualRotation;
-        if (alignPackModelToGround && !HasActivePhysics && _groundShowsBack)
+        // Imported pack mesh front/back are opposite the invisible card-proxy basis.
+        if (alignPackModelToGround && !HasActivePhysics && !_groundShowsBack)
             rotation *= Quaternion.Euler(180f, 0f, 0f);
 
         _cardRef.localRotation = rotation;
@@ -364,7 +376,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _cardRef.localScale = CardArtLibrary.WorldVisualScale;
 
         Quaternion rotation = CardArtLibrary.WorldVisualRotation;
-        if (faceDown)
+        if (!faceDown)
             rotation *= Quaternion.Euler(180f, 0f, 0f);
 
         _cardRef.localRotation = rotation;
@@ -985,7 +997,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         heading.Normalize();
 
         transform.rotation = Quaternion.LookRotation(heading, Vector3.up);
-        _groundShowsBack = !frontFaceUp;
+        _groundShowsBack = frontFaceUp;
         ApplyWorldVisualOrientation(alignPackModelToGround: true);
         ApplyPackModelShadowSettings();
         CardGroundStack.ApplyStackHeight(this, placeOnTop: true);

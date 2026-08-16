@@ -38,6 +38,7 @@ static class GamePlayBootstrap
             camera.gameObject.AddComponent<InteractionController>();
 
         CardInspectPreview.EnsureOn(camera);
+        PackInspectPreview.EnsureOn(camera);
     }
 
     static void EnsurePlayerHand()
