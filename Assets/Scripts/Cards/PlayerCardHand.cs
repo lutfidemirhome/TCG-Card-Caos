@@ -778,7 +778,7 @@ public class PlayerCardHand : MonoBehaviour
         for (int i = 0; i < _heldPacks.Count; i++)
         {
             WorldBoosterPack pack = _heldPacks[i];
-            if (!pack.IsHeld || IsOpeningPack)
+            if (!pack.IsHeld)
             {
                 pack.SetHandSelected(false);
                 continue;
