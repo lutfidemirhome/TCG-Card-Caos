@@ -600,6 +600,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     System.Collections.IEnumerator SettleDroppedCardRoutine()
     {
         float groundedTime = 0f;
+        float shelfStuckTime = 0f;
         float elapsed = 0f;
         float colliderRefreshTimer = 0f;
         const float settleAfterGrounded = 0.18f;
@@ -648,11 +649,29 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                     break;
                 if (groundedTime >= forceSettleAfterGrounded)
                     break;
-                if (elapsed >= maxFlightTime)
-                    break;
+
+                switch (CardThrowRecovery.AdvanceShelfStuckSettle(
+                    ref shelfStuckTime,
+                    ref elapsed,
+                    ref groundedTime,
+                    transform,
+                    _collider as BoxCollider,
+                    _rigidbody,
+                    nearGround,
+                    slowEnough,
+                    maxFlightTime))
+                {
+                    case CardThrowRecovery.ShelfSettleAdvance.RecoverAndContinue:
+                        yield return null;
+                        continue;
+                    case CardThrowRecovery.ShelfSettleAdvance.BreakSettle:
+                        goto finishSettle;
+                }
 
                 yield return null;
             }
+
+            finishSettle:
 
             if (_handState != HandState.World || _rigidbody == null)
                 yield break;

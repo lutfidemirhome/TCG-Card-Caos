@@ -971,6 +971,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     IEnumerator SettleDroppedPackRoutine()
     {
         float groundedTime = 0f;
+        float shelfStuckTime = 0f;
         float elapsed = 0f;
         const float settleAfterGrounded = 0.18f;
         const float forceSettleAfterGrounded = 0.55f;
@@ -1011,11 +1012,29 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
                     break;
                 if (groundedTime >= forceSettleAfterGrounded)
                     break;
-                if (elapsed >= maxFlightTime)
-                    break;
+
+                switch (CardThrowRecovery.AdvanceShelfStuckSettle(
+                    ref shelfStuckTime,
+                    ref elapsed,
+                    ref groundedTime,
+                    transform,
+                    _collider as BoxCollider,
+                    _rigidbody,
+                    nearGround,
+                    slowEnough,
+                    maxFlightTime))
+                {
+                    case CardThrowRecovery.ShelfSettleAdvance.RecoverAndContinue:
+                        yield return null;
+                        continue;
+                    case CardThrowRecovery.ShelfSettleAdvance.BreakSettle:
+                        goto finishSettle;
+                }
 
                 yield return null;
             }
+
+            finishSettle:
 
             if (_state != PackState.World || _rigidbody == null)
                 yield break;
