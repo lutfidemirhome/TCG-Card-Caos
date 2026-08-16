@@ -18,10 +18,18 @@ public static class PackOpenSequence
     const float RevealWaveDipHeightFactor = 0.042f;
     const float RevealScreenScaleMultiplier = 1.2f;
     const float RevealCardSpacingFactor = 1.12f;
-    const float PackDriftDurationFactor = 0.11f;
+    const float PackRevealLocalYOffsetFactor = 0.32f;
+    const float PackDriftDurationFactor = 0.075f;
     const float PackExitDropFactor = 1.35f;
-    const float PackDriftSwayFactor = 0.28f;
     const float PackPostShakePause = 0.05f;
+    const float PackRevealSettleDropFactor = 0.14f;
+    const float PackRevealSettleDurationFactor = 0.1f;
+    const float CardEjectDuration = 0.26f;
+    const float CardEjectStagger = 0.1f;
+    const float CardEjectStartScaleFactor = 0.32f;
+    const float CardEjectArcHeightFactor = 0.09f;
+    const float PackEjectLocalYOffsetFactor = 0.22f;
+    const float PackEjectLocalZInsetFactor = 2.8f;
     const float RevealBackdropAlpha = 0.62f;
     const float RevealBackdropFadeInDuration = 0.28f;
     const float RevealBackdropFadeOutDuration = 0.32f;
@@ -55,7 +63,10 @@ public static class PackOpenSequence
         float duration = hand.OpenSequenceDuration;
         Quaternion revealFaceRotation = CardArtLibrary.RevealRootLocalRotation;
         Quaternion packRevealWorldRotation = revealRoot.rotation * revealFaceRotation;
-        Vector3 packRevealLocalStart = new Vector3(0f, -CardDimensions.Height * heldScale * 0.18f, 0f);
+        Vector3 packRevealLocalStart = new Vector3(
+            0f,
+            -CardDimensions.Height * revealScale * PackRevealLocalYOffsetFactor,
+            0f);
 
         // Move pack toward the reveal anchor, facing the player like a held pack.
         float moveInDuration = duration * 0.22f;
@@ -71,113 +82,51 @@ public static class PackOpenSequence
             float t = Mathf.SmoothStep(0f, 1f, elapsed / moveInDuration);
             pack.transform.position = Vector3.Lerp(packStartWorldPos, packRevealWorldPos, t);
             pack.transform.rotation = Quaternion.Slerp(packStartWorldRot, packRevealWorldRotation, t);
-            pack.transform.localScale = Vector3.Lerp(packStartScale, Vector3.one * heldScale, t);
+            pack.transform.localScale = Vector3.Lerp(packStartScale, Vector3.one * revealScale, t);
             yield return null;
         }
 
         pack.transform.SetParent(revealRoot, false);
         pack.transform.localPosition = packRevealLocalStart;
         pack.ApplyRevealOpenPose(revealFaceRotation);
-        pack.transform.localScale = Vector3.one * heldScale;
+        pack.transform.localScale = Vector3.one * revealScale;
 
         Transform packTransform = pack.transform;
         Vector3 baseLocalPos = packTransform.localPosition;
         yield return AnticipationHoldRoutine(
             packTransform,
             baseLocalPos,
-            heldScale,
+            revealScale,
             hand.OpenPackAnticipationHold);
 
-        // Spawn reveal cards in a horizontal row above the pack — backs toward the player.
-        IReadOnlyList<CardDefinition> contents = pack.RollContents(CardDimensions.CardsPerBoosterPack);
-        var revealCards = new List<WorldCard>(contents.Count);
-        var revealSparkles = new List<PackRevealCardSparkle>(contents.Count);
-        float cardSpacing = CardDimensions.Width * revealScale * RevealCardSpacingFactor;
-        float rowWidth = cardSpacing * Mathf.Max(0, contents.Count - 1);
-        float halfHeight = CardDimensions.Height * revealScale * 0.5f;
+        Vector3 ejectAnchorPos = baseLocalPos + new Vector3(
+            0f,
+            -CardDimensions.Height * revealScale * PackRevealSettleDropFactor,
+            0f);
+        yield return PackRevealSettleRoutine(
+            packTransform,
+            baseLocalPos,
+            ejectAnchorPos,
+            revealScale,
+            duration * PackRevealSettleDurationFactor);
+
+        // Eject cards one by one from inside the pack mouth, then spread into the reveal row.
+        var revealCards = new List<WorldCard>(CardDimensions.CardsPerBoosterPack);
+        var revealSparkles = new List<PackRevealCardSparkle>(CardDimensions.CardsPerBoosterPack);
         float packDriftDuration = duration * PackDriftDurationFactor;
-        float packExitLocalY = -CardDimensions.Height * heldScale * PackExitDropFactor;
-        float packDriftSwayX = CardDimensions.Width * heldScale * PackDriftSwayFactor;
-        float packDriftSwaySign = Random.value < 0.5f ? -1f : 1f;
-        bool packDestroyed = false;
+        float packExitLocalY = -CardDimensions.Height * revealScale * PackExitDropFactor;
 
-        for (int i = 0; i < contents.Count; i++)
-        {
-            float x = contents.Count <= 1 ? 0f : -rowWidth * 0.5f + i * cardSpacing;
-            Vector3 localPos = new Vector3(x, halfHeight + CardDimensions.Height * revealScale * 0.12f, 0f);
-            Vector3 worldPos = revealRoot.TransformPoint(localPos);
-
-            WorldCard card = CardFactory.CreateWorldCard(
-                worldPos,
-                revealRoot.rotation * revealFaceRotation,
-                contents[i],
-                paletteIndex: 0,
-                cardName: "PackCard_" + (i + 1));
-
-            card.BeginRevealPreview(
-                revealRoot,
-                localPos,
-                revealFaceRotation,
-                0f,
-                showsBack: true);
-            revealCards.Add(card);
-
-            PackRevealCardSparkle sparkle = card.AttachRevealSparkle(revealScale);
-            if (sparkle != null)
-            {
-                sparkle.gameObject.SetActive(false);
-                revealSparkles.Add(sparkle);
-            }
-
-            GameSoundEffects.PlayPack(GameSoundEffects.PackId.InCardLayout);
-        }
-
-        GameSoundEffects.PlayPack(GameSoundEffects.PackId.PackOpen);
-
-        float spreadDuration = duration * 0.28f;
-        elapsed = 0f;
-        while (elapsed < spreadDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, elapsed / spreadDuration);
-
-            if (!packDestroyed && pack != null)
-            {
-                float packT = Mathf.Clamp01(elapsed / packDriftDuration);
-                float packFall = packT * packT;
-                float packY = Mathf.Lerp(baseLocalPos.y, packExitLocalY, packFall);
-                float packX = baseLocalPos.x
-                    + packDriftSwaySign * packDriftSwayX * Mathf.Sin(packT * Mathf.PI);
-                packTransform.localPosition = new Vector3(packX, packY, baseLocalPos.z);
-                packTransform.localScale = Vector3.one * heldScale;
-
-                if (packT >= 1f)
-                {
-                    Object.Destroy(pack.gameObject);
-                    packDestroyed = true;
-                }
-            }
-
-            for (int i = 0; i < revealCards.Count; i++)
-            {
-                WorldCard card = revealCards[i];
-                if (card == null)
-                    continue;
-
-                card.transform.localScale = Vector3.one * (revealScale * t);
-            }
-
-            yield return null;
-        }
-
-        if (!packDestroyed && pack != null)
-            Object.Destroy(pack.gameObject);
-
-        for (int i = 0; i < revealCards.Count; i++)
-        {
-            if (revealCards[i] != null)
-                revealCards[i].transform.localScale = Vector3.one * revealScale;
-        }
+        yield return EjectRevealCardsRoutine(
+            pack,
+            packTransform,
+            revealRoot,
+            revealFaceRotation,
+            revealScale,
+            ejectAnchorPos,
+            packDriftDuration,
+            packExitLocalY,
+            revealCards,
+            revealSparkles);
 
         float settleDuration = duration * 0.12f;
         elapsed = 0f;
@@ -265,10 +214,160 @@ public static class PackOpenSequence
         hand.SetHandInputLocked(false);
     }
 
+    static IEnumerator PackRevealSettleRoutine(
+        Transform packTransform,
+        Vector3 fromLocalPos,
+        Vector3 toLocalPos,
+        float packScale,
+        float settleDuration)
+    {
+        if (packTransform == null)
+            yield break;
+
+        if (settleDuration <= 0f)
+        {
+            packTransform.localPosition = toLocalPos;
+            packTransform.localScale = Vector3.one * packScale;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < settleDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / settleDuration);
+            packTransform.localPosition = Vector3.Lerp(fromLocalPos, toLocalPos, t);
+            packTransform.localScale = Vector3.one * packScale;
+            yield return null;
+        }
+
+        packTransform.localPosition = toLocalPos;
+        packTransform.localScale = Vector3.one * packScale;
+    }
+
+    static IEnumerator EjectRevealCardsRoutine(
+        WorldBoosterPack pack,
+        Transform packTransform,
+        Transform revealRoot,
+        Quaternion revealFaceRotation,
+        float revealScale,
+        Vector3 baseLocalPos,
+        float packDriftDuration,
+        float packExitLocalY,
+        List<WorldCard> revealCards,
+        List<PackRevealCardSparkle> revealSparkles)
+    {
+        IReadOnlyList<CardDefinition> contents = pack.RollContents(CardDimensions.CardsPerBoosterPack);
+        float cardSpacing = CardDimensions.Width * revealScale * RevealCardSpacingFactor;
+        float rowWidth = cardSpacing * Mathf.Max(0, contents.Count - 1);
+        float halfHeight = CardDimensions.Height * revealScale * 0.5f;
+        float rowBaseY = halfHeight + CardDimensions.Height * revealScale * 0.12f;
+        float ejectStartScale = revealScale * CardEjectStartScaleFactor;
+        float arcHeight = CardDimensions.Height * revealScale * CardEjectArcHeightFactor;
+        Vector3 ejectStartLocal = baseLocalPos + new Vector3(
+            0f,
+            CardDimensions.Height * revealScale * PackEjectLocalYOffsetFactor,
+            CardDimensions.Thickness * revealScale * PackEjectLocalZInsetFactor);
+
+        packTransform.localPosition = baseLocalPos;
+        packTransform.localScale = Vector3.one * revealScale;
+
+        GameSoundEffects.PlayPack(GameSoundEffects.PackId.PackOpen);
+
+        for (int i = 0; i < contents.Count; i++)
+        {
+            float targetX = contents.Count <= 1 ? 0f : -rowWidth * 0.5f + i * cardSpacing;
+            Vector3 targetLocalPos = new Vector3(targetX, rowBaseY, 0f);
+
+            WorldCard card = CardFactory.CreateWorldCard(
+                revealRoot.TransformPoint(ejectStartLocal),
+                revealRoot.rotation * revealFaceRotation,
+                contents[i],
+                paletteIndex: 0,
+                cardName: "PackCard_" + (i + 1));
+
+            card.BeginRevealPreview(
+                revealRoot,
+                ejectStartLocal,
+                revealFaceRotation,
+                ejectStartScale,
+                showsBack: true);
+            revealCards.Add(card);
+
+            PackRevealCardSparkle sparkle = card.AttachRevealSparkle(revealScale);
+            if (sparkle != null)
+            {
+                sparkle.gameObject.SetActive(false);
+                revealSparkles.Add(sparkle);
+            }
+
+            GameSoundEffects.PlayPack(GameSoundEffects.PackId.InCardLayout);
+
+            float cardElapsed = 0f;
+            while (cardElapsed < CardEjectDuration)
+            {
+                cardElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, cardElapsed / CardEjectDuration);
+                float arc = Mathf.Sin(t * Mathf.PI) * arcHeight;
+                Vector3 pos = Vector3.Lerp(ejectStartLocal, targetLocalPos, t);
+                pos.y += arc;
+                card.transform.localPosition = pos;
+                card.transform.localScale = Vector3.one * Mathf.Lerp(ejectStartScale, revealScale, t);
+                yield return null;
+            }
+
+            card.transform.localPosition = targetLocalPos;
+            card.transform.localScale = Vector3.one * revealScale;
+
+            if (i < contents.Count - 1)
+            {
+                float staggerElapsed = 0f;
+                while (staggerElapsed < CardEjectStagger)
+                {
+                    staggerElapsed += Time.deltaTime;
+                    yield return null;
+                }
+            }
+        }
+
+        yield return PackExitDriftRoutine(
+            pack,
+            packTransform,
+            baseLocalPos,
+            revealScale,
+            packDriftDuration,
+            packExitLocalY);
+    }
+
+    static IEnumerator PackExitDriftRoutine(
+        WorldBoosterPack pack,
+        Transform packTransform,
+        Vector3 baseLocalPos,
+        float packScale,
+        float packDriftDuration,
+        float packExitLocalY)
+    {
+        if (pack == null || packTransform == null)
+            yield break;
+
+        float elapsed = 0f;
+        while (elapsed < packDriftDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / packDriftDuration);
+            float packY = Mathf.Lerp(baseLocalPos.y, packExitLocalY, t);
+            packTransform.localPosition = new Vector3(baseLocalPos.x, packY, baseLocalPos.z);
+            packTransform.localScale = Vector3.one * packScale;
+            yield return null;
+        }
+
+        Object.Destroy(pack.gameObject);
+    }
+
     static IEnumerator AnticipationHoldRoutine(
         Transform packTransform,
         Vector3 baseLocalPos,
-        float heldScale,
+        float packScale,
         float holdDuration)
     {
         if (packTransform == null || holdDuration <= 0f)
@@ -285,12 +384,12 @@ public static class PackOpenSequence
                 tremor + Random.Range(-intensity, intensity),
                 tremor + Random.Range(-intensity, intensity),
                 Random.Range(-intensity * 0.3f, intensity * 0.3f));
-            packTransform.localScale = Vector3.one * heldScale * (1f + Mathf.Sin(elapsed * 22f) * 0.012f * t);
+            packTransform.localScale = Vector3.one * packScale * (1f + Mathf.Sin(elapsed * 22f) * 0.012f * t);
             yield return null;
         }
 
         packTransform.localPosition = baseLocalPos;
-        packTransform.localScale = Vector3.one * heldScale;
+        packTransform.localScale = Vector3.one * packScale;
 
         if (PackPostShakePause > 0f)
             yield return new WaitForSeconds(PackPostShakePause);
