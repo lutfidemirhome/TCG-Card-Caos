@@ -63,6 +63,25 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
+        PlayerCardHand hand = ResolveHand();
+        if (hand != null && hand.IsHandInputLocked)
+        {
+            _raycastAimedCard = null;
+            _raycastAimedPack = null;
+
+            if (hand.IsAwaitingRevealCollect)
+            {
+                UpdateSelectedPackPrompt();
+                HandleInput();
+            }
+            else
+            {
+                ClearTarget();
+            }
+
+            return;
+        }
+
         UpdateTarget();
         UpdateInspectPreview();
         HandleInput();
@@ -70,13 +89,6 @@ public class InteractionController : MonoBehaviour
 
     void UpdateTarget()
     {
-        PlayerCardHand hand = ResolveHand();
-        if (hand != null && hand.IsAwaitingRevealCollect)
-        {
-            UpdateSelectedPackPrompt();
-            return;
-        }
-
         Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
 
         WorldCard aimedCard = null;
