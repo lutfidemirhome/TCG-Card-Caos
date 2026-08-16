@@ -36,6 +36,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     BoxCollider _collider;
     bool _interactionHighlighted;
     bool _groundShowsBack;
+    int _packVariantIndex = 1;
+    List<CardDefinition> _preRolledContents;
     float _packModelGroundOffsetYFaceUp;
     float _packModelGroundOffsetYFaceDown;
     Vector3 _packModelCenterOffset;
@@ -65,15 +67,24 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public bool HasActivePhysics => _rigidbody != null && !_rigidbody.isKinematic;
     public int GroundStackLayer => _groundStackLayer;
     public BoosterPackDefinition Definition => packDefinition;
+    public int PackVariantIndex => _packVariantIndex;
+    public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(_packVariantIndex);
 
     public void SetGroundStackLayer(int layer)
     {
         _groundStackLayer = Mathf.Max(0, layer);
     }
 
-    public void Initialize(BoosterPackDefinition definition)
+    public void Initialize(
+        BoosterPackDefinition definition,
+        int packVariantIndex = 1,
+        IReadOnlyList<CardDefinition> preRolledContents = null)
     {
         packDefinition = definition;
+        _packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
+        _preRolledContents = preRolledContents != null && preRolledContents.Count > 0
+            ? new List<CardDefinition>(preRolledContents)
+            : null;
         EnsureVisual();
         RefreshPackModelLayout();
         ApplyWorldVisualOrientation();
@@ -155,7 +166,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _packModel = instance.transform;
             _visualBaseScale = Vector3.one;
 
-            PackArtLibrary.ApplyPackMaterials(_packModel);
+            PackArtLibrary.ApplyPackMaterials(_packModel, _packVariantIndex);
             StripVisualColliders(_packModel);
             ApplyPackModelShadowSettings();
             return;
@@ -168,7 +179,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     {
         _visualBaseScale = Vector3.one;
 
-        PackArtLibrary.ApplyPackMaterials(_packModel);
+        PackArtLibrary.ApplyPackMaterials(_packModel, _packVariantIndex);
         StripVisualColliders(_packModel);
         ApplyPackModelShadowSettings();
     }
@@ -568,7 +579,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             renderer.receiveShadows = false;
 
             if (_state == PackState.World)
-                PackArtLibrary.ApplyPackMaterials(renderer);
+                PackArtLibrary.ApplyPackMaterials(renderer, _packVariantIndex);
         }
     }
 
@@ -595,7 +606,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand == null)
-            return "Press [E] To Pick Up Pack";
+            return "Press [E] To Pick Up " + PackDisplayName;
 
         if (!hand.CanPickUpPack)
         {
@@ -605,7 +616,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return "Hand Full";
         }
 
-        return "Press [E] To Pick Up Pack";
+        return "Press [E] To Pick Up " + PackDisplayName;
     }
 
     public void Interact(GameObject interactor)
@@ -996,6 +1007,12 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public IReadOnlyList<CardDefinition> RollContents(int count)
     {
+        if (_preRolledContents != null && _preRolledContents.Count > 0)
+        {
+            int take = Mathf.Min(count, _preRolledContents.Count);
+            return _preRolledContents.GetRange(0, take);
+        }
+
         var results = new List<CardDefinition>(count);
         IReadOnlyList<CardDefinition> pool = packDefinition != null
             ? packDefinition.BuildCardPool()

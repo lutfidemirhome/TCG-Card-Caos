@@ -88,8 +88,7 @@ public static class FirstPersonSceneSetup
         CardInstancedRenderManager.EnsureExists();
         EnsureCardArtReady();
 
-        int cardCount = CardScatterUtility.CountScatterCards();
-        if (cardCount != CardScatterUtility.FullScatterCount)
+        if (CardScatterUtility.SceneNeedsScatterRefresh())
         {
             CardScatterUtility.ClearTestCards();
             CardScatterUtility.SpawnScatteredCards(CardScatterUtility.FullScatterCount);
@@ -146,8 +145,10 @@ public static class FirstPersonSceneSetup
             "TCG Card Caos: Card shop ready at "
             + ScenePath
             + " with walk settings + "
-            + CardScatterUtility.FullScatterCount
-            + " cards. Press Play to test.");
+            + CardScatterUtility.GroundScatterCount
+            + " ground cards + "
+            + CardScatterUtility.DefaultPackScatterCount
+            + " packs. Press Play to test.");
     }
 
     static void DestroyNamedRoots(params string[] names)

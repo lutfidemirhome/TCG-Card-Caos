@@ -20,8 +20,10 @@ public static class CardScatterUtility
     public const int StressTestScatterCount = 5000;
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "Card_";
-    public const int DefaultPackScatterCount = 12;
+    public const int DefaultPackScatterCount = 5;
     public const string TestPackPrefix = "BoosterPack_";
+    public static int PackReservedCardCount => DefaultPackScatterCount * CardDimensions.CardsPerBoosterPack;
+    public static int GroundScatterCount => FullScatterCount - PackReservedCardCount;
 
     const int CardsPerSpawnFrame = 250;
     const float GroundFaceDownRatio = 0.2f;
@@ -64,6 +66,127 @@ public static class CardScatterUtility
         SpawnScatteredCards(FullScatterCount, shelfCategoryId: null);
     }
 
+    public static void SpawnGroundPacksOnly(int packCount = DefaultPackScatterCount)
+    {
+        ClearTestCards();
+        CardCatalog.Reload();
+        CardArtLibrary.EnsureLoaded();
+        CardFactory.InvalidateGroundCache();
+
+        List<CardDefinition> definitions = BuildScatterDefinitions(shelfCategoryId: null);
+        if (definitions.Count == 0)
+        {
+            Debug.LogError(
+                "CardScatterUtility: No CardDefinition assets found. "
+                + "Run TCG Card Caos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
+            return;
+        }
+
+        Transform scatterRoot = EnsureScatterRoot();
+        float groundY = CardFactory.GroundHeightOffset();
+        int totalCards = packCount * CardDimensions.CardsPerBoosterPack;
+        List<CardDefinition> shuffledContents = BuildShuffledPackContents(definitions, totalCards);
+        var packPositions = GeneratePackScatterPositions(packCount);
+        BoosterPackDefinition definition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
+
+        Debug.Log(
+            "CardScatterUtility: Spawning "
+            + packCount
+            + " ground packs ("
+            + totalCards
+            + " cards pre-rolled inside).");
+
+        for (int i = 0; i < packCount; i++)
+        {
+            int variantIndex = i + 1;
+            Vector2 xz = packPositions[i];
+            var position = new Vector3(xz.x, groundY, xz.y);
+            var rotation = GenerateScatterRotation();
+
+            var packContents = new List<CardDefinition>(CardDimensions.CardsPerBoosterPack);
+            int contentStart = i * CardDimensions.CardsPerBoosterPack;
+            for (int c = 0; c < CardDimensions.CardsPerBoosterPack; c++)
+                packContents.Add(shuffledContents[contentStart + c]);
+
+            WorldBoosterPack pack = PackFactory.CreateWorldPack(
+                position,
+                rotation,
+                definition,
+                packName: PackArtLibrary.GetVariantDisplayName(variantIndex),
+                packVariantIndex: variantIndex,
+                preRolledContents: packContents);
+            pack.transform.SetParent(scatterRoot, true);
+            CardGroundStack.ApplyStackHeight(pack, placeOnTop: false);
+        }
+
+        CardGroundStack.RebuildAll();
+    }
+
+    static List<CardDefinition> BuildScatterAssignments(
+        int count,
+        IReadOnlyList<CardDefinition> definitions,
+        out bool reuseDefinitions)
+    {
+        reuseDefinitions = count > definitions.Count;
+        int assignmentCount = reuseDefinitions ? count : Mathf.Min(count, definitions.Count);
+        var assignments = new List<CardDefinition>(assignmentCount);
+        for (int i = 0; i < assignmentCount; i++)
+            assignments.Add(reuseDefinitions ? definitions[i % definitions.Count] : definitions[i]);
+
+        return assignments;
+    }
+
+    static void ReserveRandomForPacks(
+        List<CardDefinition> assignments,
+        int reserveCount,
+        out List<CardDefinition> groundAssignments,
+        out List<CardDefinition> packAssignments)
+    {
+        reserveCount = Mathf.Clamp(reserveCount, 0, assignments.Count);
+        var indices = new List<int>(assignments.Count);
+        for (int i = 0; i < assignments.Count; i++)
+            indices.Add(i);
+
+        Shuffle(indices);
+
+        var reserved = new HashSet<int>(reserveCount);
+        for (int i = 0; i < reserveCount; i++)
+            reserved.Add(indices[i]);
+
+        groundAssignments = new List<CardDefinition>(assignments.Count - reserveCount);
+        packAssignments = new List<CardDefinition>(reserveCount);
+        for (int i = 0; i < assignments.Count; i++)
+        {
+            if (reserved.Contains(i))
+                packAssignments.Add(assignments[i]);
+            else
+                groundAssignments.Add(assignments[i]);
+        }
+
+        Shuffle(packAssignments);
+    }
+
+    static void Shuffle<T>(List<T> items)
+    {
+        for (int i = items.Count - 1; i > 0; i--)
+        {
+            int swapIndex = Random.Range(0, i + 1);
+            T temp = items[i];
+            items[i] = items[swapIndex];
+            items[swapIndex] = temp;
+        }
+    }
+
+    static List<CardDefinition> BuildShuffledPackContents(IReadOnlyList<CardDefinition> pool, int totalCards)
+    {
+        var results = new List<CardDefinition>(totalCards);
+        for (int i = 0; i < totalCards; i++)
+            results.Add(pool[Random.Range(0, pool.Count)]);
+
+        Shuffle(results);
+        return results;
+    }
+
     public static void SpawnScatteredCards(int count, string shelfCategoryId)
     {
         CardCatalog.Reload();
@@ -81,15 +204,21 @@ public static class CardScatterUtility
         CardFactory.InvalidateGroundCache();
         Transform scatterRoot = EnsureScatterRoot();
         float groundY = CardFactory.GroundHeightOffset();
-        bool reuseDefinitions = count > definitions.Count;
-        int spawnCount = reuseDefinitions ? count : Mathf.Min(count, definitions.Count);
-        var positions = GenerateScatterPositions(spawnCount);
-        HashSet<int> backFacingIndices = PickBackFacingIndices(spawnCount);
+        List<CardDefinition> assignments = BuildScatterAssignments(count, definitions, out bool reuseDefinitions);
+        int reserveCount = Mathf.Min(PackReservedCardCount, assignments.Count);
+        ReserveRandomForPacks(assignments, reserveCount, out List<CardDefinition> groundAssignments, out List<CardDefinition> packAssignments);
+
+        var positions = GenerateScatterPositions(groundAssignments.Count);
+        HashSet<int> backFacingIndices = PickBackFacingIndices(groundAssignments.Count);
 
         Debug.Log(
             "CardScatterUtility: Spawning "
-            + spawnCount
-            + " cards (catalog "
+            + groundAssignments.Count
+            + " ground cards + "
+            + DefaultPackScatterCount
+            + " packs ("
+            + packAssignments.Count
+            + " cards inside packs, catalog "
             + CardCatalog.Count
             + " definitions"
             + (reuseDefinitions ? ", reusing definitions" : string.Empty)
@@ -98,14 +227,12 @@ public static class CardScatterUtility
             + " showing back"
             + ").");
 
-        for (int i = 0; i < spawnCount; i++)
+        for (int i = 0; i < groundAssignments.Count; i++)
         {
             Vector2 xz = positions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
             var rotation = GenerateScatterRotation();
-            CardDefinition definition = reuseDefinitions
-                ? definitions[i % definitions.Count]
-                : definitions[i];
+            CardDefinition definition = groundAssignments[i];
 
             WorldCard card = CardFactory.CreateWorldCard(
                 position,
@@ -119,7 +246,7 @@ public static class CardScatterUtility
             card.transform.SetParent(scatterRoot, true);
         }
 
-        SpawnScatteredPacks(scatterRoot, groundY, positions);
+        SpawnScatteredPacks(scatterRoot, groundY, positions, packAssignments);
 
         CardGroundStack.RebuildAll();
     }
@@ -141,15 +268,19 @@ public static class CardScatterUtility
         CardFactory.InvalidateGroundCache();
         Transform scatterRoot = EnsureScatterRoot();
         float groundY = CardFactory.GroundHeightOffset();
-        bool reuseDefinitions = count > definitions.Count;
-        int spawnCount = reuseDefinitions ? count : Mathf.Min(count, definitions.Count);
-        var positions = GenerateScatterPositions(spawnCount);
-        HashSet<int> backFacingIndices = PickBackFacingIndices(spawnCount);
+        List<CardDefinition> assignments = BuildScatterAssignments(count, definitions, out bool reuseDefinitions);
+        int reserveCount = Mathf.Min(PackReservedCardCount, assignments.Count);
+        ReserveRandomForPacks(assignments, reserveCount, out List<CardDefinition> groundAssignments, out List<CardDefinition> packAssignments);
+
+        var positions = GenerateScatterPositions(groundAssignments.Count);
+        HashSet<int> backFacingIndices = PickBackFacingIndices(groundAssignments.Count);
 
         Debug.Log(
             "CardScatterUtility: Spawning "
-            + spawnCount
-            + " cards at runtime (catalog "
+            + groundAssignments.Count
+            + " ground cards + "
+            + DefaultPackScatterCount
+            + " packs at runtime (catalog "
             + CardCatalog.Count
             + " definitions"
             + (reuseDefinitions ? ", reusing definitions" : string.Empty)
@@ -158,14 +289,12 @@ public static class CardScatterUtility
             + " showing back"
             + ").");
 
-        for (int i = 0; i < spawnCount; i++)
+        for (int i = 0; i < groundAssignments.Count; i++)
         {
             Vector2 xz = positions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
             var rotation = GenerateScatterRotation();
-            CardDefinition definition = reuseDefinitions
-                ? definitions[i % definitions.Count]
-                : definitions[i];
+            CardDefinition definition = groundAssignments[i];
 
             WorldCard card = CardFactory.CreateWorldCard(
                 position,
@@ -182,37 +311,48 @@ public static class CardScatterUtility
                 yield return null;
         }
 
-        SpawnScatteredPacks(scatterRoot, groundY, positions);
+        SpawnScatteredPacks(scatterRoot, groundY, positions, packAssignments);
+        CardGroundStack.RebuildAll();
     }
 
-    static void SpawnScatteredPacks(Transform scatterRoot, float groundY, List<Vector2> occupiedCardPositions)
-    {
-        SpawnScatteredPacks(scatterRoot, groundY, occupiedCardPositions, DefaultPackScatterCount);
-    }
-
-    public static void SpawnScatteredPacks(
+    static void SpawnScatteredPacks(
         Transform scatterRoot,
         float groundY,
         List<Vector2> occupiedCardPositions,
-        int count)
+        IReadOnlyList<CardDefinition> packAssignments)
     {
-        if (count <= 0 || scatterRoot == null)
+        if (scatterRoot == null || packAssignments == null || packAssignments.Count == 0)
             return;
 
-        var packPositions = GenerateScatterPositions(count, occupiedCardPositions);
+        int packCount = DefaultPackScatterCount;
+        var packPositions = GeneratePackScatterPositions(packCount, occupiedCardPositions);
         BoosterPackDefinition definition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
 
-        for (int i = 0; i < packPositions.Count; i++)
+        for (int i = 0; i < packCount; i++)
         {
+            int variantIndex = i + 1;
             Vector2 xz = packPositions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
             var rotation = GenerateScatterRotation();
+
+            var packContents = new List<CardDefinition>(CardDimensions.CardsPerBoosterPack);
+            int contentStart = i * CardDimensions.CardsPerBoosterPack;
+            for (int c = 0; c < CardDimensions.CardsPerBoosterPack; c++)
+            {
+                int assignmentIndex = contentStart + c;
+                if (assignmentIndex >= packAssignments.Count)
+                    break;
+
+                packContents.Add(packAssignments[assignmentIndex]);
+            }
 
             WorldBoosterPack pack = PackFactory.CreateWorldPack(
                 position,
                 rotation,
                 definition,
-                packName: TestPackPrefix + (i + 1).ToString("00"));
+                packName: PackArtLibrary.GetVariantDisplayName(variantIndex),
+                packVariantIndex: variantIndex,
+                preRolledContents: packContents);
             pack.transform.SetParent(scatterRoot, true);
             CardGroundStack.ApplyStackHeight(pack, placeOnTop: false);
         }
@@ -292,6 +432,22 @@ public static class CardScatterUtility
 
         definitions.Sort((a, b) => string.CompareOrdinal(a.DefinitionId, b.DefinitionId));
         return definitions;
+    }
+
+    public static int CountScatterPacks()
+    {
+        Transform scatterRoot = FindScatterRootTransform();
+        if (scatterRoot == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < scatterRoot.childCount; i++)
+        {
+            if (scatterRoot.GetChild(i).GetComponent<WorldBoosterPack>() != null)
+                count++;
+        }
+
+        return count;
     }
 
     public static int CountScatterCards()
@@ -483,6 +639,140 @@ public static class CardScatterUtility
         return positions;
     }
 
+    /// <summary>
+    /// Spreads a small number of packs across the full scatter zone with wide pack-to-pack spacing.
+    /// </summary>
+    static List<Vector2> GeneratePackScatterPositions(int packCount, IReadOnlyList<Vector2> avoidCards = null)
+    {
+        ScatterRegion region = ScatterRegion.FromScene();
+        float width = Mathf.Max(0.01f, region.MaxX - region.MinX);
+        float depth = Mathf.Max(0.01f, region.MaxZ - region.MinZ);
+        float area = width * depth;
+
+        float cardAvoidSpacing = GetPreferredScatterSpacing();
+        float cardAvoidSpacingSq = cardAvoidSpacing * cardAvoidSpacing;
+
+        float packSpacing = Mathf.Sqrt(area / Mathf.Max(1, packCount)) * 0.72f;
+        packSpacing = Mathf.Max(packSpacing, cardAvoidSpacing * 2.5f);
+        float packSpacingSq = packSpacing * packSpacing;
+
+        var positions = new List<Vector2>(packCount);
+        var cellOrder = new List<int>(packCount);
+        for (int i = 0; i < packCount; i++)
+            cellOrder.Add(i);
+        Shuffle(cellOrder);
+
+        int maxAttempts = Mathf.Max(120, packCount * 48);
+
+        for (int i = 0; i < packCount; i++)
+        {
+            Vector2 candidate = Vector2.zero;
+            bool found = false;
+            float spacing = packSpacing;
+            float spacingSq = spacing * spacing;
+            int cellIndex = cellOrder[i];
+
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                if (attempt > 0 && attempt % 24 == 0)
+                {
+                    spacing = Mathf.Max(cardAvoidSpacing * 2f, spacing * 0.9f);
+                    spacingSq = spacing * spacing;
+                }
+
+                candidate = SamplePackCandidate(region, cellIndex, packCount);
+                if (IsFarEnough(candidate, positions, spacingSq)
+                    && IsFarEnough(candidate, avoidCards, cardAvoidSpacingSq))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                candidate = FindBestPackFallback(region, positions, avoidCards, cardAvoidSpacingSq);
+
+            positions.Add(region.Clamp(candidate));
+        }
+
+        return positions;
+    }
+
+    static Vector2 SamplePackCandidate(ScatterRegion region, int packIndex, int packCount)
+    {
+        int columns = packCount <= 2 ? packCount : 3;
+        int rows = Mathf.CeilToInt((float)packCount / columns);
+        int cellIndex = packIndex;
+        int column = cellIndex % columns;
+        int row = cellIndex / columns;
+
+        float width = Mathf.Max(0.01f, region.MaxX - region.MinX);
+        float depth = Mathf.Max(0.01f, region.MaxZ - region.MinZ);
+        float cellWidth = width / columns;
+        float cellDepth = depth / rows;
+
+        float x = region.MinX + (column + Random.Range(0.18f, 0.82f)) * cellWidth;
+        float z = region.MinZ + (row + Random.Range(0.18f, 0.82f)) * cellDepth;
+        Vector2 jittered = new Vector2(x, z) + Random.insideUnitCircle * (Mathf.Min(cellWidth, cellDepth) * 0.12f);
+        return region.Clamp(jittered);
+    }
+
+    static Vector2 FindBestPackFallback(
+        ScatterRegion region,
+        IReadOnlyList<Vector2> packPositions,
+        IReadOnlyList<Vector2> avoidCards,
+        float cardAvoidSpacingSq)
+    {
+        Vector2 best = region.RandomXZ();
+        float bestScore = ScorePackCandidate(best, packPositions, avoidCards, cardAvoidSpacingSq);
+
+        for (int attempt = 0; attempt < 48; attempt++)
+        {
+            Vector2 trial = region.RandomXZ();
+            float score = ScorePackCandidate(trial, packPositions, avoidCards, cardAvoidSpacingSq);
+            if (score <= bestScore)
+                continue;
+
+            best = trial;
+            bestScore = score;
+        }
+
+        return best;
+    }
+
+    static float ScorePackCandidate(
+        Vector2 candidate,
+        IReadOnlyList<Vector2> packPositions,
+        IReadOnlyList<Vector2> avoidCards,
+        float cardAvoidSpacingSq)
+    {
+        float score = MinDistanceSq(candidate, packPositions);
+        if (avoidCards != null && avoidCards.Count > 0)
+        {
+            float cardDistanceSq = MinDistanceSq(candidate, avoidCards);
+            if (cardDistanceSq < cardAvoidSpacingSq)
+                score = Mathf.Min(score, cardDistanceSq);
+        }
+
+        return score;
+    }
+
+    static float MinDistanceSq(Vector2 candidate, IReadOnlyList<Vector2> existing)
+    {
+        if (existing == null || existing.Count == 0)
+            return float.MaxValue;
+
+        float minDistanceSq = float.MaxValue;
+        for (int i = 0; i < existing.Count; i++)
+        {
+            float distanceSq = (existing[i] - candidate).sqrMagnitude;
+            if (distanceSq < minDistanceSq)
+                minDistanceSq = distanceSq;
+        }
+
+        return minDistanceSq;
+    }
+
     static bool IsFarEnough(Vector2 candidate, IReadOnlyList<Vector2> existing, float minSpacingSq)
     {
         if (existing == null || existing.Count == 0)
@@ -529,13 +819,15 @@ public static class CardScatterUtility
 
     public static bool SceneNeedsScatterRefresh()
     {
-        if (CountScatterCards() < FullScatterCount)
+        if (CountScatterCards() < GroundScatterCount)
+            return true;
+
+        if (CountScatterPacks() < DefaultPackScatterCount)
             return true;
 
         if (HasInvalidScatterCards())
             return true;
 
-        // Old pile-based scatters stay spread-broken until refreshed.
         return HasClusteredScatterCards();
     }
 

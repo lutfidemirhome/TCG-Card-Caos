@@ -70,7 +70,9 @@ public class CardInstancedRenderManager : MonoBehaviour
         Debug.Log(
             "TCG Card Caos: Play mode card setup complete ("
             + CardScatterUtility.CountScatterCards()
-            + " scattered cards).");
+            + " ground cards + "
+            + CardScatterUtility.CountScatterPacks()
+            + " packs).");
 
         _playModeSetupRoutine = null;
     }

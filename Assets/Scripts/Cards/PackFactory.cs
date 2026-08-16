@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class PackFactory
@@ -6,7 +7,9 @@ public static class PackFactory
         Vector3 position,
         Quaternion rotation,
         BoosterPackDefinition packDefinition = null,
-        string packName = "Booster Pack")
+        string packName = "Booster Pack",
+        int packVariantIndex = 1,
+        IReadOnlyList<CardDefinition> preRolledContents = null)
     {
         CardArtLibrary.EnsureLoaded();
 
@@ -19,7 +22,7 @@ public static class PackFactory
         collider.isTrigger = false;
 
         var pack = root.AddComponent<WorldBoosterPack>();
-        pack.Initialize(packDefinition);
+        pack.Initialize(packDefinition, packVariantIndex, preRolledContents);
         return pack;
     }
 
