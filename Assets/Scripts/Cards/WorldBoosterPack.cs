@@ -218,20 +218,45 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return;
 
         _cardRef.localPosition = Vector3.zero;
-        _cardRef.localRotation = CardArtLibrary.HandVisualRotation;
+        _cardRef.localRotation = GetPackHandVisualLocalRotation();
         _cardRef.localScale = CardArtLibrary.HandVisualScale;
         SetCardRefMesh(CardArtLibrary.HandCardMesh);
         ApplyPackModelLocalTransform();
     }
 
-    void ApplyCardRefWorldRotation(bool alignPackModelToGround)
+    // --- Pack orientation (imported mesh front/back are opposite the card-proxy basis) ---
+    //
+    // Ground spawn: flat root yaw + GetPackWorldGroundLocalRotation(showsBack) on the proxy.
+    // Hand / reveal: GetPackHandVisualLocalRotation() — front always toward the player.
+    // Physics drop: bake landed proxy world rotation into root; proxy local stays at
+    // GetPackPhysicsWorldLocalRotation() for the whole tumble and settle (WorldCard pattern).
+
+    /// <summary>Local proxy rotation while the pack tumbles under physics (fixed basis, like WorldCard).</summary>
+    static Quaternion GetPackPhysicsWorldLocalRotation()
+    {
+        return CardArtLibrary.WorldVisualRotation;
+    }
+
+    /// <summary>Ground-rest proxy rotation; <paramref name="showsBack"/> true = back artwork visible.</summary>
+    static Quaternion GetPackWorldGroundLocalRotation(bool showsBack)
     {
         Quaternion rotation = CardArtLibrary.WorldVisualRotation;
-        // Imported pack mesh front/back are opposite the invisible card-proxy basis.
-        if (alignPackModelToGround && !HasActivePhysics && !_groundShowsBack)
+        if (!showsBack)
             rotation *= Quaternion.Euler(180f, 0f, 0f);
+        return rotation;
+    }
 
-        _cardRef.localRotation = rotation;
+    /// <summary>Hand and reveal: pitch pack front toward the camera.</summary>
+    static Quaternion GetPackHandVisualLocalRotation()
+    {
+        return CardArtLibrary.HandVisualRotation * Quaternion.Euler(180f, 0f, 0f);
+    }
+
+    void ApplyCardRefWorldRotation(bool alignPackModelToGround)
+    {
+        _cardRef.localRotation = alignPackModelToGround && !HasActivePhysics
+            ? GetPackWorldGroundLocalRotation(_groundShowsBack)
+            : GetPackPhysicsWorldLocalRotation();
     }
 
     void ApplyPackModelLocalTransform()
@@ -374,12 +399,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     {
         _cardRef.localPosition = Vector3.zero;
         _cardRef.localScale = CardArtLibrary.WorldVisualScale;
-
-        Quaternion rotation = CardArtLibrary.WorldVisualRotation;
-        if (!faceDown)
-            rotation *= Quaternion.Euler(180f, 0f, 0f);
-
-        _cardRef.localRotation = rotation;
+        _cardRef.localRotation = GetPackWorldGroundLocalRotation(faceDown);
     }
 
     void ApplyPackModelProbePose()
@@ -759,9 +779,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _flightTargetScale = targetHandScale;
         _flightDuration = Mathf.Max(0.05f, duration);
         _flightElapsed = 0f;
-        _flightStartWorldPos = transform.position;
-        _flightStartWorldRot = transform.rotation;
-        _flightStartWorldScale = transform.localScale.x;
         _flightArcHeight = arcHeight;
         _onPickupFlightComplete = onComplete;
 
@@ -776,6 +793,23 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         transform.SetParent(null, true);
         EnsureVisual();
+        ApplyHandVisualOrientation();
+        AlignRootRotationForHandPickup();
+        _flightStartWorldPos = transform.position;
+        _flightStartWorldRot = transform.rotation;
+        _flightStartWorldScale = transform.localScale.x;
+    }
+
+    /// <summary>
+    /// Bakes hand-front visual into the root so pickup flight does not inherit ground face-up/down.
+    /// </summary>
+    void AlignRootRotationForHandPickup()
+    {
+        if (_cardRef == null)
+            return;
+
+        Quaternion handLocal = GetPackHandVisualLocalRotation();
+        transform.rotation = _cardRef.rotation * Quaternion.Inverse(handLocal);
         ApplyHandVisualOrientation();
     }
 
@@ -878,7 +912,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_cardRef == null)
             return;
 
-        transform.rotation = _cardRef.rotation * Quaternion.Inverse(CardArtLibrary.WorldVisualRotation);
+        // Bake the hand pose into root rotation; proxy uses the fixed physics basis during the drop.
+        transform.rotation = _cardRef.rotation * Quaternion.Inverse(GetPackPhysicsWorldLocalRotation());
         ApplyWorldVisualOrientation(alignPackModelToGround: false);
     }
 
@@ -982,23 +1017,51 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         }
     }
 
+    /// <summary>
+    /// After a physics drop the proxy keeps <see cref="GetPackPhysicsWorldLocalRotation"/> local.
+    /// Back-up lands with root.up ≈ +Y; front-up lands inverted (root.up ≈ −Y). Proxy forward.y
+    /// alone cannot split the two — it is ≥ 0 for both inverted-mesh landings.
+    /// </summary>
+    static bool ReadGroundShowsBackFromLandedProxy(Transform cardRef, Transform root)
+    {
+        if (root != null && Mathf.Abs(root.up.y) > 0.35f)
+            return root.up.y >= 0f;
+
+        return cardRef != null && cardRef.forward.y >= 0f;
+    }
+
+    static Vector3 ReadGroundSettleHeading(Transform cardRef, Transform root, bool groundShowsBack)
+    {
+        Vector3 headingSource = !groundShowsBack && cardRef != null
+            ? cardRef.up
+            : root != null ? root.forward : Vector3.forward;
+
+        Vector3 heading = Vector3.ProjectOnPlane(headingSource, Vector3.up);
+        if (heading.sqrMagnitude < 0.0001f && cardRef != null)
+            heading = Vector3.ProjectOnPlane(cardRef.forward, Vector3.up);
+        if (heading.sqrMagnitude < 0.0001f && root != null)
+            heading = Vector3.ProjectOnPlane(root.right, Vector3.up);
+        if (heading.sqrMagnitude < 0.0001f)
+            heading = Vector3.forward;
+        heading.Normalize();
+        return heading;
+    }
+
+    /// <summary>
+    /// Lays the pack flat on the floor (yaw-only root) while keeping the landed front/back face.
+    /// Face is sampled before flattening so tumble pitch does not skew the result.
+    /// </summary>
     void FlattenAndSnapToGround()
     {
         EnsureVisual();
         ApplyFlatWorldCollider();
 
-        bool frontFaceUp = _cardRef != null && _cardRef.forward.y >= 0f;
-
-        Vector3 heading = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-        if (heading.sqrMagnitude < 0.0001f)
-            heading = Vector3.ProjectOnPlane(transform.right, Vector3.up);
-        if (heading.sqrMagnitude < 0.0001f)
-            heading = Vector3.forward;
-        heading.Normalize();
+        _groundShowsBack = ReadGroundShowsBackFromLandedProxy(_cardRef, transform);
+        Vector3 heading = ReadGroundSettleHeading(_cardRef, transform, _groundShowsBack);
 
         transform.rotation = Quaternion.LookRotation(heading, Vector3.up);
-        _groundShowsBack = frontFaceUp;
         ApplyWorldVisualOrientation(alignPackModelToGround: true);
+
         ApplyPackModelShadowSettings();
         CardGroundStack.ApplyStackHeight(this, placeOnTop: true);
 
