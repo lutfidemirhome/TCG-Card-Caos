@@ -36,6 +36,7 @@ public static class PackOpenSequence
 
         pack.BeginOpening();
         hand.SetHandInputLocked(true);
+        GameSoundEffects.EnsureExists();
 
         float revealDistance = hand.OpenRevealDistance;
         PackRevealBackdrop backdrop = PackRevealBackdrop.Create(camera, revealDistance);
@@ -127,7 +128,11 @@ public static class PackOpenSequence
                 sparkle.gameObject.SetActive(false);
                 revealSparkles.Add(sparkle);
             }
+
+            GameSoundEffects.PlayPack(GameSoundEffects.PackId.InCardLayout);
         }
+
+        GameSoundEffects.PlayPack(GameSoundEffects.PackId.PackOpen);
 
         float spreadDuration = duration * 0.28f;
         elapsed = 0f;
@@ -188,6 +193,8 @@ public static class PackOpenSequence
             WorldCard card = revealCards[i];
             if (card == null)
                 continue;
+
+            GameSoundEffects.PlayPack(GameSoundEffects.PackId.CardRotation);
 
             float flipElapsed = 0f;
             while (flipElapsed < FlipDuration)

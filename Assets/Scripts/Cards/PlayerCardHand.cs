@@ -551,7 +551,11 @@ public class PlayerCardHand : MonoBehaviour
             EffectiveHeldScale,
             duration,
             arcHeight,
-            () => OnCardPickupFlightComplete(newCardIndex));
+            () =>
+            {
+                OnCardPickupFlightComplete(newCardIndex);
+                GameSoundEffects.PlayPack(GameSoundEffects.PackId.WhileGathering);
+            });
     }
 
     public bool TryDropHeldPack()

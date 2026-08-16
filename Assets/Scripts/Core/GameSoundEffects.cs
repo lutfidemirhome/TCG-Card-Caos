@@ -2,11 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// One-shot gameplay SFX loaded from Resources/Audio/sfx/.
+/// One-shot gameplay SFX loaded from Resources/Audio/.
 /// </summary>
 public class GameSoundEffects : MonoBehaviour
 {
     public const string ResourceFolder = "Audio/sfx";
+    public const string PackSoundsFolder = "Audio/Card pack sounds";
 
     public static class Id
     {
@@ -16,9 +17,17 @@ public class GameSoundEffects : MonoBehaviour
         public const string CardHandScroll = "card_hand_scroll";
     }
 
+    public static class PackId
+    {
+        public const string PackOpen = "pack_open";
+        public const string CardRotation = "card_rotation";
+        public const string InCardLayout = "in_card_layout";
+        public const string WhileGathering = "while_gathering";
+    }
+
     public const float CardHandScrollVolume = 0.6f;
 
-    const int AudioSourcePoolSize = 4;
+    const int AudioSourcePoolSize = 8;
 
     static GameSoundEffects _instance;
 
@@ -49,7 +58,16 @@ public class GameSoundEffects : MonoBehaviour
             return;
 
         EnsureExists();
-        _instance.PlayInternal(effectId, volumeScale);
+        _instance.PlayInternal(ResourceFolder, effectId, volumeScale);
+    }
+
+    public static void PlayPack(string clipName, float volumeScale = 1f)
+    {
+        if (string.IsNullOrWhiteSpace(clipName))
+            return;
+
+        EnsureExists();
+        _instance.PlayInternal(PackSoundsFolder, clipName, volumeScale);
     }
 
     void Awake()
@@ -79,12 +97,12 @@ public class GameSoundEffects : MonoBehaviour
             _instance = null;
     }
 
-    void PlayInternal(string effectId, float volumeScale)
+    void PlayInternal(string resourceFolder, string clipName, float volumeScale)
     {
         if (!GameAudioSettings.SfxEnabled)
             return;
 
-        AudioClip clip = LoadClip(effectId);
+        AudioClip clip = LoadClip(resourceFolder, clipName);
         if (clip == null)
             return;
 
@@ -100,30 +118,29 @@ public class GameSoundEffects : MonoBehaviour
         return source;
     }
 
-    AudioClip LoadClip(string effectId)
+    AudioClip LoadClip(string resourceFolder, string clipName)
     {
-        if (_clips.TryGetValue(effectId, out AudioClip cached))
+        string cacheKey = resourceFolder + "/" + clipName;
+        if (_clips.TryGetValue(cacheKey, out AudioClip cached))
             return cached;
 
-        AudioClip clip = Resources.Load<AudioClip>(ResourceFolder + "/" + effectId);
-        _clips[effectId] = clip;
+        AudioClip clip = Resources.Load<AudioClip>(cacheKey);
+        _clips[cacheKey] = clip;
 
         if (clip == null)
-            WarnMissingOnce(effectId);
+            WarnMissingOnce(cacheKey);
 
         return clip;
     }
 
-    void WarnMissingOnce(string effectId)
+    void WarnMissingOnce(string resourcePath)
     {
-        if (!_warnedMissing.Add(effectId))
+        if (!_warnedMissing.Add(resourcePath))
             return;
 
         Debug.LogWarning(
             "GameSoundEffects: Missing clip Resources/"
-            + ResourceFolder
-            + "/"
-            + effectId
+            + resourcePath
             + " (.wav/.mp3/.ogg).");
     }
 }
