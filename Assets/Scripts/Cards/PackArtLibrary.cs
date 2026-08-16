@@ -11,12 +11,29 @@ public static class PackArtLibrary
     public const int PackVariantCount = 5;
 
     const string LegacyWorldMaterialResourcePath = "Cards/BoosterPack/BoosterPackWorld";
+    const string PackToonTemplateResourcePath = "Cards/BoosterPack/PackToonTemplate";
     const string LegacyBaseColorResourcePath = "Cards/BoosterPack/cards_DefaultMaterial_BaseColor";
     const string LegacyNormalResourcePath = "Cards/BoosterPack/cards_DefaultMaterial_Normal";
     const string LegacyMetallicResourcePath = "Cards/BoosterPack/cards_DefaultMaterial_Metallic";
     const string LegacyRoughnessResourcePath = "Cards/BoosterPack/cards_DefaultMaterial_Roughness";
 
+#if UNITY_EDITOR
+    const string PackToonTemplateAssetPath = "Assets/Resources/Cards/BoosterPack/PackToonTemplate.mat";
+#endif
+
+#if UNITY_EDITOR
+    [UnityEditor.InitializeOnEnterPlayMode]
+    static void ResetPlayModeCaches(UnityEditor.EnterPlayModeOptions options)
+    {
+        WorldMaterialTemplates.Clear();
+        HandMaterialTemplates.Clear();
+        _packToonTemplate = null;
+    }
+#endif
+
     static readonly Dictionary<int, Material> WorldMaterialTemplates = new Dictionary<int, Material>(PackVariantCount);
+    static readonly Dictionary<int, Material> HandMaterialTemplates = new Dictionary<int, Material>(PackVariantCount);
+    static Material _packToonTemplate;
 
     static readonly string[] VariantDisplayNames =
     {
@@ -57,12 +74,14 @@ public static class PackArtLibrary
         return baseColor;
     }
 
-    public static void ApplyPackMaterials(Renderer renderer, int packVariantIndex = 1)
+    public static void ApplyPackMaterials(Renderer renderer, int packVariantIndex = 1, bool forHand = false)
     {
         if (renderer == null)
             return;
 
-        Material template = GetWorldMaterialTemplate(packVariantIndex);
+        Material template = forHand
+            ? GetHandMaterialTemplate(packVariantIndex)
+            : GetWorldMaterialTemplate(packVariantIndex);
         if (template == null)
             return;
 
@@ -73,14 +92,59 @@ public static class PackArtLibrary
         renderer.sharedMaterials = materials;
     }
 
-    public static void ApplyPackMaterials(Transform visualRoot, int packVariantIndex = 1)
+    /// <summary>
+    /// Play-mode hand tuning: unique material instances so Inspector edits show live in Game view.
+    /// Discarded when Play stops or the pack returns to the world.
+    /// </summary>
+    public static Material[] CreatePackHandMaterialInstances(Renderer renderer, int packVariantIndex = 1)
+    {
+        if (renderer == null)
+            return null;
+
+        Material template = GetHandMaterialTemplate(packVariantIndex);
+        if (template == null)
+            return null;
+
+        Material[] shared = renderer.sharedMaterials;
+        var instances = new Material[shared.Length];
+        for (int i = 0; i < instances.Length; i++)
+        {
+            instances[i] = new Material(template)
+            {
+                name = template.name + "_LiveTune"
+            };
+        }
+
+        renderer.materials = instances;
+        return instances;
+    }
+
+    public static void DestroyMaterialInstances(Material[] instances)
+    {
+        if (instances == null)
+            return;
+
+        for (int i = 0; i < instances.Length; i++)
+        {
+            Material material = instances[i];
+            if (material == null)
+                continue;
+
+            if (Application.isPlaying)
+                Object.Destroy(material);
+            else
+                Object.DestroyImmediate(material);
+        }
+    }
+
+    public static void ApplyPackMaterials(Transform visualRoot, int packVariantIndex = 1, bool forHand = false)
     {
         if (visualRoot == null)
             return;
 
         Renderer[] renderers = visualRoot.GetComponentsInChildren<Renderer>(true);
         for (int i = 0; i < renderers.Length; i++)
-            ApplyPackMaterials(renderers[i], packVariantIndex);
+            ApplyPackMaterials(renderers[i], packVariantIndex, forHand);
     }
 
     static Material GetWorldMaterialTemplate(int packVariantIndex)
@@ -96,7 +160,46 @@ public static class PackArtLibrary
         return created;
     }
 
+    static Material GetHandMaterialTemplate(int packVariantIndex)
+    {
+        packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackVariantCount);
+        if (HandMaterialTemplates.TryGetValue(packVariantIndex, out Material cached) && cached != null)
+            return cached;
+
+        Material created = BuildPackMaterial(packVariantIndex, forHand: true);
+        if (created != null)
+            HandMaterialTemplates[packVariantIndex] = created;
+
+        return created;
+    }
+
+    static Material BuildPackMaterial(int packVariantIndex, bool forHand)
+    {
+        Material source = BuildPackMaterialCore(packVariantIndex);
+        if (source == null)
+            return null;
+
+        Material material = ConvertToPackToonMaterial(source);
+        if (material != source && Application.isPlaying)
+            Object.Destroy(source);
+
+        if (forHand)
+            ConfigurePackHandMaterial(material);
+        else
+        {
+            ApplyPackViewStableBrightness(material);
+            ConfigurePackWorldMaterial(material);
+        }
+
+        return material;
+    }
+
     static Material BuildWorldMaterial(int packVariantIndex)
+    {
+        return BuildPackMaterial(packVariantIndex, forHand: false);
+    }
+
+    static Material BuildPackMaterialCore(int packVariantIndex)
     {
         string folder = GetVariantFolderResourcePath(packVariantIndex);
         string prefix = GetVariantFilePrefix(packVariantIndex);
@@ -106,7 +209,6 @@ public static class PackArtLibrary
         {
             Material instance = Object.Instantiate(loaded);
             instance.name = loaded.name;
-            ConfigurePackWorldMaterial(instance);
             return instance;
         }
 
@@ -136,7 +238,6 @@ public static class PackArtLibrary
             {
                 Material instance = Object.Instantiate(legacyMaterial);
                 instance.name = legacyMaterial.name;
-                ConfigurePackWorldMaterial(instance);
                 return instance;
             }
 
@@ -180,8 +281,144 @@ public static class PackArtLibrary
         if (material.HasProperty("_Smoothness"))
             material.SetFloat("_Smoothness", roughnessMap != null ? 1f : 0.45f);
 
-        ConfigurePackWorldMaterial(material);
         return material;
+    }
+
+    static Material LoadPackToonTemplate()
+    {
+        if (_packToonTemplate != null)
+            return _packToonTemplate;
+
+        _packToonTemplate = Resources.Load<Material>(PackToonTemplateResourcePath);
+#if UNITY_EDITOR
+        if (_packToonTemplate == null)
+            _packToonTemplate = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(PackToonTemplateAssetPath);
+#endif
+        return _packToonTemplate;
+    }
+
+    static Material ConvertToPackToonMaterial(Material source)
+    {
+        if (source == null)
+            return null;
+
+        Material template = LoadPackToonTemplate();
+        if (template == null)
+            return source;
+
+        if (source.shader == template.shader)
+        {
+            ApplyPackToonFeatures(source, source);
+            return source;
+        }
+
+        Material toonMaterial = ExteriorWallToonUtility.CreateToonMaterial(source, template);
+        toonMaterial.name = source.name;
+        ApplyPackToonFeatures(toonMaterial, source);
+        return toonMaterial;
+    }
+
+    static void ApplyPackToonFeatures(Material toonMaterial, Material source)
+    {
+        CopySourceTexture(source, toonMaterial, "_SpecGlossMap");
+
+        toonMaterial.SetColor("_BaseColor", Color.white);
+        toonMaterial.SetColor("_Color", Color.white);
+        toonMaterial.SetColor("_HColor", Color.white);
+        toonMaterial.SetColor("_SColor", Color.white);
+
+        if (toonMaterial.HasProperty("_RampThreshold"))
+            toonMaterial.SetFloat("_RampThreshold", 0.697f);
+        if (toonMaterial.HasProperty("_RampSmoothing"))
+            toonMaterial.SetFloat("_RampSmoothing", 0f);
+
+        if (toonMaterial.HasProperty("_IndirectIntensity"))
+            toonMaterial.SetFloat("_IndirectIntensity", 0.205f);
+        if (toonMaterial.HasProperty("_SingleIndirectColor"))
+            toonMaterial.SetFloat("_SingleIndirectColor", 1f);
+
+        if (toonMaterial.HasProperty("_ShadowColorLightAtten"))
+            toonMaterial.SetFloat("_ShadowColorLightAtten", 0f);
+        toonMaterial.DisableKeyword("TCP2_SHADOW_LIGHT_COLOR");
+
+        if (toonMaterial.GetTexture("_BumpMap") != null && toonMaterial.HasProperty("_UseNormalMap"))
+            toonMaterial.SetFloat("_UseNormalMap", 1f);
+
+        if (toonMaterial.HasProperty("_UseSpecular"))
+            toonMaterial.SetFloat("_UseSpecular", 1f);
+        toonMaterial.EnableKeyword("TCP2_SPECULAR");
+        toonMaterial.DisableKeyword("TCP2_SPECULAR_STYLIZED");
+        toonMaterial.DisableKeyword("TCP2_SPECULAR_CRISP");
+
+        if (toonMaterial.HasProperty("_SpecularType"))
+            toonMaterial.SetFloat("_SpecularType", 0f);
+
+        if (toonMaterial.HasProperty("_SpecularColor"))
+            toonMaterial.SetColor("_SpecularColor", new Color(0.451f, 0.451f, 0.451f, 1f));
+
+        if (toonMaterial.HasProperty("_SpecularRoughness"))
+            toonMaterial.SetFloat("_SpecularRoughness", 0.426f);
+
+        if (toonMaterial.HasProperty("_UseReflections"))
+            toonMaterial.SetFloat("_UseReflections", 0f);
+        toonMaterial.DisableKeyword("TCP2_REFLECTIONS");
+
+        if (toonMaterial.HasProperty("_UseEmission"))
+            toonMaterial.SetFloat("_UseEmission", 0f);
+        if (toonMaterial.HasProperty("_UseRim"))
+            toonMaterial.SetFloat("_UseRim", 0f);
+        if (toonMaterial.HasProperty("_UseMatCap"))
+            toonMaterial.SetFloat("_UseMatCap", 0f);
+        if (toonMaterial.HasProperty("_UseOcclusion"))
+            toonMaterial.SetFloat("_UseOcclusion", 0f);
+        if (toonMaterial.HasProperty("_UseOutline"))
+            toonMaterial.SetFloat("_UseOutline", 0f);
+
+        if (toonMaterial.HasProperty("_ReceiveShadowsOff"))
+            toonMaterial.SetFloat("_ReceiveShadowsOff", 1f);
+        toonMaterial.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+    }
+
+    /// <summary>
+    /// Keeps packs readable at steep camera angles (looking down while held) like hand cards.
+    /// Toon ramp alone crushes brightness when the main light no longer hits the front face.
+    /// </summary>
+    static void ApplyPackViewStableBrightness(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_IndirectIntensity"))
+            material.SetFloat("_IndirectIntensity", 0.55f);
+
+        if (material.HasProperty("_RampSmoothing"))
+            material.SetFloat("_RampSmoothing", 0.22f);
+
+        if (material.HasProperty("_UseRim"))
+            material.SetFloat("_UseRim", 1f);
+        material.EnableKeyword("TCP2_RIM_LIGHTING");
+
+        if (material.HasProperty("_RimMin"))
+            material.SetFloat("_RimMin", 0.35f);
+        if (material.HasProperty("_RimMax"))
+            material.SetFloat("_RimMax", 0.78f);
+        if (material.HasProperty("_RimColor"))
+            material.SetColor("_RimColor", new Color(0.85f, 0.85f, 0.85f, 0.45f));
+    }
+
+    static void CopySourceTexture(Material source, Material destination, string propertyName)
+    {
+        if (source == null || destination == null)
+            return;
+
+        if (!source.HasProperty(propertyName) || !destination.HasProperty(propertyName))
+            return;
+
+        Texture texture = source.GetTexture(propertyName);
+        if (texture == null)
+            return;
+
+        destination.SetTexture(propertyName, texture);
     }
 
     static Texture2D LoadVariantTexture(int packVariantIndex, string mapSuffix)
@@ -202,20 +439,89 @@ public static class PackArtLibrary
     }
 
     /// <summary>
-    /// PackCardRef uses <see cref="CardArtLibrary.WorldVisualScale"/> (X = -1), which mirrors
-    /// child geometry. Shader U flip restores left-right correct pack art on both faces.
-    /// Double-sided culling keeps front/back visible after the parent mirror.
+    /// Hand / reveal: opaque depth write with back-face cull so cabinets behind the pack stay hidden.
+    /// Flat albedo presentation — no ramp/spec/rim so view angle does not change brightness.
+    /// </summary>
+    public static void ConfigurePackHandMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        ApplyPackHandFlatPresentation(material);
+        ApplyPackTextureUFlip(material);
+
+        if (material.HasProperty("_Cull"))
+            material.SetFloat("_Cull", (float)CullMode.Back);
+
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 1f);
+
+        material.renderQueue = (int)RenderQueue.Geometry;
+    }
+
+    static void ApplyPackHandFlatPresentation(Material material)
+    {
+        material.SetColor("_BaseColor", Color.white);
+        material.SetColor("_Color", Color.white);
+        material.SetColor("_HColor", Color.white);
+        material.SetColor("_SColor", Color.white);
+
+        if (material.HasProperty("_RampThreshold"))
+            material.SetFloat("_RampThreshold", 0f);
+        if (material.HasProperty("_RampSmoothing"))
+            material.SetFloat("_RampSmoothing", 1f);
+        if (material.HasProperty("_RampOffset"))
+            material.SetFloat("_RampOffset", 0f);
+
+        if (material.HasProperty("_IndirectIntensity"))
+            material.SetFloat("_IndirectIntensity", 1f);
+        if (material.HasProperty("_SingleIndirectColor"))
+            material.SetFloat("_SingleIndirectColor", 1f);
+
+        if (material.HasProperty("_UseNormalMap"))
+            material.SetFloat("_UseNormalMap", 0f);
+
+        if (material.HasProperty("_UseSpecular"))
+            material.SetFloat("_UseSpecular", 0f);
+        material.DisableKeyword("TCP2_SPECULAR");
+        material.DisableKeyword("TCP2_SPECULAR_STYLIZED");
+        material.DisableKeyword("TCP2_SPECULAR_CRISP");
+
+        if (material.HasProperty("_UseRim"))
+            material.SetFloat("_UseRim", 0f);
+        material.DisableKeyword("TCP2_RIM_LIGHTING");
+
+        if (material.HasProperty("_UseReflections"))
+            material.SetFloat("_UseReflections", 0f);
+        material.DisableKeyword("TCP2_REFLECTIONS");
+
+        if (material.HasProperty("_UseEmission"))
+            material.SetFloat("_UseEmission", 0f);
+    }
+
+    /// <summary>
+    /// Ground packs: same toon lighting as hand, double-sided for mirrored ground pose.
+    /// Skips SSAO override queue — TCP2 reads too dark at 2501 compared to hand cards.
     /// </summary>
     public static void ConfigurePackWorldMaterial(Material material)
     {
         if (material == null)
             return;
 
-        CardArtLibrary.ConfigureGroundWorldMaterial(material);
         ApplyPackTextureUFlip(material);
 
         if (material.HasProperty("_Cull"))
             material.SetFloat("_Cull", (float)CullMode.Off);
+
+        if (material.HasProperty("_ReceiveShadows"))
+            material.SetFloat("_ReceiveShadows", 0f);
+        material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+        material.SetShaderPassEnabled("ShadowCaster", false);
+
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 1f);
+
+        material.renderQueue = (int)RenderQueue.Geometry;
     }
 
     static void ApplyPackTextureUFlip(Material material)

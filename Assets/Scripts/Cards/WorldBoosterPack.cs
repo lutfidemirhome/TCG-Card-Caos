@@ -62,6 +62,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     System.Action _onPickupFlightComplete;
     Renderer[] _packRenderers;
     bool _groundModelRenderersVisible = true;
+    readonly Dictionary<int, Material[]> _liveHandMaterialsByRenderer = new Dictionary<int, Material[]>();
 
     public PackState State => _state;
     public bool IsInHand => _state == PackState.Held || _state == PackState.Opening;
@@ -72,6 +73,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public int PackVariantIndex => _packVariantIndex;
     public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(_packVariantIndex);
     public bool GroundShowsBack => _groundShowsBack;
+    public Transform PackVisualRoot => _packModel;
 
     public Bounds GetCullBounds()
     {
@@ -635,11 +637,46 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
-            if (_state == PackState.World)
-                PackArtLibrary.ApplyPackMaterials(renderer, _packVariantIndex);
+            if (_state != PackState.World)
+                EnsureLiveHandMaterials(renderer);
+            else
+            {
+                ReleaseLiveHandMaterials();
+                PackArtLibrary.ApplyPackMaterials(renderer, _packVariantIndex, forHand: false);
+            }
         }
 
         ApplyPackRendererVisibility();
+    }
+
+    void EnsureLiveHandMaterials(Renderer renderer)
+    {
+        if (renderer == null)
+            return;
+
+        int rendererId = renderer.GetInstanceID();
+        if (_liveHandMaterialsByRenderer.ContainsKey(rendererId))
+            return;
+
+        Material[] instances = PackArtLibrary.CreatePackHandMaterialInstances(renderer, _packVariantIndex);
+        if (instances != null)
+            _liveHandMaterialsByRenderer[rendererId] = instances;
+    }
+
+    void ReleaseLiveHandMaterials()
+    {
+        if (_liveHandMaterialsByRenderer.Count == 0)
+            return;
+
+        foreach (Material[] instances in _liveHandMaterialsByRenderer.Values)
+            PackArtLibrary.DestroyMaterialInstances(instances);
+
+        _liveHandMaterialsByRenderer.Clear();
+    }
+
+    void OnDestroy()
+    {
+        ReleaseLiveHandMaterials();
     }
 
     void CachePackRenderers()
@@ -909,6 +946,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         transform.SetParent(null, true);
         EnsureVisual();
         ApplyHandVisualOrientation();
+        ApplyPackModelShadowSettings();
         AlignRootRotationForHandPickup();
         _flightStartWorldPos = transform.position;
         _flightStartWorldRot = transform.rotation;
@@ -945,6 +983,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         transform.SetParent(_handAnchor, false);
         EnsureVisual();
         ApplyHandVisualOrientation();
+        ApplyPackModelShadowSettings();
 
         System.Action callback = _onPickupFlightComplete;
         _onPickupFlightComplete = null;
