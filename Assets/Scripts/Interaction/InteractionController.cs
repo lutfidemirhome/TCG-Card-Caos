@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,10 +20,15 @@ public class InteractionController : MonoBehaviour
 
     const float DefaultPromptAnchoredY = 220f;
     const float RevealCollectPromptAnchoredY = -50f;
+    static readonly Color DefaultPromptBackground = new Color(0f, 0f, 0f, 0.55f);
+    static readonly Color PackOpenWarningPromptBackground = new Color(0.95f, 0.78f, 0.08f, 0.82f);
+    const float PromptPulsePeakScale = 1.1f;
+    const float PromptPulseHalfDuration = 0.08f;
 
     Canvas _canvas;
     GameObject _promptRoot;
     RectTransform _promptPanelRect;
+    Image _promptBackground;
     Text _promptText;
     IInteractable _currentTarget;
     IInteractionHighlight _currentHighlight;
@@ -36,6 +42,7 @@ public class InteractionController : MonoBehaviour
     PlayerCardHand _playerHand;
     IInteractable _pendingPackPromptTarget;
     float _inspectPreviewTimer;
+    Coroutine _promptPulseRoutine;
 
     void Awake()
     {
@@ -417,28 +424,44 @@ public class InteractionController : MonoBehaviour
 
         if (hand != null && hand.IsAwaitingRevealCollect)
         {
-            if (Input.GetKeyDown(KeyCode.Return))
+            if (Input.GetKeyDown(interactKey))
             {
                 hand.RequestRevealCollect();
                 return;
             }
         }
 
-        if (hand != null && hand.HasHeldPack)
+        if (Input.GetKeyDown(interactKey) && ShouldUseCurrentTargetForInteract())
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-            {
-                hand.TryOpenHeldPackFromInput();
-                ClearTarget();
-                return;
-            }
+            _currentTarget.Interact(gameObject.transform.root.gameObject);
+            ClearTarget();
+            return;
         }
 
-        if (_currentTarget == null || !Input.GetKeyDown(interactKey))
-            return;
+        if (hand != null && hand.HasHeldPack && Input.GetKeyDown(interactKey))
+        {
+            if (hand.TryOpenHeldPackFromInput())
+            {
+                ClearTarget();
+            }
+            else if (hand.IsSelectedPackOpenBlocked())
+            {
+                ShowPackOpenBlockedFeedback(hand);
+            }
 
-        _currentTarget.Interact(gameObject.transform.root.gameObject);
-        ClearTarget();
+            return;
+        }
+    }
+
+    bool ShouldUseCurrentTargetForInteract()
+    {
+        if (_currentTarget == null || _currentTarget is SelectedPackPromptTarget)
+            return false;
+
+        if (_currentTarget is WorldCard || _currentTarget is WorldBoosterPack)
+            return true;
+
+        return !string.IsNullOrEmpty(_currentTarget.GetPromptText());
     }
 
     void UpdateSelectedPackPrompt(bool clearOnly = false)
@@ -468,6 +491,61 @@ public class InteractionController : MonoBehaviour
             ClearTarget();
     }
 
+    void ShowPackOpenBlockedFeedback(PlayerCardHand hand)
+    {
+        string prompt = hand.GetSelectedPackPromptText();
+        if (string.IsNullOrEmpty(prompt))
+            return;
+
+        if (_promptPulseRoutine != null)
+        {
+            StopCoroutine(_promptPulseRoutine);
+            _promptPulseRoutine = null;
+        }
+
+        ShowPrompt(SelectedPackPromptTarget.Instance, prompt, warningBackground: true);
+        _promptPulseRoutine = StartCoroutine(PulsePackOpenWarningPrompt());
+    }
+
+    IEnumerator PulsePackOpenWarningPrompt()
+    {
+        if (_promptPanelRect == null)
+        {
+            _promptPulseRoutine = null;
+            yield break;
+        }
+
+        Vector3 baseScale = Vector3.one;
+        _promptPanelRect.localScale = baseScale;
+
+        float elapsed = 0f;
+        while (elapsed < PromptPulseHalfDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / PromptPulseHalfDuration);
+            float scale = Mathf.Lerp(1f, PromptPulsePeakScale, t);
+            _promptPanelRect.localScale = baseScale * scale;
+            yield return null;
+        }
+
+        elapsed = 0f;
+        while (elapsed < PromptPulseHalfDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / PromptPulseHalfDuration);
+            float scale = Mathf.Lerp(PromptPulsePeakScale, 1f, t);
+            _promptPanelRect.localScale = baseScale * scale;
+            yield return null;
+        }
+
+        _promptPanelRect.localScale = baseScale;
+
+        if (_promptBackground != null)
+            _promptBackground.color = DefaultPromptBackground;
+
+        _promptPulseRoutine = null;
+    }
+
     sealed class SelectedPackPromptTarget : IInteractable
     {
         public static readonly SelectedPackPromptTarget Instance = new SelectedPackPromptTarget();
@@ -478,7 +556,7 @@ public class InteractionController : MonoBehaviour
 
         public void Interact(GameObject interactor)
         {
-            // Pack open / reveal collect use Enter only (see HandleInput).
+            // Pack open / reveal collect use E (see HandleInput).
         }
     }
 
@@ -503,7 +581,8 @@ public class InteractionController : MonoBehaviour
         IInteractable interactable,
         string prompt,
         float anchoredY = DefaultPromptAnchoredY,
-        bool pivotCenter = false)
+        bool pivotCenter = false,
+        bool warningBackground = false)
     {
         if (interactable == null || string.IsNullOrEmpty(prompt))
             return;
@@ -512,6 +591,13 @@ public class InteractionController : MonoBehaviour
         {
             _promptPanelRect.pivot = pivotCenter ? new Vector2(0.5f, 0.5f) : new Vector2(0.5f, 0f);
             _promptPanelRect.anchoredPosition = new Vector2(0f, anchoredY);
+        }
+
+        if (_promptBackground != null && _promptPulseRoutine == null)
+        {
+            _promptBackground.color = warningBackground
+                ? PackOpenWarningPromptBackground
+                : DefaultPromptBackground;
         }
 
         if (!ReferenceEquals(interactable, _currentTarget))
@@ -645,8 +731,9 @@ public class InteractionController : MonoBehaviour
         _promptRoot.transform.SetParent(_canvas.transform, false);
 
         var background = _promptRoot.AddComponent<Image>();
-        background.color = new Color(0f, 0f, 0f, 0.55f);
+        background.color = DefaultPromptBackground;
         background.raycastTarget = false;
+        _promptBackground = background;
 
         RectTransform panelRect = background.rectTransform;
         _promptPanelRect = panelRect;

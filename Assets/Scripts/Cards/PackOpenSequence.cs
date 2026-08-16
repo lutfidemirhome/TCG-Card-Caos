@@ -4,14 +4,14 @@ using UnityEngine;
 
 /// <summary>
 /// Camera-local pack opening: center reveal, five cards with backs first, flip to fronts,
-/// wait for Enter, then fly into the hand fan.
+/// wait for E, then fly into the hand fan.
 /// </summary>
 public static class PackOpenSequence
 {
-    const float FlipDuration = 0.28f;
-    const float FlipStagger = 0.065f;
+    const float FlipDuration = 0.233f;
+    const float FlipStagger = 0.054f;
     const float FlipRevealPopPeak = 1.09f;
-    const float FlipRevealPopDuration = 0.14f;
+    const float FlipRevealPopDuration = 0.117f;
     const float RevealWavePeak = 1.14f;
     const float RevealWavePulseDuration = 0.2f;
     const float RevealWaveStagger = 0.05f;
@@ -174,7 +174,7 @@ public static class PackOpenSequence
 
         yield return RevealMexicanWaveRoutine(revealCards, revealScale);
 
-        // Hold the reveal screen until the player presses Enter again.
+        // Hold the reveal screen until the player presses E again.
         hand.SetAwaitingRevealCollect(true);
         while (!hand.ConsumeRevealCollectRequest())
             yield return null;

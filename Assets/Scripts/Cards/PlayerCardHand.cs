@@ -56,7 +56,7 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float openRevealHeight = 0.02f;
     [SerializeField] float openSequenceDuration = 1.35f;
     [SerializeField] float openPackAnticipationHold = 1f;
-    [SerializeField] KeyCode openPackKey = KeyCode.Return;
+    [SerializeField] KeyCode openPackKey = KeyCode.E;
 
     static readonly RaycastHit[] ThrowAimHits = new RaycastHit[8];
 
@@ -132,9 +132,6 @@ public class PlayerCardHand : MonoBehaviour
             return;
 
         HandleScrollSelection();
-
-        if (Input.GetKeyDown(openPackKey) || Input.GetKeyDown(KeyCode.KeypadEnter))
-            TryOpenHeldPackFromInput();
 
         if (Input.GetKeyDown(dropKey))
         {
@@ -532,7 +529,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public string GetRevealCollectPromptText()
     {
-        return _awaitingRevealCollect ? "Press [Enter] To Collect Cards" : string.Empty;
+        return _awaitingRevealCollect ? "Press [E] To Collect Cards" : string.Empty;
     }
 
     public void AddRevealedCard(WorldCard card, float duration, float arcHeight)
@@ -598,12 +595,21 @@ public class PlayerCardHand : MonoBehaviour
 
         if (!IsHandInputLocked
             && AvailableSlotsAfterOpeningSelectedPack >= CardDimensions.CardsPerBoosterPack)
-            return "Press [Enter] To Open Pack";
+            return "Press [E] To Open Pack";
 
         int slotsNeeded = CardDimensions.CardsPerBoosterPack - CardDimensions.HandSlotsPerBoosterPack;
         return "Need "
             + slotsNeeded
             + " free hand slots to open pack";
+    }
+
+    public bool IsSelectedPackOpenBlocked()
+    {
+        if (!HasHeldPack)
+            return false;
+
+        return IsHandInputLocked
+            || AvailableSlotsAfterOpeningSelectedPack < CardDimensions.CardsPerBoosterPack;
     }
 
     void SelectLastHeldPack()
