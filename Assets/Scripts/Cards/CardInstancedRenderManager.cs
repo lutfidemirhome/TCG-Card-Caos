@@ -160,7 +160,11 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (_camera == null)
             _camera = Camera.main;
 
+        if (_camera != null)
+            GeometryUtility.CalculateFrustumPlanes(_camera, _frustumPlanes);
+
         DrawInstancedCards();
+        CullGroundPackRenderers();
     }
 
     public void Register(WorldCard card)
@@ -225,7 +229,6 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (frontMesh == null)
             return;
 
-        GeometryUtility.CalculateFrustumPlanes(_camera, _frustumPlanes);
         _scratchBatchKeys.Clear();
 
         foreach (KeyValuePair<string, HashSet<WorldCard>> pair in _cardsByBatchKey)
@@ -316,6 +319,36 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         if (_camera == null)
             return true;
+
+        Vector3 closestPoint = bounds.ClosestPoint(_camera.transform.position);
+        return (closestPoint - _camera.transform.position).sqrMagnitude <= _drawDistanceSq;
+    }
+
+    void CullGroundPackRenderers()
+    {
+        if (_camera == null)
+            return;
+
+        CardGroundStack.ForEachTrackedPack(pack =>
+        {
+            if (pack == null)
+                return;
+
+            if (pack.IsInHand || pack.HasActivePhysics || pack.State != WorldBoosterPack.PackState.World)
+            {
+                pack.SetGroundModelVisible(true);
+                return;
+            }
+
+            pack.SetGroundModelVisible(ShouldRenderPack(pack));
+        });
+    }
+
+    bool ShouldRenderPack(WorldBoosterPack pack)
+    {
+        Bounds bounds = pack.GetCullBounds();
+        if (!GeometryUtility.TestPlanesAABB(_frustumPlanes, bounds))
+            return false;
 
         Vector3 closestPoint = bounds.ClosestPoint(_camera.transform.position);
         return (closestPoint - _camera.transform.position).sqrMagnitude <= _drawDistanceSq;

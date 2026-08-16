@@ -60,6 +60,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Quaternion _flightStartWorldRot;
     float _flightStartWorldScale;
     System.Action _onPickupFlightComplete;
+    Renderer[] _packRenderers;
+    bool _groundModelRenderersVisible = true;
 
     public PackState State => _state;
     public bool IsInHand => _state == PackState.Held || _state == PackState.Opening;
@@ -70,6 +72,28 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public int PackVariantIndex => _packVariantIndex;
     public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(_packVariantIndex);
     public bool GroundShowsBack => _groundShowsBack;
+
+    public Bounds GetCullBounds()
+    {
+        float scale = Mathf.Max(transform.lossyScale.x, 0.01f);
+        Vector3 size = new Vector3(
+            CardDimensions.Width * scale * PackWidthFitMultiplier,
+            CardDimensions.Thickness * scale * 6f,
+            CardDimensions.Height * scale);
+        Vector3 center = transform.position;
+        center.y = CardGroundStack.GetDrawWorldY(this) + size.y * 0.2f;
+        return new Bounds(center, size);
+    }
+
+    public void SetGroundModelVisible(bool visible)
+    {
+        if (_groundModelRenderersVisible == visible)
+            return;
+
+        _groundModelRenderersVisible = visible;
+        ApplyPackRendererVisibility();
+        RefreshOutlineVisibilityForCull();
+    }
 
     public void SetGroundStackLayer(int layer)
     {
@@ -600,10 +624,10 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packModel == null)
             return;
 
-        var renderers = _packModel.GetComponentsInChildren<Renderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
+        CachePackRenderers();
+        for (int i = 0; i < _packRenderers.Length; i++)
         {
-            Renderer renderer = renderers[i];
+            Renderer renderer = _packRenderers[i];
             if (renderer == null)
                 continue;
 
@@ -612,6 +636,68 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
             if (_state == PackState.World)
                 PackArtLibrary.ApplyPackMaterials(renderer, _packVariantIndex);
+        }
+
+        ApplyPackRendererVisibility();
+    }
+
+    void CachePackRenderers()
+    {
+        if (_packModel == null)
+        {
+            _packRenderers = System.Array.Empty<Renderer>();
+            return;
+        }
+
+        Renderer[] renderers = _packModel.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length == 0)
+        {
+            _packRenderers = System.Array.Empty<Renderer>();
+            return;
+        }
+
+        int count = 0;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null && !IsOutlineRenderer(renderers[i]))
+                count++;
+        }
+
+        if (count == 0)
+        {
+            _packRenderers = System.Array.Empty<Renderer>();
+            return;
+        }
+
+        if (_packRenderers == null || _packRenderers.Length != count)
+            _packRenderers = new Renderer[count];
+
+        int write = 0;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || IsOutlineRenderer(renderer))
+                continue;
+
+            _packRenderers[write++] = renderer;
+        }
+    }
+
+    void ApplyPackRendererVisibility()
+    {
+        if (_packRenderers == null)
+            return;
+
+        bool show = _groundModelRenderersVisible
+            || _state != PackState.World
+            || HasActivePhysics
+            || IsInHand;
+
+        for (int i = 0; i < _packRenderers.Length; i++)
+        {
+            Renderer renderer = _packRenderers[i];
+            if (renderer != null)
+                renderer.enabled = show;
         }
     }
 
@@ -669,6 +755,16 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         RefreshOutlineVisuals();
     }
 
+    void RefreshOutlineVisibilityForCull()
+    {
+        if (_outlineObject == null || _state != PackState.World)
+            return;
+
+        bool show = _interactionHighlighted && _groundModelRenderersVisible;
+        if (_outlineObject.activeSelf != show)
+            _outlineObject.SetActive(show);
+    }
+
     public void SetHandSelected(bool selected)
     {
         if (selected)
@@ -693,6 +789,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             EnsureInteractionOutlineRenderer();
             if (_outlineObject != null)
                 _outlineObject.SetActive(true);
+            RefreshOutlineVisibilityForCull();
             return;
         }
 
@@ -790,6 +887,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         System.Action onComplete = null)
     {
         _state = PackState.FlyingToHand;
+        SetGroundModelVisible(true);
         _handAnchor = handAnchor;
         _flightTargetScale = targetHandScale;
         _flightDuration = Mathf.Max(0.05f, duration);
@@ -880,6 +978,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public void DropWithPhysics(Vector3 velocity, float worldScaleTransitionDuration = 0.12f)
     {
         _state = PackState.World;
+        SetGroundModelVisible(true);
         SetHandSelected(false);
         EnsureVisual();
         ConvertHandVisualToWorldRoot();

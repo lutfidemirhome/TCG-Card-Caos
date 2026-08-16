@@ -516,6 +516,15 @@ public static class CardGroundStack
         }
     }
 
+    public static void ForEachTrackedPack(System.Action<WorldBoosterPack> action)
+    {
+        if (action == null)
+            return;
+
+        for (int i = 0; i < GroundPacks.Count; i++)
+            action(GroundPacks[i]);
+    }
+
     public static float GetDrawWorldY(WorldBoosterPack pack)
     {
         if (pack == null)
