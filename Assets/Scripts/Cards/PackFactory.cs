@@ -16,6 +16,7 @@ public static class PackFactory
         var root = new GameObject(packName);
         root.transform.SetPositionAndRotation(position, rotation);
         root.transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
+        CardLayers.ApplyToGameObject(root);
 
         var collider = root.AddComponent<BoxCollider>();
         ApplyFlatPackCollider(collider);

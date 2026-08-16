@@ -128,6 +128,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     void Awake()
     {
+        CardLayers.ApplyToGameObject(gameObject);
         _collider = GetComponent<BoxCollider>();
         if (_collider == null)
         {
@@ -899,6 +900,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         SetHandSelected(false);
         _groundShowsBack = false;
         CardGroundStack.UntrackPack(this);
+        CardGroundStack.UntrackPhysicsPack(this);
         RemovePhysics();
 
         if (_collider != null)
@@ -1016,8 +1018,24 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
                 Random.Range(-0.2f, 0.2f));
         }
 
-        CardGroundStack.EnableLandingCollidersNear(transform.position, 2.5f);
-        StartCoroutine(SettleDroppedPackRoutine());
+        CardLayers.ApplyToGameObject(gameObject);
+        CardGroundStack.TrackPhysicsPack(this);
+        StartCoroutine(MonitorThrownPackRoutine());
+    }
+
+    IEnumerator MonitorThrownPackRoutine()
+    {
+        yield return CardThrownPhysics.Monitor(
+            transform,
+            _rigidbody,
+            _collider as BoxCollider,
+            () => _state == PackState.World && _rigidbody != null);
+
+        if (_state != PackState.World || _rigidbody == null)
+            yield break;
+
+        SetInteractionHighlight(false);
+        RefreshOutlineVisuals();
     }
 
     void ConvertHandVisualToWorldRoot()
@@ -1065,89 +1083,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         _scaleTransitionActive = false;
         _scaleTransitionRoutine = null;
-    }
-
-    IEnumerator SettleDroppedPackRoutine()
-    {
-        float groundedTime = 0f;
-        float shelfStuckTime = 0f;
-        float elapsed = 0f;
-        const float settleAfterGrounded = 0.18f;
-        const float forceSettleAfterGrounded = 0.55f;
-        const float maxFlightTime = 4f;
-
-        try
-        {
-            while (_state == PackState.World && _rigidbody != null)
-            {
-                elapsed += Time.deltaTime;
-
-                bool scaleDone = !_scaleTransitionActive;
-                float groundY = CardFactory.GroundHeightOffset();
-                float maxSettleY = groundY + CardGroundStack.StackStep * 64f + 0.25f;
-                bool nearGround = transform.position.y <= maxSettleY;
-                bool fallingOrResting = _rigidbody.linearVelocity.y <= 0.35f;
-                bool slowEnough = _rigidbody.linearVelocity.sqrMagnitude < 0.35f;
-
-                if (nearGround && fallingOrResting)
-                    _rigidbody.angularVelocity *= 0.85f;
-
-                if (scaleDone && nearGround && fallingOrResting && slowEnough)
-                {
-                    groundedTime += Time.deltaTime;
-                    ResolveWorldPenetration(_rigidbody);
-                }
-                else if (!nearGround)
-                {
-                    groundedTime = 0f;
-                }
-
-                float horizontalSpeedSq =
-                    _rigidbody.linearVelocity.x * _rigidbody.linearVelocity.x
-                    + _rigidbody.linearVelocity.z * _rigidbody.linearVelocity.z;
-
-                bool slowSlide = horizontalSpeedSq < 2.5f;
-                if (groundedTime >= settleAfterGrounded && slowSlide)
-                    break;
-                if (groundedTime >= forceSettleAfterGrounded)
-                    break;
-
-                switch (CardThrowRecovery.AdvanceShelfStuckSettle(
-                    ref shelfStuckTime,
-                    ref elapsed,
-                    ref groundedTime,
-                    transform,
-                    _collider as BoxCollider,
-                    _rigidbody,
-                    nearGround,
-                    slowEnough,
-                    maxFlightTime))
-                {
-                    case CardThrowRecovery.ShelfSettleAdvance.RecoverAndContinue:
-                        yield return null;
-                        continue;
-                    case CardThrowRecovery.ShelfSettleAdvance.BreakSettle:
-                        goto finishSettle;
-                }
-
-                yield return null;
-            }
-
-            finishSettle:
-
-            if (_state != PackState.World || _rigidbody == null)
-                yield break;
-
-            SetInteractionHighlight(false);
-            CardGroundStack.EnableLandingCollidersNear(transform.position, 1.75f);
-            RemovePhysics();
-            FlattenAndSnapToGround();
-            RefreshOutlineVisuals();
-        }
-        finally
-        {
-            CardGroundStack.RestoreLandingColliders();
-        }
     }
 
     /// <summary>
@@ -1291,6 +1226,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         DestroyImmediate(rb);
         _rigidbody = null;
+        CardGroundStack.UntrackPhysicsPack(this);
     }
 
     static FirstPersonController _cachedPlayer;

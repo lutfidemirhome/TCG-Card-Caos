@@ -19,6 +19,10 @@ public static class CardGroundStack
     static readonly List<WorldCard> CellScratch = new List<WorldCard>(32);
     static readonly List<WorldCard> LandingColliderScratch = new List<WorldCard>(32);
     static readonly Dictionary<long, List<WorldCard>> SpatialBuckets = new Dictionary<long, List<WorldCard>>(512);
+    static readonly Dictionary<WorldCard, int> LandingColliderRefCounts = new Dictionary<WorldCard, int>(64);
+    static readonly Dictionary<int, HashSet<WorldCard>> LandingColliderScopes = new Dictionary<int, HashSet<WorldCard>>(8);
+    static readonly HashSet<WorldCard> LandingCandidateSet = new HashSet<WorldCard>();
+    static int _nextLandingScopeId = 1;
 
     public static float StackStep =>
         CardDimensions.Thickness * CardDimensions.GroundCardScale + StackGap;
@@ -263,16 +267,72 @@ public static class CardGroundStack
         }
     }
 
-    /// <summary>Turn nearby ground cards into solid surfaces while a card is in flight.</summary>
-    public static void EnableLandingCollidersNear(Vector3 worldPos, float radius)
+    /// <summary>Turn nearby flat ground cards into solid surfaces while an item is in flight.</summary>
+    public static int BeginLandingColliderScope()
     {
-        RestoreLandingColliders();
+        int scopeId = _nextLandingScopeId++;
+        LandingColliderScopes[scopeId] = new HashSet<WorldCard>();
+        return scopeId;
+    }
+
+    public static void RefreshLandingColliderScope(int scopeId, Vector3 worldPos, float radius)
+    {
+        if (!LandingColliderScopes.TryGetValue(scopeId, out HashSet<WorldCard> scope))
+            return;
+
+        LandingColliderScratch.Clear();
+        CollectFlatLandingCandidates(worldPos, radius, LandingColliderScratch);
+        LandingCandidateSet.Clear();
+        for (int i = 0; i < LandingColliderScratch.Count; i++)
+            LandingCandidateSet.Add(LandingColliderScratch[i]);
+
+        foreach (WorldCard card in scope)
+        {
+            if (card == null || LandingCandidateSet.Contains(card))
+                continue;
+
+            ReleaseLandingColliderRef(card);
+        }
+
+        scope.RemoveWhere(card => card == null || !LandingCandidateSet.Contains(card));
+
+        for (int i = 0; i < LandingColliderScratch.Count; i++)
+        {
+            WorldCard card = LandingColliderScratch[i];
+            if (card == null || !scope.Add(card))
+                continue;
+
+            AcquireLandingColliderRef(card);
+        }
+    }
+
+    public static void EndLandingColliderScope(int scopeId)
+    {
+        if (!LandingColliderScopes.TryGetValue(scopeId, out HashSet<WorldCard> scope))
+            return;
+
+        foreach (WorldCard card in scope)
+        {
+            if (card != null)
+                ReleaseLandingColliderRef(card);
+        }
+
+        LandingColliderScopes.Remove(scopeId);
+    }
+
+    static void CollectFlatLandingCandidates(Vector3 worldPos, float radius, List<WorldCard> results)
+    {
+        if (GroundCards.Count >= BulkFlatStackThreshold)
+        {
+            CollectFlatLandingCandidatesSpatial(worldPos, radius, results);
+            return;
+        }
 
         float radiusSq = radius * radius;
         for (int i = 0; i < GroundCards.Count; i++)
         {
             WorldCard card = GroundCards[i];
-            if (card == null || card.IsInHand)
+            if (card == null || card.IsInHand || card.HasActivePhysics)
                 continue;
 
             Vector3 delta = card.transform.position - worldPos;
@@ -280,21 +340,75 @@ public static class CardGroundStack
             if (delta.sqrMagnitude > radiusSq)
                 continue;
 
-            card.EnableLandingCollider();
-            LandingColliderScratch.Add(card);
+            results.Add(card);
         }
     }
 
-    public static void RestoreLandingColliders()
+    static void CollectFlatLandingCandidatesSpatial(Vector3 worldPos, float radius, List<WorldCard> results)
     {
-        for (int i = 0; i < LandingColliderScratch.Count; i++)
+        if (SpatialBuckets.Count == 0)
+            RebuildSpatialBuckets();
+
+        float cellSize = SpatialCellSize;
+        float radiusSq = radius * radius;
+        int cx = Mathf.FloorToInt(worldPos.x / cellSize);
+        int cz = Mathf.FloorToInt(worldPos.z / cellSize);
+        int cellRadius = Mathf.CeilToInt(radius / cellSize);
+
+        for (int dz = -cellRadius; dz <= cellRadius; dz++)
         {
-            WorldCard card = LandingColliderScratch[i];
-            if (card != null)
-                card.RestoreGroundCollider();
+            for (int dx = -cellRadius; dx <= cellRadius; dx++)
+            {
+                long key = PackCell(cx + dx, cz + dz);
+                if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
+                    continue;
+
+                for (int i = 0; i < bucket.Count; i++)
+                {
+                    WorldCard card = bucket[i];
+                    if (card == null || card.IsInHand || card.HasActivePhysics)
+                        continue;
+
+                    Vector3 delta = card.transform.position - worldPos;
+                    delta.y *= 0.35f;
+                    if (delta.sqrMagnitude > radiusSq)
+                        continue;
+
+                    results.Add(card);
+                }
+            }
+        }
+    }
+
+    static void AcquireLandingColliderRef(WorldCard card)
+    {
+        if (card == null)
+            return;
+
+        if (!LandingColliderRefCounts.TryGetValue(card, out int count) || count <= 0)
+        {
+            card.EnableLandingCollider();
+            LandingColliderRefCounts[card] = 1;
+            return;
         }
 
-        LandingColliderScratch.Clear();
+        LandingColliderRefCounts[card] = count + 1;
+    }
+
+    static void ReleaseLandingColliderRef(WorldCard card)
+    {
+        if (card == null || !LandingColliderRefCounts.TryGetValue(card, out int count))
+            return;
+
+        count--;
+        if (count <= 0)
+        {
+            LandingColliderRefCounts.Remove(card);
+            card.RestoreGroundCollider();
+            return;
+        }
+
+        LandingColliderRefCounts[card] = count;
     }
 
     /// <summary>Cell size for neighbor queries — sized to card footprint, not pile radius.</summary>
@@ -492,6 +606,14 @@ public static class CardGroundStack
 
     static readonly List<WorldBoosterPack> GroundPacks = new List<WorldBoosterPack>(32);
     static readonly HashSet<WorldBoosterPack> GroundPackSet = new HashSet<WorldBoosterPack>();
+    static readonly List<WorldBoosterPack> PhysicsPacks = new List<WorldBoosterPack>(16);
+    static readonly HashSet<WorldBoosterPack> PhysicsPackSet = new HashSet<WorldBoosterPack>();
+    static readonly List<WorldCard> PhysicsCards = new List<WorldCard>(64);
+    static readonly HashSet<WorldCard> PhysicsCardSet = new HashSet<WorldCard>();
+
+    public static int TrackedPackCount => GroundPacks.Count;
+
+    public static int PhysicsPackCount => PhysicsPacks.Count;
 
     public static void TrackPack(WorldBoosterPack pack)
     {
@@ -523,6 +645,70 @@ public static class CardGroundStack
 
         for (int i = 0; i < GroundPacks.Count; i++)
             action(GroundPacks[i]);
+    }
+
+    public static void TrackPhysicsPack(WorldBoosterPack pack)
+    {
+        if (pack == null || !PhysicsPackSet.Add(pack))
+            return;
+
+        PhysicsPacks.Add(pack);
+    }
+
+    public static void UntrackPhysicsPack(WorldBoosterPack pack)
+    {
+        if (pack == null || !PhysicsPackSet.Remove(pack))
+            return;
+
+        for (int i = PhysicsPacks.Count - 1; i >= 0; i--)
+        {
+            if (PhysicsPacks[i] == pack)
+            {
+                PhysicsPacks.RemoveAt(i);
+                break;
+            }
+        }
+    }
+
+    public static void TrackPhysicsCard(WorldCard card)
+    {
+        if (card == null || !PhysicsCardSet.Add(card))
+            return;
+
+        PhysicsCards.Add(card);
+    }
+
+    public static void UntrackPhysicsCard(WorldCard card)
+    {
+        if (card == null || !PhysicsCardSet.Remove(card))
+            return;
+
+        for (int i = PhysicsCards.Count - 1; i >= 0; i--)
+        {
+            if (PhysicsCards[i] == card)
+            {
+                PhysicsCards.RemoveAt(i);
+                break;
+            }
+        }
+    }
+
+    public static void ForEachPhysicsCard(System.Action<WorldCard> action)
+    {
+        if (action == null)
+            return;
+
+        for (int i = 0; i < PhysicsCards.Count; i++)
+            action(PhysicsCards[i]);
+    }
+
+    public static void ForEachPhysicsPack(System.Action<WorldBoosterPack> action)
+    {
+        if (action == null)
+            return;
+
+        for (int i = 0; i < PhysicsPacks.Count; i++)
+            action(PhysicsPacks[i]);
     }
 
     public static float GetDrawWorldY(WorldBoosterPack pack)

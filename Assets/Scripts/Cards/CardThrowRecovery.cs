@@ -11,8 +11,11 @@ public static class CardThrowRecovery
     const float MinElevatedYAboveGround = 0.32f;
     const float HighElevatedYAboveGround = 0.55f;
     const float LiftClearance = 0.04f;
+    const float SleepingFloorSkipY = 0.12f;
+    const int OverlapBufferSize = 32;
 
     static readonly RaycastHit[] FloorHitBuffer = new RaycastHit[16];
+    static readonly Collider[] OverlapBuffer = new Collider[OverlapBufferSize];
 
     struct ShelfOverlapResult
     {
@@ -32,22 +35,26 @@ public static class CardThrowRecovery
     public static bool ShouldTrackShelfStuck(
         Transform itemTransform,
         BoxCollider itemCollider,
-        bool nearGround,
+        Rigidbody body,
         bool slowEnough)
     {
-        if (itemTransform == null || nearGround || !slowEnough)
+        if (itemTransform == null || !slowEnough)
             return false;
 
         if (itemTransform.GetComponentInParent<CardShelfSlot>() != null)
             return false;
 
         float groundY = CardFactory.GroundHeightOffset();
+        if (body != null && body.IsSleeping() && itemTransform.position.y <= groundY + SleepingFloorSkipY)
+            return false;
+
+        if (TryQueryShelfOverlaps(itemTransform, itemCollider, out ShelfOverlapResult overlap)
+            && (overlap.TouchesShelf || overlap.PenetrationDepth > 0.001f))
+            return true;
+
         float minElevatedY = groundY + MinElevatedYAboveGround;
         if (itemTransform.position.y < minElevatedY)
             return false;
-
-        if (TryQueryShelfOverlaps(itemTransform, itemCollider, out ShelfOverlapResult overlap))
-            return overlap.TouchesShelf;
 
         return itemTransform.position.y >= groundY + HighElevatedYAboveGround;
     }
@@ -67,7 +74,7 @@ public static class CardThrowRecovery
         float maxFlightTime)
     {
         if (itemCollider != null
-            && ShouldTrackShelfStuck(itemTransform, itemCollider, nearGround, slowEnough))
+            && ShouldTrackShelfStuck(itemTransform, itemCollider, body, slowEnough))
         {
             shelfStuckTime += Time.deltaTime;
             if (shelfStuckTime >= ShelfStuckRecoveryDelay
@@ -131,7 +138,6 @@ public static class CardThrowRecovery
             Random.Range(-0.25f, 0.25f),
             Random.Range(-0.18f, 0.18f));
 
-        CardGroundStack.EnableLandingCollidersNear(pos, 2.5f);
         return true;
     }
 
@@ -161,7 +167,6 @@ public static class CardThrowRecovery
         }
 
         itemTransform.position = dropPos;
-        CardGroundStack.EnableLandingCollidersNear(dropPos, 2.5f);
         return true;
     }
 
@@ -177,9 +182,11 @@ public static class CardThrowRecovery
         if (!TryGetOverlapBox(itemTransform, itemCollider, out Vector3 center, out Vector3 halfExtents))
             return false;
 
-        Collider[] overlaps = Physics.OverlapBox(
+        Collider[] overlaps = OverlapBuffer;
+        int overlapCount = Physics.OverlapBoxNonAlloc(
             center,
             halfExtents,
+            overlaps,
             itemTransform.rotation,
             ~0,
             QueryTriggerInteraction.Ignore);
@@ -188,7 +195,7 @@ public static class CardThrowRecovery
         float bestPenetrationDistance = 0f;
         Vector3 bestPenetrationDirection = default;
 
-        for (int i = 0; i < overlaps.Length; i++)
+        for (int i = 0; i < overlapCount; i++)
         {
             Collider overlap = overlaps[i];
             if (!IsShelfOverlapCandidate(overlap, itemCollider, itemTransform))

@@ -7,8 +7,10 @@ public static class CardCollisionUtility
 {
     const int MaxResolveIterations = 10;
     const float SeparationSkin = 0.003f;
+    const int OverlapBufferSize = 32;
 
     static PhysicsMaterial _sharedPhysicMaterial;
+    static readonly Collider[] OverlapBuffer = new Collider[OverlapBufferSize];
 
     public static PhysicsMaterial SharedPhysicMaterial
     {
@@ -85,17 +87,18 @@ public static class CardCollisionUtility
         halfExtents.y = Mathf.Max(halfExtents.y - SeparationSkin, 0.001f);
         halfExtents.z = Mathf.Max(halfExtents.z - SeparationSkin, 0.001f);
 
-        Collider[] overlaps = Physics.OverlapBox(
+        int overlapCount = Physics.OverlapBoxNonAlloc(
             center,
             halfExtents,
+            OverlapBuffer,
             cardTransform.rotation,
             ~0,
             QueryTriggerInteraction.Ignore);
 
         bool moved = false;
-        for (int i = 0; i < overlaps.Length; i++)
+        for (int i = 0; i < overlapCount; i++)
         {
-            Collider other = overlaps[i];
+            Collider other = OverlapBuffer[i];
             if (ShouldIgnoreCollider(other, cardCollider, self))
                 continue;
 

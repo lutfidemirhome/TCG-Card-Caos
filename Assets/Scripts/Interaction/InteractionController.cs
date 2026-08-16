@@ -33,6 +33,7 @@ public class InteractionController : MonoBehaviour
     WorldCard _inspectPreviewTarget;
     WorldBoosterPack _packInspectPreviewTarget;
     IInteractable _pendingCardPromptTarget;
+    PlayerCardHand _playerHand;
     IInteractable _pendingPackPromptTarget;
     float _inspectPreviewTimer;
 
@@ -46,8 +47,12 @@ public class InteractionController : MonoBehaviour
 
         _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
         _packInspectPreview = PackInspectPreview.EnsureOn(viewCamera);
+        _playerHand = PlayerCardHandResolver.FromTransformHierarchy(transform);
         BuildPromptUI();
     }
+
+    PlayerCardHand ResolveHand() =>
+        _playerHand != null ? _playerHand : (_playerHand = PlayerCardHandResolver.FromTransformHierarchy(transform));
 
     void Update()
     {
@@ -65,7 +70,7 @@ public class InteractionController : MonoBehaviour
 
     void UpdateTarget()
     {
-        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
+        PlayerCardHand hand = ResolveHand();
         if (hand != null && hand.IsAwaitingRevealCollect)
         {
             UpdateSelectedPackPrompt();
@@ -88,6 +93,20 @@ public class InteractionController : MonoBehaviour
             aimedCardDistance = float.MaxValue;
         }
 
+        WorldBoosterPack aimedPack = null;
+        float aimedPackDistance = float.MaxValue;
+        if (CardGroundQuery.TryRaycastWorldPack(ray, interactDistance, out WorldBoosterPack packHit, out float packDistance))
+        {
+            aimedPack = packHit;
+            aimedPackDistance = packDistance;
+        }
+
+        if (aimedPack != null && InteractionOcclusion.IsOccluded(ray, aimedPackDistance, interactDistance))
+        {
+            aimedPack = null;
+            aimedPackDistance = float.MaxValue;
+        }
+
         _raycastAimedCard = aimedCard != null && !aimedCard.IsInHand ? aimedCard : null;
 
         int hitCount = Physics.RaycastNonAlloc(
@@ -97,7 +116,14 @@ public class InteractionController : MonoBehaviour
             interactMask,
             QueryTriggerInteraction.Ignore);
 
-        IInteractable interactable = ResolveBestInteractable(ray, HitBuffer, hitCount, aimedCard, aimedCardDistance);
+        IInteractable interactable = ResolveBestInteractable(
+            ray,
+            HitBuffer,
+            hitCount,
+            aimedCard,
+            aimedCardDistance,
+            aimedPack,
+            aimedPackDistance);
 
         if (interactable == null)
         {
@@ -107,8 +133,8 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
-        _raycastAimedPack = interactable is WorldBoosterPack aimedPack && !aimedPack.IsInHand
-            ? aimedPack
+        _raycastAimedPack = interactable is WorldBoosterPack selectedPack && !selectedPack.IsInHand
+            ? selectedPack
             : null;
 
         if (interactable is WorldBoosterPack)
@@ -281,9 +307,11 @@ public class InteractionController : MonoBehaviour
         RaycastHit[] hits,
         int hitCount,
         WorldCard aimedCard,
-        float aimedCardDistance)
+        float aimedCardDistance,
+        WorldBoosterPack aimedPack,
+        float aimedPackDistance)
     {
-        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
+        PlayerCardHand hand = ResolveHand();
 
         CardShelf bestShelf = null;
         float bestShelfDistance = float.MaxValue;
@@ -310,7 +338,7 @@ public class InteractionController : MonoBehaviour
             }
 
             IInteractable interactable = collider.GetComponentInParent<IInteractable>();
-            if (interactable == null)
+            if (interactable == null || interactable is WorldBoosterPack)
                 continue;
 
             if (hits[i].distance < bestOtherDistance)
@@ -333,13 +361,13 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        WorldBoosterPack aimedPack = bestOther as WorldBoosterPack;
-        if (aimedCard != null && aimedPack != null)
+        if (aimedPack != null)
         {
-            if (bestOtherDistance < aimedCardDistance)
-                return aimedPack;
+            if (aimedCard != null)
+                return aimedPackDistance < aimedCardDistance ? aimedPack : aimedCard;
 
-            return aimedCard;
+            if (bestShelf == null || aimedPackDistance < bestShelfDistance)
+                return aimedPack;
         }
 
         if (aimedCard != null)
@@ -373,7 +401,7 @@ public class InteractionController : MonoBehaviour
 
     void HandleInput()
     {
-        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
+        PlayerCardHand hand = ResolveHand();
 
         if (hand != null && hand.IsAwaitingRevealCollect)
         {
@@ -403,7 +431,7 @@ public class InteractionController : MonoBehaviour
 
     void UpdateSelectedPackPrompt(bool clearOnly = false)
     {
-        PlayerCardHand hand = PlayerCardHandResolver.FromTransformHierarchy(transform);
+        PlayerCardHand hand = ResolveHand();
         if (!clearOnly && hand != null && hand.IsAwaitingRevealCollect)
         {
             string revealPrompt = hand.GetRevealCollectPromptText();

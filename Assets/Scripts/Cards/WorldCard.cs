@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -337,6 +338,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         CardInteractionFocus.ClearFocus();
         CardGroundQuery.UntrackShelfCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
+        CardGroundStack.UntrackPhysicsCard(this);
 
         SetInteractionHighlight(false);
         SetHandSelected(false);
@@ -550,10 +552,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         {
             boxCollider.isTrigger = false;
             boxCollider.enabled = true;
+            _worldColliderRequested = true;
         }
         else if (_collider != null)
         {
             _collider.enabled = true;
+            _worldColliderRequested = true;
         }
 
         IgnorePlayerCollision();
@@ -576,8 +580,23 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                 Random.Range(-0.2f, 0.2f));
         }
 
-        CardGroundStack.EnableLandingCollidersNear(transform.position, 2.5f);
-        StartCoroutine(SettleDroppedCardRoutine());
+        CardGroundStack.TrackPhysicsCard(this);
+        StartCoroutine(MonitorThrownCardRoutine());
+    }
+
+    IEnumerator MonitorThrownCardRoutine()
+    {
+        yield return CardThrownPhysics.Monitor(
+            transform,
+            _rigidbody,
+            _collider as BoxCollider,
+            () => _handState == HandState.World && _rigidbody != null);
+
+        if (_handState != HandState.World || _rigidbody == null)
+            yield break;
+
+        SetInteractionHighlight(false);
+        RefreshRenderMode();
     }
 
     void IgnorePlayerCollision()
@@ -585,11 +604,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_collider == null)
             return;
 
-        FirstPersonController player = FindFirstObjectByType<FirstPersonController>();
-        if (player == null)
+        if (_cachedPlayer == null)
+            _cachedPlayer = FindFirstObjectByType<FirstPersonController>();
+        if (_cachedPlayer == null)
             return;
 
-        Collider[] playerColliders = player.GetComponentsInChildren<Collider>();
+        Collider[] playerColliders = _cachedPlayer.GetComponentsInChildren<Collider>();
         for (int i = 0; i < playerColliders.Length; i++)
         {
             if (playerColliders[i] != null)
@@ -597,97 +617,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         }
     }
 
-    System.Collections.IEnumerator SettleDroppedCardRoutine()
-    {
-        float groundedTime = 0f;
-        float shelfStuckTime = 0f;
-        float elapsed = 0f;
-        float colliderRefreshTimer = 0f;
-        const float settleAfterGrounded = 0.18f;
-        const float forceSettleAfterGrounded = 0.55f;
-        const float maxFlightTime = 4f;
-
-        try
-        {
-            while (_handState == HandState.World && _rigidbody != null)
-            {
-                elapsed += Time.deltaTime;
-                colliderRefreshTimer += Time.deltaTime;
-                if (colliderRefreshTimer >= 0.08f)
-                {
-                    colliderRefreshTimer = 0f;
-                    CardGroundStack.EnableLandingCollidersNear(transform.position, 1.75f);
-                }
-
-                bool scaleDone = !_scaleTransitionActive;
-                float groundY = CardFactory.GroundHeightOffset();
-                float maxSettleY = groundY + CardGroundStack.StackStep * 64f + 0.25f;
-                bool nearGround = transform.position.y <= maxSettleY;
-                bool fallingOrResting = _rigidbody.linearVelocity.y <= 0.35f;
-                bool slowEnough = _rigidbody.linearVelocity.sqrMagnitude < 0.35f;
-
-                if (nearGround && fallingOrResting)
-                {
-                    // Kill leftover spin so the card lies down instead of balancing on edge.
-                    _rigidbody.angularVelocity *= 0.85f;
-                }
-
-                if (scaleDone && nearGround && fallingOrResting && slowEnough)
-                {
-                    groundedTime += Time.deltaTime;
-                    ResolveWorldPenetration(_rigidbody);
-                }
-                else if (!nearGround)
-                    groundedTime = 0f;
-
-                float horizontalSpeedSq =
-                    _rigidbody.linearVelocity.x * _rigidbody.linearVelocity.x
-                    + _rigidbody.linearVelocity.z * _rigidbody.linearVelocity.z;
-
-                bool slowSlide = horizontalSpeedSq < 2.5f;
-                if (groundedTime >= settleAfterGrounded && slowSlide)
-                    break;
-                if (groundedTime >= forceSettleAfterGrounded)
-                    break;
-
-                switch (CardThrowRecovery.AdvanceShelfStuckSettle(
-                    ref shelfStuckTime,
-                    ref elapsed,
-                    ref groundedTime,
-                    transform,
-                    _collider as BoxCollider,
-                    _rigidbody,
-                    nearGround,
-                    slowEnough,
-                    maxFlightTime))
-                {
-                    case CardThrowRecovery.ShelfSettleAdvance.RecoverAndContinue:
-                        yield return null;
-                        continue;
-                    case CardThrowRecovery.ShelfSettleAdvance.BreakSettle:
-                        goto finishSettle;
-                }
-
-                yield return null;
-            }
-
-            finishSettle:
-
-            if (_handState != HandState.World || _rigidbody == null)
-                yield break;
-
-            SetInteractionHighlight(false);
-            CardGroundStack.EnableLandingCollidersNear(transform.position, 1.75f);
-            RemovePhysics();
-            FlattenAndSnapToGround();
-            ReleaseCardVisual();
-            RefreshRenderMode();
-        }
-        finally
-        {
-            CardGroundStack.RestoreLandingColliders();
-        }
-    }
+    static FirstPersonController _cachedPlayer;
 
     /// <summary>Solid collider for nearby cards while another card is flying.</summary>
     public void EnableLandingCollider()
@@ -793,6 +723,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         // Destroy() is deferred — raycast skips cards with a Rigidbody, so clear it now.
         DestroyImmediate(rb);
         _rigidbody = null;
+        CardGroundStack.UntrackPhysicsCard(this);
     }
 
     void EnsureRigidbody()
