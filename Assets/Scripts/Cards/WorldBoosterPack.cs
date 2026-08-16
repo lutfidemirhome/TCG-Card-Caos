@@ -725,20 +725,35 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     void EnsureHandSelectionOutlineRenderer()
     {
-        if (_handSelectionOutlineObject != null)
+        if (_handSelectionOutlineObject == null)
+        {
+            _ = CardVisualResources.HandSelectionOutlineMaterial;
+            _handSelectionOutlineObject = new GameObject("HandSelectionOutline");
+
+            var meshFilter = _handSelectionOutlineObject.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = CardVisualResources.HandSelectionBorderFrameMesh;
+
+            var meshRenderer = _handSelectionOutlineObject.AddComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = CardVisualResources.HandSelectionOutlineMaterial;
+            meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+        }
+
+        _handSelectionOutlineObject.transform.SetParent(GetOutlineParent(), false);
+        ApplyHandSelectionOutlineLocalPose();
+    }
+
+    /// <summary>
+    /// Shared card border mesh assumes <see cref="CardArtLibrary.HandVisualRotation"/> on the parent.
+    /// Pack hand adds 180° X so front faces the player — cancel that for the outline only.
+    /// </summary>
+    void ApplyHandSelectionOutlineLocalPose()
+    {
+        if (_handSelectionOutlineObject == null)
             return;
 
-        _ = CardVisualResources.HandSelectionOutlineMaterial;
-        _handSelectionOutlineObject = new GameObject("HandSelectionOutline");
-        _handSelectionOutlineObject.transform.SetParent(GetOutlineParent(), false);
-
-        var meshFilter = _handSelectionOutlineObject.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = CardVisualResources.HandSelectionBorderFrameMesh;
-
-        var meshRenderer = _handSelectionOutlineObject.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = CardVisualResources.HandSelectionOutlineMaterial;
-        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        meshRenderer.receiveShadows = false;
+        _handSelectionOutlineObject.transform.localPosition = Vector3.zero;
+        _handSelectionOutlineObject.transform.localRotation = Quaternion.Euler(180f, 0f, 0f);
     }
 
     void ReleaseInteractionOutline()
