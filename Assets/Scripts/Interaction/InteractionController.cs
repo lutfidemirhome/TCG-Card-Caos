@@ -497,11 +497,7 @@ public class InteractionController : MonoBehaviour
         if (string.IsNullOrEmpty(prompt))
             return;
 
-        if (_promptPulseRoutine != null)
-        {
-            StopCoroutine(_promptPulseRoutine);
-            _promptPulseRoutine = null;
-        }
+        StopPromptPulse();
 
         ShowPrompt(SelectedPackPromptTarget.Instance, prompt, warningBackground: true);
         _promptPulseRoutine = StartCoroutine(PulsePackOpenWarningPrompt());
@@ -571,10 +567,26 @@ public class InteractionController : MonoBehaviour
 
     void ClearPromptAndHighlight()
     {
+        StopPromptPulse();
         ClearHighlight();
         _currentTarget = null;
         if (_promptRoot != null)
             _promptRoot.SetActive(false);
+    }
+
+    void StopPromptPulse()
+    {
+        if (_promptPulseRoutine != null)
+        {
+            StopCoroutine(_promptPulseRoutine);
+            _promptPulseRoutine = null;
+        }
+
+        if (_promptPanelRect != null)
+            _promptPanelRect.localScale = Vector3.one;
+
+        if (_promptBackground != null)
+            _promptBackground.color = DefaultPromptBackground;
     }
 
     void ShowPrompt(
