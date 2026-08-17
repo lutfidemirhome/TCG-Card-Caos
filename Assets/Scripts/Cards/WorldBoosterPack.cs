@@ -45,6 +45,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     float _packModelGroundOffsetYFaceDown;
     Vector3 _packModelCenterOffset;
     Vector3 _visualBaseScale = Vector3.one;
+    int _packNativeThicknessAxis;
     Vector3 _packOutlineSize;
     Vector3 _packOutlineCenterLocal;
     bool _hasPackOutlineBounds;
@@ -371,9 +372,43 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packModel == null)
             return;
 
-        _packModel.localPosition = _packModelCenterOffset;
+        Vector3 scale = GetPackModelLocalScale();
         _packModel.localRotation = Quaternion.identity;
-        _packModel.localScale = _visualBaseScale;
+        _packModel.localScale = scale;
+
+        if (!UsesHandThinPackProfile())
+        {
+            _packModel.localPosition = _packModelCenterOffset;
+            return;
+        }
+
+        _packModel.localPosition = Vector3.zero;
+        if (TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
+            _packModel.localPosition = -(min + max) * 0.5f;
+        else
+            _packModel.localPosition = _packModelCenterOffset;
+    }
+
+    bool UsesHandThinPackProfile()
+    {
+        return _state == PackState.Held
+            || _state == PackState.FlyingToHand
+            || _state == PackState.Opening;
+    }
+
+    Vector3 GetPackModelLocalScale()
+    {
+        if (!UsesHandThinPackProfile())
+            return _visualBaseScale;
+
+        float worldMultiplier = PackVisualSettings.GetThicknessFitMultiplierOrDefault();
+        float handMultiplier = PackVisualSettings.GetHeldThicknessFitMultiplierOrDefault();
+        if (Mathf.Approximately(worldMultiplier, 0f))
+            return _visualBaseScale;
+
+        Vector3 scale = _visualBaseScale;
+        scale[_packNativeThicknessAxis] *= handMultiplier / worldMultiplier;
+        return scale;
     }
 
     /// <summary>
@@ -397,6 +432,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         Vector3 nativeSize = nativeMax - nativeMin;
         Vector3 cardSize = GetCardMeshSizeInCardRefLocalSpace();
+        GetFootprintAxes(nativeSize, out int nativeThickness, out _, out _);
+        _packNativeThicknessAxis = nativeThickness;
         _visualBaseScale = ComputeCardFootprintScale(nativeSize, cardSize);
 
         _packModel.localScale = _visualBaseScale;
@@ -431,102 +468,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _packOutlineCenterLocal = (min + max) * 0.5f;
         _hasPackOutlineBounds = _packOutlineSize.sqrMagnitude > 0.000001f;
         RefreshCardProxyCenterOnPack();
-    }
-
-    float GetPackThicknessTowardCamera(Quaternion handLocalRotation)
-    {
-        EnsureVisual();
-        ApplyPackModelProbePose();
-
-        if (_cardRef == null || _packModel == null
-            || !TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
-        {
-            if (_hasPackOutlineBounds)
-            {
-                GetFootprintAxes(_packOutlineSize, out int thicknessAxis, out _, out _);
-                return _packOutlineSize[thicknessAxis];
-            }
-
-            return CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault();
-        }
-
-        Vector3 cameraDirInCardRef = Quaternion.Inverse(handLocalRotation) * Vector3.back;
-        if (cameraDirInCardRef.sqrMagnitude <= 0.000001f)
-            return CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault();
-
-        cameraDirInCardRef.Normalize();
-        float maxProj = GetBoundsSupportAlongDirection(min, max, cameraDirInCardRef);
-        float minProj = GetBoundsSupportMinAlongDirection(min, max, cameraDirInCardRef);
-        return Mathf.Max(
-            CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault(),
-            maxProj - minProj);
-    }
-
-    float GetHeldForwardPull(Quaternion handLocalRotation, float handScale)
-    {
-        EnsureVisual();
-        ApplyPackModelProbePose();
-
-        float pull = PackVisualSettings.GetHeldForwardExtraOrDefault();
-
-        if (_cardRef == null || _packModel == null
-            || !TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
-        {
-            return pull * handScale;
-        }
-
-        Vector3 behindInCardRef = Quaternion.Inverse(handLocalRotation) * Vector3.forward;
-        if (behindInCardRef.sqrMagnitude <= 0.000001f)
-            return pull * handScale;
-
-        behindInCardRef.Normalize();
-        float packBehind = GetBoundsSupportAlongDirection(min, max, behindInCardRef);
-
-        Vector3 cardSize = GetCardMeshSizeInCardRefLocalSpace();
-        GetFootprintAxes(cardSize, out int cardThicknessAxis, out int cardWidthAxis, out int cardHeightAxis);
-        var cardHalfExtents = Vector3.zero;
-        cardHalfExtents[cardThicknessAxis] = cardSize[cardThicknessAxis] * 0.5f;
-        cardHalfExtents[cardWidthAxis] = cardSize[cardWidthAxis] * 0.5f;
-        cardHalfExtents[cardHeightAxis] = cardSize[cardHeightAxis] * 0.5f;
-        float cardBehind = GetBoundsSupportAlongDirection(-cardHalfExtents, cardHalfExtents, behindInCardRef);
-
-        pull += Mathf.Max(0f, packBehind - cardBehind);
-        return pull * handScale;
-    }
-
-    static float GetBoundsSupportAlongDirection(Vector3 min, Vector3 max, Vector3 direction)
-    {
-        direction = direction.normalized;
-        Vector3 center = (min + max) * 0.5f;
-        Vector3 extents = (max - min) * 0.5f;
-        float projectedRadius = Mathf.Abs(direction.x) * extents.x
-            + Mathf.Abs(direction.y) * extents.y
-            + Mathf.Abs(direction.z) * extents.z;
-        return Vector3.Dot(center, direction) + projectedRadius;
-    }
-
-    static float GetBoundsSupportMinAlongDirection(Vector3 min, Vector3 max, Vector3 direction)
-    {
-        direction = direction.normalized;
-        Vector3 center = (min + max) * 0.5f;
-        Vector3 extents = (max - min) * 0.5f;
-        float projectedRadius = Mathf.Abs(direction.x) * extents.x
-            + Mathf.Abs(direction.y) * extents.y
-            + Mathf.Abs(direction.z) * extents.z;
-        return Vector3.Dot(center, direction) - projectedRadius;
-    }
-
-    Vector3 GetHeldDepthOffset(Quaternion handLocalRotation, float handScale, int packStackIndex)
-    {
-        float pull = GetHeldForwardPull(handLocalRotation, handScale);
-        if (packStackIndex > 0)
-            pull += packStackIndex * GetPackThicknessTowardCamera(handLocalRotation) * handScale;
-
-        if (pull <= 0f)
-            return Vector3.zero;
-
-        // HandFanLayout depth: negative Z is toward the camera.
-        return new Vector3(0f, 0f, -pull);
     }
 
     Vector3 GetCardMeshSizeInCardRefLocalSpace()
@@ -678,9 +619,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packModel == null)
             return;
 
-        _packModel.localPosition = _packModelCenterOffset;
-        _packModel.localRotation = Quaternion.identity;
-        _packModel.localScale = _visualBaseScale;
+        ApplyPackModelLocalTransform();
     }
 
     static bool TryMeasureMeshBoundsInLocalSpace(
@@ -851,6 +790,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             CardDimensions.Width,
             CardDimensions.Height,
             CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault());
+        _packNativeThicknessAxis = 2;
         visualGo.transform.localScale = _visualBaseScale;
         visualGo.transform.localRotation = Quaternion.identity;
 
@@ -1172,12 +1112,12 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         callback?.Invoke();
     }
 
-    public void ApplyHeldPose(Vector3 localPosition, Quaternion localRotation, float scale, int packStackIndex = 0)
+    public void ApplyHeldPose(Vector3 localPosition, Quaternion localRotation, float scale)
     {
         if (_state != PackState.Held && _state != PackState.Opening)
             return;
 
-        transform.localPosition = localPosition + GetHeldDepthOffset(localRotation, scale, packStackIndex);
+        transform.localPosition = localPosition;
         transform.localRotation = localRotation;
         transform.localScale = Vector3.one * scale;
         ApplyHandVisualOrientation();

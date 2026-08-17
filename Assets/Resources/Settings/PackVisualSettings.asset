@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: PackVisualSettings
   m_EditorClassIdentifier: 
   thicknessFitMultiplier: 3.5
+  heldThicknessFitMultiplier: 1
   meshChildName: Trading_Card
   meshLocalPosition: {x: 0, y: 0, z: 0.03802678}
   meshLocalRotationEuler: {x: -90, y: 0, z: -0.345}

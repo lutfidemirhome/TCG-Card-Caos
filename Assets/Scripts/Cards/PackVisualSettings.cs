@@ -9,6 +9,7 @@ public class PackVisualSettings : ScriptableObject
 {
     public const string ResourcePath = "Settings/PackVisualSettings";
     const float DefaultThicknessFitMultiplier = 3.5f;
+    const float DefaultHeldThicknessFitMultiplier = 1f;
     const string DefaultMeshChildName = "Trading_Card";
     const float DefaultHeldForwardExtra = 0.018f;
     const float DefaultQuickOutlineWidth = 7.44f;
@@ -17,6 +18,10 @@ public class PackVisualSettings : ScriptableObject
     [Tooltip("Pack kalınlığı (et kalınlığı). 1 = kart kalınlığı kadar.")]
     [Min(0.25f)]
     [SerializeField] float thicknessFitMultiplier = DefaultThicknessFitMultiplier;
+
+    [Tooltip("Elde pack et kalınlığı. 1 = kart kadar ince; yan yüz görünmediği için elde kullanılır.")]
+    [Min(0.25f)]
+    [SerializeField] float heldThicknessFitMultiplier = DefaultHeldThicknessFitMultiplier;
 
     [Header("Mesh child (Trading_Card)")]
     [Tooltip("FBX içindeki mesh child adı.")]
@@ -39,6 +44,7 @@ public class PackVisualSettings : ScriptableObject
     [SerializeField] float quickOutlineWidth = DefaultQuickOutlineWidth;
 
     public float ThicknessFitMultiplier => thicknessFitMultiplier;
+    public float HeldThicknessFitMultiplier => heldThicknessFitMultiplier;
     public float QuickOutlineWidth => quickOutlineWidth;
     public string MeshChildName => meshChildName;
     public Vector3 MeshLocalPosition => meshLocalPosition;
@@ -58,6 +64,12 @@ public class PackVisualSettings : ScriptableObject
     {
         PackVisualSettings settings = LoadOrNull();
         return settings != null ? settings.heldForwardExtra : DefaultHeldForwardExtra;
+    }
+
+    public static float GetHeldThicknessFitMultiplierOrDefault()
+    {
+        PackVisualSettings settings = LoadOrNull();
+        return settings != null ? settings.HeldThicknessFitMultiplier : DefaultHeldThicknessFitMultiplier;
     }
 
     public static float GetQuickOutlineWidthOrDefault()
