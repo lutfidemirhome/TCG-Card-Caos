@@ -794,7 +794,7 @@ public class PlayerCardHand : MonoBehaviour
             int fanIndex = CountHeldCards() + i;
             bool isSelected = packSelected && pack == selectedPack;
             HandCardPose packPose = HandFanLayout.GetPose(fanIndex, fanCount, layout, isSelected);
-            pack.ApplyHeldPose(packPose.LocalPosition, packPose.LocalRotation, packPose.Scale);
+            pack.ApplyHeldPose(packPose.LocalPosition, packPose.LocalRotation, packPose.Scale, packStackIndex: i);
             pack.SetHandSelected(isSelected);
             pack.transform.SetSiblingIndex(fanIndex);
         }

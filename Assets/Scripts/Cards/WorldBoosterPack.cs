@@ -433,6 +433,35 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         RefreshCardProxyCenterOnPack();
     }
 
+    float GetPackThicknessTowardCamera(Quaternion handLocalRotation)
+    {
+        EnsureVisual();
+        ApplyPackModelProbePose();
+
+        if (_cardRef == null || _packModel == null
+            || !TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
+        {
+            if (_hasPackOutlineBounds)
+            {
+                GetFootprintAxes(_packOutlineSize, out int thicknessAxis, out _, out _);
+                return _packOutlineSize[thicknessAxis];
+            }
+
+            return CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault();
+        }
+
+        Vector3 cameraDirInCardRef = Quaternion.Inverse(handLocalRotation) * Vector3.back;
+        if (cameraDirInCardRef.sqrMagnitude <= 0.000001f)
+            return CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault();
+
+        cameraDirInCardRef.Normalize();
+        float maxProj = GetBoundsSupportAlongDirection(min, max, cameraDirInCardRef);
+        float minProj = GetBoundsSupportMinAlongDirection(min, max, cameraDirInCardRef);
+        return Mathf.Max(
+            CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault(),
+            maxProj - minProj);
+    }
+
     float GetHeldForwardPull(Quaternion handLocalRotation, float handScale)
     {
         EnsureVisual();
@@ -476,9 +505,23 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         return Vector3.Dot(center, direction) + projectedRadius;
     }
 
-    Vector3 GetHeldDepthOffset(Quaternion handLocalRotation, float handScale)
+    static float GetBoundsSupportMinAlongDirection(Vector3 min, Vector3 max, Vector3 direction)
+    {
+        direction = direction.normalized;
+        Vector3 center = (min + max) * 0.5f;
+        Vector3 extents = (max - min) * 0.5f;
+        float projectedRadius = Mathf.Abs(direction.x) * extents.x
+            + Mathf.Abs(direction.y) * extents.y
+            + Mathf.Abs(direction.z) * extents.z;
+        return Vector3.Dot(center, direction) - projectedRadius;
+    }
+
+    Vector3 GetHeldDepthOffset(Quaternion handLocalRotation, float handScale, int packStackIndex)
     {
         float pull = GetHeldForwardPull(handLocalRotation, handScale);
+        if (packStackIndex > 0)
+            pull += packStackIndex * GetPackThicknessTowardCamera(handLocalRotation) * handScale;
+
         if (pull <= 0f)
             return Vector3.zero;
 
@@ -1128,12 +1171,12 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         callback?.Invoke();
     }
 
-    public void ApplyHeldPose(Vector3 localPosition, Quaternion localRotation, float scale)
+    public void ApplyHeldPose(Vector3 localPosition, Quaternion localRotation, float scale, int packStackIndex = 0)
     {
         if (_state != PackState.Held && _state != PackState.Opening)
             return;
 
-        transform.localPosition = localPosition + GetHeldDepthOffset(localRotation, scale);
+        transform.localPosition = localPosition + GetHeldDepthOffset(localRotation, scale, packStackIndex);
         transform.localRotation = localRotation;
         transform.localScale = Vector3.one * scale;
         ApplyHandVisualOrientation();
