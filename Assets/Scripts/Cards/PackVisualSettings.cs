@@ -11,8 +11,7 @@ public class PackVisualSettings : ScriptableObject
     const float DefaultThicknessFitMultiplier = 3.5f;
     const string DefaultMeshChildName = "Trading_Card";
     const float DefaultHeldForwardExtra = 0.018f;
-    const float DefaultOutlineSizePadding = 1.045f;
-    const float DefaultOutlineSurfaceLift = 0.14f;
+    const float DefaultQuickOutlineWidth = 7.44f;
 
     [Header("Auto fit")]
     [Tooltip("Pack kalınlığı (et kalınlığı). 1 = kart kalınlığı kadar.")]
@@ -29,20 +28,18 @@ public class PackVisualSettings : ScriptableObject
 
     [SerializeField] Vector3 meshLocalScale = new Vector3(1f, 2.398732f, 1.475494f);
 
-    [Header("Hand / outline")]
+    [Header("Hand")]
     [Tooltip("Elde pack'i kameraya biraz daha çeker; arkadaki karta girmesin diye.")]
     [Min(0f)]
     [SerializeField] float heldForwardExtra = DefaultHeldForwardExtra;
 
-    [Tooltip("Outline çerçevesini pack yüzeyinden hafif dışarı taşır.")]
-    [Min(1f)]
-    [SerializeField] float outlineSizePadding = DefaultOutlineSizePadding;
-
-    [Tooltip("Outline'ı kalınlık yönünde yüzeyden ne kadar kaldıracağı (mesh kalınlığı oranı).")]
+    [Header("Quick Outline (pack only)")]
+    [Tooltip("Pack mesh üzerindeki Quick Outline kalınlığı.")]
     [Min(0f)]
-    [SerializeField] float outlineSurfaceLift = DefaultOutlineSurfaceLift;
+    [SerializeField] float quickOutlineWidth = DefaultQuickOutlineWidth;
 
     public float ThicknessFitMultiplier => thicknessFitMultiplier;
+    public float QuickOutlineWidth => quickOutlineWidth;
     public string MeshChildName => meshChildName;
     public Vector3 MeshLocalPosition => meshLocalPosition;
     public Vector3 MeshLocalRotationEuler => meshLocalRotationEuler;
@@ -63,15 +60,9 @@ public class PackVisualSettings : ScriptableObject
         return settings != null ? settings.heldForwardExtra : DefaultHeldForwardExtra;
     }
 
-    public static float GetOutlineSizePaddingOrDefault()
+    public static float GetQuickOutlineWidthOrDefault()
     {
         PackVisualSettings settings = LoadOrNull();
-        return settings != null ? settings.outlineSizePadding : DefaultOutlineSizePadding;
-    }
-
-    public static float GetOutlineSurfaceLiftOrDefault()
-    {
-        PackVisualSettings settings = LoadOrNull();
-        return settings != null ? settings.outlineSurfaceLift : DefaultOutlineSurfaceLift;
+        return settings != null ? settings.QuickOutlineWidth : DefaultQuickOutlineWidth;
     }
 }

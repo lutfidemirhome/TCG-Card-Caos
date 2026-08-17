@@ -37,6 +37,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Rigidbody _rigidbody;
     BoxCollider _collider;
     bool _interactionHighlighted;
+    bool _handSelected;
     bool _groundShowsBack;
     int _packVariantIndex = 1;
     List<CardDefinition> _preRolledContents;
@@ -47,8 +48,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Vector3 _packOutlineSize;
     Vector3 _packOutlineCenterLocal;
     bool _hasPackOutlineBounds;
-    GameObject _outlineObject;
-    GameObject _handSelectionOutlineObject;
+    Outline _packOutline;
     int _groundStackLayer;
     bool _scaleTransitionActive;
     float _scaleFrom;
@@ -99,7 +99,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         _groundModelRenderersVisible = visible;
         ApplyPackRendererVisibility();
-        RefreshOutlineVisibilityForCull();
     }
 
     public void SetGroundStackLayer(int layer)
@@ -434,22 +433,57 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         RefreshCardProxyCenterOnPack();
     }
 
-    float GetHeldForwardPull(float handScale)
+    float GetHeldForwardPull(Quaternion handLocalRotation, float handScale)
     {
-        if (!_hasPackOutlineBounds)
-            return 0f;
+        EnsureVisual();
+        ApplyPackModelProbePose();
+
+        float pull = PackVisualSettings.GetHeldForwardExtraOrDefault();
+
+        if (_cardRef == null || _packModel == null
+            || !TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
+        {
+            return pull * handScale;
+        }
+
+        Vector3 behindInCardRef = Quaternion.Inverse(handLocalRotation) * Vector3.forward;
+        if (behindInCardRef.sqrMagnitude <= 0.000001f)
+            return pull * handScale;
+
+        behindInCardRef.Normalize();
+        float packBehind = GetBoundsSupportAlongDirection(min, max, behindInCardRef);
 
         Vector3 cardSize = GetCardMeshSizeInCardRefLocalSpace();
-        GetFootprintAxes(_packOutlineSize, out int packThicknessAxis, out _, out _);
-        GetFootprintAxes(cardSize, out int cardThicknessAxis, out _, out _);
-        float excess = (_packOutlineSize[packThicknessAxis] - cardSize[cardThicknessAxis]) * 0.5f;
-        return Mathf.Max(0f, excess) * handScale;
+        GetFootprintAxes(cardSize, out int cardThicknessAxis, out int cardWidthAxis, out int cardHeightAxis);
+        var cardHalfExtents = Vector3.zero;
+        cardHalfExtents[cardThicknessAxis] = cardSize[cardThicknessAxis] * 0.5f;
+        cardHalfExtents[cardWidthAxis] = cardSize[cardWidthAxis] * 0.5f;
+        cardHalfExtents[cardHeightAxis] = cardSize[cardHeightAxis] * 0.5f;
+        float cardBehind = GetBoundsSupportAlongDirection(-cardHalfExtents, cardHalfExtents, behindInCardRef);
+
+        pull += Mathf.Max(0f, packBehind - cardBehind);
+        return pull * handScale;
+    }
+
+    static float GetBoundsSupportAlongDirection(Vector3 min, Vector3 max, Vector3 direction)
+    {
+        direction = direction.normalized;
+        Vector3 center = (min + max) * 0.5f;
+        Vector3 extents = (max - min) * 0.5f;
+        float projectedRadius = Mathf.Abs(direction.x) * extents.x
+            + Mathf.Abs(direction.y) * extents.y
+            + Mathf.Abs(direction.z) * extents.z;
+        return Vector3.Dot(center, direction) + projectedRadius;
     }
 
     Vector3 GetHeldDepthOffset(Quaternion handLocalRotation, float handScale)
     {
-        float forward = GetHeldForwardPull(handScale);
-        return forward <= 0f ? Vector3.zero : handLocalRotation * (Vector3.back * forward);
+        float pull = GetHeldForwardPull(handLocalRotation, handScale);
+        if (pull <= 0f)
+            return Vector3.zero;
+
+        // HandFanLayout depth: negative Z is toward the camera.
+        return new Vector3(0f, 0f, -pull);
     }
 
     Vector3 GetCardMeshSizeInCardRefLocalSpace()
@@ -897,7 +931,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         bool show = _groundModelRenderersVisible
             || _state != PackState.World
             || HasActivePhysics
-            || IsInHand;
+            || IsInHand
+            || (_state == PackState.World && _interactionHighlighted);
 
         for (int i = 0; i < _packRenderers.Length; i++)
         {
@@ -960,135 +995,64 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _interactionHighlighted = highlighted && _state == PackState.World;
         if (_interactionHighlighted && !_hasPackOutlineBounds)
             RefreshPackOutlineBoundsFromLayout();
-        RefreshOutlineVisuals();
-    }
-
-    void RefreshOutlineVisibilityForCull()
-    {
-        if (_outlineObject == null || _state != PackState.World)
-            return;
-
-        bool show = _interactionHighlighted && _groundModelRenderersVisible;
-        if (_outlineObject.activeSelf != show)
-            _outlineObject.SetActive(show);
+        RefreshPackOutlineState();
+        ApplyPackRendererVisibility();
     }
 
     public void SetHandSelected(bool selected)
     {
-        if (selected)
-            EnsureHandSelectionOutlineRenderer();
-        else if (_handSelectionOutlineObject != null)
-            _handSelectionOutlineObject.SetActive(false);
-
-        if (_handSelectionOutlineObject != null)
-            _handSelectionOutlineObject.SetActive(selected && IsHeld);
+        _handSelected = selected;
+        if (selected && !_hasPackOutlineBounds)
+            RefreshPackOutlineBoundsFromLayout();
+        RefreshPackOutlineState();
     }
 
-    void RefreshOutlineVisuals()
+    void EnsurePackOutline()
     {
-        if (_state != PackState.World)
+        EnsurePackModelVisual();
+        if (_packModel == null)
+            return;
+
+        if (_packOutline == null)
+            _packOutline = _packModel.GetComponent<Outline>();
+        if (_packOutline == null)
+            _packOutline = _packModel.gameObject.AddComponent<Outline>();
+
+        _packOutline.OutlineMode = Outline.Mode.OutlineAll;
+        _packOutline.OutlineWidth = PackVisualSettings.GetQuickOutlineWidthOrDefault();
+    }
+
+    void RefreshPackOutlineState()
+    {
+        EnsurePackOutline();
+        if (_packOutline == null)
+            return;
+
+        CardOutlineSettings.Palette palette = CardOutlineSettings.GetPaletteOrDefaults();
+
+        if (_state == PackState.World && _interactionHighlighted)
         {
-            ReleaseInteractionOutline();
+            _packOutline.OutlineColor = palette.cardHover;
+            _packOutline.enabled = true;
             return;
         }
 
-        if (_interactionHighlighted)
+        if (IsHeld && _handSelected)
         {
-            EnsureInteractionOutlineRenderer();
-            if (_outlineObject != null)
-                _outlineObject.SetActive(true);
-            RefreshOutlineVisibilityForCull();
+            _packOutline.OutlineColor = palette.handSelection;
+            _packOutline.enabled = true;
             return;
         }
 
-        ReleaseInteractionOutline();
+        _packOutline.enabled = false;
     }
 
-    Transform GetOutlineParent()
+    void DisablePackOutline()
     {
-        EnsureVisual();
-        EnsureCardProxyMesh();
-        if (_cardProxyMesh != null)
-            return _cardProxyMesh;
-        return _cardRef != null ? _cardRef : transform;
-    }
-
-    void EnsureInteractionOutlineRenderer()
-    {
-        if (_outlineObject != null)
-            return;
-
-        EnsureVisual();
-        RefreshPackOutlineBoundsFromLayout();
-
-        _ = CardVisualResources.InteractionOutlineMaterial;
-        _outlineObject = new GameObject("InteractionOutline");
-        _outlineObject.transform.SetParent(GetOutlineParent(), false);
-        _outlineObject.transform.localPosition = Vector3.zero;
-        _outlineObject.transform.localRotation = Quaternion.identity;
-
-        var meshFilter = _outlineObject.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
-
-        var meshRenderer = _outlineObject.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = CardVisualResources.InteractionOutlineMaterial;
-        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        meshRenderer.receiveShadows = false;
-    }
-
-    void EnsureHandSelectionOutlineRenderer()
-    {
-        if (_handSelectionOutlineObject == null)
-        {
-            _ = CardVisualResources.HandSelectionOutlineMaterial;
-            _handSelectionOutlineObject = new GameObject("HandSelectionOutline");
-
-            var meshFilter = _handSelectionOutlineObject.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = CardVisualResources.HandSelectionBorderFrameMesh;
-
-            var meshRenderer = _handSelectionOutlineObject.AddComponent<MeshRenderer>();
-            meshRenderer.sharedMaterial = CardVisualResources.HandSelectionOutlineMaterial;
-            meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            meshRenderer.receiveShadows = false;
-        }
-
-        _handSelectionOutlineObject.transform.SetParent(GetOutlineParent(), false);
-        ApplyHandSelectionOutlineLocalPose();
-    }
-
-    void ApplyHandSelectionOutlineLocalPose()
-    {
-        if (_handSelectionOutlineObject == null)
-            return;
-
-        _handSelectionOutlineObject.transform.localPosition = Vector3.zero;
-        _handSelectionOutlineObject.transform.localRotation = Quaternion.Euler(180f, 0f, 0f);
-    }
-
-    void ReleaseInteractionOutline()
-    {
-        if (_outlineObject == null)
-            return;
-
-        if (Application.isPlaying)
-            Destroy(_outlineObject);
-        else
-            DestroyImmediate(_outlineObject);
-
-        _outlineObject = null;
-    }
-
-    void ReleaseHandSelectionOutline()
-    {
-        if (_handSelectionOutlineObject == null)
-            return;
-
-        if (Application.isPlaying)
-            Destroy(_handSelectionOutlineObject);
-        else
-            DestroyImmediate(_handSelectionOutlineObject);
-
-        _handSelectionOutlineObject = null;
+        if (_packOutline != null)
+            _packOutline.enabled = false;
+        _handSelected = false;
+        _interactionHighlighted = false;
     }
 
     public void BeginPickupFlight(
@@ -1179,8 +1143,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public void BeginOpening()
     {
         _state = PackState.Opening;
-        SetHandSelected(false);
-        ReleaseInteractionOutline();
+        DisablePackOutline();
         transform.SetParent(null, true);
     }
 
@@ -1249,7 +1212,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             yield break;
 
         SetInteractionHighlight(false);
-        RefreshOutlineVisuals();
+        RefreshPackOutlineState();
     }
 
     void ConvertHandVisualToWorldRoot()

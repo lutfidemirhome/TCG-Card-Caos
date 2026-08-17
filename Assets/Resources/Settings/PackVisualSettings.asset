@@ -18,5 +18,4 @@ MonoBehaviour:
   meshLocalRotationEuler: {x: -90, y: 0, z: -0.345}
   meshLocalScale: {x: 1, y: 2.398732, z: 1.475494}
   heldForwardExtra: 0.018
-  outlineSizePadding: 1.045
-  outlineSurfaceLift: 0.14
+  quickOutlineWidth: 7.44

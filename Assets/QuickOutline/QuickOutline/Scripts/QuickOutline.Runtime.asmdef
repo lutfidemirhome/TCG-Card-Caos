@@ -1,9 +1,7 @@
 {
-    "name": "TCGCardCaos",
+    "name": "QuickOutline.Runtime",
     "rootNamespace": "",
-    "references": [
-        "QuickOutline.Runtime"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
