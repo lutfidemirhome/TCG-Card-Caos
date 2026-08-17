@@ -39,15 +39,7 @@ public static class HandFanLayout
                 x = Mathf.Clamp(x, -widthBudget * 0.5f, widthBudget * 0.5f);
         }
 
-        float centerIndex = (count - 1) * 0.5f;
-        float z = (centerIndex - index) * settings.CardDepthStep;
-
-        if (isSelected && count > 1)
-        {
-            // Depth buffer decides draw order for 3D meshes — sibling index is not enough.
-            // Snap the selected card to the front of the fan regardless of scroll position.
-            z = (centerIndex - (count - 1)) * settings.CardDepthStep - settings.SelectedForwardMargin;
-        }
+        float z = ComputeFanDepthZ(index, count, settings, isSelected);
 
         var faceCamera = Quaternion.FromToRotation(Vector3.up, -Vector3.forward);
         if (settings.CardPitchDegrees != 0f)
@@ -72,6 +64,44 @@ public static class HandFanLayout
             LocalRotation = localRotation,
             Scale = settings.HeldScale,
         };
+    }
+
+    public static float ComputeFanDepthZ(int index, int count, in HandFanLayoutSettings settings, bool isSelected)
+    {
+        if (count <= 0)
+            return 0f;
+
+        float centerIndex = (count - 1) * 0.5f;
+        float z = (centerIndex - index) * settings.CardDepthStep;
+
+        if (isSelected && count > 1)
+        {
+            // Depth buffer decides draw order for 3D meshes — sibling index is not enough.
+            // Snap the selected card to the front of the fan regardless of scroll position.
+            z = (centerIndex - (count - 1)) * settings.CardDepthStep - settings.SelectedForwardMargin;
+        }
+
+        return z;
+    }
+
+    public static HandCardPose WithFanDepthZ(
+        HandCardPose pose,
+        int fanIndex,
+        int fanCount,
+        in HandFanLayoutSettings settings,
+        bool isSelected,
+        float[] fanDepthZ)
+    {
+        if (fanDepthZ == null || fanDepthZ.Length <= fanIndex)
+            return pose;
+
+        float defaultZ = ComputeFanDepthZ(fanIndex, fanCount, settings, isSelected);
+        float targetZ = fanDepthZ[fanIndex];
+        if (isSelected && fanCount > 1)
+            targetZ = fanDepthZ[fanCount - 1] - settings.SelectedForwardMargin;
+
+        pose.LocalPosition += new Vector3(0f, 0f, targetZ - defaultZ);
+        return pose;
     }
 
     static float GetAdaptiveFanAngle(int count, in HandFanLayoutSettings settings)

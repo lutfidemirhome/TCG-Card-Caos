@@ -744,11 +744,16 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void ApplyFanPose(int fanIndex, int fanCount, in HandFanLayoutSettings layout, bool isSelected)
     {
+        HandCardPose pose = HandFanLayout.GetPose(fanIndex, fanCount, layout, isSelected);
+        ApplyFanPose(pose, isSelected);
+    }
+
+    public void ApplyFanPose(HandCardPose pose, bool isSelected)
+    {
         if (_handState != HandState.Held)
             return;
 
         EnsureCardVisual();
-        HandCardPose pose = HandFanLayout.GetPose(fanIndex, fanCount, layout, isSelected);
         transform.localPosition = pose.LocalPosition;
         transform.localRotation = pose.LocalRotation;
         transform.localScale = Vector3.one * pose.Scale;
