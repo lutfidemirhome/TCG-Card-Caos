@@ -179,20 +179,9 @@ public static class PackArtLibrary
         if (source == null)
             return null;
 
-        if (forHand)
-        {
-            Material handMaterial = BuildHandLitMaterial(source);
-            if (Application.isPlaying)
-                Object.Destroy(source);
-            return handMaterial;
-        }
-
-        Material material = ConvertToPackToonMaterial(source);
-        if (material != source && Application.isPlaying)
+        Material material = BuildPackLitMaterial(source, forHand);
+        if (Application.isPlaying)
             Object.Destroy(source);
-
-        ApplyPackViewStableBrightness(material);
-        ConfigurePackWorldMaterial(material);
         return material;
     }
 
@@ -439,9 +428,9 @@ public static class PackArtLibrary
     }
 
     /// <summary>
-    /// Hand / reveal: flat URP Lit like hand cards — blocks depth, no TCP2 shadow bands.
+    /// Flat URP Lit for packs — same look in hand and on the ground.
     /// </summary>
-    static Material BuildHandLitMaterial(Material source)
+    static Material BuildPackLitMaterial(Material source, bool forHand)
     {
         if (source == null)
             return null;
@@ -454,7 +443,7 @@ public static class PackArtLibrary
 
         var material = new Material(shader)
         {
-            name = source.name + "_Hand"
+            name = source.name + (forHand ? "_Hand" : "_World")
         };
 
         CopyAlbedoTexture(source, material);
@@ -467,7 +456,11 @@ public static class PackArtLibrary
             material.SetFloat("_Smoothness", 0f);
 
         ApplyPackTextureUFlip(material);
-        ConfigurePackHandMaterial(material);
+        if (forHand)
+            ConfigurePackHandMaterial(material);
+        else
+            ConfigurePackWorldMaterial(material);
+
         return material;
     }
 
@@ -559,15 +552,13 @@ public static class PackArtLibrary
     }
 
     /// <summary>
-    /// Ground packs: same toon lighting as hand, double-sided for mirrored ground pose.
-    /// Skips SSAO override queue — TCP2 reads too dark at 2501 compared to hand cards.
+    /// Ground packs: same lit look as hand; double-sided for mirrored ground pose.
     /// </summary>
     public static void ConfigurePackWorldMaterial(Material material)
     {
         if (material == null)
             return;
 
-        ApplyPackTextureUFlip(material);
         ApplyPackNoShadowMaterialSettings(material);
 
         if (material.HasProperty("_Cull"))
@@ -576,7 +567,7 @@ public static class PackArtLibrary
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
 
-        material.renderQueue = (int)RenderQueue.Geometry;
+        material.renderQueue = 2501;
     }
 
     static void ApplyPackTextureUFlip(Material material)

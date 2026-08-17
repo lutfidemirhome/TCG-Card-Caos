@@ -222,11 +222,9 @@ public static class CardArtLibrary
         {
             frontMaterial = new Material(template);
             if (quality == CardTextureQuality.World)
-            {
                 frontMaterial.enableInstancing = true;
-                ConfigureGroundWorldMaterial(frontMaterial);
-            }
 
+            ConfigureGroundWorldMaterial(frontMaterial);
             cache[paletteIndex] = frontMaterial;
         }
 
@@ -254,11 +252,9 @@ public static class CardArtLibrary
             frontMaterial = new Material(template);
             ApplyFrontTexture(frontMaterial, definition.FrontTexture);
             if (quality == CardTextureQuality.World)
-            {
                 frontMaterial.enableInstancing = true;
-                ConfigureGroundWorldMaterial(frontMaterial);
-            }
 
+            ConfigureGroundWorldMaterial(frontMaterial);
             cache[cacheKey] = frontMaterial;
         }
 
@@ -368,13 +364,14 @@ public static class CardArtLibrary
         ApplyBackTextureUFlip(_sharedBackDetailTemplate);
         ConfigureGroundWorldMaterial(_sharedFrontWorldTemplate);
         ConfigureGroundWorldMaterial(_sharedBackWorldTemplate);
+        ConfigureGroundWorldMaterial(_sharedFrontDetailTemplate);
+        ConfigureGroundWorldMaterial(_sharedBackDetailTemplate);
 
         return _cardMesh != null && _sharedFrontDetailTemplate != null && _sharedBackDetailTemplate != null;
     }
 
     /// <summary>
-    /// Ground cards skip SSAO / contact darkening so wall inner shadows stay, floor cards do not halo.
-    /// Drawn after opaque SSAO (queue 2501) with ZWrite so stacks still occlude each other.
+    /// Hand and ground cards skip SSAO / contact darkening; draw after opaque SSAO (queue 2501) with ZWrite.
     /// </summary>
     public static void ConfigureGroundWorldMaterial(Material material)
     {
