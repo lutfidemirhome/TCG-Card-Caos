@@ -222,9 +222,11 @@ public static class CardArtLibrary
         {
             frontMaterial = new Material(template);
             if (quality == CardTextureQuality.World)
+            {
                 frontMaterial.enableInstancing = true;
+                ConfigureGroundWorldMaterial(frontMaterial);
+            }
 
-            ConfigureGroundWorldMaterial(frontMaterial);
             cache[paletteIndex] = frontMaterial;
         }
 
@@ -252,9 +254,11 @@ public static class CardArtLibrary
             frontMaterial = new Material(template);
             ApplyFrontTexture(frontMaterial, definition.FrontTexture);
             if (quality == CardTextureQuality.World)
+            {
                 frontMaterial.enableInstancing = true;
+                ConfigureGroundWorldMaterial(frontMaterial);
+            }
 
-            ConfigureGroundWorldMaterial(frontMaterial);
             cache[cacheKey] = frontMaterial;
         }
 
@@ -364,14 +368,14 @@ public static class CardArtLibrary
         ApplyBackTextureUFlip(_sharedBackDetailTemplate);
         ConfigureGroundWorldMaterial(_sharedFrontWorldTemplate);
         ConfigureGroundWorldMaterial(_sharedBackWorldTemplate);
-        ConfigureGroundWorldMaterial(_sharedFrontDetailTemplate);
-        ConfigureGroundWorldMaterial(_sharedBackDetailTemplate);
+        ConfigureHandDetailMaterial(_sharedFrontDetailTemplate);
+        ConfigureHandDetailMaterial(_sharedBackDetailTemplate);
 
         return _cardMesh != null && _sharedFrontDetailTemplate != null && _sharedBackDetailTemplate != null;
     }
 
     /// <summary>
-    /// Hand and ground cards skip SSAO / contact darkening; draw after opaque SSAO (queue 2501) with ZWrite.
+    /// Ground cards skip SSAO / contact darkening; draw after opaque SSAO (queue 2501) with ZWrite.
     /// </summary>
     public static void ConfigureGroundWorldMaterial(Material material)
     {
@@ -387,6 +391,21 @@ public static class CardArtLibrary
             material.SetFloat("_ZWrite", 1f);
 
         material.renderQueue = 2501;
+    }
+
+    /// <summary>
+    /// Hand / shelf detail cards: no shadow receive, keep default opaque queue (not 2501).
+    /// </summary>
+    public static void ConfigureHandDetailMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_ReceiveShadows"))
+            material.SetFloat("_ReceiveShadows", 0f);
+
+        material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+        material.SetShaderPassEnabled("ShadowCaster", false);
     }
 
     public static void ApplyGroundWorldRendererSettings(Renderer renderer)

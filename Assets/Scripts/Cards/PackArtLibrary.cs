@@ -490,8 +490,8 @@ public static class PackArtLibrary
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
 
-        // Match hand/ground cards: write depth and skip SSAO contact darkening.
-        material.renderQueue = 2501;
+        // Default opaque queue — 2501 caused see-through hand cards/packs.
+        material.renderQueue = (int)RenderQueue.Geometry;
     }
 
     static void ApplyPackNoShadowMaterialSettings(Material material)
