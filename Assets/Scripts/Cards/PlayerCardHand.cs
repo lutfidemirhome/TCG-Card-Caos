@@ -53,7 +53,8 @@ public class PlayerCardHand : MonoBehaviour
 
     [Header("Booster pack")]
     [SerializeField] float openRevealDistance = 0.48f;
-    [SerializeField] float openRevealHeight = 0.02f;
+    [Tooltip("Pack-only vertical offset during open reveal. Lower = pack sits lower; card row stays fixed.")]
+    [SerializeField] float openRevealHeight = -0.06f;
     [SerializeField] float openSequenceDuration = 1.35f;
     [SerializeField] float openPackAnticipationHold = 1f;
     [SerializeField] KeyCode openPackKey = KeyCode.E;

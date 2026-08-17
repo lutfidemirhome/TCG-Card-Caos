@@ -18,7 +18,8 @@ public static class PackOpenSequence
     const float RevealWaveDipHeightFactor = 0.042f;
     const float RevealScreenScaleMultiplier = 1.2f;
     const float RevealCardSpacingFactor = 1.12f;
-    const float PackRevealLocalYOffsetFactor = 0.32f;
+    const float RevealCardAnchorHeight = 0.02f;
+    const float PackRevealLocalYOffsetFactor = 0.44f;
     const float PackDriftDurationFactor = 0.075f;
     const float PackExitDropFactor = 1.35f;
     const float PackPostShakePause = 0.05f;
@@ -47,15 +48,14 @@ public static class PackOpenSequence
         GameSoundEffects.EnsureExists();
 
         float revealDistance = hand.OpenRevealDistance;
+        float packOnlyWorldDown = RevealCardAnchorHeight - hand.OpenRevealHeight;
         PackRevealBackdrop backdrop = PackRevealBackdrop.Create(camera, revealDistance);
         if (backdrop != null)
             yield return backdrop.FadeTo(RevealBackdropAlpha, RevealBackdropFadeInDuration);
 
         Transform revealRoot = new GameObject("PackRevealRoot").transform;
         revealRoot.SetParent(camera.transform, false);
-
-        float revealHeight = hand.OpenRevealHeight;
-        revealRoot.localPosition = new Vector3(0f, revealHeight, revealDistance);
+        revealRoot.localPosition = new Vector3(0f, RevealCardAnchorHeight, revealDistance);
         revealRoot.localRotation = Quaternion.identity;
 
         float heldScale = hand.EffectiveHeldScale;
@@ -65,7 +65,7 @@ public static class PackOpenSequence
         Quaternion packRevealWorldRotation = revealRoot.rotation * revealFaceRotation;
         Vector3 packRevealLocalStart = new Vector3(
             0f,
-            -CardDimensions.Height * revealScale * PackRevealLocalYOffsetFactor,
+            -CardDimensions.Height * revealScale * PackRevealLocalYOffsetFactor - packOnlyWorldDown,
             0f);
 
         // Move pack toward the reveal anchor, facing the player like a held pack.

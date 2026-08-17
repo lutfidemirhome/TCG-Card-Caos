@@ -24266,7 +24266,7 @@ MonoBehaviour:
   throwAimFallbackDistance: 8
   dropKey: 113
   openRevealDistance: 0.48
-  openRevealHeight: 0.02
+  openRevealHeight: -0.06
   openSequenceDuration: 1.35
   openPackAnticipationHold: 1
   openPackKey: 101

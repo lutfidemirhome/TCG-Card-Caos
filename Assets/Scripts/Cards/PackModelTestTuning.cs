@@ -48,7 +48,7 @@ public sealed class PackModelTestTuning : MonoBehaviour
         packVisual.localScale = new Vector3(
             CardDimensions.Width,
             CardDimensions.Height,
-            CardDimensions.Thickness * 2.5f);
+            CardDimensions.Thickness * PackVisualSettings.GetThicknessFitMultiplierOrDefault());
     }
 
     void OnDrawGizmosSelected()

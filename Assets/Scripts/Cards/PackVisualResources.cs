@@ -15,6 +15,15 @@ static class PackVisualResources
     static readonly Dictionary<long, Mesh> InteractionMeshCache = new Dictionary<long, Mesh>();
     static readonly Dictionary<long, Mesh> HandSelectionMeshCache = new Dictionary<long, Mesh>();
 
+#if UNITY_EDITOR
+    [UnityEditor.InitializeOnEnterPlayMode]
+    static void ResetPlayModeCaches(UnityEditor.EnterPlayModeOptions options)
+    {
+        InteractionMeshCache.Clear();
+        HandSelectionMeshCache.Clear();
+    }
+#endif
+
     public static Mesh GetInteractionBorderMesh(Vector3 meshSize)
     {
         float borderThickness = Mathf.Max(meshSize.x, 0.0001f) * InteractionBorderThicknessPercent;
@@ -42,9 +51,11 @@ static class PackVisualResources
     {
         long x = Mathf.RoundToInt(size.x * 1000000f);
         long y = Mathf.RoundToInt(size.y * 1000000f);
+        long z = Mathf.RoundToInt(size.z * 1000000f);
         long t = Mathf.RoundToInt(borderThickness * 1000000f);
         long key = x;
         key = (key * 1000003L) ^ y;
+        key = (key * 1000003L) ^ z;
         key = (key * 1000003L) ^ t;
         return key;
     }
