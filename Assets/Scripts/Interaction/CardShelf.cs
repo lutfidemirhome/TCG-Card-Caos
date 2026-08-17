@@ -412,6 +412,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         CardShelfSlot slot = FindAimTargetSlot();
         if (slot == null)
         {
+            _previewSlot = null;
             HidePlacementOutline();
             return;
         }

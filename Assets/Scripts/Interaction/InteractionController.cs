@@ -148,6 +148,7 @@ public class InteractionController : MonoBehaviour
         {
             _raycastAimedPack = null;
             ClearDelayedInspectUiState();
+            ClearActiveShelfAim();
             UpdateSelectedPackPrompt();
             return;
         }
@@ -161,11 +162,15 @@ public class InteractionController : MonoBehaviour
 
         if (interactable is CardShelf shelf)
         {
+            if (_currentTarget is CardShelf previousShelf && !ReferenceEquals(previousShelf, shelf))
+                previousShelf.ClearAim();
+
             ClearDelayedInspectUiState();
             shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf));
         }
         else
         {
+            ClearActiveShelfAim();
             ClearShelfAimForNonShelfTarget(interactable);
         }
 
@@ -399,6 +404,12 @@ public class InteractionController : MonoBehaviour
             return bestOther;
 
         return null;
+    }
+
+    void ClearActiveShelfAim()
+    {
+        if (_currentTarget is CardShelf shelf)
+            shelf.ClearAim();
     }
 
     void ClearShelfAimForNonShelfTarget(IInteractable interactable)
