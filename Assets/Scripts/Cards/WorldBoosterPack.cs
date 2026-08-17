@@ -872,6 +872,10 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packModel == null)
             return;
 
+        bool useHandMaterials = _state != PackState.World;
+        if (useHandMaterials)
+            ReleaseLiveHandMaterials();
+
         CachePackRenderers();
         for (int i = 0; i < _packRenderers.Length; i++)
         {
@@ -882,13 +886,10 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
-            if (_state != PackState.World)
+            if (useHandMaterials)
                 EnsureLiveHandMaterials(renderer);
             else
-            {
-                ReleaseLiveHandMaterials();
                 PackArtLibrary.ApplyPackMaterials(renderer, _packVariantIndex, forHand: false);
-            }
         }
 
         ApplyPackRendererVisibility();

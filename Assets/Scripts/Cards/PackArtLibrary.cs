@@ -179,18 +179,20 @@ public static class PackArtLibrary
         if (source == null)
             return null;
 
+        if (forHand)
+        {
+            Material handMaterial = BuildHandLitMaterial(source);
+            if (Application.isPlaying)
+                Object.Destroy(source);
+            return handMaterial;
+        }
+
         Material material = ConvertToPackToonMaterial(source);
         if (material != source && Application.isPlaying)
             Object.Destroy(source);
 
-        if (forHand)
-            ConfigurePackHandMaterial(material);
-        else
-        {
-            ApplyPackViewStableBrightness(material);
-            ConfigurePackWorldMaterial(material);
-        }
-
+        ApplyPackViewStableBrightness(material);
+        ConfigurePackWorldMaterial(material);
         return material;
     }
 
@@ -374,9 +376,7 @@ public static class PackArtLibrary
         if (toonMaterial.HasProperty("_UseOutline"))
             toonMaterial.SetFloat("_UseOutline", 0f);
 
-        if (toonMaterial.HasProperty("_ReceiveShadowsOff"))
-            toonMaterial.SetFloat("_ReceiveShadowsOff", 1f);
-        toonMaterial.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+        ApplyPackNoShadowMaterialSettings(toonMaterial);
     }
 
     /// <summary>
@@ -439,16 +439,57 @@ public static class PackArtLibrary
     }
 
     /// <summary>
-    /// Hand / reveal: opaque depth write with back-face cull so cabinets behind the pack stay hidden.
-    /// Flat albedo presentation — no ramp/spec/rim so view angle does not change brightness.
+    /// Hand / reveal: flat URP Lit like hand cards — blocks depth, no TCP2 shadow bands.
     /// </summary>
+    static Material BuildHandLitMaterial(Material source)
+    {
+        if (source == null)
+            return null;
+
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
+            shader = Shader.Find("Standard");
+        if (shader == null)
+            return null;
+
+        var material = new Material(shader)
+        {
+            name = source.name + "_Hand"
+        };
+
+        CopyAlbedoTexture(source, material);
+        material.SetColor("_BaseColor", Color.white);
+        material.SetColor("_Color", Color.white);
+
+        if (material.HasProperty("_Metallic"))
+            material.SetFloat("_Metallic", 0f);
+        if (material.HasProperty("_Smoothness"))
+            material.SetFloat("_Smoothness", 0f);
+
+        ApplyPackTextureUFlip(material);
+        ConfigurePackHandMaterial(material);
+        return material;
+    }
+
+    static void CopyAlbedoTexture(Material source, Material destination)
+    {
+        if (source == null || destination == null)
+            return;
+
+        if (source.HasProperty("_BaseMap") && destination.HasProperty("_BaseMap"))
+            destination.SetTexture("_BaseMap", source.GetTexture("_BaseMap"));
+        else if (source.HasProperty("_MainTex") && destination.HasProperty("_BaseMap"))
+            destination.SetTexture("_BaseMap", source.GetTexture("_MainTex"));
+        else if (source.HasProperty("_MainTex") && destination.HasProperty("_MainTex"))
+            destination.SetTexture("_MainTex", source.GetTexture("_MainTex"));
+    }
+
     public static void ConfigurePackHandMaterial(Material material)
     {
         if (material == null)
             return;
 
-        ApplyPackHandFlatPresentation(material);
-        ApplyPackTextureUFlip(material);
+        ApplyPackNoShadowMaterialSettings(material);
 
         if (material.HasProperty("_Cull"))
             material.SetFloat("_Cull", (float)CullMode.Back);
@@ -456,7 +497,25 @@ public static class PackArtLibrary
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
 
-        material.renderQueue = (int)RenderQueue.Geometry;
+        // Match hand/ground cards: write depth and skip SSAO contact darkening.
+        material.renderQueue = 2501;
+    }
+
+    static void ApplyPackNoShadowMaterialSettings(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_ReceiveShadows"))
+            material.SetFloat("_ReceiveShadows", 0f);
+        if (material.HasProperty("_ReceiveShadowsOff"))
+            material.SetFloat("_ReceiveShadowsOff", 1f);
+        material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+        material.SetShaderPassEnabled("ShadowCaster", false);
+
+        if (material.HasProperty("_ShadowColorLightAtten"))
+            material.SetFloat("_ShadowColorLightAtten", 0f);
+        material.DisableKeyword("TCP2_SHADOW_LIGHT_COLOR");
     }
 
     static void ApplyPackHandFlatPresentation(Material material)
@@ -509,14 +568,10 @@ public static class PackArtLibrary
             return;
 
         ApplyPackTextureUFlip(material);
+        ApplyPackNoShadowMaterialSettings(material);
 
         if (material.HasProperty("_Cull"))
             material.SetFloat("_Cull", (float)CullMode.Off);
-
-        if (material.HasProperty("_ReceiveShadows"))
-            material.SetFloat("_ReceiveShadows", 0f);
-        material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
-        material.SetShaderPassEnabled("ShadowCaster", false);
 
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
