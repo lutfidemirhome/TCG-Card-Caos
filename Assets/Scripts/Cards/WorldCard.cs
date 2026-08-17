@@ -566,7 +566,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         RefreshRenderMode();
 
         EnsureRigidbody();
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        // ContinuousDynamic (not just Continuous) is required so two fast-moving cards thrown back-to-back
+        // resolve their collision against EACH OTHER instead of tunneling/overlapping for a frame.
+        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         _rigidbody.isKinematic = false;
         _rigidbody.useGravity = true;
         _rigidbody.constraints = RigidbodyConstraints.None;
@@ -590,7 +592,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             transform,
             _rigidbody,
             _collider as BoxCollider,
-            () => _handState == HandState.World && _rigidbody != null);
+            () => _handState == HandState.World && _rigidbody != null,
+            onSettled: () => CardGroundStack.ApplyStackHeight(this, placeOnTop: true));
 
         if (_handState != HandState.World || _rigidbody == null)
             yield break;
@@ -740,6 +743,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _rigidbody.angularDamping = 0.8f;
         _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        // Extra solver iterations keep thin flat cards from sinking/interpenetrating when several land in a pile.
+        _rigidbody.solverIterations = 12;
+        _rigidbody.solverVelocityIterations = 4;
     }
 
     public void ApplyFanPose(int fanIndex, int fanCount, in HandFanLayoutSettings layout, bool isSelected)

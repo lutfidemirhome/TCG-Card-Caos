@@ -1165,7 +1165,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ApplyPackModelShadowSettings();
 
         EnsureRigidbody();
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        // ContinuousDynamic (not just Continuous) is required so two fast-moving packs/cards thrown
+        // back-to-back resolve their collision against EACH OTHER instead of tunneling for a frame.
+        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         _rigidbody.isKinematic = false;
         _rigidbody.useGravity = true;
         _rigidbody.constraints = RigidbodyConstraints.None;
@@ -1190,7 +1192,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             transform,
             _rigidbody,
             _collider as BoxCollider,
-            () => _state == PackState.World && _rigidbody != null);
+            () => _state == PackState.World && _rigidbody != null,
+            onSettled: () => CardGroundStack.ApplyStackHeight(this, placeOnTop: true),
+            allowKinematicFreeze: false);
 
         if (_state != PackState.World || _rigidbody == null)
             yield break;
@@ -1374,6 +1378,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _rigidbody.angularDamping = 0.8f;
         _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        // Extra solver iterations keep flat packs from sinking/interpenetrating when several land in a pile.
+        _rigidbody.solverIterations = 12;
+        _rigidbody.solverVelocityIterations = 4;
     }
 
     void RemovePhysics()

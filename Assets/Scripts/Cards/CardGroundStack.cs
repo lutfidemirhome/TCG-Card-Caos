@@ -466,7 +466,7 @@ public static class CardGroundStack
     static void PlaceOnTopOfOverlaps(WorldCard card)
     {
         int maxLayer = -1;
-        RebuildSpatialBuckets();
+        EnsureSpatialBucketsBuilt();
         CollectNeighborhood(card.transform.position, CellScratch);
 
         for (int i = 0; i < CellScratch.Count; i++)
@@ -495,6 +495,34 @@ public static class CardGroundStack
         Vector3 position = card.transform.position;
         position.y = GetDrawWorldY(card);
         card.transform.position = position;
+        InsertIntoSpatialBucket(card);
+    }
+
+    /// <summary>
+    /// Builds the spatial hash once and only re-touches it via <see cref="InsertIntoSpatialBucket"/> for
+    /// individually-settled items afterward — a full rebuild scanning every tracked ground card is too
+    /// costly to run on every single thrown card/pack settle (rapid Q-throws would otherwise hitch).
+    /// </summary>
+    static void EnsureSpatialBucketsBuilt()
+    {
+        if (SpatialBuckets.Count == 0)
+            RebuildSpatialBuckets();
+    }
+
+    static void InsertIntoSpatialBucket(WorldCard card)
+    {
+        if (card == null || SpatialBuckets.Count == 0)
+            return;
+
+        long key = CellKey(card.transform.position, SpatialCellSize);
+        if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
+        {
+            bucket = new List<WorldCard>(8);
+            SpatialBuckets[key] = bucket;
+        }
+
+        if (!bucket.Contains(card))
+            bucket.Add(card);
     }
 
     public static void RefreshCluster(WorldCard seed, WorldCard forceOnTop = null)
@@ -767,7 +795,7 @@ public static class CardGroundStack
     static void PlacePackOnTopOfOverlaps(WorldBoosterPack pack)
     {
         int maxLayer = -1;
-        RebuildSpatialBuckets();
+        EnsureSpatialBucketsBuilt();
         CollectNeighborhood(pack.transform.position, CellScratch);
 
         for (int i = 0; i < CellScratch.Count; i++)
