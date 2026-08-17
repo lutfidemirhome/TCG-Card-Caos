@@ -1029,7 +1029,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshRenderer == null)
             return;
 
-        CardTextureQuality quality = IsInHand
+        // FlyingToHand uses world materials (queue 2501, no SSAO) — detail queue darkens during pickup flight.
+        CardTextureQuality quality = _handState == HandState.Held
             || _handState == HandState.PackReveal
             || _handState == HandState.FlyingToShelf
             || GetComponentInParent<CardShelfSlot>() != null

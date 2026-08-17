@@ -812,8 +812,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packModel == null)
             return;
 
-        bool useHandMaterials = _state != PackState.World;
-        if (useHandMaterials)
+        bool useHandMaterials = _state == PackState.Held || _state == PackState.Opening;
+        if (!useHandMaterials)
             ReleaseLiveHandMaterials();
 
         CachePackRenderers();
