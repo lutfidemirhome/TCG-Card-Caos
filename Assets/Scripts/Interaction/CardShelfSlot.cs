@@ -123,11 +123,20 @@ public class CardShelfSlot : MonoBehaviour
         RefreshPreviewVisibility();
     }
 
+    void Awake()
+    {
+        if (Application.isPlaying)
+            HidePreviewForPlayMode();
+    }
+
     void OnEnable()
     {
         SyncIndicesFromHierarchy();
         EnsurePreview();
-        RefreshPreviewVisibility();
+        if (Application.isPlaying)
+            HidePreviewForPlayMode();
+        else
+            RefreshPreviewVisibility();
     }
 
     void OnDisable()
@@ -171,7 +180,7 @@ public class CardShelfSlot : MonoBehaviour
         // Keep preview alive while editing; hide during Play (runtime outline handles aim).
         if (Application.isPlaying)
         {
-            SetPreviewActive(false);
+            HidePreviewForPlayMode();
             return;
         }
 
@@ -185,10 +194,39 @@ public class CardShelfSlot : MonoBehaviour
         SetPreviewActive(show);
     }
 
+    /// <summary>
+    /// Editor preview uses renderer.enabled (not GameObject.SetActive) so Unity does not keep
+    /// dirtying cabinet prefab m_IsActive fields in SourceTree.
+    /// </summary>
     void SetPreviewActive(bool active)
     {
-        if (_previewRoot != null)
-            _previewRoot.gameObject.SetActive(active);
+        EnsurePreview();
+        if (_previewRoot == null)
+            return;
+
+        if (Application.isPlaying)
+        {
+            HidePreviewForPlayMode();
+            return;
+        }
+
+        if (active && !_previewRoot.gameObject.activeSelf)
+            _previewRoot.gameObject.SetActive(true);
+
+        SetPreviewRenderersEnabled(active);
+    }
+
+    void HidePreviewForPlayMode()
+    {
+        SetPreviewRenderersEnabled(false);
+    }
+
+    void SetPreviewRenderersEnabled(bool enabled)
+    {
+        if (_fillRenderer != null)
+            _fillRenderer.enabled = enabled;
+        if (_edgeRenderer != null)
+            _edgeRenderer.enabled = enabled;
     }
 
     void EnsurePreview()
