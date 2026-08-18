@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Marker for one card seat on a cabinet shelf.
@@ -135,8 +138,13 @@ public class CardShelfSlot : MonoBehaviour
         EnsurePreview();
         if (Application.isPlaying)
             HidePreviewForPlayMode();
+#if UNITY_EDITOR
+        else if (!IsEditingPrefabAsset())
+            RefreshPreviewVisibility();
+#else
         else
             RefreshPreviewVisibility();
+#endif
     }
 
     void OnDisable()
@@ -146,6 +154,10 @@ public class CardShelfSlot : MonoBehaviour
 
     void OnValidate()
     {
+#if UNITY_EDITOR
+        if (IsEditingPrefabAsset())
+            return;
+#endif
         // SetParent/AddComponent are illegal during OnValidate — defer to editor delayCall.
         SchedulePreviewRefresh();
     }
@@ -170,6 +182,9 @@ public class CardShelfSlot : MonoBehaviour
         if (this == null)
             return;
 
+        if (IsEditingPrefabAsset())
+            return;
+
         EnsurePreview();
         RefreshPreviewVisibility();
     }
@@ -177,12 +192,17 @@ public class CardShelfSlot : MonoBehaviour
 
     void LateUpdate()
     {
-        // Keep preview alive while editing; hide during Play (runtime outline handles aim).
         if (Application.isPlaying)
         {
             HidePreviewForPlayMode();
             return;
         }
+
+#if UNITY_EDITOR
+        // Never drive preview visibility on the prefab asset — that dirties 50+ cabinet YAML files.
+        if (IsEditingPrefabAsset())
+            return;
+#endif
 
         EnsurePreview();
         RefreshPreviewVisibility();
@@ -195,8 +215,8 @@ public class CardShelfSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// Editor preview uses renderer.enabled (not GameObject.SetActive) so Unity does not keep
-    /// dirtying cabinet prefab m_IsActive fields in SourceTree.
+    /// Editor preview uses renderer.enabled only — never GameObject.SetActive on the prefab asset
+    /// (that flips m_IsActive and fills SourceTree with ~50 cabinet prefab diffs).
     /// </summary>
     void SetPreviewActive(bool active)
     {
@@ -210,8 +230,10 @@ public class CardShelfSlot : MonoBehaviour
             return;
         }
 
-        if (active && !_previewRoot.gameObject.activeSelf)
-            _previewRoot.gameObject.SetActive(true);
+#if UNITY_EDITOR
+        if (IsEditingPrefabAsset())
+            return;
+#endif
 
         SetPreviewRenderersEnabled(active);
     }
@@ -223,11 +245,21 @@ public class CardShelfSlot : MonoBehaviour
 
     void SetPreviewRenderersEnabled(bool enabled)
     {
+#if UNITY_EDITOR
+        if (IsEditingPrefabAsset())
+            return;
+#endif
+
         if (_fillRenderer != null)
             _fillRenderer.enabled = enabled;
         if (_edgeRenderer != null)
             _edgeRenderer.enabled = enabled;
     }
+
+#if UNITY_EDITOR
+    bool IsEditingPrefabAsset() =>
+        PrefabUtility.IsPartOfPrefabAsset(gameObject);
+#endif
 
     void EnsurePreview()
     {
@@ -242,7 +274,21 @@ public class CardShelfSlot : MonoBehaviour
         {
             var go = new GameObject(PreviewObjectName);
             go.transform.SetParent(transform, false);
+#if UNITY_EDITOR
+            if (!IsEditingPrefabAsset())
+                go.hideFlags = HideFlags.DontSave;
+#endif
             _previewRoot = go.transform;
+        }
+        else if (!_previewRoot.gameObject.activeSelf)
+        {
+            // Prefab ships with SlotCardPreview inactive; enable only on scene instances (not prefab assets).
+#if UNITY_EDITOR
+            if (!IsEditingPrefabAsset())
+                _previewRoot.gameObject.SetActive(true);
+#else
+            _previewRoot.gameObject.SetActive(true);
+#endif
         }
 
         _previewRoot.localPosition = Vector3.zero;
