@@ -1,0 +1,113 @@
+#pragma kernel CSFindMinT
+#pragma kernel CSFindMinIndex
+#pragma kernel CSComputeNormal
+
+StructuredBuffer<float3> vertices;
+StructuredBuffer<int> triangles;
+
+RWStructuredBuffer<uint> minDistanceBits;
+RWStructuredBuffer<uint> minTriangleIndex;
+RWStructuredBuffer<float3> hitNormalBuffer;
+
+float3 rayOrigin;
+float3 rayDirection;
+uint triangleCount;
+
+[numthreads(64, 1, 1)]
+void CSFindMinT(uint triIdx : SV_DispatchThreadID)
+{
+    if (triIdx >= triangleCount)
+        return;
+
+    uint i0 = triangles[3 * triIdx + 0];
+    uint i1 = triangles[3 * triIdx + 1];
+    uint i2 = triangles[3 * triIdx + 2];
+    float3 v0 = vertices[i0];
+    float3 v1 = vertices[i1];
+    float3 v2 = vertices[i2];
+
+    const float EPS = 1e-6;
+    float3 edge1 = v1 - v0;
+    float3 edge2 = v2 - v0;
+    float3 pvec = cross(rayDirection, edge2);
+    float det = dot(edge1, pvec);
+    if (det > -EPS && det < EPS)
+        return;
+    float invDet = 1.0 / det;
+
+    float3 tvec = rayOrigin - v0;
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0 || u > 1.0)
+        return;
+
+    float3 qvec = cross(tvec, edge1);
+    float v = dot(rayDirection, qvec) * invDet;
+    if (v < 0.0 || u + v > 1.0)
+        return;
+
+    float t = dot(edge2, qvec) * invDet;
+    if (t <= EPS)
+        return;
+
+    uint tBits = asuint(t);
+    InterlockedMin(minDistanceBits[0], tBits);
+}
+
+[numthreads(64, 1, 1)]
+void CSFindMinIndex(uint triIdx : SV_DispatchThreadID)
+{
+    if (triIdx >= triangleCount)
+        return;
+
+    uint i0 = triangles[3 * triIdx + 0];
+    uint i1 = triangles[3 * triIdx + 1];
+    uint i2 = triangles[3 * triIdx + 2];
+    float3 v0 = vertices[i0];
+    float3 v1 = vertices[i1];
+    float3 v2 = vertices[i2];
+
+    const float EPS = 1e-6;
+    float3 edge1 = v1 - v0;
+    float3 edge2 = v2 - v0;
+    float3 pvec = cross(rayDirection, edge2);
+    float det = dot(edge1, pvec);
+    if (det > -EPS && det < EPS)
+        return;
+    float invDet = 1.0 / det;
+
+    float3 tvec = rayOrigin - v0;
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0 || u > 1.0)
+        return;
+
+    float3 qvec = cross(tvec, edge1);
+    float v = dot(rayDirection, qvec) * invDet;
+    if (v < 0.0 || u + v > 1.0)
+        return;
+
+    float t = dot(edge2, qvec) * invDet;
+    if (t <= EPS)
+        return;
+
+    uint tBits = asuint(t);
+    if (tBits == minDistanceBits[0])
+    {
+        InterlockedMin(minTriangleIndex[0], triIdx);
+    }
+}
+
+[numthreads(1, 1, 1)]
+void CSComputeNormal(uint id : SV_DispatchThreadID)
+{
+    uint triIdx = minTriangleIndex[0];
+    uint i0 = triangles[3 * triIdx + 0];
+    uint i1 = triangles[3 * triIdx + 1];
+    uint i2 = triangles[3 * triIdx + 2];
+
+    float3 v0 = vertices[i0];
+    float3 v1 = vertices[i1];
+    float3 v2 = vertices[i2];
+
+    float3 n = normalize(cross(v1 - v0, v2 - v0));
+    hitNormalBuffer[0] = n;
+}

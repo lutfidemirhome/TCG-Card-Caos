@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 48d1e63a3c127ff4295bdfd5e43cb9f1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 185406
+  packageName: Prefab World Builder
+  packageVersion: 4.8.1
+  assetPath: Assets/PluginMaster/DesignTools/Editor/Common/Scripts/CollectionsUtils.cs
+  uploadId: 776075

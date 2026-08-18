@@ -1,0 +1,123 @@
+# Jungle install manifest v1. Generated at export; do not edit.
+# Kind (X = content checked, P = presence only), length, hash, path.
+# optional= folders the customer may leave out of the import, in full.
+plugin=Grabbit
+stamp=80f8b2f55dbb33a444107c00297520da3a82546c
+---
+P	-	-	Assets/Plugins/Jungle/Grabbit/Default Grabbit Settings Preset.preset
+X	386	c57a32be6d8d68f50c7d590f8bd74a9fd4d6531d	Assets/Plugins/Jungle/Grabbit/Grabbit Assembly.asmdef
+P	-	-	Assets/Plugins/Jungle/Grabbit/Grabbit Documentation.pdf
+P	-	-	Assets/Plugins/Jungle/Grabbit/Grabbit Settings.asset
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Demo Scene.unity
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Banana.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Bowl.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Bricks 1.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Bricks.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Coconut.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Concrete.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Glass.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Ground Tiles.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Leaf 1.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Leaf.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Metal.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/New Physic Material.physicMaterial
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Paper.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Rock 1.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Rock 2.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Rock.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Sky Box.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Terrain 1.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Terrain.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Wall 1.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Wall 2.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Water.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Wood 1.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Materials/Wood.mat
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Banana Bunch.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Banana.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Beach.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/book.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Bricks Group Of 2.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Bricks Group Of 3.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Coconut.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Collider.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Damaged Bowl.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Desk 2.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Leaf 2.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Mashing Stick.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Open Crate.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Palm Tree.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Paper.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Pebble 1.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Pebble 2.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Pebble.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Pencil.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Plank 1.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Plank 2.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Plank.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Play Mode.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Potion Containers 3.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Potion Containers 4.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Range Circle.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/rigidbody.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Rock.prefab
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Room HALF.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Screw.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Shelf 2.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Soft Cube.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Soft Ramp Up And Down.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Stool.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Table.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/tick.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Torus Big.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Torus Holder.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Torus Small.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Torus.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/TREE_1 2.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/TREE_1 3.fbx
+P	-	-	Assets/Plugins/Jungle/Grabbit/Demo/Models/Turning Arrow.fbx
+X	372	1aa118550a4a34a4a2c855d050442d95aee134eb	Assets/Plugins/Jungle/Grabbit/Editor/Bootstrap/Grabbit.Bootstrap.asmdef
+X	909	28ae1a04eaed7f13e5389f8676286b75e74051ab	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/ColliderMeshDeletionPostProcessor.cs
+X	53015	092f76b82dd93e93ccc52b716c95bb4bc684d3bb	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/GrabbitEditor.cs
+X	582	b4ff9fb4a2d5dea5df5b4c7eba0747cad2841053	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/GrabbitHandlerEditor.cs
+X	6291	26afdb5a0a296210c20554811b2f1c4d6265bad2	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/GrabbitRange.cs
+X	24240	28ec8a7dd2f5fc567b7e8a54d75bf116a076c023	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/GrabbitStartingWindow.cs
+X	74175	dfbe3e6ec69ed613bac669d54d6a70879479726a	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/GrabbitTool.cs
+X	12758	b0ff4de0f6cad45b544c2dde97d2a329a9d5c7ea	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/GrabbitV2AnnouncementWindow.cs
+X	947	f64e65bf6be5a258f4a7b9876d107f3011776aa1	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/PrefabModeProcessor.cs
+X	8832	deee38a18d3dbbb6d8d5d8da182e02da1d8eb33d	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/Utilities/GUIHelper.cs
+X	655	00148491b4f26cc2d2b52b0f35de32158d06c1c2	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/Utilities/ListExt.cs
+X	379	a570558cf41588e9da7d366f999d3d030fcfb1aa	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/Utilities/MathExt.cs
+X	655	80f410490f2a68578391f07b1e219989f1623dad	Assets/Plugins/Jungle/Grabbit/Editor/Scripts/Utilities/Vector3Ext.cs
+X	15582	35fd3592310b112690e75593861d11ab30a8b209	Assets/Plugins/Jungle/Grabbit/Scripts/ColliderMeshContainer.cs
+X	25326	bafae99fedb53a80f59947ff092bc45581463b79	Assets/Plugins/Jungle/Grabbit/Scripts/GrabbitData.cs
+X	14963	57e90ba57d50b22b1a0339e1e854c174cb858de0	Assets/Plugins/Jungle/Grabbit/Scripts/GrabbitHandler.cs
+X	11174	fede20bff27ba1c35666b18ecf9bd42d91a1e75b	Assets/Plugins/Jungle/Grabbit/Scripts/GrabbitSettings.cs
+X	1915	87cc0d137c54fc354ca6795eafe036703a659b06	Assets/Plugins/Jungle/Grabbit/Scripts/RigidbodyCompat.cs
+X	5177	043568e93fe688413a656bbfafd15940153c2d40	Assets/Plugins/Jungle/Grabbit/Scripts/SerializableDictionary.cs
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit -Text.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit 2 Logo.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Big Editor Black.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Big Editor White.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Head - Black.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Head - White.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Head - Whitr.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Head Big Black.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Head Big White.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Grabbit Head Scene White.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/jungle logo.PNG
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/MonKey.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Parrot Icon exclamation mark.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Parrot Icon heart.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Parrot Icon question martk.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Parrot Icon speed 2.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Parrot Icon star.png
+P	-	-	Assets/Plugins/Jungle/Grabbit/Textures/Parrot.png
+X	723384	01375ef6cfda7e1595eba6c20a46f97e8d62499e	Assets/Plugins/Jungle/Grabbit/VHACD/liblibvhacd.dylib
+X	804792	0111bbabd7be56ccf47a47f89708c0d46152b5bb	Assets/Plugins/Jungle/Grabbit/VHACD/liblibvhacd.so
+X	2872832	c2d5f8c44316fb25bd8b978d22d34ccc17c4f0f1	Assets/Plugins/Jungle/Grabbit/VHACD/libvhacd.dll
+P	-	-	Assets/Plugins/Jungle/Grabbit/VHACD/LICENSE.MD
+P	-	-	Assets/Plugins/Jungle/Grabbit/VHACD/README.md
+P	-	-	Assets/Plugins/Jungle/Grabbit/VHACD/Third Party Notices.md
+X	290	4765c02c3b9ee780e962dfffdddacfaa0e1bc419	Assets/Plugins/Jungle/Grabbit/VHACD/vhacd.asmdef
+X	15992	a2a4c5f319edc07617be0e090380d4244839893e	Assets/Plugins/Jungle/Grabbit/VHACD/VhacdGenerator.cs
