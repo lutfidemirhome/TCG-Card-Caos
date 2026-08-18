@@ -264,7 +264,7 @@ public class CardShelf : MonoBehaviour, IInteractable
                 return HasAnySlots() ? "Shelf Full" : "No Shelf Slots";
             }
 
-            return "Press [E] To Place Card";
+            return InteractPrompt.Format("Place Card");
         }
 
         HidePlacementOutline();

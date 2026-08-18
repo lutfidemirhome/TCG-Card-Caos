@@ -949,7 +949,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand == null)
-            return "Press [E] To Pick Up " + PackDisplayName;
+            return InteractPrompt.Format("Pick Up " + PackDisplayName);
 
         if (!hand.CanPickUpPack)
         {
@@ -959,7 +959,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return "Hand Full";
         }
 
-        return "Press [E] To Pick Up " + PackDisplayName;
+        return InteractPrompt.Format("Pick Up " + PackDisplayName);
     }
 
     public void Interact(GameObject interactor)

@@ -296,7 +296,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (hand != null && hand.AvailableSlots <= 0)
             return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
 
-        return "Press [E] To " + cardLabel;
+        return InteractPrompt.Format(cardLabel);
     }
 
     public void Interact(GameObject interactor)

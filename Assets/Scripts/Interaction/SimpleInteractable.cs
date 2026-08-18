@@ -9,7 +9,7 @@ public class SimpleInteractable : MonoBehaviour, IInteractable
 
     public string GetPromptText()
     {
-        return "Press [E] To " + actionLabel;
+        return InteractPrompt.Format(actionLabel);
     }
 
     public void Interact(GameObject interactor)

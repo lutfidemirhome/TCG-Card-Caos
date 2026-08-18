@@ -93,11 +93,11 @@ public class PlayerCardHand : MonoBehaviour
         if (Instance != null)
             return Instance.WasPackActionKeyPressedThisFrame();
 
-        return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+        return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetMouseButtonDown(1);
     }
 
     bool WasPackActionKeyPressedThisFrame() =>
-        Input.GetKeyDown(packActionKey) || Input.GetKeyDown(KeyCode.KeypadEnter);
+        Input.GetKeyDown(packActionKey) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetMouseButtonDown(1);
     public bool IsHandInputLocked => _handInputLocked || _isOpeningPack;
     public bool IsPackOpenMovementLocked => _packOpenMovementLocked;
     public float OpenRevealDistance => openRevealDistance;
@@ -614,7 +614,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public string GetRevealCollectPromptText()
     {
-        return _awaitingRevealCollect ? "Press [Enter] To Collect Cards" : string.Empty;
+        return _awaitingRevealCollect ? PackActionPrompt.Format("Collect Cards") : string.Empty;
     }
 
     public void AddRevealedCard(WorldCard card, float duration, float arcHeight)
@@ -682,7 +682,7 @@ public class PlayerCardHand : MonoBehaviour
 
         if (!IsHandInputLocked
             && AvailableSlotsAfterOpeningSelectedPack >= CardDimensions.CardsPerBoosterPack)
-            return "Press [Enter] To Open Pack";
+            return PackActionPrompt.Format("Open Pack");
 
         int slotsNeeded = CardDimensions.CardsPerBoosterPack - CardDimensions.HandSlotsPerBoosterPack;
         return "Need "

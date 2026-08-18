@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Raycast from screen center, show prompt, interact with E.
+/// Raycast from screen center, show prompt, interact with E or left mouse click.
 /// Ground cards are found via math raycast (no mass physics colliders).
 /// Only the aimed card keeps its collider enabled.
 /// </summary>
@@ -13,7 +13,7 @@ public class InteractionController : MonoBehaviour
     [SerializeField] float interactDistance = 3f;
     [SerializeField] LayerMask interactMask = ~0;
     [SerializeField] KeyCode interactKey = KeyCode.E;
-    [Tooltip("Seconds to look at a card before the inspect preview and Press [E] prompt appear. 0 = instant.")]
+    [Tooltip("Seconds to look at a card before the inspect preview and interact prompt appear. 0 = instant.")]
     [SerializeField] float inspectPreviewDelay = 0.15f;
 
     static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
@@ -452,13 +452,16 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(interactKey) && ShouldUseCurrentTargetForInteract())
+        if (WasInteractPressedThisFrame() && ShouldUseCurrentTargetForInteract())
         {
             _currentTarget.Interact(gameObject.transform.root.gameObject);
             ClearTarget();
             return;
         }
     }
+
+    bool WasInteractPressedThisFrame() =>
+        Input.GetKeyDown(interactKey) || Input.GetMouseButtonDown(0);
 
     bool ShouldUseCurrentTargetForInteract()
     {
@@ -559,7 +562,7 @@ public class InteractionController : MonoBehaviour
 
         public void Interact(GameObject interactor)
         {
-            // Pack open / reveal collect use Enter (see HandleInput).
+            // Pack open / reveal collect use Enter or right click (see HandleInput).
         }
     }
 
@@ -771,7 +774,7 @@ public class InteractionController : MonoBehaviour
         _promptText.alignment = TextAnchor.MiddleCenter;
         _promptText.color = Color.white;
         _promptText.raycastTarget = false;
-        _promptText.text = "Press [E] To Action";
+        _promptText.text = InteractPrompt.Format("Action");
 
         RectTransform textRect = _promptText.rectTransform;
         textRect.anchorMin = Vector2.zero;
