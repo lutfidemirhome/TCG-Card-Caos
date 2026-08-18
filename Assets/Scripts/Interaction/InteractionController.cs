@@ -433,11 +433,21 @@ public class InteractionController : MonoBehaviour
     {
         PlayerCardHand hand = ResolveHand();
 
-        if (hand != null && hand.IsAwaitingRevealCollect)
+        if (hand != null && PlayerCardHand.IsPackActionKeyDown())
         {
-            if (Input.GetKeyDown(interactKey))
+            if (hand.IsAwaitingRevealCollect)
             {
                 hand.RequestRevealCollect();
+                return;
+            }
+
+            if (hand.HasHeldPack)
+            {
+                if (hand.TryOpenHeldPackFromInput())
+                    ClearTarget();
+                else if (hand.IsSelectedPackOpenBlocked())
+                    ShowPackOpenBlockedFeedback(hand);
+
                 return;
             }
         }
@@ -446,20 +456,6 @@ public class InteractionController : MonoBehaviour
         {
             _currentTarget.Interact(gameObject.transform.root.gameObject);
             ClearTarget();
-            return;
-        }
-
-        if (hand != null && hand.HasHeldPack && Input.GetKeyDown(interactKey))
-        {
-            if (hand.TryOpenHeldPackFromInput())
-            {
-                ClearTarget();
-            }
-            else if (hand.IsSelectedPackOpenBlocked())
-            {
-                ShowPackOpenBlockedFeedback(hand);
-            }
-
             return;
         }
     }
@@ -563,7 +559,7 @@ public class InteractionController : MonoBehaviour
 
         public void Interact(GameObject interactor)
         {
-            // Pack open / reveal collect use E (see HandleInput).
+            // Pack open / reveal collect use Enter (see HandleInput).
         }
     }
 

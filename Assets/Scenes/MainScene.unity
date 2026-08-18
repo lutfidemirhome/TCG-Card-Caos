@@ -24269,7 +24269,7 @@ MonoBehaviour:
   openRevealHeight: -0.06
   openSequenceDuration: 1.35
   openPackAnticipationHold: 1
-  openPackKey: 101
+  packActionKey: 13
 --- !u!43 &1281286305
 Mesh:
   m_ObjectHideFlags: 0

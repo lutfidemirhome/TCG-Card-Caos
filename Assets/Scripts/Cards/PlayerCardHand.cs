@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Holds up to 10 cards in a bottom-center fan. Newest pickup (card or pack) goes to the right.
@@ -57,7 +58,8 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float openRevealHeight = -0.06f;
     [SerializeField] float openSequenceDuration = 1.35f;
     [SerializeField] float openPackAnticipationHold = 1f;
-    [SerializeField] KeyCode openPackKey = KeyCode.E;
+    [FormerlySerializedAs("openPackKey")]
+    [SerializeField] KeyCode packActionKey = KeyCode.Return;
 
     static readonly RaycastHit[] ThrowAimHits = new RaycastHit[8];
 
@@ -85,6 +87,17 @@ public class PlayerCardHand : MonoBehaviour
     public bool IsPackSelected => GetSelectedHeldPack() != null;
     public bool IsOpeningPack => _isOpeningPack;
     public bool IsAwaitingRevealCollect => _awaitingRevealCollect;
+
+    public static bool IsPackActionKeyDown()
+    {
+        if (Instance != null)
+            return Instance.WasPackActionKeyPressedThisFrame();
+
+        return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+    }
+
+    bool WasPackActionKeyPressedThisFrame() =>
+        Input.GetKeyDown(packActionKey) || Input.GetKeyDown(KeyCode.KeypadEnter);
     public bool IsHandInputLocked => _handInputLocked || _isOpeningPack;
     public bool IsPackOpenMovementLocked => _packOpenMovementLocked;
     public float OpenRevealDistance => openRevealDistance;
@@ -123,12 +136,6 @@ public class PlayerCardHand : MonoBehaviour
     {
         if (Cursor.lockState != CursorLockMode.Locked)
             return;
-
-        if (_awaitingRevealCollect && Input.GetKeyDown(openPackKey))
-        {
-            RequestRevealCollect();
-            return;
-        }
 
         if (IsHandInputLocked)
             return;
@@ -607,7 +614,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public string GetRevealCollectPromptText()
     {
-        return _awaitingRevealCollect ? "Press [E] To Collect Cards" : string.Empty;
+        return _awaitingRevealCollect ? "Press [Enter] To Collect Cards" : string.Empty;
     }
 
     public void AddRevealedCard(WorldCard card, float duration, float arcHeight)
@@ -675,7 +682,7 @@ public class PlayerCardHand : MonoBehaviour
 
         if (!IsHandInputLocked
             && AvailableSlotsAfterOpeningSelectedPack >= CardDimensions.CardsPerBoosterPack)
-            return "Press [E] To Open Pack";
+            return "Press [Enter] To Open Pack";
 
         int slotsNeeded = CardDimensions.CardsPerBoosterPack - CardDimensions.HandSlotsPerBoosterPack;
         return "Need "
