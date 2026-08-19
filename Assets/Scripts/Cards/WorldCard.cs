@@ -62,6 +62,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     bool _scaleTransitionActive;
     int _groundStackLayer;
     bool _worldColliderRequested;
+    bool _landingSurfaceRequested;
     [SerializeField] bool groundShowsBack;
 
     public bool IsHeld => _handState == HandState.Held;
@@ -282,7 +283,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_collider == null || IsInHand)
             return;
 
-        _collider.enabled = _worldColliderRequested;
+        // Two independent requesters. Aim/render state must not be able to drop the landing surface that
+        // is being held for an item in flight: the interaction prompt refreshes the render mode the moment
+        // the aim target changes, which used to switch the collider off mid-flight and let a card thrown at
+        // the very card the player is looking at pass straight through it and land underneath.
+        _collider.enabled = _worldColliderRequested || _landingSurfaceRequested;
     }
 
     public void SetInteractionHighlight(bool highlighted)
@@ -637,16 +642,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (IsInHand || _rigidbody != null)
             return;
 
+        _landingSurfaceRequested = true;
+
         if (_collider is BoxCollider boxCollider)
         {
             CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
             boxCollider.isTrigger = false;
-            _collider.enabled = true;
-            return;
         }
 
-        if (_collider != null)
-            _collider.enabled = true;
+        ApplyWorldColliderState();
     }
 
     public void RestoreGroundCollider()
@@ -654,10 +658,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (IsInHand || _rigidbody != null)
             return;
 
+        _landingSurfaceRequested = false;
+
         if (_collider is BoxCollider boxCollider)
             boxCollider.isTrigger = true;
 
-        SetWorldColliderEnabled(false);
+        ApplyWorldColliderState();
     }
 
     void ApplyFlatWorldCollider()
@@ -1117,13 +1123,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshRenderer.receiveShadows = false;
     }
 
+    /// <summary>
+    /// Per-layer tiebreak only. The frame mesh already spans the card's own thickness, so lifting it any
+    /// further would stand it over a card resting on this one and hide that card's edge.
+    /// </summary>
     float GetOutlineLift()
     {
-        float cardScale = GetComponentInParent<CardShelfSlot>() != null
-            ? CardDimensions.WorldCardScale
-            : CardDimensions.GroundCardScale;
-        float halfThickness = CardDimensions.Thickness * cardScale * 0.5f;
-        return halfThickness + _groundStackLayer * 0.00025f;
+        return _groundStackLayer * 0.00025f;
     }
 
     void ReleaseInteractionOutline()

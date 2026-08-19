@@ -162,8 +162,6 @@ static class CardVisualResources
         float halfWidth = bounds.extents.x;
         float halfHeight = bounds.extents.y;
         float halfThickness = bounds.extents.z;
-        float z = halfThickness * 0.65f;
-        float stripDepth = Mathf.Max(halfThickness * 0.35f * 2f, borderThickness);
         float cornerRadius = CardArtLibrary.MeshCornerRadius;
 
         List<Vector2> innerLoop = BuildRoundedRectPerimeter(halfWidth, halfHeight, cornerRadius, CornerSegments);
@@ -175,7 +173,10 @@ static class CardVisualResources
 
         var vertices = new List<Vector3>();
         var triangles = new List<int>();
-        ExtrudeRing(vertices, triangles, innerLoop, outerLoop, z, stripDepth * 0.5f);
+        // The band spans exactly the card's own thickness, centred on it: borderThickness widens the frame
+        // sideways only. A band standing proud of the card face would rise over a card resting on top of a
+        // highlighted ground card and hide its edge, reading as if the thrown card had slipped underneath.
+        ExtrudeRing(vertices, triangles, innerLoop, outerLoop, 0f, halfThickness);
 
         var mesh = new Mesh { name = "CardRoundedBorderFrame" };
         mesh.SetVertices(vertices);
