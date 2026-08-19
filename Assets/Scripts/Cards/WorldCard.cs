@@ -1035,15 +1035,16 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshRenderer == null)
             return;
 
-        // CardVisual is only used for mesh cards (hand, Q-throw, shelf flight). World quality (queue 2501)
-        // is for GPU-instanced ground quads only — on a tumbling 3D mesh it lands in URP's transparent pass
-        // and reads as see-through. Detail matches the hand look and stays in the opaque queue.
-        CardTextureQuality quality = CardTextureQuality.Detail;
+        // Mesh cards use URP Transparent surface (alpha 1) — switching Opaque → Transparent in the
+        // Inspector is what fixes the see-through bug; instanced ground quads keep World/queue 2501.
+        Material[] materials = UsesDefinitionFrontArt
+            ? CardArtLibrary.GetCardMaterials(definition, CardTextureQuality.Detail)
+            : CardArtLibrary.GetCardMaterials(paletteIndex, CardTextureQuality.Detail);
 
-        if (UsesDefinitionFrontArt)
-            meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(definition, quality);
-        else
-            meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(paletteIndex, quality);
+        for (int i = 0; i < materials.Length; i++)
+            CardArtLibrary.ConfigureHandDetailMaterial(materials[i]);
+
+        meshRenderer.sharedMaterials = materials;
     }
 
     void ReleaseCardVisual()

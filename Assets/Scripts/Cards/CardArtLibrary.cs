@@ -70,6 +70,8 @@ public static class CardArtLibrary
     static Material _sharedFrontDetailTemplate;
     static Material _sharedBackDetailTemplate;
     static Material _instancedGroundBackMaterial;
+    static Material _runtimeMeshBackDetailMaterial;
+    static Material _runtimeMeshBackWorldMaterial;
     static Vector3? _flatSize;
     static Rect? _frontArtUvRect;
     static readonly Dictionary<int, Material> FrontWorldMaterialsByPalette = new Dictionary<int, Material>();
@@ -177,11 +179,33 @@ public static class CardArtLibrary
     public static Material GetBackMaterial(CardTextureQuality quality)
     {
         EnsureLoaded();
-        Material material = quality == CardTextureQuality.World
-            ? _sharedBackWorldTemplate
-            : _sharedBackDetailTemplate;
-        ApplyBackTextureUFlip(material);
-        return material;
+
+        if (quality == CardTextureQuality.World)
+        {
+            if (_runtimeMeshBackWorldMaterial == null)
+            {
+                _runtimeMeshBackWorldMaterial = new Material(_sharedBackWorldTemplate)
+                {
+                    name = "CardBackWorldMeshRuntime"
+                };
+                ApplyBackTextureUFlip(_runtimeMeshBackWorldMaterial);
+                ConfigureGroundWorldMaterial(_runtimeMeshBackWorldMaterial);
+            }
+
+            return _runtimeMeshBackWorldMaterial;
+        }
+
+        if (_runtimeMeshBackDetailMaterial == null)
+        {
+            _runtimeMeshBackDetailMaterial = new Material(_sharedBackDetailTemplate)
+            {
+                name = "CardBackDetailMeshRuntime"
+            };
+            ApplyBackTextureUFlip(_runtimeMeshBackDetailMaterial);
+            ConfigureHandDetailMaterial(_runtimeMeshBackDetailMaterial);
+        }
+
+        return _runtimeMeshBackDetailMaterial;
     }
 
     /// <summary>
@@ -226,6 +250,10 @@ public static class CardArtLibrary
                 frontMaterial.enableInstancing = true;
                 ConfigureGroundWorldMaterial(frontMaterial);
             }
+            else
+            {
+                ConfigureHandDetailMaterial(frontMaterial);
+            }
 
             cache[paletteIndex] = frontMaterial;
         }
@@ -257,6 +285,10 @@ public static class CardArtLibrary
             {
                 frontMaterial.enableInstancing = true;
                 ConfigureGroundWorldMaterial(frontMaterial);
+            }
+            else
+            {
+                ConfigureHandDetailMaterial(frontMaterial);
             }
 
             cache[cacheKey] = frontMaterial;
@@ -307,6 +339,8 @@ public static class CardArtLibrary
         _instancedCardMesh = null;
         _instancedCardBackMesh = null;
         _instancedGroundBackMaterial = null;
+        _runtimeMeshBackDetailMaterial = null;
+        _runtimeMeshBackWorldMaterial = null;
         _sharedFrontWorldTemplate = null;
         _sharedBackWorldTemplate = null;
         _sharedFrontDetailTemplate = null;
@@ -358,35 +392,35 @@ public static class CardArtLibrary
         if (_sharedBackDetailTemplate == null)
             _sharedBackDetailTemplate = Resources.Load<Material>("Cards/CardBackDetail");
 
-        if (_sharedFrontWorldTemplate == null)
-            _sharedFrontWorldTemplate = _sharedFrontDetailTemplate;
+        if (_sharedFrontWorldTemplate == null && _sharedFrontDetailTemplate != null)
+        {
+            _sharedFrontWorldTemplate = new Material(_sharedFrontDetailTemplate)
+            {
+                name = "CardFrontWorld_RuntimeFallback"
+            };
+        }
 
-        if (_sharedBackWorldTemplate == null)
-            _sharedBackWorldTemplate = _sharedBackDetailTemplate;
-
-        ApplyBackTextureUFlip(_sharedBackWorldTemplate);
-        ApplyBackTextureUFlip(_sharedBackDetailTemplate);
-        ConfigureGroundWorldMaterial(_sharedFrontWorldTemplate);
-        ConfigureGroundWorldMaterial(_sharedBackWorldTemplate);
-        ConfigureHandDetailMaterial(_sharedFrontDetailTemplate);
-        ConfigureHandDetailMaterial(_sharedBackDetailTemplate);
+        if (_sharedBackWorldTemplate == null && _sharedBackDetailTemplate != null)
+        {
+            _sharedBackWorldTemplate = new Material(_sharedBackDetailTemplate)
+            {
+                name = "CardBackWorld_RuntimeFallback"
+            };
+        }
 
         return _cardMesh != null && _sharedFrontDetailTemplate != null && _sharedBackDetailTemplate != null;
     }
 
     /// <summary>
-    /// Ground cards skip SSAO / contact darkening; draw after opaque SSAO (queue 2501) with ZWrite.
+    /// GPU-instanced ground quads only. Queue 2501 draws after SSAO; mesh cards must stay opaque (Detail).
     /// </summary>
     public static void ConfigureGroundWorldMaterial(Material material)
     {
         if (material == null)
             return;
 
-        if (material.HasProperty("_ReceiveShadows"))
-            material.SetFloat("_ReceiveShadows", 0f);
-
-        material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
-        material.SetShaderPassEnabled("ShadowCaster", false);
+        ApplyNoShadowMaterialSettings(material);
+        ForceOpaqueSurface(material);
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
 
@@ -394,9 +428,19 @@ public static class CardArtLibrary
     }
 
     /// <summary>
-    /// Hand / shelf detail cards: no shadow receive, keep default opaque queue (not 2501).
+    /// Mesh cards (hand, throw, shelf flight): URP Lit Transparent surface with alpha 1 — matches the
+    /// Inspector fix where switching Opaque → Transparent stops the card reading see-through.
     /// </summary>
     public static void ConfigureHandDetailMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        ApplyNoShadowMaterialSettings(material);
+        ForceTransparentSurface(material);
+    }
+
+    static void ApplyNoShadowMaterialSettings(Material material)
     {
         if (material == null)
             return;
@@ -406,6 +450,70 @@ public static class CardArtLibrary
 
         material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
         material.SetShaderPassEnabled("ShadowCaster", false);
+    }
+
+    static void ForceOpaqueSurface(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_Surface"))
+            material.SetFloat("_Surface", 0f);
+
+        material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        material.DisableKeyword("_ALPHABLEND_ON");
+
+        if (material.HasProperty("_Blend"))
+            material.SetFloat("_Blend", 0f);
+        if (material.HasProperty("_SrcBlend"))
+            material.SetFloat("_SrcBlend", (float)BlendMode.One);
+        if (material.HasProperty("_DstBlend"))
+            material.SetFloat("_DstBlend", (float)BlendMode.Zero);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 1f);
+    }
+
+    static void ForceTransparentSurface(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_Surface"))
+            material.SetFloat("_Surface", 1f);
+
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        material.DisableKeyword("_ALPHABLEND_ON");
+
+        if (material.HasProperty("_Blend"))
+            material.SetFloat("_Blend", 0f);
+        if (material.HasProperty("_SrcBlend"))
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        if (material.HasProperty("_DstBlend"))
+            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        if (material.HasProperty("_SrcBlendAlpha"))
+            material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+        if (material.HasProperty("_DstBlendAlpha"))
+            material.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 0f);
+
+        if (material.HasProperty("_BaseColor"))
+        {
+            Color baseColor = material.GetColor("_BaseColor");
+            baseColor.a = 1f;
+            material.SetColor("_BaseColor", baseColor);
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            Color color = material.GetColor("_Color");
+            color.a = 1f;
+            material.SetColor("_Color", color);
+        }
+
+        material.renderQueue = (int)RenderQueue.Transparent;
     }
 
     public static void ApplyGroundWorldRendererSettings(Renderer renderer)
