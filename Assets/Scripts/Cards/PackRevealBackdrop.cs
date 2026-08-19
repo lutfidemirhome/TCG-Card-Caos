@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 /// <summary>
 /// Semi-transparent screen dimmer during pack reveal. A camera-local quad is sized from
 /// the live viewport frustum so it covers every PC resolution and aspect ratio, sitting
-/// just behind the reveal cards.
+/// just behind the reveal cards and always drawing before them.
 /// </summary>
 public sealed class PackRevealBackdrop : MonoBehaviour
 {
@@ -90,7 +90,12 @@ public sealed class PackRevealBackdrop : MonoBehaviour
 
         var material = new Material(shader);
         material.color = Color.black;
-        material.renderQueue = (int)RenderQueue.Transparent;
+
+        // One queue ahead of the reveal cards so the dimmer never competes with them in the transparent
+        // sort. Perspective transparent sorting uses radial distance from the camera, so the row's outer
+        // cards sit further away than this centred plane even though they share its depth — leaving them
+        // on the wrong side of the plate and washed black while the middle cards stayed clean.
+        material.renderQueue = (int)RenderQueue.Transparent - 1;
         return material;
     }
 
