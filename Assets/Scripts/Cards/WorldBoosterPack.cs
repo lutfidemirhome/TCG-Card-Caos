@@ -43,6 +43,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     List<CardDefinition> _preRolledContents;
     float _packModelGroundOffsetYFaceUp;
     float _packModelGroundOffsetYFaceDown;
+    float _packBodyThickness;
     Vector3 _packModelCenterOffset;
     Vector3 _visualBaseScale = Vector3.one;
     int _packNativeThicknessAxis;
@@ -73,7 +74,19 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public PackState State => _state;
     public bool IsInHand => _state == PackState.Held || _state == PackState.Opening;
     public bool IsHeld => _state == PackState.Held;
-    public bool HasActivePhysics => _rigidbody != null && !_rigidbody.isKinematic;
+
+    /// <summary>
+    /// True once the pack has been thrown, meaning it stands in the tumbled pose the solver left it in
+    /// rather than the flattened ground pose. Visuals, renderer swaps and ray proxies all key off this.
+    /// </summary>
+    public bool HasActivePhysics => _rigidbody != null;
+
+    /// <summary>
+    /// True only while the solver is still moving the pack. A settled pack keeps a frozen (kinematic)
+    /// body as its solid surface, so <see cref="HasActivePhysics"/> alone cannot tell "still flying"
+    /// from "already at rest" — stack layering needs this distinction.
+    /// </summary>
+    public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
     public int GroundStackLayer => _groundStackLayer;
     public BoosterPackDefinition Definition => packDefinition;
     public int PackVariantIndex => _packVariantIndex;
@@ -316,6 +329,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ApplyCardRefWorldRotation(alignPackModelToGround);
         ApplyPackModelLocalTransform();
         RefreshCardProxyCenterOnPack();
+        ApplyPackBodyCollider();
     }
 
     void ApplyHandVisualOrientation()
@@ -596,6 +610,11 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return;
 
         groundOffsetY = (-CardDimensions.Thickness * 0.5f) - min.y;
+
+        // Taken from the mesh after the footprint fit and the mesh child tuning, so the collider spans the
+        // body the player sees rather than the card proxy hidden inside it. Face up and face down are
+        // mirror images, so both probes measure the same thickness.
+        _packBodyThickness = Mathf.Max(CardDimensions.Thickness, max.y - min.y);
     }
 
     static bool IsOutlineObject(GameObject gameObject)
@@ -1147,7 +1166,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ConvertHandVisualToWorldRoot();
         transform.SetParent(null, true);
 
-        ApplyFlatWorldCollider();
+        ApplyPackBodyCollider();
 
         if (_collider is BoxCollider boxCollider)
         {
@@ -1195,8 +1214,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _rigidbody,
             boxCollider,
             () => _state == PackState.World && _rigidbody != null,
-            onSettled: () => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody),
-            allowKinematicFreeze: false);
+            onSettled: () => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody));
 
         if (_state != PackState.World || _rigidbody == null)
             yield break;
@@ -1289,7 +1307,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     void FlattenAndSnapToGround()
     {
         EnsureVisual();
-        ApplyFlatWorldCollider();
+        ApplyPackBodyCollider();
 
         _groundShowsBack = ReadGroundShowsBackFromLandedProxy(_cardRef, transform);
         Vector3 heading = ReadGroundSettleHeading(_cardRef, transform, _groundShowsBack);
@@ -1352,10 +1370,42 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         transform.localScale = Vector3.one * scale;
     }
 
-    void ApplyFlatWorldCollider()
+    /// <summary>
+    /// Root lift, over the flat stack height, that rests the pack body's underside on the stack surface.
+    /// The ground pose already lifts the mesh onto the card proxy bottom (lift 0), while the physics pose
+    /// centres the body on the root, so there the root has to clear half a pack instead of half a card.
+    /// Without this the settle snap pulled a landed pack back down into the floor.
+    /// </summary>
+    public float GroundRestLift
     {
-        if (_collider is BoxCollider boxCollider)
-            CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
+        get
+        {
+            if (_cardRef == null)
+                return 0f;
+
+            float halfBody = Mathf.Max(CardDimensions.Thickness, _packBodyThickness) * 0.5f;
+            float halfCard = CardDimensions.Thickness * 0.5f;
+            return (halfBody - halfCard - _cardRef.localPosition.y) * CardDimensions.GroundCardScale;
+        }
+    }
+
+    /// <summary>
+    /// Sizes the collider to the pack body instead of the invisible card proxy, following whichever
+    /// visual pose is applied — the ground pose lifts the mesh onto the card bottom, the physics pose
+    /// keeps it centred on the root. A card-thin box let thrown cards come to rest inside the pack mesh
+    /// and left the pack's lower half below the floor.
+    /// </summary>
+    void ApplyPackBodyCollider()
+    {
+        if (_cardRef == null || !(_collider is BoxCollider boxCollider))
+            return;
+
+        boxCollider.center = new Vector3(0f, _cardRef.localPosition.y, 0f);
+        boxCollider.size = new Vector3(
+            CardDimensions.Width,
+            Mathf.Max(CardDimensions.Thickness, _packBodyThickness),
+            CardDimensions.Height);
+        CardCollisionUtility.ApplyToCollider(boxCollider);
     }
 
     void EnsureRigidbody()

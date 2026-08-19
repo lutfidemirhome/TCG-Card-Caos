@@ -4,11 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Keeps Q-thrown cards and packs in physics until they settle — no flatten/snap, no rotation/texture
-/// changes. Once truly at rest on the floor, cards freeze (kinematic) so they stop costing solver time
+/// changes. Once truly at rest on the floor they freeze (kinematic) so they stop costing solver time
 /// and can no longer be woken up and jittered/sunk into by a freshly thrown item landing nearby.
-/// Packs opt out of the freeze (allowKinematicFreeze = false) because WorldBoosterPack.HasActivePhysics
-/// treats "no longer active physics" as "already flattened to ground orientation", which this settle
-/// path intentionally never does.
 /// </summary>
 public static class CardThrownPhysics
 {
@@ -30,8 +27,7 @@ public static class CardThrownPhysics
         Rigidbody body,
         BoxCollider collider,
         Func<bool> isActive,
-        Func<bool> onSettled = null,
-        bool allowKinematicFreeze = true)
+        Func<bool> onSettled = null)
     {
         if (itemTransform == null || body == null || isActive == null)
             yield break;
@@ -111,18 +107,15 @@ public static class CardThrownPhysics
                             // the solver running on it forever. This is what stops fast back-to-back
                             // throws from jittering/sinking into an already-settled pile, and stops
                             // paying per-frame physics cost for items that already stopped moving.
-                            if (allowKinematicFreeze)
-                            {
-                                body.isKinematic = true;
+                            body.isKinematic = true;
 
-                                // Auto Sync Transforms is off project-wide, so the settle snap above only
-                                // moved the transform. Push the final pose into the body or the frozen
-                                // collider stays where the solver left it and later throws collide with
-                                // a surface that is no longer under the card they can see.
-                                body.position = itemTransform.position;
-                                body.rotation = itemTransform.rotation;
-                                yield break;
-                            }
+                            // Auto Sync Transforms is off project-wide, so the settle snap above only
+                            // moved the transform. Push the final pose into the body or the frozen
+                            // collider stays where the solver left it and later throws collide with
+                            // a surface that is no longer under the card they can see.
+                            body.position = itemTransform.position;
+                            body.rotation = itemTransform.rotation;
+                            yield break;
                         }
                     }
                     else

@@ -491,7 +491,7 @@ public static class CardGroundStack
         for (int i = 0; i < GroundPacks.Count; i++)
         {
             WorldBoosterPack pack = GroundPacks[i];
-            if (pack == null || pack.IsInHand || pack.HasActivePhysics)
+            if (pack == null || pack.IsInHand || pack.IsPhysicsSimulating)
                 continue;
             if (!OverlapsOnGround(pack, card))
                 continue;
@@ -776,7 +776,8 @@ public static class CardGroundStack
         if (pack == null)
             return CardFactory.GroundHeightOffset();
 
-        float y = GetStackedWorldY(pack.GroundStackLayer);
+        // A pack is a thick body, so its root rests higher than a flat card's on the same surface.
+        float y = GetStackedWorldY(pack.GroundStackLayer) + pack.GroundRestLift;
         if (pack.GroundStackLayer == 0)
             y += GetUniqueDepthBiasForPack(pack);
 
@@ -829,7 +830,7 @@ public static class CardGroundStack
         for (int i = 0; i < GroundPacks.Count; i++)
         {
             WorldBoosterPack other = GroundPacks[i];
-            if (other == null || other == pack || other.IsInHand || other.HasActivePhysics)
+            if (other == null || other == pack || other.IsInHand || other.IsPhysicsSimulating)
                 continue;
             if (!OverlapsOnGround(pack, other))
                 continue;
