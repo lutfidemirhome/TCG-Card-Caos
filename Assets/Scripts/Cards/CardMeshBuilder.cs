@@ -400,45 +400,6 @@ public static class CardMeshBuilder
     }
 
     /// <summary>
-    /// Single front-face quad for GPU-instanced ground cards (2 tris).
-    /// UVs are fitted from interior flat-face samples so bevel/black padding is excluded.
-    /// </summary>
-    public static Mesh CreateInstancedGroundCardMesh(Mesh referenceMesh)
-    {
-        if (!TryFitFrontFaceUv(referenceMesh, out Bounds xyBounds, out float frontZ, out UvPlaneFit fit))
-            return CreateFallbackGroundQuad(referenceMesh.bounds);
-
-        float minX = xyBounds.min.x;
-        float maxX = xyBounds.max.x;
-        float minY = xyBounds.min.y;
-        float maxY = xyBounds.max.y;
-
-        var vertices = new[]
-        {
-            new Vector3(minX, minY, frontZ),
-            new Vector3(maxX, minY, frontZ),
-            new Vector3(maxX, maxY, frontZ),
-            new Vector3(minX, maxY, frontZ),
-        };
-        var uvs = new[]
-        {
-            fit.Evaluate(minX, minY),
-            fit.Evaluate(maxX, minY),
-            fit.Evaluate(maxX, maxY),
-            fit.Evaluate(minX, maxY),
-        };
-
-        var mesh = new Mesh { name = "InstancedGroundCardMesh" };
-        mesh.vertices = vertices;
-        mesh.uv = uvs;
-        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-        mesh.subMeshCount = 1;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
-    }
-
-    /// <summary>
     /// Fits U = ax+by+c, V = dx+ey+f from interior front-face verts (avoids bevel black padding).
     /// </summary>
     static bool TryFitFrontFaceUv(Mesh mesh, out Bounds xyBounds, out float frontZ, out UvPlaneFit fit)
@@ -606,34 +567,6 @@ public static class CardMeshBuilder
             return false;
 
         return Mathf.Abs(vertex.z - targetZ) <= zTolerance;
-    }
-
-    static Mesh CreateFallbackGroundQuad(Bounds bounds)
-    {
-        float frontZ = bounds.max.z;
-        var vertices = new[]
-        {
-            new Vector3(bounds.min.x, bounds.min.y, frontZ),
-            new Vector3(bounds.max.x, bounds.min.y, frontZ),
-            new Vector3(bounds.max.x, bounds.max.y, frontZ),
-            new Vector3(bounds.min.x, bounds.max.y, frontZ),
-        };
-        var uvs = new[]
-        {
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(1f, 1f),
-            new Vector2(0f, 1f),
-        };
-
-        var mesh = new Mesh { name = "InstancedGroundCardMesh" };
-        mesh.vertices = vertices;
-        mesh.uv = uvs;
-        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-        mesh.subMeshCount = 1;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
     }
 
     public static PlanarFaceMapping ExtractFrontFacePlanarMapping(Mesh mesh)

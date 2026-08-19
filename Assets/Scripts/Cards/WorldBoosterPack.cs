@@ -1195,21 +1195,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ApplyPackModelShadowSettings();
 
         EnsureRigidbody();
-        // ContinuousDynamic (not just Continuous) is required so two fast-moving packs/cards thrown
-        // back-to-back resolve their collision against EACH OTHER instead of tunneling for a frame.
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        _rigidbody.isKinematic = false;
-        _rigidbody.useGravity = true;
-        _rigidbody.constraints = RigidbodyConstraints.None;
-
-        if (!_rigidbody.isKinematic)
-        {
-            _rigidbody.linearVelocity = velocity;
-            _rigidbody.angularVelocity = new Vector3(
-                Random.Range(-0.2f, 0.2f),
-                Random.Range(-0.35f, 0.35f),
-                Random.Range(-0.2f, 0.2f));
-        }
+        CardCollisionUtility.LaunchThrownBody(_rigidbody, velocity);
 
         CardLayers.ApplyToGameObject(gameObject);
         CardGroundStack.TrackPhysicsPack(this);
@@ -1428,16 +1414,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return;
 
         _rigidbody = gameObject.AddComponent<Rigidbody>();
-        _rigidbody.mass = 0.05f;
-        _rigidbody.linearDamping = 0.4f;
-        _rigidbody.angularDamping = 0.8f;
-        _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        // Extra solver iterations keep flat packs from sinking/interpenetrating when several land in a pile.
-        _rigidbody.solverIterations = 12;
-        _rigidbody.solverVelocityIterations = 4;
-        // Overlapping items must ease apart instead of being launched across the room.
-        _rigidbody.maxDepenetrationVelocity = 1f;
+        CardCollisionUtility.ConfigureThrownBody(_rigidbody);
     }
 
     void RemovePhysics()
@@ -1454,23 +1431,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         CardGroundStack.UntrackPhysicsPack(this);
     }
 
-    static FirstPersonController _cachedPlayer;
-
     void IgnorePlayerCollision()
     {
-        if (_collider == null)
-            return;
-
-        if (_cachedPlayer == null)
-            _cachedPlayer = FindFirstObjectByType<FirstPersonController>();
-        if (_cachedPlayer == null)
-            return;
-
-        Collider[] playerColliders = _cachedPlayer.GetComponentsInChildren<Collider>();
-        for (int i = 0; i < playerColliders.Length; i++)
-        {
-            if (playerColliders[i] != null)
-                Physics.IgnoreCollision(_collider, playerColliders[i], true);
-        }
+        CardCollisionUtility.IgnorePlayerCollision(_collider);
     }
 }

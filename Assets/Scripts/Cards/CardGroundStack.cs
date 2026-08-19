@@ -18,6 +18,9 @@ public static class CardGroundStack
     const int UniqueDepthBiasSteps = 4096;
     const int BulkFlatStackThreshold = 256;
 
+    /// <summary>Thickness of the footprint slab used for ground overlap tests.</summary>
+    const float FootprintSlabHeight = 0.01f;
+
     static readonly List<WorldCard> GroundCards = new List<WorldCard>(512);
     static readonly HashSet<WorldCard> GroundCardSet = new HashSet<WorldCard>();
     static readonly List<WorldCard> ClusterScratch = new List<WorldCard>(16);
@@ -107,23 +110,6 @@ public static class CardGroundStack
         GroundCardSet.Clear();
         SpatialBuckets.Clear();
     }
-
-    public static void ForEachTracked(System.Action<WorldCard> visit)
-    {
-        if (visit == null)
-            return;
-
-        for (int i = 0; i < GroundCards.Count; i++)
-        {
-            WorldCard card = GroundCards[i];
-            if (card != null)
-                visit(card);
-        }
-    }
-
-    public static int TrackedCount => GroundCards.Count;
-
-    public static WorldCard GetTracked(int index) => GroundCards[index];
 
     static readonly HashSet<WorldCard> RayCandidateSeen = new HashSet<WorldCard>();
 
@@ -503,52 +489,13 @@ public static class CardGroundStack
 
     static void PlaceOnTopOfOverlaps(WorldCard card, float maxDownwardShift)
     {
-        int maxLayer = -1;
-        float restY = GetStackReferenceY(card);
-        float ceilingY = float.PositiveInfinity;
-        EnsureSpatialBucketsBuilt();
-        CollectNeighborhood(card.transform.position, CellScratch);
-
-        for (int i = 0; i < CellScratch.Count; i++)
-        {
-            WorldCard other = CellScratch[i];
-            // Frozen cards (settled, kinematic body kept) still occupy a layer and are still a solid
-            // surface, so they must count here — skipping them handed the incoming card their layer
-            // and dropped it underneath the card it visibly landed on.
-            if (other == null || other == card || other.IsInHand || other.IsPhysicsSimulating)
-                continue;
-            if (!OverlapsOnGround(card, other))
-                continue;
-
-            float otherY = GetStackReferenceY(other);
-            if (RestsAbove(otherY, restY))
-            {
-                ceilingY = Mathf.Min(ceilingY, otherY);
-                continue;
-            }
-
-            if (other.GroundStackLayer > maxLayer)
-                maxLayer = other.GroundStackLayer;
-        }
-
-        for (int i = 0; i < GroundPacks.Count; i++)
-        {
-            WorldBoosterPack pack = GroundPacks[i];
-            if (pack == null || pack.IsInHand || pack.IsPhysicsSimulating)
-                continue;
-            if (!OverlapsOnGround(pack, card))
-                continue;
-
-            float packY = GetStackReferenceY(pack);
-            if (RestsAbove(packY, restY))
-            {
-                ceilingY = Mathf.Min(ceilingY, packY);
-                continue;
-            }
-
-            if (pack.GroundStackLayer > maxLayer)
-                maxLayer = pack.GroundStackLayer;
-        }
+        ScanRestingOverlaps(
+            card.transform,
+            GetStackReferenceY(card),
+            card,
+            null,
+            out int maxLayer,
+            out float ceilingY);
 
         card.SetGroundStackLayer(maxLayer + 1);
 
@@ -561,6 +508,73 @@ public static class CardGroundStack
         }
 
         InsertIntoSpatialBucket(card);
+    }
+
+    /// <summary>
+    /// Looks at every settled card and pack whose footprint the item covers and reports the highest
+    /// layer among those it is resting on, plus the height of the lowest one resting on top of it.
+    /// </summary>
+    /// <param name="restY">Item's own height, in the shared reference space of <see cref="GetStackReferenceY(WorldCard)"/>.</param>
+    /// <param name="maxLayer">-1 when the item covers nothing, so the caller lands on layer 0.</param>
+    /// <param name="ceilingY">
+    /// Reference height of the lowest item lying on this one, or infinity when nothing does.
+    /// </param>
+    static void ScanRestingOverlaps(
+        Transform itemTransform,
+        float restY,
+        WorldCard selfCard,
+        WorldBoosterPack selfPack,
+        out int maxLayer,
+        out float ceilingY)
+    {
+        maxLayer = -1;
+        ceilingY = float.PositiveInfinity;
+
+        Bounds footprint = GetHorizontalBounds(itemTransform);
+        EnsureSpatialBucketsBuilt();
+        CollectNeighborhood(itemTransform.position, CellScratch);
+
+        for (int i = 0; i < CellScratch.Count; i++)
+        {
+            WorldCard other = CellScratch[i];
+            // Frozen cards (settled, kinematic body kept) still occupy a layer and are still a solid
+            // surface, so they must count here — skipping them handed the incoming card their layer
+            // and dropped it underneath the card it visibly landed on.
+            if (other == null || other == selfCard || other.IsInHand || other.IsPhysicsSimulating)
+                continue;
+            if (!footprint.Intersects(GetHorizontalBounds(other.transform)))
+                continue;
+
+            AccumulateStackNeighbor(GetStackReferenceY(other), other.GroundStackLayer, restY, ref maxLayer, ref ceilingY);
+        }
+
+        for (int i = 0; i < GroundPacks.Count; i++)
+        {
+            WorldBoosterPack pack = GroundPacks[i];
+            if (pack == null || pack == selfPack || pack.IsInHand || pack.IsPhysicsSimulating)
+                continue;
+            if (!footprint.Intersects(GetHorizontalBounds(pack.transform)))
+                continue;
+
+            AccumulateStackNeighbor(GetStackReferenceY(pack), pack.GroundStackLayer, restY, ref maxLayer, ref ceilingY);
+        }
+    }
+
+    static void AccumulateStackNeighbor(
+        float otherY,
+        int otherLayer,
+        float restY,
+        ref int maxLayer,
+        ref float ceilingY)
+    {
+        if (RestsAbove(otherY, restY))
+        {
+            ceilingY = Mathf.Min(ceilingY, otherY);
+            return;
+        }
+
+        if (otherLayer > maxLayer)
+            maxLayer = otherLayer;
     }
 
     /// <summary>
@@ -721,22 +735,27 @@ public static class CardGroundStack
 
     public static bool OverlapsOnGround(WorldCard a, WorldCard b)
     {
-        Bounds aBounds = GetHorizontalBounds(a);
-        Bounds bBounds = GetHorizontalBounds(b);
-        return aBounds.Intersects(bBounds);
+        if (a == null || b == null)
+            return false;
+
+        return GetHorizontalBounds(a.transform).Intersects(GetHorizontalBounds(b.transform));
     }
 
-    static Bounds GetHorizontalBounds(WorldCard card)
+    /// <summary>
+    /// Yaw-aware ground footprint of a card or pack — both are the same flat rectangle. The Y size is
+    /// a deliberately thin slab so items a couple of layers apart do not read as sharing a surface.
+    /// </summary>
+    static Bounds GetHorizontalBounds(Transform itemTransform)
     {
-        float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.GroundCardScale);
+        float scale = Mathf.Max(itemTransform.lossyScale.x, CardDimensions.GroundCardScale);
         float width = CardDimensions.Width * scale;
         float height = CardDimensions.Height * scale;
-        float yaw = card.transform.eulerAngles.y * Mathf.Deg2Rad;
+        float yaw = itemTransform.eulerAngles.y * Mathf.Deg2Rad;
         float cos = Mathf.Abs(Mathf.Cos(yaw));
         float sin = Mathf.Abs(Mathf.Sin(yaw));
         float extentX = width * cos + height * sin;
         float extentZ = width * sin + height * cos;
-        return new Bounds(card.transform.position, new Vector3(extentX, 0.01f, extentZ));
+        return new Bounds(itemTransform.position, new Vector3(extentX, FootprintSlabHeight, extentZ));
     }
 
     static readonly List<WorldBoosterPack> GroundPacks = new List<WorldBoosterPack>(32);
@@ -828,15 +847,6 @@ public static class CardGroundStack
         }
     }
 
-    public static void ForEachPhysicsCard(System.Action<WorldCard> action)
-    {
-        if (action == null)
-            return;
-
-        for (int i = 0; i < PhysicsCards.Count; i++)
-            action(PhysicsCards[i]);
-    }
-
     public static void ForEachPhysicsPack(System.Action<WorldBoosterPack> action)
     {
         if (action == null)
@@ -886,49 +896,13 @@ public static class CardGroundStack
 
     static void PlacePackOnTopOfOverlaps(WorldBoosterPack pack, float maxDownwardShift)
     {
-        int maxLayer = -1;
-        float restY = GetStackReferenceY(pack);
-        float ceilingY = float.PositiveInfinity;
-        EnsureSpatialBucketsBuilt();
-        CollectNeighborhood(pack.transform.position, CellScratch);
-
-        for (int i = 0; i < CellScratch.Count; i++)
-        {
-            WorldCard other = CellScratch[i];
-            if (other == null || other.IsInHand || other.IsPhysicsSimulating)
-                continue;
-            if (!OverlapsOnGround(pack, other))
-                continue;
-
-            float otherY = GetStackReferenceY(other);
-            if (RestsAbove(otherY, restY))
-            {
-                ceilingY = Mathf.Min(ceilingY, otherY);
-                continue;
-            }
-
-            if (other.GroundStackLayer > maxLayer)
-                maxLayer = other.GroundStackLayer;
-        }
-
-        for (int i = 0; i < GroundPacks.Count; i++)
-        {
-            WorldBoosterPack other = GroundPacks[i];
-            if (other == null || other == pack || other.IsInHand || other.IsPhysicsSimulating)
-                continue;
-            if (!OverlapsOnGround(pack, other))
-                continue;
-
-            float otherY = GetStackReferenceY(other);
-            if (RestsAbove(otherY, restY))
-            {
-                ceilingY = Mathf.Min(ceilingY, otherY);
-                continue;
-            }
-
-            if (other.GroundStackLayer > maxLayer)
-                maxLayer = other.GroundStackLayer;
-        }
+        ScanRestingOverlaps(
+            pack.transform,
+            GetStackReferenceY(pack),
+            null,
+            pack,
+            out int maxLayer,
+            out float ceilingY);
 
         pack.SetGroundStackLayer(maxLayer + 1);
 
@@ -947,7 +921,7 @@ public static class CardGroundStack
         if (pack == null || card == null)
             return false;
 
-        return GetHorizontalBounds(pack).Intersects(GetHorizontalBounds(card));
+        return GetHorizontalBounds(pack.transform).Intersects(GetHorizontalBounds(card.transform));
     }
 
     public static bool OverlapsOnGround(WorldBoosterPack a, WorldBoosterPack b)
@@ -955,19 +929,6 @@ public static class CardGroundStack
         if (a == null || b == null)
             return false;
 
-        return GetHorizontalBounds(a).Intersects(GetHorizontalBounds(b));
-    }
-
-    static Bounds GetHorizontalBounds(WorldBoosterPack pack)
-    {
-        float scale = Mathf.Max(pack.transform.lossyScale.x, CardDimensions.GroundCardScale);
-        float width = CardDimensions.Width * scale;
-        float height = CardDimensions.Height * scale;
-        float yaw = pack.transform.eulerAngles.y * Mathf.Deg2Rad;
-        float cos = Mathf.Abs(Mathf.Cos(yaw));
-        float sin = Mathf.Abs(Mathf.Sin(yaw));
-        float extentX = width * cos + height * sin;
-        float extentZ = width * sin + height * cos;
-        return new Bounds(pack.transform.position, new Vector3(extentX, 0.01f, extentZ));
+        return GetHorizontalBounds(a.transform).Intersects(GetHorizontalBounds(b.transform));
     }
 }

@@ -635,23 +635,6 @@ public class PlayerCardHand : MonoBehaviour
         return true;
     }
 
-    public bool TryOpenSelectedPack()
-    {
-        WorldBoosterPack pack = ResolveHeldPackToOpen();
-        if (!CanOpenHeldPack(pack) || _openPackRoutine != null)
-            return false;
-
-        if (_camera == null)
-            _camera = Camera.main;
-
-        if (_camera == null)
-            return false;
-
-        _isOpeningPack = true;
-        _openPackRoutine = StartCoroutine(OpenHeldPackRoutine(pack));
-        return true;
-    }
-
     System.Collections.IEnumerator OpenHeldPackRoutine(WorldBoosterPack pack)
     {
         if (pack == null || !pack.IsHeld)

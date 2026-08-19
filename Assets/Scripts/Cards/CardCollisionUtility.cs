@@ -33,7 +33,30 @@ public static class CardCollisionUtility
     /// </summary>
     const float ContactOffset = 0.0018f;
 
+    /// <summary>Mass of a single card or pack. Light enough to be thrown, heavy enough not to skate.</summary>
+    const float ThrownMass = 0.05f;
+
+    const float ThrownLinearDamping = 0.4f;
+    const float ThrownAngularDamping = 0.8f;
+
+    /// <summary>Extra solver work that keeps thin flat items from sinking into each other in a pile.</summary>
+    const int ThrownSolverIterations = 12;
+
+    const int ThrownSolverVelocityIterations = 4;
+
+    /// <summary>
+    /// Items that do end up overlapping have to ease apart. On the default budget a thin card
+    /// overlapped by half its thickness is launched across the room instead of nudged out.
+    /// </summary>
+    const float ThrownMaxDepenetrationVelocity = 1f;
+
+    /// <summary>Random launch spin, radians per second.</summary>
+    const float ThrownSpinPitch = 0.2f;
+
+    const float ThrownSpinYaw = 0.35f;
+
     static PhysicsMaterial _sharedPhysicMaterial;
+    static FirstPersonController _cachedPlayer;
     static readonly Collider[] OverlapBuffer = new Collider[OverlapBufferSize];
 
     public static PhysicsMaterial SharedPhysicMaterial
@@ -63,6 +86,67 @@ public static class CardCollisionUtility
 
         collider.material = SharedPhysicMaterial;
         collider.contactOffset = ContactOffset;
+    }
+
+    /// <summary>
+    /// Physics profile for anything the player throws. Cards and packs land in the same piles, so they
+    /// have to share one profile — when these numbers drifted apart, packs jittered where cards did not.
+    /// </summary>
+    public static void ConfigureThrownBody(Rigidbody body)
+    {
+        if (body == null)
+            return;
+
+        body.mass = ThrownMass;
+        body.linearDamping = ThrownLinearDamping;
+        body.angularDamping = ThrownAngularDamping;
+        body.interpolation = RigidbodyInterpolation.Interpolate;
+        // ContinuousDynamic (not just Continuous) is required so two fast items thrown back-to-back
+        // resolve their collision against EACH OTHER instead of tunneling/overlapping for a frame.
+        body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        body.solverIterations = ThrownSolverIterations;
+        body.solverVelocityIterations = ThrownSolverVelocityIterations;
+        body.maxDepenetrationVelocity = ThrownMaxDepenetrationVelocity;
+    }
+
+    /// <summary>
+    /// Hands a body over to the solver for a throw. Also re-applies the profile, so an item that was
+    /// frozen by an earlier settle and is being thrown again starts from the same physics as a new one.
+    /// </summary>
+    public static void LaunchThrownBody(Rigidbody body, Vector3 velocity)
+    {
+        if (body == null)
+            return;
+
+        ConfigureThrownBody(body);
+        body.isKinematic = false;
+        body.useGravity = true;
+        body.constraints = RigidbodyConstraints.None;
+        body.linearVelocity = velocity;
+        // A little spin so a thrown card tumbles instead of gliding like a plate.
+        body.angularVelocity = new Vector3(
+            Random.Range(-ThrownSpinPitch, ThrownSpinPitch),
+            Random.Range(-ThrownSpinYaw, ThrownSpinYaw),
+            Random.Range(-ThrownSpinPitch, ThrownSpinPitch));
+    }
+
+    /// <summary>Keeps a thrown item from bouncing off the player who is throwing it.</summary>
+    public static void IgnorePlayerCollision(Collider itemCollider)
+    {
+        if (itemCollider == null)
+            return;
+
+        if (_cachedPlayer == null)
+            _cachedPlayer = Object.FindFirstObjectByType<FirstPersonController>();
+        if (_cachedPlayer == null)
+            return;
+
+        Collider[] playerColliders = _cachedPlayer.GetComponentsInChildren<Collider>();
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            if (playerColliders[i] != null)
+                Physics.IgnoreCollision(itemCollider, playerColliders[i], true);
+        }
     }
 
     public static void ApplyFlatWorldSize(BoxCollider collider)

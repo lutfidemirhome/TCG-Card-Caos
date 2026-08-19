@@ -78,12 +78,6 @@ public class CardShelfSlot : MonoBehaviour
         }
     }
 
-    public void ConfigureIndices(int row, int column)
-    {
-        rowIndex = Mathf.Max(0, row);
-        columnIndex = Mathf.Clamp(column, 0, OwnerShelfSlotsPerRow - 1);
-    }
-
     public void SyncIndicesFromName()
     {
         if (CardShelfSlotNaming.TryParse(gameObject.name, out int _, out int column))

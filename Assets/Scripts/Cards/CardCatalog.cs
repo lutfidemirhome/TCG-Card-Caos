@@ -92,11 +92,6 @@ public static class CardCatalog
         return ByCategorySlot.TryGetValue(new CategorySlotKey(categoryId, slotNumber), out definition);
     }
 
-    public static bool TryGetForShelf(string categoryId, int slotNumber, out CardDefinition definition)
-    {
-        return TryGetByCategorySlot(categoryId, slotNumber, out definition);
-    }
-
     static void EnsureLoaded()
     {
         if (_loaded)

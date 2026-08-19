@@ -84,26 +84,6 @@ public static class HandFanLayout
         return z;
     }
 
-    public static HandCardPose WithFanDepthZ(
-        HandCardPose pose,
-        int fanIndex,
-        int fanCount,
-        in HandFanLayoutSettings settings,
-        bool isSelected,
-        float[] fanDepthZ)
-    {
-        if (fanDepthZ == null || fanDepthZ.Length <= fanIndex)
-            return pose;
-
-        float defaultZ = ComputeFanDepthZ(fanIndex, fanCount, settings, isSelected);
-        float targetZ = fanDepthZ[fanIndex];
-        if (isSelected && fanCount > 1)
-            targetZ = fanDepthZ[fanCount - 1] - settings.SelectedForwardMargin;
-
-        pose.LocalPosition += new Vector3(0f, 0f, targetZ - defaultZ);
-        return pose;
-    }
-
     static float GetAdaptiveFanAngle(int count, in HandFanLayoutSettings settings)
     {
         if (count <= 1)

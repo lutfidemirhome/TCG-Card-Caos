@@ -203,11 +203,6 @@ public class CardShelf : MonoBehaviour, IInteractable
         return CardShelfRules.CanPlaceOnShelf(CategoryId, definition);
     }
 
-    public bool AcceptsCard(WorldCard card)
-    {
-        return card != null && card.HasShelfRules && AcceptsDefinition(card.Definition);
-    }
-
     public bool CanPlaceCardInSlot(WorldCard card, CardShelfSlot slot)
     {
         return card != null && slot != null && slot.IsEmpty;
@@ -312,17 +307,6 @@ public class CardShelf : MonoBehaviour, IInteractable
         RefreshOccupancy();
         CardShelfSlot closest = FindClosestSlot(aim);
         return closest != null && !closest.IsEmpty;
-    }
-
-    public void PlaceCardInSlot(WorldCard card, CardShelfSlot slot)
-    {
-        if (card == null || slot == null)
-            return;
-
-        bool isCorrect = IsCorrectPlacement(card, slot);
-        slot.Occupy(card);
-        card.PlaceOnShelfSlot(slot.transform, surfacePadding);
-        card.NotifyShelfPlacement(isCorrect);
     }
 
     void BeginShelfFlight(WorldCard card, CardShelfSlot slot, bool isCorrect)
@@ -548,14 +532,6 @@ public class CardShelf : MonoBehaviour, IInteractable
             DestroyImmediate(_placementOutline);
 
         _placementOutline = null;
-    }
-
-    /// <summary>Editor helper: keep API for old menu; now just refreshes marker cache.</summary>
-    public void RebuildLevelsFromColliders()
-    {
-        if (placementRoot == null)
-            placementRoot = transform;
-        RefreshSlotCache();
     }
 
     static PlayerCardHand FindHand() => PlayerCardHand.Instance;

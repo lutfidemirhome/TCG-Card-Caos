@@ -368,33 +368,6 @@ public static class PackArtLibrary
         ApplyPackNoShadowMaterialSettings(toonMaterial);
     }
 
-    /// <summary>
-    /// Keeps packs readable at steep camera angles (looking down while held) like hand cards.
-    /// Toon ramp alone crushes brightness when the main light no longer hits the front face.
-    /// </summary>
-    static void ApplyPackViewStableBrightness(Material material)
-    {
-        if (material == null)
-            return;
-
-        if (material.HasProperty("_IndirectIntensity"))
-            material.SetFloat("_IndirectIntensity", 0.55f);
-
-        if (material.HasProperty("_RampSmoothing"))
-            material.SetFloat("_RampSmoothing", 0.22f);
-
-        if (material.HasProperty("_UseRim"))
-            material.SetFloat("_UseRim", 1f);
-        material.EnableKeyword("TCP2_RIM_LIGHTING");
-
-        if (material.HasProperty("_RimMin"))
-            material.SetFloat("_RimMin", 0.35f);
-        if (material.HasProperty("_RimMax"))
-            material.SetFloat("_RimMax", 0.78f);
-        if (material.HasProperty("_RimColor"))
-            material.SetColor("_RimColor", new Color(0.85f, 0.85f, 0.85f, 0.45f));
-    }
-
     static void CopySourceTexture(Material source, Material destination, string propertyName)
     {
         if (source == null || destination == null)

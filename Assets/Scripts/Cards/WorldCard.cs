@@ -590,21 +590,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         RefreshRenderMode();
 
         EnsureRigidbody();
-        // ContinuousDynamic (not just Continuous) is required so two fast-moving cards thrown back-to-back
-        // resolve their collision against EACH OTHER instead of tunneling/overlapping for a frame.
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        _rigidbody.isKinematic = false;
-        _rigidbody.useGravity = true;
-        _rigidbody.constraints = RigidbodyConstraints.None;
-
-        if (!_rigidbody.isKinematic)
-        {
-            _rigidbody.linearVelocity = velocity;
-            _rigidbody.angularVelocity = new Vector3(
-                Random.Range(-0.2f, 0.2f),
-                Random.Range(-0.35f, 0.35f),
-                Random.Range(-0.2f, 0.2f));
-        }
+        CardCollisionUtility.LaunchThrownBody(_rigidbody, velocity);
 
         CardGroundStack.TrackPhysicsCard(this);
         StartCoroutine(MonitorThrownCardRoutine());
@@ -630,23 +616,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void IgnorePlayerCollision()
     {
-        if (_collider == null)
-            return;
-
-        if (_cachedPlayer == null)
-            _cachedPlayer = FindFirstObjectByType<FirstPersonController>();
-        if (_cachedPlayer == null)
-            return;
-
-        Collider[] playerColliders = _cachedPlayer.GetComponentsInChildren<Collider>();
-        for (int i = 0; i < playerColliders.Length; i++)
-        {
-            if (playerColliders[i] != null)
-                Physics.IgnoreCollision(_collider, playerColliders[i], true);
-        }
+        CardCollisionUtility.IgnorePlayerCollision(_collider);
     }
-
-    static FirstPersonController _cachedPlayer;
 
     /// <summary>Solid collider for nearby cards while another card is flying.</summary>
     public void EnableLandingCollider()
@@ -757,17 +728,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         _rigidbody = gameObject.AddComponent<Rigidbody>();
-        _rigidbody.mass = 0.05f;
-        _rigidbody.linearDamping = 0.4f;
-        _rigidbody.angularDamping = 0.8f;
-        _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        // Extra solver iterations keep thin flat cards from sinking/interpenetrating when several land in a pile.
-        _rigidbody.solverIterations = 12;
-        _rigidbody.solverVelocityIterations = 4;
-        // Cards that do end up overlapping must ease apart. On the default budget a thin card that is
-        // overlapped by half its thickness gets launched across the room instead of nudged out.
-        _rigidbody.maxDepenetrationVelocity = 1f;
+        CardCollisionUtility.ConfigureThrownBody(_rigidbody);
     }
 
     public void ApplyFanPose(int fanIndex, int fanCount, in HandFanLayoutSettings layout, bool isSelected)
@@ -1001,11 +962,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         }
     }
 
-    public void RefreshGroundRendering()
-    {
-        RegisterForInstancedGround();
-    }
-
     /// <summary>Lightweight ground setup: no mesh, GPU instanced draw, collider off until player is near.</summary>
     public void RegisterForInstancedGround()
     {
@@ -1220,11 +1176,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _shelfStatusOutlineObject = null;
     }
 
-    public void SetWorldPose(Vector3 position, Quaternion rotation)
-    {
-        PlaceOnSurface(null, position, rotation);
-    }
-
     /// <summary>
     /// Places the card face-up flat on the ground without physics.
     /// </summary>
@@ -1252,55 +1203,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
 
         ReleaseCardVisual();
-        RefreshRenderMode();
-    }
-
-    /// <summary>
-    /// Stands the card upright on a shelf board, face toward <paramref name="faceDirection"/>.
-    /// </summary>
-    public void PlaceUprightOnShelf(Transform parent, Vector3 surfacePoint, Vector3 faceDirection)
-    {
-        _handState = HandState.World;
-        SetInteractionHighlight(false);
-        SetHandSelected(false);
-        RemovePhysics();
-        _scaleTransitionActive = false;
-
-        faceDirection.y = 0f;
-        if (faceDirection.sqrMagnitude < 0.0001f)
-            faceDirection = parent != null ? -parent.forward : Vector3.forward;
-        faceDirection.Normalize();
-
-        // Upright mesh on shelf: +Y height, +Z face (slot forward).
-        EnsureCardVisual();
-        ApplyShelfVisualOrientation();
-
-        if (_collider != null)
-        {
-            _collider.enabled = true;
-            if (_collider is BoxCollider boxCollider)
-                CardCollisionUtility.ApplyUprightShelfSize(boxCollider);
-        }
-
-        transform.SetParent(parent, true);
-        transform.rotation = Quaternion.LookRotation(faceDirection, Vector3.up);
-        transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
-        transform.position = surfacePoint;
-
-        // Sit the bottom edge on the board.
-        MeshRenderer meshRenderer = _cardVisual != null
-            ? _cardVisual.GetComponent<MeshRenderer>()
-            : GetComponentInChildren<MeshRenderer>();
-        if (meshRenderer != null)
-        {
-            float lift = surfacePoint.y - meshRenderer.bounds.min.y;
-            transform.position += Vector3.up * lift;
-        }
-        else
-        {
-            transform.position += Vector3.up * (CardDimensions.Height * CardDimensions.WorldCardScale * 0.5f);
-        }
-
         RefreshRenderMode();
     }
 
