@@ -69,6 +69,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool IsFlyingToShelf => _handState == HandState.FlyingToShelf;
     public bool IsInHand => _handState == HandState.Held || _handState == HandState.FlyingToHand;
     public bool HasActivePhysics => _rigidbody != null;
+
+    /// <summary>
+    /// True only while the solver is still moving the card. A settled card keeps a frozen (kinematic)
+    /// body as its solid surface, so <see cref="HasActivePhysics"/> alone cannot tell "still flying"
+    /// from "already at rest" — stack layering and settle math need this distinction.
+    /// </summary>
+    public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
     public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
@@ -588,12 +595,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     IEnumerator MonitorThrownCardRoutine()
     {
+        var boxCollider = _collider as BoxCollider;
+
         yield return CardThrownPhysics.Monitor(
             transform,
             _rigidbody,
-            _collider as BoxCollider,
+            boxCollider,
             () => _handState == HandState.World && _rigidbody != null,
-            onSettled: () => CardGroundStack.ApplyStackHeight(this, placeOnTop: true));
+            onSettled: () => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody));
 
         if (_handState != HandState.World || _rigidbody == null)
             yield break;
@@ -685,14 +694,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         SetWorldColliderEnabled(false);
     }
 
-    void ResolveWorldPenetration(Rigidbody body = null)
-    {
-        if (_collider is not BoxCollider boxCollider)
-            return;
-
-        CardCollisionUtility.ResolveStaticPenetration(transform, boxCollider, this, body);
-    }
-
     /// <summary>
     /// Preserves world-space card art when changing local visual from Hand to World rotation.
     /// </summary>
@@ -746,6 +747,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         // Extra solver iterations keep thin flat cards from sinking/interpenetrating when several land in a pile.
         _rigidbody.solverIterations = 12;
         _rigidbody.solverVelocityIterations = 4;
+        // Cards that do end up overlapping must ease apart. On the default budget a thin card that is
+        // overlapped by half its thickness gets launched across the room instead of nudged out.
+        _rigidbody.maxDepenetrationVelocity = 1f;
     }
 
     public void ApplyFanPose(int fanIndex, int fanCount, in HandFanLayoutSettings layout, bool isSelected)

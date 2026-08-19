@@ -278,28 +278,33 @@ public class CardShelf : MonoBehaviour, IInteractable
             return;
 
         Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
-        bool aimOnOccupied = IsAimOnOccupiedSlot(aim);
+        if (!hand.HasSelectedHeldCard() || IsAimOnOccupiedSlot(aim))
+            return;
 
-        if (hand.HasSelectedHeldCard() && !aimOnOccupied)
+        // Resolve and validate the seat BEFORE the card leaves the hand. A taken card is still
+        // HandState.Held, so the old rollback (TryPickup) always refused it and left the card
+        // visually in hand but absent from every hand list — undroppable and unplaceable forever.
+        // This fires whenever the prompt says "Shelf Full" or the aim sits between shelf levels.
+        RefreshOccupancy();
+        CardShelfSlot slot = FindAimTargetSlot();
+        WorldCard selectedCard = hand.SelectedHeldCard;
+        if (slot == null || selectedCard == null || !CanPlaceCardInSlot(selectedCard, slot))
+            return;
+
+        if (!hand.TryTakeSelectedHeldCard(out WorldCard card))
+            return;
+
+        if (card != selectedCard || !CanPlaceCardInSlot(card, slot))
         {
-            if (!hand.TryTakeSelectedHeldCard(out WorldCard card))
-                return;
-
-            RefreshOccupancy();
-            CardShelfSlot slot = FindAimTargetSlot();
-            if (slot == null || !CanPlaceCardInSlot(card, slot))
-            {
-                hand.TryPickup(card);
-                return;
-            }
-
-            bool isCorrect = IsCorrectPlacement(card, slot);
-            HidePlacementOutline();
-            slot.Occupy(card);
-            BeginShelfFlight(card, slot, isCorrect);
-            ClearAim();
+            hand.ReturnHeldCard(card);
             return;
         }
+
+        bool isCorrect = IsCorrectPlacement(card, slot);
+        HidePlacementOutline();
+        slot.Occupy(card);
+        BeginShelfFlight(card, slot, isCorrect);
+        ClearAim();
     }
 
     public bool IsAimOnOccupiedSlot(Vector3 aim)

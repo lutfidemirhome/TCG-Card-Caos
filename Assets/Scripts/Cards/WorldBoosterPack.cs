@@ -1188,12 +1188,14 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     IEnumerator MonitorThrownPackRoutine()
     {
+        var boxCollider = _collider as BoxCollider;
+
         yield return CardThrownPhysics.Monitor(
             transform,
             _rigidbody,
-            _collider as BoxCollider,
+            boxCollider,
             () => _state == PackState.World && _rigidbody != null,
-            onSettled: () => CardGroundStack.ApplyStackHeight(this, placeOnTop: true),
+            onSettled: () => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody),
             allowKinematicFreeze: false);
 
         if (_state != PackState.World || _rigidbody == null)
@@ -1305,14 +1307,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         }
     }
 
-    void ResolveWorldPenetration(Rigidbody body = null)
-    {
-        if (_collider is not BoxCollider boxCollider)
-            return;
-
-        CardCollisionUtility.ResolveStaticPenetration(transform, boxCollider, null, body);
-    }
-
     public IReadOnlyList<CardDefinition> RollContents(int count)
     {
         if (_preRolledContents != null && _preRolledContents.Count > 0)
@@ -1381,6 +1375,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         // Extra solver iterations keep flat packs from sinking/interpenetrating when several land in a pile.
         _rigidbody.solverIterations = 12;
         _rigidbody.solverVelocityIterations = 4;
+        // Overlapping items must ease apart instead of being launched across the room.
+        _rigidbody.maxDepenetrationVelocity = 1f;
     }
 
     void RemovePhysics()

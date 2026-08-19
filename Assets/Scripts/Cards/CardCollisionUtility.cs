@@ -9,6 +9,13 @@ public static class CardCollisionUtility
     const float SeparationSkin = 0.003f;
     const int OverlapBufferSize = 32;
 
+    /// <summary>
+    /// Unity's 1 cm project default is roughly twice a card's own physical thickness, so a flat card
+    /// generates contacts a full card-height away from its surface: piles jitter and a landed card
+    /// keeps nudging itself. Stay well under half the card thickness instead.
+    /// </summary>
+    const float ContactOffset = 0.0018f;
+
     static PhysicsMaterial _sharedPhysicMaterial;
     static readonly Collider[] OverlapBuffer = new Collider[OverlapBufferSize];
 
@@ -38,6 +45,7 @@ public static class CardCollisionUtility
             return;
 
         collider.material = SharedPhysicMaterial;
+        collider.contactOffset = ContactOffset;
     }
 
     public static void ApplyFlatWorldSize(BoxCollider collider)
@@ -59,20 +67,29 @@ public static class CardCollisionUtility
         collider.center = Vector3.zero;
     }
 
-    public static void ResolveStaticPenetration(
+    /// <summary>
+    /// Pushes the card out of static geometry (floor, cabinet plinths, wall bases) it is currently
+    /// inside. Returns true when the card actually had to be moved.
+    /// </summary>
+    public static bool ResolveStaticPenetration(
         Transform cardTransform,
         BoxCollider cardCollider,
         WorldCard self,
         Rigidbody body = null)
     {
         if (cardTransform == null || cardCollider == null || !cardCollider.enabled)
-            return;
+            return false;
 
+        bool moved = false;
         for (int iteration = 0; iteration < MaxResolveIterations; iteration++)
         {
             if (!TryResolveSinglePass(cardTransform, cardCollider, self, body))
                 break;
+
+            moved = true;
         }
+
+        return moved;
     }
 
     static bool TryResolveSinglePass(
@@ -115,11 +132,11 @@ public static class CardCollisionUtility
                 continue;
             }
 
-            Vector3 separation = direction * (distance + SeparationSkin);
-            if (body != null && body.isKinematic == false)
-                body.MovePosition(body.position + separation);
-            else
-                cardTransform.position += separation;
+            // Hard teleport, not MovePosition: this runs on an already-resting body, and with
+            // Auto Sync Transforms off the solver only sees the new pose through Rigidbody.position.
+            cardTransform.position += direction * (distance + SeparationSkin);
+            if (body != null)
+                body.position = cardTransform.position;
 
             moved = true;
         }

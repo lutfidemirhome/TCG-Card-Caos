@@ -448,7 +448,12 @@ public static class CardGroundStack
     /// <summary>
     /// Place a dropped card on the pile. Existing cards keep their height — only this card moves.
     /// </summary>
-    public static void ApplyStackHeight(WorldCard card, bool placeOnTop = false)
+    /// <param name="maxDownwardShift">
+    /// Largest downward correction the stack height may apply, in world units. Negative = unlimited.
+    /// Settling throws pass a small budget so a card resting on a cabinet plinth or leaning against
+    /// one is never yanked down to the floor-relative stack height and left inside the geometry.
+    /// </param>
+    public static void ApplyStackHeight(WorldCard card, bool placeOnTop = false, float maxDownwardShift = -1f)
     {
         if (card == null || card.IsInHand)
             return;
@@ -456,14 +461,14 @@ public static class CardGroundStack
         Track(card);
         if (placeOnTop)
         {
-            PlaceOnTopOfOverlaps(card);
+            PlaceOnTopOfOverlaps(card, maxDownwardShift);
             return;
         }
 
         RefreshCluster(card);
     }
 
-    static void PlaceOnTopOfOverlaps(WorldCard card)
+    static void PlaceOnTopOfOverlaps(WorldCard card, float maxDownwardShift)
     {
         int maxLayer = -1;
         EnsureSpatialBucketsBuilt();
@@ -472,7 +477,10 @@ public static class CardGroundStack
         for (int i = 0; i < CellScratch.Count; i++)
         {
             WorldCard other = CellScratch[i];
-            if (other == null || other == card || other.IsInHand || other.HasActivePhysics)
+            // Frozen cards (settled, kinematic body kept) still occupy a layer and are still a solid
+            // surface, so they must count here — skipping them handed the incoming card their layer
+            // and dropped it underneath the card it visibly landed on.
+            if (other == null || other == card || other.IsInHand || other.IsPhysicsSimulating)
                 continue;
             if (!OverlapsOnGround(card, other))
                 continue;
@@ -492,10 +500,18 @@ public static class CardGroundStack
         }
 
         card.SetGroundStackLayer(maxLayer + 1);
-        Vector3 position = card.transform.position;
-        position.y = GetDrawWorldY(card);
-        card.transform.position = position;
+        ApplyStackedY(card.transform, GetDrawWorldY(card), maxDownwardShift);
         InsertIntoSpatialBucket(card);
+    }
+
+    static void ApplyStackedY(Transform itemTransform, float stackedY, float maxDownwardShift)
+    {
+        Vector3 position = itemTransform.position;
+        if (maxDownwardShift >= 0f && stackedY < position.y - maxDownwardShift)
+            return;
+
+        position.y = stackedY;
+        itemTransform.position = position;
     }
 
     /// <summary>
@@ -773,7 +789,7 @@ public static class CardGroundStack
         return (id % UniqueDepthBiasSteps) * (UniqueDepthBiasRange / UniqueDepthBiasSteps);
     }
 
-    public static void ApplyStackHeight(WorldBoosterPack pack, bool placeOnTop = false)
+    public static void ApplyStackHeight(WorldBoosterPack pack, bool placeOnTop = false, float maxDownwardShift = -1f)
     {
         if (pack == null || pack.IsInHand)
             return;
@@ -781,7 +797,7 @@ public static class CardGroundStack
         TrackPack(pack);
         if (placeOnTop)
         {
-            PlacePackOnTopOfOverlaps(pack);
+            PlacePackOnTopOfOverlaps(pack, maxDownwardShift);
             return;
         }
 
@@ -792,7 +808,7 @@ public static class CardGroundStack
         pack.transform.position = position;
     }
 
-    static void PlacePackOnTopOfOverlaps(WorldBoosterPack pack)
+    static void PlacePackOnTopOfOverlaps(WorldBoosterPack pack, float maxDownwardShift)
     {
         int maxLayer = -1;
         EnsureSpatialBucketsBuilt();
@@ -801,7 +817,7 @@ public static class CardGroundStack
         for (int i = 0; i < CellScratch.Count; i++)
         {
             WorldCard other = CellScratch[i];
-            if (other == null || other.IsInHand || other.HasActivePhysics)
+            if (other == null || other.IsInHand || other.IsPhysicsSimulating)
                 continue;
             if (!OverlapsOnGround(pack, other))
                 continue;
@@ -823,9 +839,7 @@ public static class CardGroundStack
         }
 
         pack.SetGroundStackLayer(maxLayer + 1);
-        Vector3 position = pack.transform.position;
-        position.y = GetDrawWorldY(pack);
-        pack.transform.position = position;
+        ApplyStackedY(pack.transform, GetDrawWorldY(pack), maxDownwardShift);
     }
 
     public static bool OverlapsOnGround(WorldBoosterPack pack, WorldCard card)

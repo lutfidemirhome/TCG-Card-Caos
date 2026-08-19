@@ -154,6 +154,7 @@ public class PlayerCardHand : MonoBehaviour
     void LateUpdate()
     {
         UpdateHandAnchorTransform();
+        ReclaimOrphanedHeldItems();
         UpdatePickupFlights();
         UpdatePackPickupFlight();
 
@@ -481,6 +482,106 @@ public class PlayerCardHand : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Puts a card taken with <see cref="TryTakeSelectedHeldCard"/> back into the hand. Taking a card
+    /// does not change its hand state, so it is still Held and <see cref="TryPickup"/> would reject
+    /// it — callers that abort a placement must use this instead.
+    /// </summary>
+    public void ReturnHeldCard(WorldCard card)
+    {
+        if (card == null)
+            return;
+
+        if (!card.IsHeld)
+        {
+            TryPickup(card);
+            return;
+        }
+
+        if (!_cards.Contains(card))
+            _cards.Add(card);
+
+        if (!HasHandFanEntry(card))
+            AddHandFanEntry(new HandFanEntry { Card = card });
+
+        _selectedIndex = GetFanIndexForCard(card);
+        ClampSelectionIndex();
+        ApplyFanLayout();
+    }
+
+    /// <summary>Pack counterpart of <see cref="ReturnHeldCard"/>.</summary>
+    public void ReturnHeldPack(WorldBoosterPack pack)
+    {
+        if (pack == null || !pack.IsHeld)
+            return;
+
+        if (!_heldPacks.Contains(pack))
+            _heldPacks.Add(pack);
+
+        if (!HasHandFanEntry(pack))
+            AddHandFanEntry(new HandFanEntry { Pack = pack });
+
+        ClampSelectionIndex();
+    }
+
+    /// <summary>
+    /// Safety net against hand-list desync: anything still parented to the hand anchor and reporting
+    /// Held must be tracked, otherwise selection, drop and shelf placement all read an empty hand and
+    /// the card can never leave the player's hand again. Costs one child-count compare per frame while
+    /// the hand is consistent, which is every frame in normal play.
+    /// </summary>
+    void ReclaimOrphanedHeldItems()
+    {
+        if (_handAnchor == null)
+            return;
+
+        int childCount = _handAnchor.childCount;
+        if (childCount == 0 || childCount <= CountHeldCards() + CountHeldPacks())
+            return;
+
+        for (int i = 0; i < childCount; i++)
+        {
+            Transform child = _handAnchor.GetChild(i);
+
+            if (child.TryGetComponent(out WorldCard card))
+            {
+                if (card.IsHeld && !_cards.Contains(card))
+                    ReturnHeldCard(card);
+
+                continue;
+            }
+
+            if (child.TryGetComponent(out WorldBoosterPack pack)
+                && pack.IsHeld
+                && !_heldPacks.Contains(pack))
+            {
+                ReturnHeldPack(pack);
+            }
+        }
+    }
+
+    bool HasHandFanEntry(WorldCard card)
+    {
+        for (int i = 0; i < _handFanOrder.Count; i++)
+        {
+            if (_handFanOrder[i].Card == card)
+                return true;
+        }
+
+        return false;
+    }
+
+    bool HasHandFanEntry(WorldBoosterPack pack)
+    {
+        for (int i = 0; i < _handFanOrder.Count; i++)
+        {
+            if (_handFanOrder[i].Pack == pack)
+                return true;
+        }
+
+        return false;
+    }
+
     public bool TryPickupPack(WorldBoosterPack pack)
     {
         if (pack == null || pack.IsInHand || !CanPickUpPack)
@@ -563,11 +664,22 @@ public class PlayerCardHand : MonoBehaviour
         SetPackOpenMovementLocked(true);
         _heldPacks.Remove(pack);
         RemoveHandFanEntry(pack);
-        yield return PackOpenSequence.Run(this, pack, _camera);
-        if (_packOpenMovementLocked)
-            SetPackOpenMovementLocked(false);
-        _isOpeningPack = false;
-        _openPackRoutine = null;
+
+        try
+        {
+            yield return PackOpenSequence.Run(this, pack, _camera);
+        }
+        finally
+        {
+            // The sequence normally clears these itself, but if it ever stops early the player would
+            // be left unable to move, drop or interact with anything at all.
+            if (_packOpenMovementLocked)
+                SetPackOpenMovementLocked(false);
+            SetAwaitingRevealCollect(false);
+            SetHandInputLocked(false);
+            _isOpeningPack = false;
+            _openPackRoutine = null;
+        }
     }
 
     public void ClearHeldPackReference(WorldBoosterPack pack = null)
@@ -914,6 +1026,18 @@ public class PlayerCardHand : MonoBehaviour
         for (int i = 0; i < _cards.Count; i++)
         {
             if (_cards[i].IsHeld)
+                heldCount++;
+        }
+
+        return heldCount;
+    }
+
+    int CountHeldPacks()
+    {
+        int heldCount = 0;
+        for (int i = 0; i < _heldPacks.Count; i++)
+        {
+            if (_heldPacks[i].IsHeld)
                 heldCount++;
         }
 

@@ -496,8 +496,13 @@ public static class CardArtLibrary
             material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
         if (material.HasProperty("_DstBlendAlpha"))
             material.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+
+        // Alpha stays 1 below, so these cards are visually solid and must keep writing depth.
+        // With depth writes off the transparent queue resolves overlap by camera distance, which
+        // disagrees with the hand fan order once the arc drops the outer cards — the card next to
+        // the selected one then renders behind its neighbour and disappears completely.
         if (material.HasProperty("_ZWrite"))
-            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_ZWrite", 1f);
 
         if (material.HasProperty("_BaseColor"))
         {
