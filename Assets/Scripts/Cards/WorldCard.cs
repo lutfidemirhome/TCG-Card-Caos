@@ -1035,13 +1035,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshRenderer == null)
             return;
 
-        // FlyingToHand uses world materials (queue 2501, no SSAO) — detail queue darkens during pickup flight.
-        CardTextureQuality quality = _handState == HandState.Held
-            || _handState == HandState.PackReveal
-            || _handState == HandState.FlyingToShelf
-            || GetComponentInParent<CardShelfSlot>() != null
-            ? CardTextureQuality.Detail
-            : CardTextureQuality.World;
+        // CardVisual is only used for mesh cards (hand, Q-throw, shelf flight). World quality (queue 2501)
+        // is for GPU-instanced ground quads only — on a tumbling 3D mesh it lands in URP's transparent pass
+        // and reads as see-through. Detail matches the hand look and stays in the opaque queue.
+        CardTextureQuality quality = CardTextureQuality.Detail;
 
         if (UsesDefinitionFrontArt)
             meshRenderer.sharedMaterials = CardArtLibrary.GetCardMaterials(definition, quality);
