@@ -134,6 +134,18 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _groundStackLayer = Mathf.Max(0, layer);
     }
 
+    /// <summary>
+    /// Moves the card and drags its physics body along. Auto Sync Transforms is off project-wide, so
+    /// writing the transform alone leaves the collider behind: the card then draws where nothing is
+    /// solid, and the next card thrown at it stops on the invisible surface and reads as sunk into it.
+    /// </summary>
+    public void SetGroundRestPosition(Vector3 position)
+    {
+        transform.position = position;
+        if (_rigidbody != null)
+            _rigidbody.position = position;
+    }
+
     /// <summary>World center for ground-card aim tests — always matches instanced draw Y.</summary>
     public Vector3 GetGroundQueryCenter()
     {
@@ -607,7 +619,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             _rigidbody,
             boxCollider,
             () => _handState == HandState.World && _rigidbody != null,
-            onSettled: () => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody));
+            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody, attempt));
 
         if (_handState != HandState.World || _rigidbody == null)
             yield break;

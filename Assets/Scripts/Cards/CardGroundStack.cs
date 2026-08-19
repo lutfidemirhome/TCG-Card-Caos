@@ -8,7 +8,12 @@ using UnityEngine;
 /// </summary>
 public static class CardGroundStack
 {
-    const float StackGap = 0.00015f;
+    /// <summary>
+    /// Air between two stacked cards. It has to clear <see cref="UniqueDepthBiasRange"/>: a layer-0 card
+    /// is lifted by up to that bias, so with a thinner gap the card on layer 1 above it ends up inside it.
+    /// </summary>
+    const float StackGap = 0.0006f;
+
     const float UniqueDepthBiasRange = 0.0004f;
     const int UniqueDepthBiasSteps = 4096;
     const int BulkFlatStackThreshold = 256;
@@ -18,6 +23,8 @@ public static class CardGroundStack
     static readonly List<WorldCard> ClusterScratch = new List<WorldCard>(16);
     static readonly List<WorldCard> OpenScratch = new List<WorldCard>(16);
     static readonly List<WorldCard> CellScratch = new List<WorldCard>(32);
+    static readonly List<WorldCard> CellSeedScratch = new List<WorldCard>(16);
+    static readonly HashSet<WorldCard> RelayoutSeen = new HashSet<WorldCard>();
     static readonly List<WorldCard> LandingColliderScratch = new List<WorldCard>(32);
     static readonly Dictionary<long, List<WorldCard>> SpatialBuckets = new Dictionary<long, List<WorldCard>>(512);
     static readonly Dictionary<WorldCard, int> LandingColliderRefCounts = new Dictionary<WorldCard, int>(64);
@@ -231,24 +238,47 @@ public static class CardGroundStack
         }
     }
 
+    /// <summary>
+    /// A card left this cell, so whatever was lying on it has to drop a layer. Relayout runs per
+    /// overlapping pile, not per cell: a cell is smaller than a card, so cards that never sat on each
+    /// other share one — handing the whole cell to the pile layout stacked them into a floating
+    /// staircase, and this runs on every pickup once the floor holds a few hundred cards.
+    /// </summary>
     static void RefreshCellAt(Vector3 worldPos)
     {
         float cellSize = SpatialCellSize;
         long key = CellKey(worldPos, cellSize);
-        CellScratch.Clear();
+        CellSeedScratch.Clear();
 
         for (int i = 0; i < GroundCards.Count; i++)
         {
             WorldCard card = GroundCards[i];
-            if (card == null || card.IsInHand)
+            if (card == null || card.IsInHand || card.HasActivePhysics)
                 continue;
             if (CellKey(card.transform.position, cellSize) != key)
                 continue;
 
-            CellScratch.Add(card);
+            CellSeedScratch.Add(card);
         }
 
-        ApplyPileLayers(CellScratch);
+        RelayoutSeen.Clear();
+        for (int i = 0; i < CellSeedScratch.Count; i++)
+        {
+            WorldCard seed = CellSeedScratch[i];
+            if (seed == null || RelayoutSeen.Contains(seed))
+                continue;
+
+            BuildLocalPile(seed, ClusterScratch);
+            if (ClusterScratch.Count == 0)
+                continue;
+
+            for (int j = 0; j < ClusterScratch.Count; j++)
+                RelayoutSeen.Add(ClusterScratch[j]);
+
+            ApplyPileLayers(ClusterScratch);
+        }
+
+        RelayoutSeen.Clear();
     }
 
     static void ApplyPileLayers(List<WorldCard> pile, WorldCard forceOnTop = null)
@@ -273,13 +303,16 @@ public static class CardGroundStack
         for (int layer = 0; layer < pile.Count; layer++)
         {
             WorldCard card = pile[layer];
-            if (card == null || card.IsInHand)
+            // A thrown card is placed by the settle pass, against the colliders actually under it — a
+            // flat layer height cannot describe a card resting on a pack or on a tilted neighbour, so
+            // it keeps its own height and only reserves this layer for the cards around it.
+            if (card == null || card.IsInHand || card.HasActivePhysics)
                 continue;
 
             card.SetGroundStackLayer(layer);
             Vector3 position = card.transform.position;
             position.y = GetDrawWorldY(card);
-            card.transform.position = position;
+            card.SetGroundRestPosition(position);
         }
     }
 
@@ -471,6 +504,8 @@ public static class CardGroundStack
     static void PlaceOnTopOfOverlaps(WorldCard card, float maxDownwardShift)
     {
         int maxLayer = -1;
+        float restY = GetStackReferenceY(card);
+        float ceilingY = float.PositiveInfinity;
         EnsureSpatialBucketsBuilt();
         CollectNeighborhood(card.transform.position, CellScratch);
 
@@ -484,6 +519,14 @@ public static class CardGroundStack
                 continue;
             if (!OverlapsOnGround(card, other))
                 continue;
+
+            float otherY = GetStackReferenceY(other);
+            if (RestsAbove(otherY, restY))
+            {
+                ceilingY = Mathf.Min(ceilingY, otherY);
+                continue;
+            }
+
             if (other.GroundStackLayer > maxLayer)
                 maxLayer = other.GroundStackLayer;
         }
@@ -495,23 +538,55 @@ public static class CardGroundStack
                 continue;
             if (!OverlapsOnGround(pack, card))
                 continue;
+
+            float packY = GetStackReferenceY(pack);
+            if (RestsAbove(packY, restY))
+            {
+                ceilingY = Mathf.Min(ceilingY, packY);
+                continue;
+            }
+
             if (pack.GroundStackLayer > maxLayer)
                 maxLayer = pack.GroundStackLayer;
         }
 
         card.SetGroundStackLayer(maxLayer + 1);
-        ApplyStackedY(card.transform, GetDrawWorldY(card), maxDownwardShift);
+
+        Vector3 position = card.transform.position;
+        float stackedY = GetDrawWorldY(card);
+        if (ShouldTakeStackedY(position.y, stackedY, maxDownwardShift, ceilingY))
+        {
+            position.y = stackedY;
+            card.SetGroundRestPosition(position);
+        }
+
         InsertIntoSpatialBucket(card);
     }
 
-    static void ApplyStackedY(Transform itemTransform, float stackedY, float maxDownwardShift)
-    {
-        Vector3 position = itemTransform.position;
-        if (maxDownwardShift >= 0f && stackedY < position.y - maxDownwardShift)
-            return;
+    /// <summary>
+    /// Height an item is measured at when comparing stack positions. A pack's root sits a body
+    /// half-thickness higher than a card's on the same surface, so its lift is taken back out.
+    /// </summary>
+    static float GetStackReferenceY(WorldCard card) => card.transform.position.y;
 
-        position.y = stackedY;
-        itemTransform.position = position;
+    static float GetStackReferenceY(WorldBoosterPack pack) => pack.transform.position.y - pack.GroundRestLift;
+
+    /// <summary>Half a layer of tolerance so items sharing one surface never read as stacked.</summary>
+    static bool RestsAbove(float otherY, float selfY) => otherY > selfY + StackStep * 0.5f;
+
+    /// <param name="ceilingY">
+    /// Root height of the lowest settled item resting on top of this one, in this item's own root
+    /// space (infinity when nothing rests on it).
+    /// </param>
+    static bool ShouldTakeStackedY(float currentY, float stackedY, float maxDownwardShift, float ceilingY)
+    {
+        // Whoever settles first claims the lowest free layer, and back-to-back throws at one spot settle
+        // out of order: the card underneath is regularly the last to freeze. Climbing to its computed
+        // layer then drove it straight up into the card already resting on it, and both froze intersecting.
+        if (stackedY > currentY && stackedY > ceilingY - StackStep * 0.5f)
+            return false;
+
+        return maxDownwardShift < 0f || stackedY >= currentY - maxDownwardShift;
     }
 
     /// <summary>
@@ -806,12 +881,14 @@ public static class CardGroundStack
         pack.SetGroundStackLayer(0);
         Vector3 position = pack.transform.position;
         position.y = GetDrawWorldY(pack);
-        pack.transform.position = position;
+        pack.SetGroundRestPosition(position);
     }
 
     static void PlacePackOnTopOfOverlaps(WorldBoosterPack pack, float maxDownwardShift)
     {
         int maxLayer = -1;
+        float restY = GetStackReferenceY(pack);
+        float ceilingY = float.PositiveInfinity;
         EnsureSpatialBucketsBuilt();
         CollectNeighborhood(pack.transform.position, CellScratch);
 
@@ -822,6 +899,13 @@ public static class CardGroundStack
                 continue;
             if (!OverlapsOnGround(pack, other))
                 continue;
+
+            float otherY = GetStackReferenceY(other);
+            if (RestsAbove(otherY, restY))
+            {
+                ceilingY = Mathf.Min(ceilingY, otherY);
+                continue;
+            }
 
             if (other.GroundStackLayer > maxLayer)
                 maxLayer = other.GroundStackLayer;
@@ -835,12 +919,27 @@ public static class CardGroundStack
             if (!OverlapsOnGround(pack, other))
                 continue;
 
+            float otherY = GetStackReferenceY(other);
+            if (RestsAbove(otherY, restY))
+            {
+                ceilingY = Mathf.Min(ceilingY, otherY);
+                continue;
+            }
+
             if (other.GroundStackLayer > maxLayer)
                 maxLayer = other.GroundStackLayer;
         }
 
         pack.SetGroundStackLayer(maxLayer + 1);
-        ApplyStackedY(pack.transform, GetDrawWorldY(pack), maxDownwardShift);
+
+        Vector3 position = pack.transform.position;
+        float stackedY = GetDrawWorldY(pack);
+        // ceilingY was gathered in reference space; the pack's own transform sits its rest lift above that.
+        if (ShouldTakeStackedY(position.y, stackedY, maxDownwardShift, ceilingY + pack.GroundRestLift))
+        {
+            position.y = stackedY;
+            pack.SetGroundRestPosition(position);
+        }
     }
 
     public static bool OverlapsOnGround(WorldBoosterPack pack, WorldCard card)

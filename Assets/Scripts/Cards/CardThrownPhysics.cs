@@ -19,15 +19,16 @@ public static class CardThrownPhysics
     const int MaxSettleRejections = 3;
 
     /// <param name="onSettled">
-    /// Resolves the final resting pose. Returning false means the item was still inside something and
-    /// needs to keep simulating, so it is never frozen while penetrating another collider.
+    /// Resolves the final resting pose, taking the settle attempt index (0 on the first try). Returning
+    /// false means the item was still inside something and needs to keep simulating, so it is never
+    /// frozen while penetrating another collider.
     /// </param>
     public static IEnumerator Monitor(
         Transform itemTransform,
         Rigidbody body,
         BoxCollider collider,
         Func<bool> isActive,
-        Func<bool> onSettled = null)
+        Func<int, bool> onSettled = null)
     {
         if (itemTransform == null || body == null || isActive == null)
             yield break;
@@ -93,7 +94,7 @@ public static class CardThrownPhysics
                             // top of whatever it is actually overlapping — position/rotation from the
                             // physics tumble are left untouched, so this never affects front/back facing.
                             if (onSettled != null
-                                && !onSettled.Invoke()
+                                && !onSettled.Invoke(settleRejections)
                                 && ++settleRejections < MaxSettleRejections)
                             {
                                 restSettleTime = 0f;

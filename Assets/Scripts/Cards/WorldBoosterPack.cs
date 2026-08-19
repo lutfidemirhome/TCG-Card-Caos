@@ -120,6 +120,17 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _groundStackLayer = Mathf.Max(0, layer);
     }
 
+    /// <summary>
+    /// Moves the pack and drags its physics body along — see <see cref="WorldCard.SetGroundRestPosition"/>
+    /// for why the transform alone is not enough with Auto Sync Transforms off.
+    /// </summary>
+    public void SetGroundRestPosition(Vector3 position)
+    {
+        transform.position = position;
+        if (_rigidbody != null)
+            _rigidbody.position = position;
+    }
+
     public void SetGroundShowsBack(bool showsBack)
     {
         if (_groundShowsBack == showsBack)
@@ -1214,7 +1225,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _rigidbody,
             boxCollider,
             () => _state == PackState.World && _rigidbody != null,
-            onSettled: () => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody));
+            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody, attempt));
 
         if (_state != PackState.World || _rigidbody == null)
             yield break;

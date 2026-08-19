@@ -6,8 +6,25 @@ using UnityEngine;
 public static class CardCollisionUtility
 {
     const int MaxResolveIterations = 10;
-    const float SeparationSkin = 0.003f;
     const int OverlapBufferSize = 32;
+
+    /// <summary>
+    /// How much the overlap query box is pulled in from the collider so that merely touching a surface
+    /// does not read as being inside it. It has to stay far below a card's own half thickness (2.6 mm at
+    /// ground scale): a larger skin collapsed the query box in Y down to a plane, so a card frozen
+    /// halfway inside another card reported no overlap at all and was never pushed back out.
+    /// </summary>
+    const float SeparationSkin = 0.0003f;
+
+    /// <summary>Clearance left behind after separating, roughly a fifth of a card thickness.</summary>
+    const float SeparationPush = 0.0004f;
+
+    /// <summary>
+    /// Overlaps shallower than this are contact-offset noise from a card resting on a surface, not
+    /// penetration. Acting on them would keep re-settling every card that landed perfectly well, and
+    /// at a sixth of a card thickness they are invisible anyway.
+    /// </summary>
+    const float MinPenetration = 0.0008f;
 
     /// <summary>
     /// Unity's 1 cm project default is roughly twice a card's own physical thickness, so a flat card
@@ -68,10 +85,11 @@ public static class CardCollisionUtility
     }
 
     /// <summary>
-    /// Pushes the card out of static geometry (floor, cabinet plinths, wall bases) it is currently
-    /// inside. Returns true when the card actually had to be moved.
+    /// Pushes the card out of anything already at rest that it is currently inside — static geometry
+    /// (floor, cabinet plinths, wall bases) as well as cards and packs that have already settled.
+    /// Returns true when the card actually had to be moved.
     /// </summary>
-    public static bool ResolveStaticPenetration(
+    public static bool ResolveRestingPenetration(
         Transform cardTransform,
         BoxCollider cardCollider,
         WorldCard self,
@@ -100,9 +118,9 @@ public static class CardCollisionUtility
     {
         Vector3 center = cardTransform.TransformPoint(cardCollider.center);
         Vector3 halfExtents = Vector3.Scale(cardCollider.size * 0.5f, cardTransform.lossyScale);
-        halfExtents.x = Mathf.Max(halfExtents.x - SeparationSkin, 0.001f);
-        halfExtents.y = Mathf.Max(halfExtents.y - SeparationSkin, 0.001f);
-        halfExtents.z = Mathf.Max(halfExtents.z - SeparationSkin, 0.001f);
+        halfExtents.x = Mathf.Max(halfExtents.x - SeparationSkin, 0.0002f);
+        halfExtents.y = Mathf.Max(halfExtents.y - SeparationSkin, 0.0002f);
+        halfExtents.z = Mathf.Max(halfExtents.z - SeparationSkin, 0.0002f);
 
         int overlapCount = Physics.OverlapBoxNonAlloc(
             center,
@@ -116,7 +134,7 @@ public static class CardCollisionUtility
         for (int i = 0; i < overlapCount; i++)
         {
             Collider other = OverlapBuffer[i];
-            if (ShouldIgnoreCollider(other, cardCollider, self))
+            if (ShouldIgnoreCollider(other, cardCollider, self, body))
                 continue;
 
             if (!Physics.ComputePenetration(
@@ -132,9 +150,12 @@ public static class CardCollisionUtility
                 continue;
             }
 
+            if (distance <= MinPenetration)
+                continue;
+
             // Hard teleport, not MovePosition: this runs on an already-resting body, and with
             // Auto Sync Transforms off the solver only sees the new pose through Rigidbody.position.
-            cardTransform.position += direction * (distance + SeparationSkin);
+            cardTransform.position += direction * (distance + SeparationPush);
             if (body != null)
                 body.position = cardTransform.position;
 
@@ -144,23 +165,27 @@ public static class CardCollisionUtility
         return moved;
     }
 
-    static bool ShouldIgnoreCollider(Collider other, Collider selfCollider, WorldCard self)
+    static bool ShouldIgnoreCollider(Collider other, Collider selfCollider, WorldCard self, Rigidbody body)
     {
         if (other == null || other == selfCollider)
             return true;
         if (other.isTrigger)
             return true;
 
-        WorldCard otherCard = other.GetComponentInParent<WorldCard>();
-        if (otherCard != null && otherCard != self)
+        // Own colliders, including a pack's inner card proxy — separating from those would shove the
+        // item across the room chasing its own body.
+        if (body != null && other.attachedRigidbody == body)
             return true;
-
-        if (other.GetComponentInParent<WorldBoosterPack>() != null)
+        if (self != null && other.GetComponentInParent<WorldCard>() == self)
             return true;
 
         if (other.GetComponentInParent<FirstPersonController>() != null)
             return true;
 
+        // Anything the solver is still moving will sort itself out on its own; only items already at
+        // rest are separated here. Settled cards and packs keep a frozen kinematic body, so they pass
+        // this test — without that, two cards that crossed while landing froze inside each other and
+        // nothing could ever push them apart again.
         Rigidbody otherBody = other.attachedRigidbody;
         if (otherBody != null && !otherBody.isKinematic)
             return true;
