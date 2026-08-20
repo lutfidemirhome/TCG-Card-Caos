@@ -77,10 +77,12 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         Debug.Log(
             "TCG Card Caos: Play mode card setup complete ("
-            + CardScatterUtility.CountScatterCards()
+            + (CardScatterUtility.CountScatterCards() - CardScatterUtility.CountScatterPsaCards())
             + " ground cards + "
             + CardScatterUtility.CountScatterPacks()
-            + " packs).");
+            + " packs + "
+            + CardScatterUtility.CountScatterPsaCards()
+            + " PSA cards).");
 
         IsGameplayReady = true;
         _playModeSetupRoutine = null;

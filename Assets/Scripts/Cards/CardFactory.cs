@@ -40,6 +40,34 @@ public static class CardFactory
         return card;
     }
 
+    /// <summary>PSA slab kart — aynı el/yer fiziği, 3D holder görseli.</summary>
+    public static WorldCard CreateWorldPsaCard(
+        Vector3 position,
+        Quaternion rotation,
+        int variantIndex = 1,
+        string cardName = null)
+    {
+        CardArtLibrary.EnsureLoaded();
+
+        string resolvedName = string.IsNullOrWhiteSpace(cardName)
+            ? "PSA Card " + Mathf.Clamp(variantIndex, 1, PsaArtLibrary.VariantCount)
+            : cardName;
+
+        var root = new GameObject(resolvedName);
+        CardLayers.ApplyToGameObject(root);
+        root.transform.SetPositionAndRotation(position, rotation);
+        root.transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
+
+        var collider = root.AddComponent<BoxCollider>();
+        CardCollisionUtility.ApplyFlatWorldSize(collider);
+        collider.isTrigger = true;
+        collider.enabled = false;
+
+        var card = root.AddComponent<WorldCard>();
+        card.InitializePsa(variantIndex);
+        return card;
+    }
+
     public static WorldCard CreateWorldCard(
         Vector3 position,
         Quaternion rotation,

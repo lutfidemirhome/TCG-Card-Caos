@@ -21,6 +21,7 @@ public static class CardScatterUtility
     public const string ScatterRootName = "ScatteredCards";
     public const string TestCardPrefix = "Card_";
     public const int DefaultPackScatterCount = 5;
+    public const int DefaultPsaScatterCount = 4;
     public const string TestPackPrefix = "BoosterPack_";
     public static int PackReservedCardCount => DefaultPackScatterCount * CardDimensions.CardsPerBoosterPack;
     public static int GroundScatterCount => FullScatterCount - PackReservedCardCount;
@@ -250,6 +251,7 @@ public static class CardScatterUtility
         }
 
         SpawnScatteredPacks(scatterRoot, groundY, positions, packAssignments);
+        SpawnScatteredPsaCards(scatterRoot, groundY, positions);
 
         CardGroundStack.RebuildAll();
     }
@@ -324,6 +326,53 @@ public static class CardScatterUtility
         }
 
         SpawnScatteredPacks(scatterRoot, groundY, positions, packAssignments);
+        SpawnScatteredPsaCards(scatterRoot, groundY, positions);
+    }
+
+    static void SpawnScatteredPsaCards(
+        Transform scatterRoot,
+        float groundY,
+        IReadOnlyList<Vector2> occupiedCardPositions)
+    {
+        if (scatterRoot == null)
+            return;
+
+        int psaCount = Mathf.Min(DefaultPsaScatterCount, PsaArtLibrary.VariantCount);
+        var avoid = new List<Vector2>(
+            (occupiedCardPositions != null ? occupiedCardPositions.Count : 0) + DefaultPackScatterCount + 8);
+        if (occupiedCardPositions != null)
+            avoid.AddRange(occupiedCardPositions);
+
+        for (int i = 0; i < scatterRoot.childCount; i++)
+        {
+            Transform child = scatterRoot.GetChild(i);
+            if (child.GetComponent<WorldBoosterPack>() == null)
+                continue;
+
+            Vector3 worldPos = child.position;
+            avoid.Add(new Vector2(worldPos.x, worldPos.z));
+        }
+
+        var psaPositions = GeneratePackScatterPositions(psaCount, avoid);
+        HashSet<int> backFacingIndices = PickBackFacingIndices(psaCount);
+
+        for (int i = 0; i < psaCount; i++)
+        {
+            int variantIndex = i + 1;
+            Vector2 xz = psaPositions[i];
+            var position = new Vector3(xz.x, groundY, xz.y);
+            var rotation = GenerateScatterRotation();
+
+            WorldCard card = CardFactory.CreateWorldPsaCard(
+                position,
+                rotation,
+                variantIndex,
+                cardName: "PSA_" + variantIndex);
+
+            card.SetGroundShowsBack(backFacingIndices.Contains(i));
+            card.transform.SetParent(scatterRoot, true);
+            CardGroundStack.ApplyStackHeight(card, placeOnTop: false);
+        }
     }
 
     static void SpawnScatteredPacks(
@@ -479,6 +528,23 @@ public static class CardScatterUtility
         for (int i = 0; i < scatterRoot.childCount; i++)
         {
             if (scatterRoot.GetChild(i).GetComponent<WorldBoosterPack>() != null)
+                count++;
+        }
+
+        return count;
+    }
+
+    public static int CountScatterPsaCards()
+    {
+        Transform scatterRoot = FindScatterRootTransform();
+        if (scatterRoot == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < scatterRoot.childCount; i++)
+        {
+            WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+            if (card != null && card.UsesPsaSlab)
                 count++;
         }
 
@@ -921,6 +987,9 @@ public static class CardScatterUtility
             return true;
 
         if (CountScatterPacks() < DefaultPackScatterCount)
+            return true;
+
+        if (CountScatterPsaCards() < DefaultPsaScatterCount)
             return true;
 
         if (HasInvalidScatterCards())

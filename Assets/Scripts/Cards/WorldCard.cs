@@ -31,10 +31,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     [SerializeField] string cardLabel = "Pick Up";
     [SerializeField] CardDefinition definition;
     [SerializeField] int paletteIndex;
+    [Tooltip("0 = normal kart. 1–4 = PSA slab görsel varyantı (Resources/Cards/PsaCard/psa_N).")]
+    [SerializeField] int psaVariantIndex;
 
     Collider _collider;
+    PsaCardVisualController _psaController;
     Rigidbody _rigidbody;
     Transform _cardVisual;
+    bool _handSelected;
     GameObject _outlineObject;
     GameObject _handSelectionOutlineObject;
     GameObject _shelfStatusOutlineObject;
@@ -80,6 +84,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
+    public bool UsesPsaSlab => psaVariantIndex >= 1 && psaVariantIndex <= PsaArtLibrary.VariantCount;
+    public int PsaVariantIndex => psaVariantIndex;
+    public float GroundRestLift => UsesPsaSlab && _psaController != null ? _psaController.GroundRestLift : 0f;
+    internal Transform RootTransform => transform;
+    internal Collider PhysCollider => _collider;
     public CardDefinition Definition => definition;
     public bool HasShelfRules => definition != null;
     public string ShelfCategoryId => definition != null ? definition.ShelfCategoryId : string.Empty;
@@ -89,6 +98,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public bool CanUseInstancedRendering =>
         Application.isPlaying
+        && !UsesPsaSlab
         && _handState == HandState.World
         && !_scaleTransitionActive
         && _rigidbody == null
@@ -98,6 +108,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public bool CanUseInstancedBackRendering =>
         Application.isPlaying
+        && !UsesPsaSlab
         && _handState == HandState.World
         && !_scaleTransitionActive
         && _rigidbody == null
@@ -170,9 +181,21 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         definition = cardDefinition;
         paletteIndex = palette;
+        psaVariantIndex = 0;
 
         if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
             cardLabel = "Pick Up " + definition.DisplayName;
+    }
+
+    /// <summary>PSA slab kartı — normal kart oyun mantığı, 3D holder görseli.</summary>
+    public void InitializePsa(int variantIndex)
+    {
+        definition = null;
+        paletteIndex = 0;
+        psaVariantIndex = Mathf.Clamp(variantIndex, 1, PsaArtLibrary.VariantCount);
+        cardLabel = "Pick Up PSA " + psaVariantIndex;
+        _psaController = new PsaCardVisualController(this);
+        _psaController.Build(psaVariantIndex);
     }
 
     public void Initialize(int definitionId, int palette)
@@ -374,6 +397,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.SetParent(null, true);
         EnsureCardVisual();
         ApplyHandVisualOrientation();
+        if (UsesPsaSlab && _psaController != null)
+            _psaController.AlignRootRotationForHandPickup();
         RefreshRenderMode();
     }
 
@@ -629,7 +654,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         if (_collider is BoxCollider boxCollider)
         {
-            CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
+            if (UsesPsaSlab && _psaController != null)
+                _psaController.ApplyBodyCollider();
+            else
+                CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
             boxCollider.isTrigger = false;
         }
 
@@ -651,6 +679,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void ApplyFlatWorldCollider()
     {
+        if (UsesPsaSlab && _psaController != null)
+        {
+            _psaController.ApplyBodyCollider();
+            return;
+        }
+
         if (_collider is BoxCollider boxCollider)
             CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
     }
@@ -688,6 +722,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// </summary>
     void ConvertHandVisualToWorldRoot()
     {
+        if (UsesPsaSlab && _psaController != null)
+        {
+            _psaController.ConvertHandVisualToWorldRoot();
+            ApplyWorldVisualOrientation();
+            return;
+        }
+
         EnsureCardVisual();
         if (_cardVisual == null)
             return;
@@ -752,6 +793,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void ApplyHandVisualOrientation()
     {
+        if (UsesPsaSlab && _psaController != null)
+        {
+            _psaController.ApplyHandOrientation();
+            return;
+        }
+
         if (_cardVisual == null)
             return;
 
@@ -763,6 +810,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void ApplyWorldVisualOrientation()
     {
+        if (UsesPsaSlab && _psaController != null)
+        {
+            _psaController.ApplyWorldOrientation(alignModelToGround: !HasActivePhysics);
+            _psaController.ApplyBodyCollider();
+            return;
+        }
+
         if (_cardVisual == null)
             return;
 
@@ -799,6 +853,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void SetHandSelected(bool selected)
     {
+        _handSelected = selected;
+
+        if (UsesPsaSlab && _psaController != null)
+        {
+            ReleaseHandSelectionOutline();
+            _psaController.RefreshOutlineState(_interactionHighlighted, selected);
+            return;
+        }
+
         if (selected)
             EnsureHandSelectionOutlineRenderer();
         else
@@ -932,6 +995,32 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void RefreshInteractionOutline()
     {
+        if (UsesPsaSlab && _psaController != null)
+        {
+            ReleaseInteractionOutline();
+            ReleaseHandSelectionOutline();
+
+            if (_shelfPlacementFlashRoutine != null)
+            {
+                _psaController.DisableOutline();
+                return;
+            }
+
+            if (HasShelfPlacementFeedback)
+            {
+                _psaController.DisableOutline();
+                EnsureShelfStatusOutline();
+                ApplyShelfStatusOutlineMaterial(_shelfPlacementStatus);
+                if (_shelfStatusOutlineObject != null)
+                    _shelfStatusOutlineObject.SetActive(true);
+                return;
+            }
+
+            ReleaseShelfStatusOutline();
+            _psaController.RefreshOutlineState(_interactionHighlighted, _handSelected);
+            return;
+        }
+
         if (_shelfPlacementFlashRoutine != null)
         {
             ReleaseInteractionOutline();
@@ -969,6 +1058,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         CardInstancedRenderManager.EnsureExists();
+
+        if (UsesPsaSlab)
+        {
+            ReleaseInteractionOutline();
+            ReleaseHandSelectionOutline();
+            SetWorldColliderEnabled(false);
+            RefreshRenderMode();
+            CardGroundStack.Track(this);
+            return;
+        }
+
         ReleaseCardVisual();
         ReleaseInteractionOutline();
         ReleaseShelfStatusOutline();
@@ -984,6 +1084,20 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void EnsureCardVisual()
     {
+        if (UsesPsaSlab)
+        {
+            if (_psaController == null)
+            {
+                _psaController = new PsaCardVisualController(this);
+                _psaController.Build(psaVariantIndex);
+            }
+            else
+                _psaController.EnsureVisual();
+
+            _cardVisual = _psaController.CardRef;
+            return;
+        }
+
         if (_cardVisual != null)
             return;
 
@@ -1029,6 +1143,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         ReleaseInteractionOutline();
         ReleaseHandSelectionOutline();
+
+        if (UsesPsaSlab && _psaController != null)
+        {
+            _psaController.ReleaseVisual();
+            _cardVisual = null;
+            return;
+        }
 
         if (_cardVisual == null)
             return;

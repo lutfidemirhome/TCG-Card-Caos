@@ -61,7 +61,7 @@ public static class CardGroundStack
         if (card == null)
             return CardFactory.GroundHeightOffset();
 
-        float y = GetStackedWorldY(card.GroundStackLayer);
+        float y = GetStackedWorldY(card.GroundStackLayer) + card.GroundRestLift;
         if (card.GroundStackLayer == 0)
             y += GetUniqueDepthBias(card);
 
@@ -501,7 +501,7 @@ public static class CardGroundStack
 
         Vector3 position = card.transform.position;
         float stackedY = GetDrawWorldY(card);
-        if (ShouldTakeStackedY(position.y, stackedY, maxDownwardShift, ceilingY))
+        if (ShouldTakeStackedY(position.y, stackedY, maxDownwardShift, ceilingY + card.GroundRestLift))
         {
             position.y = stackedY;
             card.SetGroundRestPosition(position);
@@ -581,7 +581,7 @@ public static class CardGroundStack
     /// Height an item is measured at when comparing stack positions. A pack's root sits a body
     /// half-thickness higher than a card's on the same surface, so its lift is taken back out.
     /// </summary>
-    static float GetStackReferenceY(WorldCard card) => card.transform.position.y;
+    static float GetStackReferenceY(WorldCard card) => card.transform.position.y - card.GroundRestLift;
 
     static float GetStackReferenceY(WorldBoosterPack pack) => pack.transform.position.y - pack.GroundRestLift;
 
