@@ -34,6 +34,7 @@ public class InteractionController : MonoBehaviour
     IInteractionHighlight _currentHighlight;
     CardInspectPreview _inspectPreview;
     PackInspectPreview _packInspectPreview;
+    PsaInspectPreview _psaInspectPreview;
     WorldCard _raycastAimedCard;
     WorldBoosterPack _raycastAimedPack;
     WorldCard _inspectPreviewTarget;
@@ -54,6 +55,7 @@ public class InteractionController : MonoBehaviour
 
         _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
         _packInspectPreview = PackInspectPreview.EnsureOn(viewCamera);
+        _psaInspectPreview = PsaInspectPreview.EnsureOn(viewCamera);
         _playerHand = PlayerCardHandResolver.FromTransformHierarchy(transform);
         BuildPromptUI();
     }
@@ -227,6 +229,7 @@ public class InteractionController : MonoBehaviour
             _inspectPreviewTarget = worldCard;
             _inspectPreviewTimer = 0f;
             _inspectPreview?.Hide();
+            _psaInspectPreview?.Hide();
             ClearPromptAndHighlight();
             CardInteractionFocus.ClearFocus();
         }
@@ -274,7 +277,10 @@ public class InteractionController : MonoBehaviour
 
         if (_inspectPreviewTarget != null)
         {
-            _inspectPreview?.Hide();
+            if (_inspectPreviewTarget.UsesPsaSlab)
+                _psaInspectPreview?.Hide();
+            else
+                _inspectPreview?.Hide();
             _inspectPreviewTarget = null;
             _inspectPreviewTimer = 0f;
         }
@@ -307,10 +313,23 @@ public class InteractionController : MonoBehaviour
 
         CardInteractionFocus.SetFocusedCard(worldCard);
 
-        if (_inspectPreview == null)
-            _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
+        if (worldCard.UsesPsaSlab)
+        {
+            if (_psaInspectPreview == null)
+                _psaInspectPreview = PsaInspectPreview.EnsureOn(viewCamera);
 
-        _inspectPreview.Show(worldCard);
+            _inspectPreview?.Hide();
+            _psaInspectPreview.Show(worldCard);
+        }
+        else
+        {
+            if (_inspectPreview == null)
+                _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
+
+            _psaInspectPreview?.Hide();
+            _inspectPreview.Show(worldCard);
+        }
+
         ShowPrompt(worldCard, worldCard.GetPromptText());
     }
 

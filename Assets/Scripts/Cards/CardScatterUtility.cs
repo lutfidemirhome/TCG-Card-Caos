@@ -337,7 +337,14 @@ public static class CardScatterUtility
         if (scatterRoot == null)
             return;
 
-        int psaCount = Mathf.Min(DefaultPsaScatterCount, PsaArtLibrary.VariantCount);
+        PsaCabinet cabinet = UnityEngine.Object.FindFirstObjectByType<PsaCabinet>();
+        if (cabinet != null)
+        {
+            cabinet.SpawnDefaultSlabs(scatterRoot);
+            return;
+        }
+
+        int psaCount = Mathf.Min(DefaultPsaScatterCount, PsaArtLibrary.CabinetSlotCount);
         var avoid = new List<Vector2>(
             (occupiedCardPositions != null ? occupiedCardPositions.Count : 0) + DefaultPackScatterCount + 8);
         if (occupiedCardPositions != null)
@@ -358,7 +365,7 @@ public static class CardScatterUtility
 
         for (int i = 0; i < psaCount; i++)
         {
-            int variantIndex = i + 1;
+            int slotNumber = PsaArtLibrary.CabinetSlotNumbers[i];
             Vector2 xz = psaPositions[i];
             var position = new Vector3(xz.x, groundY, xz.y);
             var rotation = GenerateScatterRotation();
@@ -366,8 +373,9 @@ public static class CardScatterUtility
             WorldCard card = CardFactory.CreateWorldPsaCard(
                 position,
                 rotation,
-                variantIndex,
-                cardName: "PSA_" + variantIndex);
+                slotNumber,
+                variantIndex: 1,
+                cardName: $"PSA_{slotNumber}_1");
 
             card.SetGroundShowsBack(backFacingIndices.Contains(i));
             card.transform.SetParent(scatterRoot, true);

@@ -74,6 +74,7 @@ static class GamePlayBootstrap
 
         CardInspectPreview.EnsureOn(camera);
         PackInspectPreview.EnsureOn(camera);
+        PsaInspectPreview.EnsureOn(camera);
     }
 
     static void EnsurePlayerHand()

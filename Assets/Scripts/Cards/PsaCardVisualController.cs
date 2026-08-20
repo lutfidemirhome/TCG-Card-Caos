@@ -13,6 +13,7 @@ public sealed class PsaCardVisualController
     const float FootprintWidthFitMultiplier = 1.06f;
 
     readonly WorldCard _owner;
+    int _slotNumber = PsaArtLibrary.MinCabinetSlotNumber;
     int _variantIndex = 1;
     Transform _cardRef;
     Transform _psaModel;
@@ -45,9 +46,10 @@ public sealed class PsaCardVisualController
         }
     }
 
-    public void Build(int variantIndex)
+    public void Build(int slotNumber, int variantIndex)
     {
-        _variantIndex = Mathf.Clamp(variantIndex, 1, PsaArtLibrary.VariantCount);
+        _slotNumber = PsaArtLibrary.ClampCabinetSlotNumber(slotNumber);
+        _variantIndex = Mathf.Max(1, variantIndex);
         EnsureVisual();
         RefreshLayout();
         ApplyWorldOrientation(alignModelToGround: true);
@@ -220,7 +222,7 @@ public sealed class PsaCardVisualController
         instance.name = PsaModelChildName;
         _psaModel = instance.transform;
         _visualBaseScale = Vector3.one;
-        PsaArtLibrary.ApplySlabMaterials(_psaModel, _variantIndex);
+        PsaArtLibrary.ApplySlabMaterials(_psaModel, _slotNumber, _variantIndex);
         StripVisualColliders(_psaModel);
     }
 
@@ -241,7 +243,7 @@ public sealed class PsaCardVisualController
         {
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
-            renderer.sharedMaterial = PsaArtLibrary.CreateSlabMaterial(PsaArtLibrary.GetVariantTexture(_variantIndex));
+            renderer.sharedMaterial = PsaArtLibrary.CreateSlabMaterial(_slotNumber, _variantIndex);
         }
 
         StripVisualColliders(visualGo.transform);

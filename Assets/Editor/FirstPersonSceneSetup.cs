@@ -116,6 +116,7 @@ public static class FirstPersonSceneSetup
             camera.gameObject.AddComponent<AudioListener>();
         CardInspectPreview.EnsureOn(camera);
         PackInspectPreview.EnsureOn(camera);
+        PsaInspectPreview.EnsureOn(camera);
 
         if (player.GetComponent<PlayerCardHand>() == null)
             player.AddComponent<PlayerCardHand>();

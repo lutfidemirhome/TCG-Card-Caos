@@ -31,7 +31,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     [SerializeField] string cardLabel = "Pick Up";
     [SerializeField] CardDefinition definition;
     [SerializeField] int paletteIndex;
-    [Tooltip("0 = normal kart. 1–4 = PSA slab görsel varyantı (Resources/Cards/PsaCard/psa_N).")]
+    [Tooltip("0 = normal kart. 7–10 = PSA dolap slot numarası.")]
+    [SerializeField] int psaSlotNumber;
+    [Tooltip("PSA slot içindeki varyant (psa_7_1 → 1, psa_7_2 → 2).")]
     [SerializeField] int psaVariantIndex;
 
     Collider _collider;
@@ -84,8 +86,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
-    public bool UsesPsaSlab => psaVariantIndex >= 1 && psaVariantIndex <= PsaArtLibrary.VariantCount;
-    public int PsaVariantIndex => psaVariantIndex;
+    public bool UsesPsaSlab => PsaArtLibrary.IsCabinetSlotNumber(psaSlotNumber);
+    public int PsaSlotNumber => psaSlotNumber;
+    public int PsaVariantIndex => Mathf.Max(1, psaVariantIndex);
     public float GroundRestLift => UsesPsaSlab && _psaController != null ? _psaController.GroundRestLift : 0f;
     internal Transform RootTransform => transform;
     internal Collider PhysCollider => _collider;
@@ -181,6 +184,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         definition = cardDefinition;
         paletteIndex = palette;
+        psaSlotNumber = 0;
         psaVariantIndex = 0;
 
         if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
@@ -188,14 +192,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     }
 
     /// <summary>PSA slab kartı — normal kart oyun mantığı, 3D holder görseli.</summary>
-    public void InitializePsa(int variantIndex)
+    public void InitializePsa(int slotNumber, int variantIndex = 1)
     {
         definition = null;
         paletteIndex = 0;
-        psaVariantIndex = Mathf.Clamp(variantIndex, 1, PsaArtLibrary.VariantCount);
-        cardLabel = "Pick Up PSA " + psaVariantIndex;
+        psaSlotNumber = PsaArtLibrary.ClampCabinetSlotNumber(slotNumber);
+        psaVariantIndex = Mathf.Max(1, variantIndex);
+        cardLabel = $"Pick Up PSA {psaSlotNumber}-{psaVariantIndex}";
         _psaController = new PsaCardVisualController(this);
-        _psaController.Build(psaVariantIndex);
+        _psaController.Build(psaSlotNumber, psaVariantIndex);
     }
 
     public void Initialize(int definitionId, int palette)
@@ -1089,7 +1094,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             if (_psaController == null)
             {
                 _psaController = new PsaCardVisualController(this);
-                _psaController.Build(psaVariantIndex);
+                _psaController.Build(psaSlotNumber, psaVariantIndex);
             }
             else
                 _psaController.EnsureVisual();

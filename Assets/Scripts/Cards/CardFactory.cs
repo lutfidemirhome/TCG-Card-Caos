@@ -44,13 +44,17 @@ public static class CardFactory
     public static WorldCard CreateWorldPsaCard(
         Vector3 position,
         Quaternion rotation,
+        int slotNumber,
         int variantIndex = 1,
         string cardName = null)
     {
         CardArtLibrary.EnsureLoaded();
 
+        slotNumber = PsaArtLibrary.ClampCabinetSlotNumber(slotNumber);
+        variantIndex = Mathf.Max(1, variantIndex);
+
         string resolvedName = string.IsNullOrWhiteSpace(cardName)
-            ? "PSA Card " + Mathf.Clamp(variantIndex, 1, PsaArtLibrary.VariantCount)
+            ? $"PSA {slotNumber}-{variantIndex}"
             : cardName;
 
         var root = new GameObject(resolvedName);
@@ -64,7 +68,7 @@ public static class CardFactory
         collider.enabled = false;
 
         var card = root.AddComponent<WorldCard>();
-        card.InitializePsa(variantIndex);
+        card.InitializePsa(slotNumber, variantIndex);
         return card;
     }
 
