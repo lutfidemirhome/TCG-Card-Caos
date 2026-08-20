@@ -11,6 +11,11 @@ public class PsaCabinetSlotEditor : Editor
         var slot = (PsaCabinetSlot)target;
         EditorGUILayout.Space(6f);
 
+        if (GUILayout.Button("Create / Refresh Slot Marker"))
+        {
+            slot.TryCreateSlotMarker();
+        }
+
         if (GUILayout.Button("Create / Refresh Slot Number Label"))
         {
             slot.TryCreateLabelObject();

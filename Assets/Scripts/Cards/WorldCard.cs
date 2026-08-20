@@ -61,6 +61,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Transform _shelfFlightSlot;
     float _shelfFlightSurfacePadding;
     System.Action _onShelfFlightComplete;
+    bool _usePsaCabinetPlacement;
+    bool _psaCabinetPlaced;
+    Vector3 _psaCabinetLocalPosition;
+    Quaternion _psaCabinetLocalRotation;
+    Vector3 _psaCabinetLocalScale = Vector3.one * CardDimensions.GroundCardScale;
     float _scaleFrom = 1f;
     float _scaleTo = 1f;
     float _scaleTransitionElapsed;
@@ -386,6 +391,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (shelfSlot != null)
             shelfSlot.ClearIfMatches(this);
 
+        PsaCabinetSlot psaCabinetSlot = GetComponentInParent<PsaCabinetSlot>();
+        if (psaCabinetSlot != null)
+            psaCabinetSlot.ClearIfMatches(this);
+
+        _psaCabinetPlaced = false;
+
         ClearShelfPlacementStatus();
         CardInteractionFocus.ClearFocus();
         CardGroundQuery.UntrackShelfCard(this);
@@ -516,6 +527,27 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         ApplyRevealVisualOrientation(frontT);
     }
 
+    public void BeginPsaCabinetPlacementFlight(
+        Transform anchor,
+        Vector3 localPosition,
+        Quaternion localRotation,
+        Vector3 localScale,
+        float targetWorldScale,
+        float duration,
+        float arcHeight,
+        System.Action onComplete = null)
+    {
+        if (anchor == null)
+            return;
+
+        _usePsaCabinetPlacement = true;
+        _psaCabinetLocalPosition = localPosition;
+        _psaCabinetLocalRotation = localRotation;
+        _psaCabinetLocalScale = localScale;
+
+        BeginShelfFlight(anchor, targetWorldScale, duration, arcHeight, 0f, onComplete);
+    }
+
     public void BeginShelfFlight(
         Transform slot,
         float targetWorldScale,
@@ -527,6 +559,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (slot == null)
             return;
 
+        _usePsaCabinetPlacement = false;
         _handState = HandState.FlyingToShelf;
         _handAnchor = null;
         _flightTargetHandScale = targetWorldScale;
@@ -549,7 +582,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         transform.SetParent(null, true);
         EnsureCardVisual();
-        ApplyShelfVisualOrientation();
+        if (UsesPsaSlab && _psaController != null)
+            _psaController.ApplyCabinetSlotOrientation();
+        else
+            ApplyShelfVisualOrientation();
         RefreshRenderMode();
     }
 
@@ -568,10 +604,20 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         Transform slot = _shelfFlightSlot;
         float surfacePadding = _shelfFlightSurfacePadding;
+        bool usePsaCabinetPlacement = _usePsaCabinetPlacement;
+        Vector3 psaLocalPosition = _psaCabinetLocalPosition;
+        Quaternion psaLocalRotation = _psaCabinetLocalRotation;
+        Vector3 psaLocalScale = _psaCabinetLocalScale;
         _shelfFlightSlot = null;
+        _usePsaCabinetPlacement = false;
 
         if (slot != null)
-            PlaceOnShelfSlot(slot, surfacePadding);
+        {
+            if (usePsaCabinetPlacement)
+                PlaceOnPsaCabinetSlot(slot, psaLocalPosition, psaLocalRotation, psaLocalScale);
+            else
+                PlaceOnShelfSlot(slot, surfacePadding);
+        }
 
         System.Action callback = _onShelfFlightComplete;
         _onShelfFlightComplete = null;
@@ -968,6 +1014,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void ApplyActiveVisualOrientation()
     {
+        if (UsesPsaSlab && _psaController != null)
+        {
+            ApplyPsaVisualOrientation();
+            return;
+        }
+
         if (_cardVisual == null)
             return;
 
@@ -997,6 +1049,26 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         ApplyWorldVisualOrientation();
     }
+
+    void ApplyPsaVisualOrientation()
+    {
+        if (_handState == HandState.Held || _handState == HandState.FlyingToHand)
+        {
+            _psaController.ApplyHandOrientation();
+            return;
+        }
+
+        if (_psaCabinetPlaced || IsInPsaCabinetSlot() || (_handState == HandState.FlyingToShelf && _usePsaCabinetPlacement))
+        {
+            _psaController.ApplyCabinetSlotOrientation();
+            return;
+        }
+
+        _psaController.ApplyWorldOrientation(alignModelToGround: !HasActivePhysics);
+        _psaController.ApplyBodyCollider();
+    }
+
+    bool IsInPsaCabinetSlot() => GetComponentInParent<PsaCabinetSlot>() != null;
 
     void RefreshInteractionOutline()
     {
@@ -1329,6 +1401,41 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
 
         ReleaseCardVisual();
+        RefreshRenderMode();
+    }
+
+    /// <summary>
+    /// Parents a PSA slab into a cabinet holder anchor using a tuned local pose.
+    /// </summary>
+    public void PlaceOnPsaCabinetSlot(
+        Transform anchor,
+        Vector3 localPosition,
+        Quaternion localRotation,
+        Vector3 localScale)
+    {
+        if (anchor == null)
+            return;
+
+        _psaCabinetPlaced = true;
+        _handState = HandState.World;
+        SetInteractionHighlight(false);
+        SetHandSelected(false);
+        RemovePhysics();
+        _scaleTransitionActive = false;
+
+        if (_collider != null)
+            _collider.enabled = false;
+
+        transform.SetParent(anchor, false);
+        transform.localPosition = localPosition;
+        transform.localRotation = localRotation;
+        transform.localScale = localScale;
+
+        if (UsesPsaSlab && _psaController != null)
+            _psaController.ApplyCabinetSlotOrientation();
+
+        CardInstancedRenderManager.ReleaseFromGround(this);
+        SetPlayerAimFocus(false);
         RefreshRenderMode();
     }
 

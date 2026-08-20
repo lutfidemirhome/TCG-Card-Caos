@@ -155,6 +155,23 @@ public sealed class PsaCardVisualController
         ApplyModelLocalTransform();
     }
 
+    /// <summary>
+    /// Upright PSA slab in a cabinet slot marker (+Z = face toward player).
+    /// </summary>
+    public static Quaternion GetCabinetSlotCardRefLocalRotation() => Quaternion.identity;
+
+    public void ApplyCabinetSlotOrientation()
+    {
+        EnsureVisual();
+        if (_cardRef == null)
+            return;
+
+        _cardRef.localPosition = Vector3.zero;
+        _cardRef.localRotation = GetCabinetSlotCardRefLocalRotation();
+        _cardRef.localScale = Vector3.one;
+        ApplyModelLocalTransform();
+    }
+
     public void ApplyBodyCollider()
     {
         if (_cardRef == null || !(_owner.PhysCollider is BoxCollider boxCollider))

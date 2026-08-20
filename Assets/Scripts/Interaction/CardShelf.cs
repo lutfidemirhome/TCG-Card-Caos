@@ -245,7 +245,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (hand.HasSelectedHeldCard() && !aimOnOccupied)
         {
             WorldCard selectedCard = hand.SelectedHeldCard;
-            if (selectedCard == null)
+            if (selectedCard == null || selectedCard.UsesPsaSlab)
             {
                 HidePlacementOutline();
                 return string.Empty;
@@ -283,7 +283,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         RefreshOccupancy();
         CardShelfSlot slot = FindAimTargetSlot();
         WorldCard selectedCard = hand.SelectedHeldCard;
-        if (slot == null || selectedCard == null || !CanPlaceCardInSlot(selectedCard, slot))
+        if (slot == null || selectedCard == null || selectedCard.UsesPsaSlab || !CanPlaceCardInSlot(selectedCard, slot))
             return;
 
         if (!hand.TryTakeSelectedHeldCard(out WorldCard card))

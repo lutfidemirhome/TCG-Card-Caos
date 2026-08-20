@@ -150,7 +150,7 @@ public class InteractionController : MonoBehaviour
         {
             _raycastAimedPack = null;
             ClearDelayedInspectUiState();
-            ClearActiveShelfAim();
+            ClearActivePlacementAims();
             UpdateSelectedPackPrompt();
             return;
         }
@@ -162,17 +162,29 @@ public class InteractionController : MonoBehaviour
         if (interactable is WorldBoosterPack)
             UpdateSelectedPackPrompt(clearOnly: true);
 
-        if (interactable is CardShelf shelf)
+        if (interactable is PsaCabinetSlot psaSlot)
+        {
+            if (_currentTarget is CardShelf previousShelf)
+                previousShelf.ClearAim();
+            if (_currentTarget is PsaCabinetSlot previousPsaSlot && !ReferenceEquals(previousPsaSlot, psaSlot))
+                previousPsaSlot.ClearAim();
+
+            ClearDelayedInspectUiState();
+            psaSlot.SetAimHit(FindPsaSlotHit(HitBuffer, hitCount, psaSlot));
+        }
+        else if (interactable is CardShelf shelf)
         {
             if (_currentTarget is CardShelf previousShelf && !ReferenceEquals(previousShelf, shelf))
                 previousShelf.ClearAim();
+            if (_currentTarget is PsaCabinetSlot previousPsaSlot)
+                previousPsaSlot.ClearAim();
 
             ClearDelayedInspectUiState();
             shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf));
         }
         else
         {
-            ClearActiveShelfAim();
+            ClearActivePlacementAims();
             ClearShelfAimForNonShelfTarget(interactable);
         }
 
@@ -195,6 +207,8 @@ public class InteractionController : MonoBehaviour
         {
             if (interactable is CardShelf emptyShelf)
                 emptyShelf.ClearAim();
+            if (interactable is PsaCabinetSlot emptyPsaSlot)
+                emptyPsaSlot.ClearAim();
             ClearTarget();
             return;
         }
@@ -359,6 +373,9 @@ public class InteractionController : MonoBehaviour
         CardShelf bestShelf = null;
         float bestShelfDistance = float.MaxValue;
 
+        PsaCabinetSlot bestPsaSlot = null;
+        float bestPsaSlotDistance = float.MaxValue;
+
         IInteractable bestOther = null;
         float bestOtherDistance = float.MaxValue;
 
@@ -367,6 +384,18 @@ public class InteractionController : MonoBehaviour
             Collider collider = hits[i].collider;
             if (collider == null)
                 continue;
+
+            PsaCabinetSlot psaSlot = collider.GetComponentInParent<PsaCabinetSlot>();
+            if (psaSlot != null)
+            {
+                if (psaSlot.IsAimCollider(collider) && hits[i].distance < bestPsaSlotDistance)
+                {
+                    bestPsaSlotDistance = hits[i].distance;
+                    bestPsaSlot = psaSlot;
+                }
+
+                continue;
+            }
 
             CardShelf shelf = collider.GetComponentInParent<CardShelf>();
             if (shelf != null)
@@ -391,16 +420,33 @@ public class InteractionController : MonoBehaviour
             }
         }
 
+        if (hand != null && hand.HasSelectedHeldCard())
+        {
+            WorldCard heldCard = hand.SelectedHeldCard;
+            if (heldCard != null && heldCard.UsesPsaSlab && bestPsaSlot != null)
+            {
+                if (!InteractionOcclusion.IsOccluded(ray, bestPsaSlotDistance, interactDistance)
+                    && bestPsaSlot.CanPlaceHeldCard(heldCard))
+                {
+                    return bestPsaSlot;
+                }
+            }
+        }
+
         if (hand != null && hand.HasSelectedHeldCard() && bestShelf != null)
         {
-            if (!InteractionOcclusion.IsOccluded(ray, bestShelfDistance, interactDistance))
+            WorldCard heldCard = hand.SelectedHeldCard;
+            if (heldCard == null || !heldCard.UsesPsaSlab)
             {
-                Vector3 aim = hitCount > 0
-                    ? FindShelfHit(hits, hitCount, bestShelf).point
-                    : bestShelf.transform.position;
+                if (!InteractionOcclusion.IsOccluded(ray, bestShelfDistance, interactDistance))
+                {
+                    Vector3 aim = hitCount > 0
+                        ? FindShelfHit(hits, hitCount, bestShelf).point
+                        : bestShelf.transform.position;
 
-                if (!bestShelf.IsAimOnOccupiedSlot(aim))
-                    return bestShelf;
+                    if (!bestShelf.IsAimOnOccupiedSlot(aim))
+                        return bestShelf;
+                }
             }
         }
 
@@ -425,16 +471,36 @@ public class InteractionController : MonoBehaviour
         return null;
     }
 
-    void ClearActiveShelfAim()
+    void ClearActivePlacementAims()
     {
         if (_currentTarget is CardShelf shelf)
             shelf.ClearAim();
+        if (_currentTarget is PsaCabinetSlot psaSlot)
+            psaSlot.ClearAim();
     }
+
+    void ClearActiveShelfAim() => ClearActivePlacementAims();
 
     void ClearShelfAimForNonShelfTarget(IInteractable interactable)
     {
         if (interactable is WorldCard worldCard)
             worldCard.GetComponentInParent<CardShelf>()?.ClearAim();
+    }
+
+    static RaycastHit FindPsaSlotHit(RaycastHit[] hits, int hitCount, PsaCabinetSlot slot)
+    {
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider collider = hits[i].collider;
+            if (collider != null
+                && collider.GetComponentInParent<PsaCabinetSlot>() == slot
+                && slot.IsAimCollider(collider))
+            {
+                return hits[i];
+            }
+        }
+
+        return default;
     }
 
     static RaycastHit FindShelfHit(RaycastHit[] hits, int hitCount, CardShelf shelf)
@@ -589,6 +655,8 @@ public class InteractionController : MonoBehaviour
     {
         if (_currentTarget is CardShelf shelf)
             shelf.ClearAim();
+        if (_currentTarget is PsaCabinetSlot psaSlot)
+            psaSlot.ClearAim();
 
         ClearDelayedInspectUiState();
         ClearPromptAndHighlight();
@@ -645,6 +713,8 @@ public class InteractionController : MonoBehaviour
         {
             if (_currentTarget is CardShelf previousShelf)
                 previousShelf.ClearAim();
+            if (_currentTarget is PsaCabinetSlot previousPsaSlot)
+                previousPsaSlot.ClearAim();
 
             ClearHighlight();
             _currentTarget = interactable;
