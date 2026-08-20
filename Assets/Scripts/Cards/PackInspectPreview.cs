@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public class PackInspectPreview : MonoBehaviour
 {
     [SerializeField] Vector2 anchoredPosition = new Vector2(620f, 40f);
-    [SerializeField] Vector2 packSize = new Vector2(320f, 448f);
+    [SerializeField] Vector2 packSize = new Vector2(416f, 582.4f);
 
     Canvas _canvas;
     RectTransform _previewRoot;

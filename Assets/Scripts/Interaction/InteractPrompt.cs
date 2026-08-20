@@ -5,5 +5,5 @@ public static class InteractPrompt
 
 public static class PackActionPrompt
 {
-    public static string Format(string action) => "Press [Enter] or Right Click To " + action;
+    public static string Format(string action) => "Press [F] or Right Click To " + action;
 }

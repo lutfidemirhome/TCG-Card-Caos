@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Camera-local pack opening: center reveal, five cards with backs first, flip to fronts,
-/// wait for Enter, then fly into the hand fan.
+/// wait for F, then fly into the hand fan.
 /// </summary>
 public static class PackOpenSequence
 {
@@ -174,7 +174,7 @@ public static class PackOpenSequence
 
         yield return RevealMexicanWaveRoutine(revealCards, revealScale);
 
-        // Hold the reveal screen until the player presses Enter to collect cards into the hand.
+        // Hold the reveal screen until the player presses F to collect cards into the hand.
         hand.SetAwaitingRevealCollect(true);
         while (!hand.ConsumeRevealCollectRequest())
             yield return null;

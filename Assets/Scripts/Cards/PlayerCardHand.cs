@@ -59,7 +59,7 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float openSequenceDuration = 1.35f;
     [SerializeField] float openPackAnticipationHold = 1f;
     [FormerlySerializedAs("openPackKey")]
-    [SerializeField] KeyCode packActionKey = KeyCode.Return;
+    [SerializeField] KeyCode packActionKey = KeyCode.F;
 
     static readonly RaycastHit[] ThrowAimHits = new RaycastHit[8];
 
@@ -93,11 +93,11 @@ public class PlayerCardHand : MonoBehaviour
         if (Instance != null)
             return Instance.WasPackActionKeyPressedThisFrame();
 
-        return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetMouseButtonDown(1);
+        return Input.GetKeyDown(KeyCode.F) || Input.GetMouseButtonDown(1);
     }
 
     bool WasPackActionKeyPressedThisFrame() =>
-        Input.GetKeyDown(packActionKey) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetMouseButtonDown(1);
+        Input.GetKeyDown(packActionKey) || Input.GetMouseButtonDown(1);
     public bool IsHandInputLocked => _handInputLocked || _isOpeningPack;
     public bool IsPackOpenMovementLocked => _packOpenMovementLocked;
     public float OpenRevealDistance => openRevealDistance;
