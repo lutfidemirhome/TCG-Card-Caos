@@ -49,7 +49,9 @@ public class LocalizedText : MonoBehaviour
         string value = Localization.Get(key);
         // Unity YAML sometimes stores literal "\n" instead of line breaks; keep lists itemized.
         value = value.Replace("\\n", "\n").Replace("\r\n", "\n");
-        _text.text = uppercase ? value.ToUpperInvariant() : value;
+        _text.text = uppercase
+            ? GameLanguages.ToUpper(value, Localization.CurrentLanguage)
+            : value;
         EnsureFitComponent();
         UiTextFit.Apply(_text);
     }

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 /// <summary>
 /// The 12 shipping languages. Enum order defines the column order in <see cref="LocalizationTable"/>,
 /// so never reorder or remove entries once translations exist — only append.
@@ -81,6 +83,24 @@ public static class GameLanguages
         GameLanguage.Russian => ScriptGroup.Cyrillic,
         _ => ScriptGroup.Latin,
     };
+
+    /// <summary>
+    /// Uppercases copy using the active language's casing rules (e.g. Turkish i → İ, not I).
+    /// </summary>
+    public static string ToUpper(string text, GameLanguage language)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        try
+        {
+            return text.ToUpper(CultureInfo.GetCultureInfo(GetCultureCode(language)));
+        }
+        catch (CultureNotFoundException)
+        {
+            return text.ToUpperInvariant();
+        }
+    }
 
     /// <summary>Maps the player's OS language onto a shipping language, defaulting to English.</summary>
     public static GameLanguage FromSystemLanguage(UnityEngine.SystemLanguage systemLanguage) => systemLanguage switch
