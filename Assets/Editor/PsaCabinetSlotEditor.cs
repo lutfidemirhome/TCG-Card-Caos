@@ -21,6 +21,13 @@ public class PsaCabinetSlotEditor : Editor
             slot.TryCreateLabelObject();
         }
 
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.HelpBox(
+            "To add seats 8–10 inside this prefab (one shared table, no extra Counter_attlsv), "
+            + "close Prefab Mode and run:\nTCG Card Caos → PSA → Setup 4 Holders In KartTutucu_1 Prefab\n"
+            + "If labels 8–10 look wrong, run:\nTCG Card Caos → PSA → Sync KartTutucu_1 Labels From Holder 7",
+            MessageType.Info);
+
         if (GUI.changed)
         {
             slot.EnsureLabelExists();

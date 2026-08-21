@@ -190,10 +190,13 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         if (Application.isPlaying)
         {
             HideEditorPreviewForPlayMode();
+            RefreshLabelCanvasForPlayView();
             return;
         }
 
 #if UNITY_EDITOR
+        RefreshLabelCanvasForEditorView();
+
         if (IsEditingPrefabAsset())
             return;
 #endif
@@ -201,6 +204,25 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         EnsureEditorPreview();
         RefreshEditorPreviewVisibility();
     }
+
+    void RefreshLabelCanvasForPlayView()
+    {
+        if (!showSlotLabel)
+            return;
+
+        CacheLabelReferences();
+        if (_labelCanvasRect == null || !_labelCanvasRect.gameObject.activeSelf)
+            return;
+
+        ConfigureLabelCanvas(_labelCanvasRect);
+    }
+
+#if UNITY_EDITOR
+    void RefreshLabelCanvasForEditorView()
+    {
+        RefreshLabelCanvasForPlayView();
+    }
+#endif
 
     void ResolveReferences()
     {
@@ -1019,6 +1041,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         defaultVariantIndex = Mathf.Max(1, defaultVariantIndex);
         ApplyShadowFlagsOnly();
         ApplyEditorMaterialOverrides();
+        RefreshLabel();
         if (IsEditingPrefabAsset())
             return;
         SchedulePreviewRefresh();
@@ -1349,20 +1372,70 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         if (_labelCanvasRect != null)
+        {
             _labelCanvasRect.gameObject.SetActive(true);
+            ConfigureLabelCanvas(_labelCanvasRect);
+        }
 
-        ApplyLabelTransform();
+        // When labelAnchor is assigned in the prefab/scene, keep its authored transform.
+        if (labelAnchor == null)
+            ApplyLabelTransform();
+
         ApplyLabelVisuals();
     }
 
     public void EnsureLabelExists()
     {
+        Transform anchor = labelAnchor != null ? labelAnchor : transform;
+        if (anchor.Find(LabelObjectName) != null)
+        {
+            CacheLabelReferences();
+            if (_labelText != null)
+                return;
+        }
+
         CacheLabelReferences();
         if (_labelText != null)
             return;
 
         CreateLabelHierarchy();
         CacheLabelReferences();
+    }
+
+    void ConfigureLabelCanvas(RectTransform canvasRect)
+    {
+        if (canvasRect == null)
+            return;
+
+        Canvas canvas = canvasRect.GetComponent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.enabled = true;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = slotNumber;
+
+            if (Application.isPlaying)
+            {
+                if (canvas.worldCamera == null)
+                    canvas.worldCamera = Camera.main;
+            }
+#if UNITY_EDITOR
+            else
+            {
+                SceneView sceneView = SceneView.lastActiveSceneView;
+                if (sceneView != null && sceneView.camera != null)
+                    canvas.worldCamera = sceneView.camera;
+            }
+#endif
+        }
+
+        CanvasRenderer[] renderers = canvasRect.GetComponentsInChildren<CanvasRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null)
+                renderers[i].cullTransparentMesh = false;
+        }
     }
 
     void ApplyLabelVisuals()
