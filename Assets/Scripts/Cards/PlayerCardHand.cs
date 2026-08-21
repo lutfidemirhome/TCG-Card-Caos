@@ -772,7 +772,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public string GetSelectedPackPromptText()
     {
-        if (!HasHeldPack)
+        if (!IsPackSelected)
             return string.Empty;
 
         if (!IsHandInputLocked

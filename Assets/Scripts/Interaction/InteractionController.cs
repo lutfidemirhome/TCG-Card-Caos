@@ -572,7 +572,7 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        if (!clearOnly && hand != null && (hand.IsPackSelected || hand.HasHeldPack))
+        if (!clearOnly && hand != null && hand.IsPackSelected)
         {
             string prompt = hand.GetSelectedPackPromptText();
             if (!string.IsNullOrEmpty(prompt))
