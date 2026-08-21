@@ -1,0 +1,134 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ccf77ff71acd49fc8e19731703be433, type: 3}
+  m_Name: LocalizationTable
+  m_EditorClassIdentifier: 
+  entries:
+  - key: menu.new_game
+    values:
+    - New Game
+    - Yeni Oyun
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - key: menu.load_game
+    values:
+    - Load Game
+    - "Oyun Y\xFCkle"
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - key: menu.settings
+    values:
+    - Settings
+    - Ayarlar
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - key: menu.quit
+    values:
+    - Quit
+    - "\xC7\u0131k\u0131\u015F"
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - key: menu.feedback
+    values:
+    - Feedback
+    - Geri Bildirim
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - key: menu.follow_us
+    values:
+    - Follow Us
+    - Bizi Takip Edin
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - key: menu.roadmap.title
+    values:
+    - Planned For Full Release
+    - "Tam S\xFCr\xFCmde Planlanan"
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - key: menu.roadmap.items
+    values:
+    - "\u2022 5,000+ Cards\n\u2022 Larger Play Area\n\u2022 More Card Categories\n\u2022
+      More Shelves & Storage\n\u2022 Additional Card Packs\n\u2022 More Graded Cards\n\u2022
+      New Rare Card Types\n\u2022 Skills & Upgrades\n\u2022 Achievements\n\u2022
+      Quality-of-Life Improvements\n\u2026and more!"
+    - "\u2022 5.000+ Kart\n\u2022 Daha Geni\u015F Oyun Alan\u0131\n\u2022 Daha Fazla
+      Kart Kategorisi\n\u2022 Daha Fazla Raf ve Depolama\n\u2022 Ek Kart Paketleri\n\u2022
+      Daha Fazla Dereceli Kart\n\u2022 Yeni Nadir Kart T\xFCrleri\n\u2022 Yetenekler
+      ve Geli\u015Ftirmeler\n\u2022 Ba\u015Far\u0131mlar\n\u2022 Kullan\u0131m Kolayl\u0131\u011F\u0131
+      \u0130yile\u015Ftirmeleri\n\u2026ve daha fazlas\u0131!"
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 

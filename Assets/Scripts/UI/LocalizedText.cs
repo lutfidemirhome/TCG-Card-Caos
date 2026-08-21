@@ -1,0 +1,56 @@
+using TMPro;
+using UnityEngine;
+
+/// <summary>
+/// Drives a TextMeshPro label from a <see cref="LocalizationKeys"/> entry so the string updates
+/// whenever the language changes. Attach next to any TMP text that shows player-facing copy.
+/// </summary>
+[RequireComponent(typeof(TMP_Text))]
+public class LocalizedText : MonoBehaviour
+{
+    [Tooltip("Key from LocalizationKeys, e.g. menu.new_game")]
+    [SerializeField] string key;
+
+    [Tooltip("Uppercases the result. Use for headers instead of baking caps into translations.")]
+    [SerializeField] bool uppercase;
+
+    TMP_Text _text;
+
+    public string Key => key;
+
+    void Awake() => _text = GetComponent<TMP_Text>();
+
+    void OnEnable()
+    {
+        Localization.LanguageChanged += Apply;
+        Apply();
+    }
+
+    void OnDisable() => Localization.LanguageChanged -= Apply;
+
+    public void SetKey(string localizationKey)
+    {
+        key = localizationKey;
+        Apply();
+    }
+
+    void Apply()
+    {
+        if (_text == null)
+            _text = GetComponent<TMP_Text>();
+
+        if (_text == null || string.IsNullOrEmpty(key))
+            return;
+
+        string value = Localization.Get(key);
+        _text.text = uppercase ? value.ToUpperInvariant() : value;
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (!Application.isPlaying)
+            Apply();
+    }
+#endif
+}

@@ -2,7 +2,8 @@
     "name": "TCGCardCaos",
     "rootNamespace": "",
     "references": [
-        "QuickOutline.Runtime"
+        "QuickOutline.Runtime",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
