@@ -14,3 +14,11 @@ Recordings/
 unity-create.log
 __pycache__/
 *.pyc
+
+# Unity standalone player builds — never commit (GitHub 100 MB file limit).
+TCG Card Chaos/
+MonoBleedingEdge/
+*_DoNotShip/
+*.exe
+*.app
+*.resS

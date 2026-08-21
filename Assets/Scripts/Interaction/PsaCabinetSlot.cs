@@ -297,7 +297,9 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
             meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
             meshRenderer.receiveShadows = false;
+#if UNITY_EDITOR
             meshRenderer.receiveGI = ReceiveGI.LightProbes;
+#endif
         }
     }
 
