@@ -66,7 +66,20 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     MeshRenderer _previewEdgeRenderer;
     bool _previewDeferred;
     Outline _holderOutline;
-    bool _holderOutlineActive;
+    HolderOutlineMode _holderOutlineMode = HolderOutlineMode.Off;
+    Coroutine _holderPlacementFlashRoutine;
+
+    const int HolderPlacementFlashPulses = 2;
+    const float HolderPlacementFlashOnSeconds = 0.12f;
+    const float HolderPlacementFlashOffSeconds = 0.1f;
+
+    enum HolderOutlineMode
+    {
+        Off,
+        Hover,
+        Correct,
+        Incorrect,
+    }
     BoxCollider _aimCollider;
 
     struct PlacementFlightEntry
@@ -106,13 +119,13 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     void OnDestroy()
     {
-        SetHolderOutlineActive(false);
+        ClearPlacementFeedback();
     }
 
     void OnDisable()
     {
         SetEditorPreviewActive(false);
-        SetHolderOutlineActive(false);
+        ClearPlacementFeedback();
     }
 
     void LateUpdate()
@@ -257,6 +270,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         occupiedCard = null;
+        CardGroundQuery.UntrackShelfCard(card);
         RefreshEditorPreviewVisibility();
     }
 
@@ -519,6 +533,56 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         }
     }
 
+    /// <summary>Green/red placement pulse on Tutucu2_Visual instead of the placed card mesh.</summary>
+    public void NotifyPlacementFeedback(bool isCorrect)
+    {
+        if (_holderPlacementFlashRoutine != null)
+        {
+            StopCoroutine(_holderPlacementFlashRoutine);
+            _holderPlacementFlashRoutine = null;
+        }
+
+        _holderPlacementFlashRoutine = StartCoroutine(HolderPlacementFlashRoutine(isCorrect));
+    }
+
+    public void ClearPlacementFeedback()
+    {
+        if (_holderPlacementFlashRoutine != null)
+        {
+            StopCoroutine(_holderPlacementFlashRoutine);
+            _holderPlacementFlashRoutine = null;
+        }
+
+        SetHolderOutlineMode(HolderOutlineMode.Off);
+    }
+
+    /// <summary>Yellow hover while the crosshair is on a card seated in this holder.</summary>
+    public void SetOccupiedCardAimOutline(bool active)
+    {
+        if (_holderPlacementFlashRoutine != null)
+            return;
+
+        SetHolderOutlineMode(active ? HolderOutlineMode.Hover : HolderOutlineMode.Off);
+    }
+
+    System.Collections.IEnumerator HolderPlacementFlashRoutine(bool isCorrect)
+    {
+        HolderOutlineMode flashMode = isCorrect
+            ? HolderOutlineMode.Correct
+            : HolderOutlineMode.Incorrect;
+
+        for (int pulse = 0; pulse < HolderPlacementFlashPulses; pulse++)
+        {
+            SetHolderOutlineMode(flashMode);
+            yield return new WaitForSeconds(HolderPlacementFlashOnSeconds);
+            SetHolderOutlineMode(HolderOutlineMode.Off);
+            yield return new WaitForSeconds(HolderPlacementFlashOffSeconds);
+        }
+
+        _holderPlacementFlashRoutine = null;
+        SetHolderOutlineMode(HolderOutlineMode.Off);
+    }
+
     void EnsureHolderOutline()
     {
         ResolveReferences();
@@ -534,13 +598,13 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         _holderOutline.enabled = false;
     }
 
-    void SetHolderOutlineActive(bool active)
+    void SetHolderOutlineMode(HolderOutlineMode mode)
     {
-        if (_holderOutlineActive == active)
+        if (_holderOutlineMode == mode)
             return;
 
-        _holderOutlineActive = active;
-        if (!active)
+        _holderOutlineMode = mode;
+        if (mode == HolderOutlineMode.Off)
         {
             if (_holderOutline != null)
                 _holderOutline.enabled = false;
@@ -552,9 +616,17 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         CardOutlineSettings.Palette palette = CardOutlineSettings.GetPaletteOrDefaults();
-        _holderOutline.OutlineColor = palette.cardHover;
+        _holderOutline.OutlineColor = mode switch
+        {
+            HolderOutlineMode.Correct => palette.shelfCorrect,
+            HolderOutlineMode.Incorrect => palette.shelfIncorrect,
+            _ => palette.cardHover,
+        };
         _holderOutline.enabled = true;
     }
+
+    void SetHolderOutlineActive(bool active) =>
+        SetHolderOutlineMode(active ? HolderOutlineMode.Hover : HolderOutlineMode.Off);
 
     void OnEnable()
     {

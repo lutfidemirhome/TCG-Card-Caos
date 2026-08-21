@@ -924,6 +924,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void NotifyShelfPlacement(bool isCorrect)
     {
+        PsaCabinetSlot cabinetSlot = GetComponentInParent<PsaCabinetSlot>();
+        if (cabinetSlot != null)
+        {
+            cabinetSlot.NotifyPlacementFeedback(isCorrect);
+            return;
+        }
+
         if (_shelfPlacementFlashRoutine != null)
         {
             StopCoroutine(_shelfPlacementFlashRoutine);
@@ -938,6 +945,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void ClearShelfPlacementStatus()
     {
+        PsaCabinetSlot cabinetSlot = GetComponentInParent<PsaCabinetSlot>();
+        if (cabinetSlot != null)
+        {
+            cabinetSlot.ClearPlacementFeedback();
+            RefreshRenderMode();
+            return;
+        }
+
         if (_shelfPlacementFlashRoutine != null)
         {
             StopCoroutine(_shelfPlacementFlashRoutine);
@@ -1074,6 +1089,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         if (UsesPsaSlab && _psaController != null)
         {
+            PsaCabinetSlot cabinetSlot = GetComponentInParent<PsaCabinetSlot>();
+            if (cabinetSlot != null)
+            {
+                ReleaseInteractionOutline();
+                ReleaseHandSelectionOutline();
+                ReleaseShelfStatusOutline();
+                _psaController.DisableOutline();
+                cabinetSlot.SetOccupiedCardAimOutline(_interactionHighlighted);
+                return;
+            }
+
             ReleaseInteractionOutline();
             ReleaseHandSelectionOutline();
 
@@ -1436,6 +1462,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         CardInstancedRenderManager.ReleaseFromGround(this);
         SetPlayerAimFocus(false);
+        CardGroundQuery.TrackShelfCard(this);
         RefreshRenderMode();
     }
 

@@ -242,6 +242,10 @@ public static class CardGroundQuery
         HitScratch.Add(new CardRayHit { Card = candidate, Distance = distance });
     }
 
+    static bool IsOnDisplaySlot(WorldCard card) =>
+        card.GetComponentInParent<CardShelfSlot>() != null
+        || card.GetComponentInParent<PsaCabinetSlot>() != null;
+
     static bool TryRayHitCard(Ray ray, WorldCard card, float maxDistance, out float distance)
     {
         distance = float.MaxValue;
@@ -249,8 +253,8 @@ public static class CardGroundQuery
             return false;
 
         Vector3 halfExtents = GetHalfExtents(card);
-        bool onShelf = card.GetComponentInParent<CardShelfSlot>() != null;
-        Vector3 center = onShelf ? card.transform.position : card.GetGroundQueryCenter();
+        bool onDisplaySlot = IsOnDisplaySlot(card);
+        Vector3 center = onDisplaySlot ? card.transform.position : card.GetGroundQueryCenter();
 
         if (!TryRayIntersectOrientedBox(ray, center, card.transform.rotation, halfExtents, out distance))
             return false;
@@ -260,9 +264,17 @@ public static class CardGroundQuery
 
     static Vector3 GetHalfExtents(WorldCard card)
     {
+        if (card.GetComponentInParent<PsaCabinetSlot>() != null && card.UsesPsaSlab)
+        {
+            Vector3 lossyScale = card.transform.lossyScale;
+            if (PsaSlabLayoutUtility.TryGetCabinetRootBounds(out _, out _, out Vector3 size))
+            {
+                return Vector3.Scale(size * 0.5f, lossyScale);
+            }
+        }
+
         float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.GroundCardScale);
-        bool onShelf = card.GetComponentInParent<CardShelfSlot>() != null;
-        if (onShelf)
+        if (card.GetComponentInParent<CardShelfSlot>() != null)
         {
             return new Vector3(
                 CardDimensions.Width * scale * 0.5f,
