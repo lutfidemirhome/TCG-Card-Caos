@@ -18,7 +18,11 @@ public class LocalizedText : MonoBehaviour
 
     public string Key => key;
 
-    void Awake() => _text = GetComponent<TMP_Text>();
+    void Awake()
+    {
+        _text = GetComponent<TMP_Text>();
+        EnsureFitComponent();
+    }
 
     void OnEnable()
     {
@@ -43,7 +47,20 @@ public class LocalizedText : MonoBehaviour
             return;
 
         string value = Localization.Get(key);
+        // Unity YAML sometimes stores literal "\n" instead of line breaks; keep lists itemized.
+        value = value.Replace("\\n", "\n").Replace("\r\n", "\n");
         _text.text = uppercase ? value.ToUpperInvariant() : value;
+        EnsureFitComponent();
+        UiTextFit.Apply(_text);
+    }
+
+    void EnsureFitComponent()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        if (GetComponent<FitTextToBounds>() == null)
+            gameObject.AddComponent<FitTextToBounds>();
     }
 
 #if UNITY_EDITOR

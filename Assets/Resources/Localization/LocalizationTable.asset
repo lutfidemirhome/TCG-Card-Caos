@@ -22,11 +22,11 @@ MonoBehaviour:
     - Fortsetzen
     - Continuar
     - Continuar
-    - 继续
-    - 繼續
-    - 続ける
-    - 계속하기
-    - Продолжить
+    - "继续"
+    - "繼續"
+    - "続ける"
+    - "계속하기"
+    - "Продолжить"
   - key: menu.new_game
     values:
     - New Game
@@ -36,53 +36,53 @@ MonoBehaviour:
     - Neues Spiel
     - Nueva partida
     - Novo jogo
-    - 新游戏
-    - 新遊戲
-    - 新しいゲーム
-    - 새 게임
-    - Новая игра
+    - "新游戏"
+    - "新遊戲"
+    - "新しいゲーム"
+    - "새 게임"
+    - "Новая игра"
   - key: menu.load_game
     values:
     - Load Game
-    - Oyun Yükle
+    - "Oyun Yükle"
     - Charger une partie
     - Carica partita
     - Spiel laden
     - Cargar partida
     - Carregar jogo
-    - 加载游戏
-    - 載入遊戲
-    - ゲームを読み込む
-    - 게임 불러오기
-    - Загрузить игру
+    - "加载游戏"
+    - "載入遊戲"
+    - "ゲームを読み込む"
+    - "게임 불러오기"
+    - "Загрузить игру"
   - key: menu.settings
     values:
     - Settings
     - Ayarlar
-    - Paramètres
+    - "Paramètres"
     - Impostazioni
     - Einstellungen
     - Ajustes
-    - Configurações
-    - 设置
-    - 設定
-    - 設定
-    - 설정
-    - Настройки
+    - "Configurações"
+    - "设置"
+    - "設定"
+    - "設定"
+    - "설정"
+    - "Настройки"
   - key: menu.quit
     values:
     - Quit
-    - Çıkış
+    - "Çıkış"
     - Quitter
     - Esci
     - Beenden
     - Salir
     - Sair
-    - 退出
-    - 退出
-    - 終了
-    - 종료
-    - Выйти
+    - "退出"
+    - "退出"
+    - "終了"
+    - "종료"
+    - "Выйти"
   - key: menu.feedback
     values:
     - Feedback
@@ -92,11 +92,11 @@ MonoBehaviour:
     - Feedback
     - Comentarios
     - Feedback
-    - 反馈
-    - 意見回饋
-    - フィードバック
-    - 피드백
-    - Обратная связь
+    - "反馈"
+    - "意見回饋"
+    - "フィードバック"
+    - "피드백"
+    - "Обратная связь"
   - key: menu.follow_us
     values:
     - Follow Us
@@ -104,158 +104,38 @@ MonoBehaviour:
     - Suivez-nous
     - Seguici
     - Folge uns
-    - Síguenos
+    - "Síguenos"
     - Siga-nos
-    - 关注我们
-    - 關注我們
-    - フォローする
-    - 팔로우하기
-    - Подписывайтесь
+    - "关注我们"
+    - "關注我們"
+    - "フォローする"
+    - "팔로우하기"
+    - "Подписывайтесь"
   - key: menu.roadmap.title
     values:
     - Planned For Full Release
-    - Tam Sürümde Planlanan
-    - Prévu pour la version complète
+    - "Tam Sürümde Planlanan"
+    - "Prévu pour la version complète"
     - Pianificato per la versione completa
-    - Für die Vollversion geplant
-    - Planificado para la versión completa
-    - Planejado para a versão completa
-    - 完整版计划功能
-    - 完整版計畫功能
-    - 完全版で予定されている機能
-    - 정식 출시 예정 기능
-    - Запланировано в полной версии
+    - "Für die Vollversion geplant"
+    - "Planificado para la versión completa"
+    - "Planejado para a versão completa"
+    - "完整版计划功能"
+    - "完整版計畫功能"
+    - "完全版で予定されている機能"
+    - "정식 출시 예정 기능"
+    - "Запланировано в полной версии"
   - key: menu.roadmap.items
     values:
-    - "• 5,000+ Cards
-• Larger Play Area
-• More Card Categories
-• More Shelves & Storage
-• Additional Card Packs
-• More Graded Cards
-• New Rare Card Types
-• Skills & Upgrades
-• Achievements
-• Quality-of-Life Improvements
-…and more!"
-    - "• 5.000+ Kart
-• Daha Geniş Oyun Alanı
-• Daha Fazla Kart Kategorisi
-• Daha Fazla Raf ve Depolama
-• Ek Kart Paketleri
-• Daha Fazla Dereceli Kart
-• Yeni Nadir Kart Türleri
-• Yetenekler ve Geliştirmeler
-• Başarımlar
-• Kullanım Kolaylığı İyileştirmeleri
-…ve daha fazlası!"
-    - "• Plus de 5 000 cartes
-• Zone de jeu plus grande
-• Plus de catégories de cartes
-• Plus d'étagères et de stockage
-• Packs de cartes supplémentaires
-• Plus de cartes gradées
-• Nouveaux types de cartes rares
-• Compétences et améliorations
-• Succès
-• Améliorations de qualité de vie
-…et plus encore !"
-    - "• Oltre 5.000 carte
-• Area di gioco più grande
-• Più categorie di carte
-• Più scaffali e spazio di archiviazione
-• Pacchetti di carte aggiuntivi
-• Più carte classificate
-• Nuovi tipi di carte rare
-• Abilità e potenziamenti
-• Obiettivi
-• Miglioramenti della qualità della vita
-…e altro ancora!"
-    - "• Über 5.000 Karten
-• Größerer Spielbereich
-• Mehr Kartenkategorien
-• Mehr Regale & Lagerplatz
-• Zusätzliche Kartenpacks
-• Mehr bewertete Karten
-• Neue seltene Kartentypen
-• Fähigkeiten & Upgrades
-• Erfolge
-• Quality-of-Life-Verbesserungen
-…und mehr!"
-    - "• Más de 5.000 cartas
-• Área de juego más grande
-• Más categorías de cartas
-• Más estanterías y almacenamiento
-• Sobres de cartas adicionales
-• Más cartas clasificadas
-• Nuevos tipos de cartas raras
-• Habilidades y mejoras
-• Logros
-• Mejoras de calidad de vida
-…¡y mucho más!"
-    - "• Mais de 5.000 cartas
-• Área de jogo maior
-• Mais categorias de cartas
-• Mais prateleiras e armazenamento
-• Pacotes de cartas adicionais
-• Mais cartas graduadas
-• Novos tipos de cartas raras
-• Habilidades e melhorias
-• Conquistas
-• Melhorias de qualidade de vida
-…e muito mais!"
-    - "• 5,000+ 张卡牌
-• 更大的游戏区域
-• 更多卡牌类别
-• 更多货架与存储
-• 额外卡包
-• 更多评级卡
-• 新稀有卡类型
-• 技能与升级
-• 成就
-• 体验优化
-…还有更多！"
-    - "• 5,000+ 張卡牌
-• 更大的遊戲區域
-• 更多卡牌類別
-• 更多貨架與儲存空間
-• 額外卡包
-• 更多評級卡
-• 新稀有卡類型
-• 技能與升級
-• 成就
-• 體驗優化
-…還有更多！"
-    - "• 5,000枚以上のカード
-• より広いプレイエリア
-• より多くのカードカテゴリ
-• より多くの棚と収納
-• 追加カードパック
-• より多くのグレードカード
-• 新しいレアカードタイプ
-• スキルとアップグレード
-• 実績
-• クオリティ・オブ・ライフの改善
-…その他多数！"
-    - "• 5,000장 이상의 카드
-• 더 넓은 플레이 영역
-• 더 많은 카드 카테고리
-• 더 많은 선반 및 저장 공간
-• 추가 카드 팩
-• 더 많은 등급 카드
-• 새로운 희귀 카드 유형
-• 스킬 및 업그레이드
-• 업적
-• 사용성 개선
-…그리고 더 많은 것들!"
-    - "• 5 000+ карт
-• Большая игровая зона
-• Больше категорий карт
-• Больше полок и места для хранения
-• Дополнительные наборы карт
-• Больше оценённых карт
-• Новые типы редких карт
-• Навыки и улучшения
-• Достижения
-• Улучшения качества жизни
-…и многое другое!"
+    - "• 5,000+ Cards\n• Larger Play Area\n• More Card Categories\n• More Shelves & Storage\n• Additional Card Packs\n• More Graded Cards\n• New Rare Card Types\n• Skills & Upgrades\n• Achievements\n• Quality-of-Life Improvements\n…and more!"
+    - "• 5.000+ Kart\n• Daha Geniş Oyun Alanı\n• Daha Fazla Kart Kategorisi\n• Daha Fazla Raf ve Depolama\n• Ek Kart Paketleri\n• Daha Fazla Dereceli Kart\n• Yeni Nadir Kart Türleri\n• Yetenekler ve Geliştirmeler\n• Başarımlar\n• Kullanım Kolaylığı İyileştirmeleri\n…ve daha fazlası!"
+    - "• Plus de 5 000 cartes\n• Zone de jeu plus grande\n• Plus de catégories de cartes\n• Plus d'étagères et de stockage\n• Packs de cartes supplémentaires\n• Plus de cartes gradées\n• Nouveaux types de cartes rares\n• Compétences et améliorations\n• Succès\n• Améliorations de qualité de vie\n…et plus encore !"
+    - "• Oltre 5.000 carte\n• Area di gioco più grande\n• Più categorie di carte\n• Più scaffali e spazio di archiviazione\n• Pacchetti di carte aggiuntivi\n• Più carte classificate\n• Nuovi tipi di carte rare\n• Abilità e potenziamenti\n• Obiettivi\n• Miglioramenti della qualità della vita\n…e altro ancora!"
+    - "• Über 5.000 Karten\n• Größerer Spielbereich\n• Mehr Kartenkategorien\n• Mehr Regale & Lagerplatz\n• Zusätzliche Kartenpacks\n• Mehr bewertete Karten\n• Neue seltene Kartentypen\n• Fähigkeiten & Upgrades\n• Erfolge\n• Quality-of-Life-Verbesserungen\n…und mehr!"
+    - "• Más de 5.000 cartas\n• Área de juego más grande\n• Más categorías de cartas\n• Más estanterías y almacenamiento\n• Sobres de cartas adicionales\n• Más cartas clasificadas\n• Nuevos tipos de cartas raras\n• Habilidades y mejoras\n• Logros\n• Mejoras de calidad de vida\n…¡y mucho más!"
+    - "• Mais de 5.000 cartas\n• Área de jogo maior\n• Mais categorias de cartas\n• Mais prateleiras e armazenamento\n• Pacotes de cartas adicionais\n• Mais cartas graduadas\n• Novos tipos de cartas raras\n• Habilidades e melhorias\n• Conquistas\n• Melhorias de qualidade de vida\n…e muito mais!"
+    - "• 5,000+ 张卡牌\n• 更大的游戏区域\n• 更多卡牌类别\n• 更多货架与存储\n• 额外卡包\n• 更多评级卡\n• 新稀有卡类型\n• 技能与升级\n• 成就\n• 体验优化\n…还有更多！"
+    - "• 5,000+ 張卡牌\n• 更大的遊戲區域\n• 更多卡牌類別\n• 更多貨架與儲存空間\n• 額外卡包\n• 更多評級卡\n• 新稀有卡類型\n• 技能與升級\n• 成就\n• 體驗優化\n…還有更多！"
+    - "• 5,000枚以上のカード\n• より広いプレイエリア\n• より多くのカードカテゴリ\n• より多くの棚と収納\n• 追加カードパック\n• より多くのグレードカード\n• 新しいレアカードタイプ\n• スキルとアップグレード\n• 実績\n• クオリティ・オブ・ライフの改善\n…その他多数！"
+    - "• 5,000장 이상의 카드\n• 더 넓은 플레이 영역\n• 더 많은 카드 카테고리\n• 더 많은 선반 및 저장 공간\n• 추가 카드 팩\n• 더 많은 등급 카드\n• 새로운 희귀 카드 유형\n• 스킬 및 업그레이드\n• 업적\n• 사용성 개선\n…그리고 더 많은 것들!"
+    - "• 5 000+ карт\n• Большая игровая зона\n• Больше категорий карт\n• Больше полок и места для хранения\n• Дополнительные наборы карт\n• Больше оценённых карт\n• Новые типы редких карт\n• Навыки и улучшения\n• Достижения\n• Улучшения качества жизни\n…и многое другое!"

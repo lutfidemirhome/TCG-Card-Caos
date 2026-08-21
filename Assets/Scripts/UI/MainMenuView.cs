@@ -13,7 +13,6 @@ public class MainMenuView : MonoBehaviour
 
     /// <summary>Quit sits on the same line as the Feedback button; the stack grows upward from it.</summary>
     const float QuitAnchoredY = -437f;
-    const float LogoAnchoredY = 340f;
 
     [Header("Buttons")]
     [SerializeField] Button continueButton;
@@ -81,13 +80,6 @@ public class MainMenuView : MonoBehaviour
         SetAnchoredY(loadGameButton, QuitAnchoredY + MenuButtonStep * 2f);
         SetAnchoredY(newGameButton, QuitAnchoredY + MenuButtonStep * 3f);
         SetAnchoredY(continueButton, QuitAnchoredY + MenuButtonStep * 4f);
-
-        if (logoRect != null)
-        {
-            Vector2 logoPosition = logoRect.anchoredPosition;
-            logoPosition.y = LogoAnchoredY;
-            logoRect.anchoredPosition = logoPosition;
-        }
     }
 
     static void SetAnchoredY(Component target, float y)
@@ -148,6 +140,7 @@ public class MainMenuView : MonoBehaviour
             : versionOverride;
 
         versionText.text = versionPrefix + version;
+        UiTextFit.Apply(versionText);
     }
 
     static void OpenUrl(string url, string label)

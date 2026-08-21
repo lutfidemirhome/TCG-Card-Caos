@@ -295,7 +295,7 @@ public static class MainMenuUIBuilder
         StretchToParent(labelRect, new Vector4(18f, 8f, 18f, 12f));
 
         TMP_Text label = CreateText(labelRect, font, 40f, TextAlignmentOptions.Center, Color.white);
-        EnableAutoSize(label, 22f, 40f);
+        EnableAutoSize(label, 20f, 40f);
         AddLocalizedText(labelRect.gameObject, localizationKey);
 
         return button;
@@ -309,6 +309,7 @@ public static class MainMenuUIBuilder
         TMP_Text text = CreateText(rect, font, 26f, TextAlignmentOptions.Center, Color.white);
         text.text = "v0.30";
         text.raycastTarget = false;
+        EnableAutoSize(text, 13f, 26f);
         return text;
     }
 
@@ -516,14 +517,17 @@ public static class MainMenuUIBuilder
     }
 
     /// <summary>
-    /// Auto sizing keeps long translations (German, Russian) inside the authored art instead of
-    /// overflowing the button slice.
+    /// Auto sizing keeps long translations inside the authored art. Short copy stays at
+    /// <paramref name="max"/>; overflow is truncated after shrinking.
     /// </summary>
     static void EnableAutoSize(TMP_Text text, float min, float max)
     {
+        text.fontSize = max;
         text.enableAutoSizing = true;
         text.fontSizeMin = min;
         text.fontSizeMax = max;
+        text.textWrappingMode = TextWrappingModes.Normal;
+        text.overflowMode = TextOverflowModes.Truncate;
     }
 
     static void AddLocalizedText(GameObject target, string key, bool uppercase = false)
