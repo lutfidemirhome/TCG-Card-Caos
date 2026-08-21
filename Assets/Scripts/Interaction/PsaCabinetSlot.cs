@@ -80,6 +80,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     [SerializeField] Vector3 labelLocalEuler = new Vector3(0f, 180f, 0f);
     [SerializeField] float labelCanvasScale = 0.00035f;
     [SerializeField] int labelFontSize = 120;
+    [Tooltip("Used only when creating a new label. To change color, edit SlotNumberLabel/Text in the Scene.")]
     [SerializeField] Color labelColor = new Color(0.12f, 0.12f, 0.12f, 1f);
 
     RectTransform _labelCanvasRect;
@@ -1370,8 +1371,11 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         _labelText.text = slotNumber.ToString();
+
+        if (Application.isPlaying)
+            return;
+
         _labelText.fontSize = labelFontSize;
-        _labelText.color = labelColor;
     }
 
     void CacheLabelReferences()
