@@ -364,7 +364,10 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     public bool AcceptsPsaCard(WorldCard card) =>
         card != null
         && card.UsesPsaSlab
-        && card.PsaSlotNumber == SlotNumber;
+        && PsaArtLibrary.IsCabinetSlotNumber(card.PsaSlotNumber);
+
+    public bool IsCorrectPlacement(WorldCard card) =>
+        AcceptsPsaCard(card) && card.PsaSlotNumber == SlotNumber;
 
     public bool CanPlaceHeldCard(WorldCard card) =>
         AcceptsPsaCard(card) && IsEmpty;
@@ -499,7 +502,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             () =>
             {
                 RemovePlacementFlight(card);
-                card.NotifyShelfPlacement(isCorrect: true);
+                card.NotifyShelfPlacement(IsCorrectPlacement(card));
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
             });
     }
