@@ -1230,8 +1230,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshRenderer == null)
             return;
 
-        // Mesh cards use URP Transparent surface (alpha 1) — switching Opaque → Transparent in the
-        // Inspector is what fixes the see-through bug; instanced ground quads keep World/queue 2501.
+        // Mesh cards stay opaque Geometry (hand packs same). Ground instanced quads use World/2501.
         Material[] materials = UsesDefinitionFrontArt
             ? CardArtLibrary.GetCardMaterials(definition, CardTextureQuality.Detail)
             : CardArtLibrary.GetCardMaterials(paletteIndex, CardTextureQuality.Detail);

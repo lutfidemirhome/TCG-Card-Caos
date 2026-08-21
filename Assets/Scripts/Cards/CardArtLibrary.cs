@@ -428,8 +428,9 @@ public static class CardArtLibrary
     }
 
     /// <summary>
-    /// Mesh cards (hand, throw, shelf flight): URP Lit Transparent surface with alpha 1 — matches the
-    /// Inspector fix where switching Opaque → Transparent stops the card reading see-through.
+    /// Mesh cards (hand, throw, shelf flight, PSA slabs): solid opaque URP Lit.
+    /// Transparent surface looked solid on Metal but alpha-blends on Windows/D3D — same opaque
+    /// Geometry queue as hand packs.
     /// </summary>
     public static void ConfigureHandDetailMaterial(Material material)
     {
@@ -437,7 +438,8 @@ public static class CardArtLibrary
             return;
 
         ApplyNoShadowMaterialSettings(material);
-        ForceTransparentSurface(material);
+        ForceOpaqueSurface(material);
+        material.renderQueue = (int)RenderQueue.Geometry;
     }
 
     static void ApplyNoShadowMaterialSettings(Material material)
@@ -460,6 +462,7 @@ public static class CardArtLibrary
         if (material.HasProperty("_Surface"))
             material.SetFloat("_Surface", 0f);
 
+        material.SetOverrideTag("RenderType", "Opaque");
         material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
         material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
         material.DisableKeyword("_ALPHABLEND_ON");
@@ -470,37 +473,10 @@ public static class CardArtLibrary
             material.SetFloat("_SrcBlend", (float)BlendMode.One);
         if (material.HasProperty("_DstBlend"))
             material.SetFloat("_DstBlend", (float)BlendMode.Zero);
-        if (material.HasProperty("_ZWrite"))
-            material.SetFloat("_ZWrite", 1f);
-    }
-
-    static void ForceTransparentSurface(Material material)
-    {
-        if (material == null)
-            return;
-
-        if (material.HasProperty("_Surface"))
-            material.SetFloat("_Surface", 1f);
-
-        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        material.DisableKeyword("_ALPHABLEND_ON");
-
-        if (material.HasProperty("_Blend"))
-            material.SetFloat("_Blend", 0f);
-        if (material.HasProperty("_SrcBlend"))
-            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-        if (material.HasProperty("_DstBlend"))
-            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
         if (material.HasProperty("_SrcBlendAlpha"))
             material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
         if (material.HasProperty("_DstBlendAlpha"))
-            material.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
-
-        // Alpha stays 1 below, so these cards are visually solid and must keep writing depth.
-        // With depth writes off the transparent queue resolves overlap by camera distance, which
-        // disagrees with the hand fan order once the arc drops the outer cards — the card next to
-        // the selected one then renders behind its neighbour and disappears completely.
+            material.SetFloat("_DstBlendAlpha", (float)BlendMode.Zero);
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
 
@@ -517,8 +493,6 @@ public static class CardArtLibrary
             color.a = 1f;
             material.SetColor("_Color", color);
         }
-
-        material.renderQueue = (int)RenderQueue.Transparent;
     }
 
     public static void ApplyGroundWorldRendererSettings(Renderer renderer)
