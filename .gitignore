@@ -12,3 +12,5 @@ Recordings/
 *.user
 *.userprefs
 unity-create.log
+__pycache__/
+*.pyc
