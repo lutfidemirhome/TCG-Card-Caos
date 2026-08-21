@@ -4,11 +4,41 @@ using UnityEngine;
 [CustomEditor(typeof(PsaCabinetSlot))]
 public class PsaCabinetSlotEditor : Editor
 {
+    SerializedProperty _labelColor;
+
+    void OnEnable()
+    {
+        _labelColor = serializedObject.FindProperty("labelColor");
+    }
+
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
+        serializedObject.Update();
+        DrawPropertiesExcluding(serializedObject, "m_Script", "labelColor");
 
         var slot = (PsaCabinetSlot)target;
+        EditorGUILayout.Space(6f);
+        EditorGUILayout.LabelField("Slot Number Label", EditorStyles.boldLabel);
+
+        EditorGUI.BeginChangeCheck();
+        EditorGUILayout.PropertyField(
+            _labelColor,
+            new GUIContent("Rakam Rengi", "Changes the slot number text color on this holder."));
+        bool labelColorChanged = EditorGUI.EndChangeCheck();
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Copy Color From Text Child"))
+        {
+            slot.AdoptLabelColorFromText();
+            serializedObject.Update();
+            EditorUtility.SetDirty(slot);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.HelpBox(
+            "Change Rakam Rengi here while editing the prefab. The color is written to SlotNumberLabel/Text automatically.",
+            MessageType.Info);
+
         EditorGUILayout.Space(6f);
 
         if (GUILayout.Button("Create / Refresh Slot Marker"))
@@ -28,11 +58,16 @@ public class PsaCabinetSlotEditor : Editor
             + "If labels 8–10 look wrong, run:\nTCG Card Caos → PSA → Sync KartTutucu_1 Labels From Holder 7",
             MessageType.Info);
 
-        if (GUI.changed)
+        if (labelColorChanged || GUI.changed)
         {
+            serializedObject.ApplyModifiedProperties();
             slot.EnsureLabelExists();
             slot.RefreshLabel();
             EditorUtility.SetDirty(slot);
+        }
+        else
+        {
+            serializedObject.ApplyModifiedProperties();
         }
     }
 

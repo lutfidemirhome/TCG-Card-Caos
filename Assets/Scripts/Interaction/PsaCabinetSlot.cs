@@ -80,7 +80,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     [SerializeField] Vector3 labelLocalEuler = new Vector3(0f, 180f, 0f);
     [SerializeField] float labelCanvasScale = 0.00035f;
     [SerializeField] int labelFontSize = 120;
-    [Tooltip("Used only when creating a new label. To change color, edit SlotNumberLabel/Text in the Scene.")]
+    [Tooltip("Slot number text color. Applied to SlotNumberLabel/Text in the prefab and in Play mode.")]
     [SerializeField] Color labelColor = new Color(0.12f, 0.12f, 0.12f, 1f);
 
     RectTransform _labelCanvasRect;
@@ -1489,12 +1489,29 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         _labelText.text = slotNumber.ToString();
+        _labelText.color = labelColor;
 
         if (Application.isPlaying)
             return;
 
         _labelText.fontSize = labelFontSize;
     }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// Copies the authored Text color into <see cref="labelColor"/> so prefab edits on the child
+    /// Text component can be pulled onto the holder in one step.
+    /// </summary>
+    public void AdoptLabelColorFromText()
+    {
+        CacheLabelReferences();
+        if (_labelText == null)
+            return;
+
+        labelColor = _labelText.color;
+        RefreshLabel();
+    }
+#endif
 
     /// <summary>
     /// The label hierarchy never changes while playing, so the lookup runs once and is only
