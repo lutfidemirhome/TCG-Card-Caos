@@ -211,7 +211,17 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         CacheLabelReferences();
-        if (_labelCanvasRect == null || !_labelCanvasRect.gameObject.activeSelf)
+        if (_labelCanvasRect == null)
+            return;
+
+        bool visible = ShouldShowSlotLabel();
+        if (_labelCanvasRect.gameObject.activeSelf != visible)
+        {
+            RefreshLabel();
+            return;
+        }
+
+        if (!visible)
             return;
 
         ConfigureLabelCanvas(_labelCanvasRect);
@@ -655,6 +665,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         occupiedCard = null;
         CardGroundQuery.UntrackShelfCard(card);
         RefreshEditorPreviewVisibility();
+        RefreshLabel();
     }
 
     public bool IsAimCollider(Collider collider)
@@ -726,12 +737,14 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     {
         occupiedCard = card;
         RefreshEditorPreviewVisibility();
+        RefreshLabel();
     }
 
     public void ClearOccupant()
     {
         occupiedCard = null;
         RefreshEditorPreviewVisibility();
+        RefreshLabel();
     }
 
     public Vector3 GetSpawnPosition()
@@ -760,6 +773,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         if (occupiedCard != null && occupiedCard.IsInHand)
             occupiedCard = null;
         RefreshEditorPreviewVisibility();
+        RefreshLabel();
     }
 
     public Transform GetPlacementAnchor() => GetPlacementParent();
@@ -1371,17 +1385,28 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         if (_labelText == null)
             return;
 
+        bool visible = ShouldShowSlotLabel();
         if (_labelCanvasRect != null)
-        {
-            _labelCanvasRect.gameObject.SetActive(true);
-            ConfigureLabelCanvas(_labelCanvasRect);
-        }
+            _labelCanvasRect.gameObject.SetActive(visible);
+
+        if (!visible)
+            return;
+
+        ConfigureLabelCanvas(_labelCanvasRect);
 
         // When labelAnchor is assigned in the prefab/scene, keep its authored transform.
         if (labelAnchor == null)
             ApplyLabelTransform();
 
         ApplyLabelVisuals();
+    }
+
+    bool ShouldShowSlotLabel()
+    {
+        if (occupiedCard == null)
+            return true;
+
+        return occupiedCard.IsInHand;
     }
 
     public void EnsureLabelExists()
