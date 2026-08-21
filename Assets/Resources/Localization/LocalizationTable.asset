@@ -17,123 +17,193 @@ MonoBehaviour:
     values:
     - Continue
     - Devam Et
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Continuer
+    - Continua
+    - Fortsetzen
+    - Continuar
+    - Continuar
     - 继续
-    - 
-    - 
-    - 
-    - 
+    - 繼續
+    - 続ける
+    - 계속하기
+    - Продолжить
   - key: menu.new_game
     values:
     - New Game
     - Yeni Oyun
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Nouvelle partie
+    - Nuova partita
+    - Neues Spiel
+    - Nueva partida
+    - Novo jogo
     - 新游戏
-    - 
-    - 
-    - 
-    - 
+    - 新遊戲
+    - 新しいゲーム
+    - 새 게임
+    - Новая игра
   - key: menu.load_game
     values:
     - Load Game
-    - "\"Oyun Y\\xFCkle\""
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Oyun Yükle
+    - Charger une partie
+    - Carica partita
+    - Spiel laden
+    - Cargar partida
+    - Carregar jogo
     - 加载游戏
-    - 
-    - 
-    - 
-    - 
+    - 載入遊戲
+    - ゲームを読み込む
+    - 게임 불러오기
+    - Загрузить игру
   - key: menu.settings
     values:
     - Settings
     - Ayarlar
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Paramètres
+    - Impostazioni
+    - Einstellungen
+    - Ajustes
+    - Configurações
     - 设置
-    - 
-    - 
-    - 
-    - 
+    - 設定
+    - 設定
+    - 설정
+    - Настройки
   - key: menu.quit
     values:
     - Quit
-    - "\"\\xC7\\u0131k\\u0131\\u015F\""
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Çıkış
+    - Quitter
+    - Esci
+    - Beenden
+    - Salir
+    - Sair
     - 退出
-    - 
-    - 
-    - 
-    - 
+    - 退出
+    - 終了
+    - 종료
+    - Выйти
   - key: menu.feedback
     values:
     - Feedback
     - Geri Bildirim
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Commentaires
+    - Feedback
+    - Feedback
+    - Comentarios
+    - Feedback
     - 反馈
-    - 
-    - 
-    - 
-    - 
+    - 意見回饋
+    - フィードバック
+    - 피드백
+    - Обратная связь
   - key: menu.follow_us
     values:
     - Follow Us
     - Bizi Takip Edin
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Suivez-nous
+    - Seguici
+    - Folge uns
+    - Síguenos
+    - Siga-nos
     - 关注我们
-    - 
-    - 
-    - 
-    - 
+    - 關注我們
+    - フォローする
+    - 팔로우하기
+    - Подписывайтесь
   - key: menu.roadmap.title
     values:
     - Planned For Full Release
-    - "\"Tam S\\xFCr\\xFCmde Planlanan\""
-    - 
-    - 
-    - 
-    - 
-    - 
+    - Tam Sürümde Planlanan
+    - Prévu pour la version complète
+    - Pianificato per la versione completa
+    - Für die Vollversion geplant
+    - Planificado para la versión completa
+    - Planejado para a versão completa
     - 完整版计划功能
-    - 
-    - 
-    - 
-    - 
+    - 完整版計畫功能
+    - 完全版で予定されている機能
+    - 정식 출시 예정 기능
+    - Запланировано в полной версии
   - key: menu.roadmap.items
     values:
-    - "\"\\u2022 5,000+ Cards\\n\\u2022 Larger Play Area\\n\\u2022 More Card Categories\\n\\u2022 More Shelves & Storage\\n\\u2022 Additional Card Packs\\n\\u2022 More Graded Cards\\n\\u2022 New Rare Card Types\\n\\u2022 Skills & Upgrades\\n\\u2022 Achievements\\n\\u2022 Quality-of-Life Improvements\\n\\u2026and more!\""
-    - "\"\\u2022 5.000+ Kart\\n\\u2022 Daha Geni\\u015F Oyun Alan\\u0131\\n\\u2022 Daha Fazla Kart Kategorisi\\n\\u2022 Daha Fazla Raf ve Depolama\\n\\u2022 Ek Kart Paketleri\\n\\u2022 Daha Fazla Dereceli Kart\\n\\u2022 Yeni Nadir Kart T\\xFCrleri\\n\\u2022 Yetenekler ve Geli\\u015Ftirmeler\\n\\u2022 Ba\\u015Far\\u0131mlar\\n\\u2022 Kullan\\u0131m Kolayl\\u0131\\u011F\\u0131 \\u0130yile\\u015Ftirmeleri\\n\\u2026ve daha fazlas\\u0131!\""
-    - 
-    - 
-    - 
-    - 
-    - 
+    - "• 5,000+ Cards
+• Larger Play Area
+• More Card Categories
+• More Shelves & Storage
+• Additional Card Packs
+• More Graded Cards
+• New Rare Card Types
+• Skills & Upgrades
+• Achievements
+• Quality-of-Life Improvements
+…and more!"
+    - "• 5.000+ Kart
+• Daha Geniş Oyun Alanı
+• Daha Fazla Kart Kategorisi
+• Daha Fazla Raf ve Depolama
+• Ek Kart Paketleri
+• Daha Fazla Dereceli Kart
+• Yeni Nadir Kart Türleri
+• Yetenekler ve Geliştirmeler
+• Başarımlar
+• Kullanım Kolaylığı İyileştirmeleri
+…ve daha fazlası!"
+    - "• Plus de 5 000 cartes
+• Zone de jeu plus grande
+• Plus de catégories de cartes
+• Plus d'étagères et de stockage
+• Packs de cartes supplémentaires
+• Plus de cartes gradées
+• Nouveaux types de cartes rares
+• Compétences et améliorations
+• Succès
+• Améliorations de qualité de vie
+…et plus encore !"
+    - "• Oltre 5.000 carte
+• Area di gioco più grande
+• Più categorie di carte
+• Più scaffali e spazio di archiviazione
+• Pacchetti di carte aggiuntivi
+• Più carte classificate
+• Nuovi tipi di carte rare
+• Abilità e potenziamenti
+• Obiettivi
+• Miglioramenti della qualità della vita
+…e altro ancora!"
+    - "• Über 5.000 Karten
+• Größerer Spielbereich
+• Mehr Kartenkategorien
+• Mehr Regale & Lagerplatz
+• Zusätzliche Kartenpacks
+• Mehr bewertete Karten
+• Neue seltene Kartentypen
+• Fähigkeiten & Upgrades
+• Erfolge
+• Quality-of-Life-Verbesserungen
+…und mehr!"
+    - "• Más de 5.000 cartas
+• Área de juego más grande
+• Más categorías de cartas
+• Más estanterías y almacenamiento
+• Sobres de cartas adicionales
+• Más cartas clasificadas
+• Nuevos tipos de cartas raras
+• Habilidades y mejoras
+• Logros
+• Mejoras de calidad de vida
+…¡y mucho más!"
+    - "• Mais de 5.000 cartas
+• Área de jogo maior
+• Mais categorias de cartas
+• Mais prateleiras e armazenamento
+• Pacotes de cartas adicionais
+• Mais cartas graduadas
+• Novos tipos de cartas raras
+• Habilidades e melhorias
+• Conquistas
+• Melhorias de qualidade de vida
+…e muito mais!"
     - "• 5,000+ 张卡牌
 • 更大的游戏区域
 • 更多卡牌类别
@@ -145,8 +215,47 @@ MonoBehaviour:
 • 成就
 • 体验优化
 …还有更多！"
-    - 
-    - 
-    - 
-    - 
-
+    - "• 5,000+ 張卡牌
+• 更大的遊戲區域
+• 更多卡牌類別
+• 更多貨架與儲存空間
+• 額外卡包
+• 更多評級卡
+• 新稀有卡類型
+• 技能與升級
+• 成就
+• 體驗優化
+…還有更多！"
+    - "• 5,000枚以上のカード
+• より広いプレイエリア
+• より多くのカードカテゴリ
+• より多くの棚と収納
+• 追加カードパック
+• より多くのグレードカード
+• 新しいレアカードタイプ
+• スキルとアップグレード
+• 実績
+• クオリティ・オブ・ライフの改善
+…その他多数！"
+    - "• 5,000장 이상의 카드
+• 더 넓은 플레이 영역
+• 더 많은 카드 카테고리
+• 더 많은 선반 및 저장 공간
+• 추가 카드 팩
+• 더 많은 등급 카드
+• 새로운 희귀 카드 유형
+• 스킬 및 업그레이드
+• 업적
+• 사용성 개선
+…그리고 더 많은 것들!"
+    - "• 5 000+ карт
+• Большая игровая зона
+• Больше категорий карт
+• Больше полок и места для хранения
+• Дополнительные наборы карт
+• Больше оценённых карт
+• Новые типы редких карт
+• Навыки и улучшения
+• Достижения
+• Улучшения качества жизни
+…и многое другое!"
