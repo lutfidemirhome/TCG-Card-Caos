@@ -85,6 +85,12 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     RectTransform _labelCanvasRect;
     Text _labelText;
+    Canvas _labelCanvas;
+    CanvasRenderer[] _labelCanvasRenderers;
+    bool _labelRefsResolved;
+    bool _labelFound;
+    bool _labelCanvasConfigured;
+    bool _labelVisible = true;
     Transform _previewRoot;
     MeshRenderer _previewFillRenderer;
     MeshRenderer _previewEdgeRenderer;
@@ -205,32 +211,35 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         RefreshEditorPreviewVisibility();
     }
 
+    /// <summary>
+    /// Safety net for occupancy changes that did not route through <see cref="RefreshLabel"/>.
+    /// Steady state costs one bool compare, so it stays allocation free.
+    /// </summary>
     void RefreshLabelCanvasForPlayView()
     {
         if (!showSlotLabel)
             return;
 
         CacheLabelReferences();
-        if (_labelCanvasRect == null)
+
+        // A partially authored label would make RefreshLabel bail out before updating state,
+        // which would otherwise retrigger it every frame.
+        if (!_labelFound)
             return;
 
         bool visible = ShouldShowSlotLabel();
-        if (_labelCanvasRect.gameObject.activeSelf != visible)
-        {
+        if (visible != _labelVisible || _labelCanvasRect.gameObject.activeSelf != visible)
             RefreshLabel();
-            return;
-        }
-
-        if (!visible)
-            return;
-
-        ConfigureLabelCanvas(_labelCanvasRect);
     }
 
 #if UNITY_EDITOR
     void RefreshLabelCanvasForEditorView()
     {
         RefreshLabelCanvasForPlayView();
+
+        // The Scene view camera can change between repaints, so keep re-applying it in the editor.
+        if (_labelCanvasRect != null && _labelCanvasRect.gameObject.activeSelf)
+            ConfigureLabelCanvas();
     }
 #endif
 
@@ -730,6 +739,8 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     public void SetSlotNumber(int number)
     {
         slotNumber = PsaArtLibrary.ClampCabinetSlotNumber(number);
+        // Sorting order is derived from the slot number, so the canvas has to be re-applied.
+        _labelCanvasConfigured = false;
         RefreshLabel();
     }
 
@@ -1030,6 +1041,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     void OnEnable()
     {
+        InvalidateLabelCache();
         EnsureSlotMarkerExists();
         if (Application.isPlaying)
             EnsureAimCollider();
@@ -1055,6 +1067,8 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         defaultVariantIndex = Mathf.Max(1, defaultVariantIndex);
         ApplyShadowFlagsOnly();
         ApplyEditorMaterialOverrides();
+        // labelAnchor or the label hierarchy may have been re-authored in the inspector.
+        InvalidateLabelCache();
         RefreshLabel();
         if (IsEditingPrefabAsset())
             return;
@@ -1377,6 +1391,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
         if (!showSlotLabel)
         {
+            _labelVisible = false;
             if (_labelCanvasRect != null)
                 _labelCanvasRect.gameObject.SetActive(false);
             return;
@@ -1386,13 +1401,14 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         bool visible = ShouldShowSlotLabel();
+        _labelVisible = visible;
         if (_labelCanvasRect != null)
             _labelCanvasRect.gameObject.SetActive(visible);
 
         if (!visible)
             return;
 
-        ConfigureLabelCanvas(_labelCanvasRect);
+        ConfigureLabelCanvas();
 
         // When labelAnchor is assigned in the prefab/scene, keep its authored transform.
         if (labelAnchor == null)
@@ -1411,56 +1427,60 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     public void EnsureLabelExists()
     {
-        Transform anchor = labelAnchor != null ? labelAnchor : transform;
-        if (anchor.Find(LabelObjectName) != null)
-        {
-            CacheLabelReferences();
-            if (_labelText != null)
-                return;
-        }
-
         CacheLabelReferences();
         if (_labelText != null)
             return;
 
-        CreateLabelHierarchy();
-        CacheLabelReferences();
-    }
-
-    void ConfigureLabelCanvas(RectTransform canvasRect)
-    {
-        if (canvasRect == null)
+        // Re-check against the live hierarchy before building a second label.
+        ResolveLabelReferences();
+        if (_labelText != null)
             return;
 
-        Canvas canvas = canvasRect.GetComponent<Canvas>();
-        if (canvas != null)
-        {
-            canvas.renderMode = RenderMode.WorldSpace;
-            canvas.enabled = true;
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = slotNumber;
+        CreateLabelHierarchy();
+    }
 
-            if (Application.isPlaying)
+    /// <summary>
+    /// Canvas setup is static for the life of the label, so it is applied once per cache refresh.
+    /// Only the camera hookup keeps polling: in play until <see cref="Camera.main"/> exists, and in
+    /// the editor because the active Scene view can change.
+    /// </summary>
+    void ConfigureLabelCanvas()
+    {
+        if (_labelCanvas == null)
+            return;
+
+        if (!_labelCanvasConfigured)
+        {
+            _labelCanvas.renderMode = RenderMode.WorldSpace;
+            _labelCanvas.enabled = true;
+            _labelCanvas.overrideSorting = true;
+            _labelCanvas.sortingOrder = slotNumber;
+
+            if (_labelCanvasRenderers != null)
             {
-                if (canvas.worldCamera == null)
-                    canvas.worldCamera = Camera.main;
+                for (int i = 0; i < _labelCanvasRenderers.Length; i++)
+                {
+                    if (_labelCanvasRenderers[i] != null)
+                        _labelCanvasRenderers[i].cullTransparentMesh = false;
+                }
             }
+
+            _labelCanvasConfigured = true;
+        }
+
+        if (Application.isPlaying)
+        {
+            if (_labelCanvas.worldCamera == null)
+                _labelCanvas.worldCamera = Camera.main;
+
+            return;
+        }
+
 #if UNITY_EDITOR
-            else
-            {
-                SceneView sceneView = SceneView.lastActiveSceneView;
-                if (sceneView != null && sceneView.camera != null)
-                    canvas.worldCamera = sceneView.camera;
-            }
+        SceneView sceneView = SceneView.lastActiveSceneView;
+        if (sceneView != null && sceneView.camera != null)
+            _labelCanvas.worldCamera = sceneView.camera;
 #endif
-        }
-
-        CanvasRenderer[] renderers = canvasRect.GetComponentsInChildren<CanvasRenderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            if (renderers[i] != null)
-                renderers[i].cullTransparentMesh = false;
-        }
     }
 
     void ApplyLabelVisuals()
@@ -1476,10 +1496,27 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         _labelText.fontSize = labelFontSize;
     }
 
+    /// <summary>
+    /// The label hierarchy never changes while playing, so the lookup runs once and is only
+    /// repeated when the cache is invalidated or the cached objects were destroyed.
+    /// </summary>
     void CacheLabelReferences()
+    {
+        if (_labelRefsResolved && (!_labelFound || (_labelCanvasRect != null && _labelText != null)))
+            return;
+
+        ResolveLabelReferences();
+    }
+
+    void ResolveLabelReferences()
     {
         _labelCanvasRect = null;
         _labelText = null;
+        _labelCanvas = null;
+        _labelCanvasRenderers = null;
+        _labelCanvasConfigured = false;
+        _labelRefsResolved = true;
+        _labelFound = false;
 
         Transform anchor = labelAnchor != null ? labelAnchor : transform;
         Transform existing = anchor.Find(LabelObjectName);
@@ -1490,9 +1527,25 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         if (_labelCanvasRect == null)
             _labelCanvasRect = existing.GetComponent<RectTransform>();
 
+        _labelCanvas = existing.GetComponent<Canvas>();
+        _labelCanvasRenderers = existing.GetComponentsInChildren<CanvasRenderer>(true);
+
         Transform textTransform = existing.Find(LabelTextObjectName);
         if (textTransform != null)
             _labelText = textTransform.GetComponent<Text>();
+
+        _labelFound = _labelCanvasRect != null && _labelText != null;
+    }
+
+    void InvalidateLabelCache()
+    {
+        _labelRefsResolved = false;
+        _labelFound = false;
+        _labelCanvasConfigured = false;
+        _labelCanvasRect = null;
+        _labelText = null;
+        _labelCanvas = null;
+        _labelCanvasRenderers = null;
     }
 
     void ApplyLabelTransform()
@@ -1550,6 +1603,12 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         _labelText.text = slotNumber.ToString();
 
         ApplyLabelTransform();
+
+        _labelCanvas = canvas;
+        _labelCanvasRenderers = canvasGo.GetComponentsInChildren<CanvasRenderer>(true);
+        _labelRefsResolved = true;
+        _labelFound = true;
+        _labelCanvasConfigured = false;
     }
 
     void RemoveExistingLabel(Transform anchor)
@@ -1557,6 +1616,8 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         Transform existing = anchor.Find(LabelObjectName);
         if (existing == null)
             return;
+
+        InvalidateLabelCache();
 
 #if UNITY_EDITOR
         if (!Application.isPlaying)

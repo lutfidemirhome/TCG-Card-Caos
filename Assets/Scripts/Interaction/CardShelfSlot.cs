@@ -141,6 +141,21 @@ public class CardShelfSlot : MonoBehaviour
 #endif
     }
 
+    /// <summary>
+    /// In play mode the slot is purely data: the editor preview stays hidden and occupancy is
+    /// driven by explicit calls. A single scene holds 3000+ slots, so keeping LateUpdate alive
+    /// only to re-hide already hidden renderers costs a measurable amount of frame time.
+    /// Disabling the component skips that dispatch while leaving every public member usable.
+    /// </summary>
+    void Start()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        HidePreviewForPlayMode();
+        enabled = false;
+    }
+
     void OnDisable()
     {
         SetPreviewActive(false);
