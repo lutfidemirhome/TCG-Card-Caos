@@ -19,6 +19,11 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     const string PreviewObjectName = "SlotCardPreview";
     const string AimColliderName = "PsaSlotAimCollider";
     const string DefaultHolderOutlineTargetName = "Tutucu2_Visual";
+    const string DefaultTableVisualName = "Counter_attlsv";
+    const string LegacyTableVisualName = "Table_Visual";
+    const string HolderToonTemplatePath = "Assets/Art/Materials/CabinetBody.mat";
+    const string TableToonTemplatePath = "Assets/Art/Materials/PsaCabinetTable.mat";
+    const string TableToonFallbackPath = "Assets/Art/Materials/CabinetShelf.mat";
 
     static readonly Color PreviewFillColor = new Color(1f, 0.82f, 0.12f, 0.45f);
     static readonly Color PreviewEdgeColor = new Color(1f, 0.92f, 0.2f, 0.95f);
@@ -48,6 +53,24 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     [Header("Aim highlight")]
     [Tooltip("QuickOutline target while aiming with a matching held PSA card (same as ground PSA hover).")]
     [SerializeField] Transform holderOutlineTarget;
+
+    [Header("Holder color")]
+    [Tooltip("Tints the holder visuals in the Scene and while playing.")]
+    [SerializeField] bool overrideHolderColor;
+    [SerializeField] Color holderColor = Color.white;
+
+    [Header("Table color")]
+    [Tooltip("Table mesh under the holder. Auto-fills when empty.")]
+    [SerializeField] Transform tableVisual;
+    [Tooltip("Tints the assigned table visual in the Scene and while playing.")]
+    [SerializeField] bool overrideTableColor;
+    [SerializeField] Color tableColor = Color.white;
+
+    [Header("Cabinet toon")]
+    [Tooltip("Editor only. Off by default. When off, materials you assign on renderers in the Scene are kept unchanged in Play mode.")]
+    [SerializeField] bool applyCabinetToon;
+    [SerializeField] Material holderToonTemplate;
+    [SerializeField] Material tableToonTemplate;
 
     [Header("Slot number label")]
     [SerializeField] bool showSlotLabel = true;
@@ -82,6 +105,23 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     }
     BoxCollider _aimCollider;
 
+    struct HolderTintEntry
+    {
+        public MeshRenderer Renderer;
+        public int MaterialIndex;
+        public bool HasBaseColor;
+        public bool HasColor;
+        public bool IsTable;
+    }
+
+    System.Collections.Generic.List<HolderTintEntry> _holderTintEntries;
+    bool _holderTintStateValid;
+    bool _appliedOverrideHolderColor;
+    Color _appliedHolderColor;
+    bool _appliedOverrideTableColor;
+    Color _appliedTableColor;
+    static MaterialPropertyBlock _sharedPropertyBlock;
+
     struct PlacementFlightEntry
     {
         public WorldCard Card;
@@ -114,7 +154,21 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     {
         ResolveReferences();
         if (Application.isPlaying)
+        {
             HideEditorPreviewForPlayMode();
+            ClearHolderPropertyBlocks();
+            ApplyShadowFlagsOnly();
+            return;
+        }
+
+        ApplyShadowFlagsOnly();
+        ApplyEditorMaterialOverrides();
+    }
+
+    void Start()
+    {
+        EnsureLabelExists();
+        RefreshLabel();
     }
 
     void OnDestroy()
@@ -157,6 +211,312 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
         if (holderOutlineTarget == null)
             holderOutlineTarget = transform.Find(DefaultHolderOutlineTargetName);
+
+        if (tableVisual == null)
+        {
+            tableVisual = transform.Find(DefaultTableVisualName);
+            if (tableVisual == null)
+                tableVisual = transform.Find(LegacyTableVisualName);
+        }
+    }
+
+    void InvalidateHolderTintCache()
+    {
+        _holderTintEntries = null;
+        _holderTintStateValid = false;
+    }
+
+    void ClearHolderPropertyBlocks()
+    {
+        MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer meshRenderer = renderers[i];
+            if (meshRenderer == null || ShouldSkipHolderShadowDisable(meshRenderer))
+                continue;
+
+            int materialCount = meshRenderer.sharedMaterials.Length;
+            for (int m = 0; m < materialCount; m++)
+                meshRenderer.SetPropertyBlock(null, m);
+        }
+
+        InvalidateHolderTintCache();
+    }
+
+    void ApplyShadowFlagsOnly()
+    {
+        ResolveReferences();
+        MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer meshRenderer = renderers[i];
+            if (meshRenderer == null || ShouldSkipHolderShadowDisable(meshRenderer))
+                continue;
+
+            meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+            meshRenderer.receiveGI = ReceiveGI.LightProbes;
+        }
+    }
+
+    void ApplyEditorMaterialOverrides()
+    {
+        if (Application.isPlaying)
+            return;
+
+        if (applyCabinetToon)
+            ApplyCabinetToonToAll();
+
+        RefreshHolderColor();
+    }
+
+    void ApplyCabinetToonToAll()
+    {
+        if (Application.isPlaying)
+            return;
+
+        ResolveReferences();
+        Material holderTemplate = ResolveHolderToonTemplate();
+        Material tableTemplate = ResolveTableToonTemplate();
+        MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer meshRenderer = renderers[i];
+            if (meshRenderer == null || ShouldSkipHolderShadowDisable(meshRenderer))
+                continue;
+
+            bool isTable = IsTableRenderer(meshRenderer.transform);
+            Material template = isTable ? tableTemplate : holderTemplate;
+            ApplyCabinetToon(meshRenderer, template, isTable);
+        }
+    }
+
+    static void ApplyCabinetToon(MeshRenderer meshRenderer, Material template, bool isTable)
+    {
+        if (meshRenderer == null || template == null)
+            return;
+
+        if (isTable)
+        {
+            meshRenderer.sharedMaterial = template;
+            return;
+        }
+
+        Material current = meshRenderer.sharedMaterial;
+        if (current != null && current.shader == template.shader)
+            return;
+
+        meshRenderer.sharedMaterial = template;
+    }
+
+    Material ResolveHolderToonTemplate()
+    {
+        if (holderToonTemplate != null)
+            return holderToonTemplate;
+
+#if UNITY_EDITOR
+        return UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(HolderToonTemplatePath);
+#else
+        return null;
+#endif
+    }
+
+    Material ResolveTableToonTemplate()
+    {
+        if (tableToonTemplate != null)
+            return tableToonTemplate;
+
+#if UNITY_EDITOR
+        Material tableMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(TableToonTemplatePath);
+        if (tableMaterial != null)
+            return tableMaterial;
+
+        return UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(TableToonFallbackPath);
+#else
+        return null;
+#endif
+    }
+
+    /// <summary>
+    /// Tints holder visuals. Pass <c>null</c> to restore the model colors.
+    /// </summary>
+    public void SetHolderColor(Color? color)
+    {
+        overrideHolderColor = color.HasValue;
+        if (color.HasValue)
+            holderColor = color.Value;
+
+        InvalidateHolderTintCache();
+        RefreshHolderColor();
+    }
+
+    /// <summary>
+    /// Tints the table visual. Pass <c>null</c> to restore the model colors.
+    /// </summary>
+    public void SetTableColor(Color? color)
+    {
+        overrideTableColor = color.HasValue;
+        if (color.HasValue)
+            tableColor = color.Value;
+
+        InvalidateHolderTintCache();
+        RefreshHolderColor();
+    }
+
+    void RefreshHolderColor()
+    {
+        if (Application.isPlaying)
+            return;
+
+        if (!overrideHolderColor && !overrideTableColor)
+            return;
+
+        ResolveReferences();
+
+        if (_holderTintStateValid
+            && _appliedOverrideHolderColor == overrideHolderColor
+            && _appliedOverrideTableColor == overrideTableColor
+            && _appliedHolderColor == holderColor
+            && _appliedTableColor == tableColor)
+        {
+            return;
+        }
+
+        EnsureHolderTintEntries();
+        if (_holderTintEntries == null)
+            return;
+
+        MaterialPropertyBlock block = SharedPropertyBlock;
+        for (int i = 0; i < _holderTintEntries.Count; i++)
+        {
+            HolderTintEntry entry = _holderTintEntries[i];
+            if (entry.Renderer == null)
+                continue;
+
+            bool tint = entry.IsTable ? overrideTableColor : overrideHolderColor;
+            if (!tint)
+            {
+                entry.Renderer.SetPropertyBlock(null, entry.MaterialIndex);
+                continue;
+            }
+
+            Color color = entry.IsTable ? tableColor : holderColor;
+            block.Clear();
+            if (entry.HasBaseColor)
+                block.SetColor("_BaseColor", color);
+            if (entry.HasColor)
+                block.SetColor("_Color", color);
+
+            entry.Renderer.SetPropertyBlock(block, entry.MaterialIndex);
+        }
+
+        _appliedOverrideHolderColor = overrideHolderColor;
+        _appliedOverrideTableColor = overrideTableColor;
+        _appliedHolderColor = holderColor;
+        _appliedTableColor = tableColor;
+        _holderTintStateValid = true;
+    }
+
+    void EnsureHolderTintEntries()
+    {
+        if (_holderTintEntries != null)
+            return;
+
+        MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>(true);
+        if (renderers.Length == 0)
+            return;
+
+        _holderTintEntries = new System.Collections.Generic.List<HolderTintEntry>(renderers.Length);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer meshRenderer = renderers[i];
+            if (meshRenderer == null || ShouldSkipHolderShadowDisable(meshRenderer))
+                continue;
+
+            bool isTable = IsTableRenderer(meshRenderer.transform);
+            Material[] materials = meshRenderer.sharedMaterials;
+            for (int m = 0; m < materials.Length; m++)
+            {
+                Material material = materials[m];
+                if (material == null)
+                    continue;
+
+                bool hasBaseColor = material.HasProperty("_BaseColor");
+                bool hasColor = material.HasProperty("_Color");
+                if (!hasBaseColor && !hasColor)
+                    continue;
+
+                _holderTintEntries.Add(new HolderTintEntry
+                {
+                    Renderer = meshRenderer,
+                    MaterialIndex = m,
+                    HasBaseColor = hasBaseColor,
+                    HasColor = hasColor,
+                    IsTable = isTable,
+                });
+            }
+        }
+    }
+
+    bool IsTableRenderer(Transform target)
+    {
+        if (tableVisual == null)
+            return false;
+
+        return target == tableVisual || target.IsChildOf(tableVisual);
+    }
+
+    static MaterialPropertyBlock SharedPropertyBlock =>
+        _sharedPropertyBlock ??= new MaterialPropertyBlock();
+
+    static void ClearMaterialOcclusion(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_OcclusionMap"))
+            material.SetTexture("_OcclusionMap", null);
+
+        if (material.HasProperty("_OcclusionStrength"))
+            material.SetFloat("_OcclusionStrength", 0f);
+    }
+
+    static bool ShouldSkipHolderShadowDisable(Renderer renderer)
+    {
+        Transform transform = renderer.transform;
+        if (transform.GetComponentInParent<Canvas>() != null)
+            return true;
+
+        string objectName = transform.name;
+        if (objectName == PreviewObjectName
+            || objectName == AimColliderName
+            || objectName == LabelObjectName
+            || objectName == LabelTextObjectName)
+        {
+            return true;
+        }
+
+        Transform marker = transform;
+        while (marker != null)
+        {
+            if (marker.name == SlotMarkerName)
+                return true;
+            marker = marker.parent;
+        }
+
+        return false;
+    }
+
+    static void ApplyNoShadowMaterialSettings(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_ReceiveShadows"))
+            material.SetFloat("_ReceiveShadows", 0f);
+
+        material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+        material.SetShaderPassEnabled("ShadowCaster", false);
     }
 
     Transform GetSlotMarker()
@@ -636,6 +996,9 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         EnsureSlotMarkerExists();
         if (Application.isPlaying)
             EnsureAimCollider();
+        else
+            ApplyEditorMaterialOverrides();
+
         EnsureLabelExists();
         RefreshLabel();
         EnsureEditorPreview();
@@ -645,17 +1008,16 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 #endif
     }
 
-    void Start()
-    {
-        EnsureLabelExists();
-        RefreshLabel();
-    }
-
 #if UNITY_EDITOR
     void OnValidate()
     {
+        if (Application.isPlaying)
+            return;
+
         slotNumber = PsaArtLibrary.ClampCabinetSlotNumber(slotNumber);
         defaultVariantIndex = Mathf.Max(1, defaultVariantIndex);
+        ApplyShadowFlagsOnly();
+        ApplyEditorMaterialOverrides();
         if (IsEditingPrefabAsset())
             return;
         SchedulePreviewRefresh();
