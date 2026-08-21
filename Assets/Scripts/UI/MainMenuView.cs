@@ -9,12 +9,22 @@ using UnityEngine.UI;
 /// </summary>
 public class MainMenuView : MonoBehaviour
 {
+    const float MenuButtonStep = 105f;
+
+    /// <summary>Quit sits on the same line as the Feedback button; the stack grows upward from it.</summary>
+    const float QuitAnchoredY = -437f;
+    const float LogoAnchoredY = 340f;
+
     [Header("Buttons")]
+    [SerializeField] Button continueButton;
     [SerializeField] Button newGameButton;
     [SerializeField] Button loadGameButton;
     [SerializeField] Button settingsButton;
     [SerializeField] Button quitButton;
     [SerializeField] Button feedbackButton;
+
+    [Header("Menu layout")]
+    [SerializeField] RectTransform logoRect;
 
     [Header("Version label")]
     [SerializeField] TMP_Text versionText;
@@ -41,10 +51,57 @@ public class MainMenuView : MonoBehaviour
         Cursor.visible = true;
 
         EnsureEventSystem();
+        EnsureLogoReference();
+        ApplyMenuLayout();
         WireButtons();
         ApplyVersionLabel();
 
         GameAssetPrewarm.Start(this);
+    }
+
+    void EnsureLogoReference()
+    {
+        if (logoRect != null)
+            return;
+
+        Transform logo = transform.Find("Logo");
+        if (logo != null)
+            logoRect = logo.GetComponent<RectTransform>();
+    }
+
+    void ApplyMenuLayout()
+    {
+        bool hasSave = GameSaveStore.HasAnySave();
+
+        if (continueButton != null)
+            continueButton.gameObject.SetActive(hasSave);
+
+        SetAnchoredY(quitButton, QuitAnchoredY);
+        SetAnchoredY(settingsButton, QuitAnchoredY + MenuButtonStep);
+        SetAnchoredY(loadGameButton, QuitAnchoredY + MenuButtonStep * 2f);
+        SetAnchoredY(newGameButton, QuitAnchoredY + MenuButtonStep * 3f);
+        SetAnchoredY(continueButton, QuitAnchoredY + MenuButtonStep * 4f);
+
+        if (logoRect != null)
+        {
+            Vector2 logoPosition = logoRect.anchoredPosition;
+            logoPosition.y = LogoAnchoredY;
+            logoRect.anchoredPosition = logoPosition;
+        }
+    }
+
+    static void SetAnchoredY(Component target, float y)
+    {
+        if (target == null)
+            return;
+
+        RectTransform rect = target.transform as RectTransform;
+        if (rect == null)
+            return;
+
+        Vector2 position = rect.anchoredPosition;
+        position.y = y;
+        rect.anchoredPosition = position;
     }
 
     static void EnsureEventSystem()
@@ -59,6 +116,7 @@ public class MainMenuView : MonoBehaviour
 
     void WireButtons()
     {
+        Bind(continueButton, OnContinueClicked);
         Bind(newGameButton, OnNewGameClicked);
         Bind(loadGameButton, OnLoadGameClicked);
         Bind(settingsButton, OnSettingsClicked);
@@ -103,7 +161,9 @@ public class MainMenuView : MonoBehaviour
         Application.OpenURL(url);
     }
 
-    static void OnNewGameClicked() => GameSceneLoader.LoadGame();
+    static void OnContinueClicked() => GameSceneLoader.ContinueGame();
+
+    static void OnNewGameClicked() => GameSceneLoader.StartNewGame();
 
     static void OnLoadGameClicked() =>
         Debug.Log("[MainMenu] Load Game is not implemented yet.");

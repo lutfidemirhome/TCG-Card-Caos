@@ -13,6 +13,20 @@ MonoBehaviour:
   m_Name: LocalizationTable
   m_EditorClassIdentifier: 
   entries:
+  - key: menu.continue
+    values:
+    - Continue
+    - Devam Et
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 继续
+    - 
+    - 
+    - 
+    - 
   - key: menu.new_game
     values:
     - New Game
@@ -22,7 +36,7 @@ MonoBehaviour:
     - 
     - 
     - 
-    - 
+    - 新游戏
     - 
     - 
     - 
@@ -30,13 +44,13 @@ MonoBehaviour:
   - key: menu.load_game
     values:
     - Load Game
-    - "Oyun Y\xFCkle"
+    - "\"Oyun Y\\xFCkle\""
     - 
     - 
     - 
     - 
     - 
-    - 
+    - 加载游戏
     - 
     - 
     - 
@@ -50,7 +64,7 @@ MonoBehaviour:
     - 
     - 
     - 
-    - 
+    - 设置
     - 
     - 
     - 
@@ -58,13 +72,13 @@ MonoBehaviour:
   - key: menu.quit
     values:
     - Quit
-    - "\xC7\u0131k\u0131\u015F"
+    - "\"\\xC7\\u0131k\\u0131\\u015F\""
     - 
     - 
     - 
     - 
     - 
-    - 
+    - 退出
     - 
     - 
     - 
@@ -78,7 +92,7 @@ MonoBehaviour:
     - 
     - 
     - 
-    - 
+    - 反馈
     - 
     - 
     - 
@@ -92,7 +106,7 @@ MonoBehaviour:
     - 
     - 
     - 
-    - 
+    - 关注我们
     - 
     - 
     - 
@@ -100,35 +114,39 @@ MonoBehaviour:
   - key: menu.roadmap.title
     values:
     - Planned For Full Release
-    - "Tam S\xFCr\xFCmde Planlanan"
+    - "\"Tam S\\xFCr\\xFCmde Planlanan\""
     - 
     - 
     - 
     - 
     - 
-    - 
+    - 完整版计划功能
     - 
     - 
     - 
     - 
   - key: menu.roadmap.items
     values:
-    - "\u2022 5,000+ Cards\n\u2022 Larger Play Area\n\u2022 More Card Categories\n\u2022
-      More Shelves & Storage\n\u2022 Additional Card Packs\n\u2022 More Graded Cards\n\u2022
-      New Rare Card Types\n\u2022 Skills & Upgrades\n\u2022 Achievements\n\u2022
-      Quality-of-Life Improvements\n\u2026and more!"
-    - "\u2022 5.000+ Kart\n\u2022 Daha Geni\u015F Oyun Alan\u0131\n\u2022 Daha Fazla
-      Kart Kategorisi\n\u2022 Daha Fazla Raf ve Depolama\n\u2022 Ek Kart Paketleri\n\u2022
-      Daha Fazla Dereceli Kart\n\u2022 Yeni Nadir Kart T\xFCrleri\n\u2022 Yetenekler
-      ve Geli\u015Ftirmeler\n\u2022 Ba\u015Far\u0131mlar\n\u2022 Kullan\u0131m Kolayl\u0131\u011F\u0131
-      \u0130yile\u015Ftirmeleri\n\u2026ve daha fazlas\u0131!"
+    - "\"\\u2022 5,000+ Cards\\n\\u2022 Larger Play Area\\n\\u2022 More Card Categories\\n\\u2022 More Shelves & Storage\\n\\u2022 Additional Card Packs\\n\\u2022 More Graded Cards\\n\\u2022 New Rare Card Types\\n\\u2022 Skills & Upgrades\\n\\u2022 Achievements\\n\\u2022 Quality-of-Life Improvements\\n\\u2026and more!\""
+    - "\"\\u2022 5.000+ Kart\\n\\u2022 Daha Geni\\u015F Oyun Alan\\u0131\\n\\u2022 Daha Fazla Kart Kategorisi\\n\\u2022 Daha Fazla Raf ve Depolama\\n\\u2022 Ek Kart Paketleri\\n\\u2022 Daha Fazla Dereceli Kart\\n\\u2022 Yeni Nadir Kart T\\xFCrleri\\n\\u2022 Yetenekler ve Geli\\u015Ftirmeler\\n\\u2022 Ba\\u015Far\\u0131mlar\\n\\u2022 Kullan\\u0131m Kolayl\\u0131\\u011F\\u0131 \\u0130yile\\u015Ftirmeleri\\n\\u2026ve daha fazlas\\u0131!\""
     - 
     - 
     - 
     - 
     - 
+    - "• 5,000+ 张卡牌
+• 更大的游戏区域
+• 更多卡牌类别
+• 更多货架与存储
+• 额外卡包
+• 更多评级卡
+• 新稀有卡类型
+• 技能与升级
+• 成就
+• 体验优化
+…还有更多！"
     - 
     - 
     - 
     - 
-    - 
+

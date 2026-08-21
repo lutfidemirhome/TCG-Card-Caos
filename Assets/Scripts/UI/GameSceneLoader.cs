@@ -9,6 +9,24 @@ public class GameSceneLoader : MonoBehaviour
 {
     static GameSceneLoader _runner;
     static bool _isLoading;
+    static GameLoadMode _pendingLoadMode = GameLoadMode.NewGame;
+
+    public static GameLoadMode PendingLoadMode => _pendingLoadMode;
+
+    public static void StartNewGame()
+    {
+        _pendingLoadMode = GameLoadMode.NewGame;
+        LoadGame();
+    }
+
+    public static void ContinueGame()
+    {
+        if (!GameSaveStore.HasAnySave())
+            return;
+
+        _pendingLoadMode = GameLoadMode.Continue;
+        LoadGame();
+    }
 
     public static void LoadGame()
     {
@@ -73,6 +91,14 @@ public class GameSceneLoader : MonoBehaviour
 
         while (!CardInstancedRenderManager.IsGameplayReady)
             yield return null;
+
+        if (_pendingLoadMode == GameLoadMode.Continue)
+        {
+            if (!GameSaveStore.TryApplyLatestSave(out string saveError))
+                Debug.LogWarning("[GameSceneLoader] " + saveError);
+        }
+
+        _pendingLoadMode = GameLoadMode.NewGame;
 
         yield return null;
         loadingScreen.Hide();

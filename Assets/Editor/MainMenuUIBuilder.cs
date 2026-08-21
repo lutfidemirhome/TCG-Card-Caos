@@ -42,6 +42,85 @@ public static class MainMenuUIBuilder
         EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
     }
 
+    [MenuItem("TCG Card Caos/UI/Add Continue Button To Menu")]
+    public static void AddContinueButtonToMenu()
+    {
+        if (!File.Exists(MenuScenePath))
+        {
+            EditorUtility.DisplayDialog(
+                "Main Menu",
+                "MenuScene not found.\n\nRun: TCG Card Caos → UI → Build Main Menu UI",
+                "OK");
+            return;
+        }
+
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+
+        EnsureLocalizationTable();
+
+        UnityEngine.SceneManagement.Scene scene =
+            EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
+
+        Transform canvas = FindMenuCanvas();
+        if (canvas == null)
+        {
+            Debug.LogError("[MainMenuUIBuilder] MainMenuCanvas not found in MenuScene.");
+            return;
+        }
+
+        Transform loadGame = canvas.Find("Button_LoadGame");
+        if (loadGame == null)
+        {
+            Debug.LogError("[MainMenuUIBuilder] Button_LoadGame not found. Add Load Game first.");
+            return;
+        }
+
+        Transform existingContinue = canvas.Find("Button_Continue");
+        if (existingContinue != null)
+            Object.DestroyImmediate(existingContinue.gameObject);
+
+        GameObject continueGo = Object.Instantiate(loadGame.gameObject, canvas);
+        continueGo.name = "Button_Continue";
+
+        RectTransform continueRect = continueGo.GetComponent<RectTransform>();
+        RectTransform newGameRect = canvas.Find("Button_NewGame")?.GetComponent<RectTransform>();
+        float y = newGameRect != null ? newGameRect.anchoredPosition.y + 105f : -17f;
+        continueRect.anchoredPosition = new Vector2(0f, y);
+
+        Transform label = continueGo.transform.Find("Label");
+        if (label != null)
+        {
+            var localized = label.GetComponent<LocalizedText>();
+            if (localized != null)
+            {
+                var localizedObject = new SerializedObject(localized);
+                localizedObject.FindProperty("key").stringValue = LocalizationKeys.MenuContinue;
+                localizedObject.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        MainMenuView view = canvas.GetComponent<MainMenuView>();
+        if (view != null)
+        {
+            var viewObject = new SerializedObject(view);
+            viewObject.FindProperty("continueButton").objectReferenceValue = continueGo.GetComponent<Button>();
+            Transform logo = canvas.Find("Logo");
+            if (logo != null)
+                viewObject.FindProperty("logoRect").objectReferenceValue = logo.GetComponent<RectTransform>();
+            viewObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, MenuScenePath);
+
+        if (File.Exists(MenuPrefabPath))
+            PrefabUtility.SaveAsPrefabAsset(canvas.gameObject, MenuPrefabPath);
+
+        Selection.activeGameObject = continueGo;
+        Debug.Log("[MainMenuUIBuilder] Button_Continue added above New Game (copied from Load Game).");
+    }
+
     [MenuItem("TCG Card Caos/UI/Build Main Menu UI")]
     public static void BuildMainMenuUI()
     {
@@ -65,14 +144,16 @@ public static class MainMenuUIBuilder
         BuildBackground(canvas.transform);
         BuildLogo(canvas.transform);
 
+        Button continueBtn = BuildMenuButton(canvas.transform, "Button_Continue", LocalizationKeys.MenuContinue,
+            new Vector2(0f, -17f), new Color(0.45f, 0.84f, 0.15f), font);
         Button newGame = BuildMenuButton(canvas.transform, "Button_NewGame", LocalizationKeys.MenuNewGame,
-            new Vector2(0f, -50f), new Color(0.96f, 0.58f, 0.11f), font);
+            new Vector2(0f, -122f), new Color(0.96f, 0.58f, 0.11f), font);
         Button loadGame = BuildMenuButton(canvas.transform, "Button_LoadGame", LocalizationKeys.MenuLoadGame,
-            new Vector2(0f, -175f), new Color(0.45f, 0.84f, 0.15f), font);
+            new Vector2(0f, -227f), new Color(0.45f, 0.84f, 0.15f), font);
         Button settings = BuildMenuButton(canvas.transform, "Button_Settings", LocalizationKeys.MenuSettings,
-            new Vector2(0f, -300f), new Color(0.18f, 0.70f, 0.95f), font);
+            new Vector2(0f, -332f), new Color(0.18f, 0.70f, 0.95f), font);
         Button quit = BuildMenuButton(canvas.transform, "Button_Quit", LocalizationKeys.MenuQuit,
-            new Vector2(0f, -425f), new Color(0.91f, 0.32f, 0.20f), font);
+            new Vector2(0f, -437f), new Color(0.91f, 0.32f, 0.20f), font);
 
         TMP_Text versionText = BuildVersionLabel(canvas.transform, font);
         Button feedback = BuildFeedbackButton(canvas.transform, font);
@@ -80,7 +161,7 @@ public static class MainMenuUIBuilder
         RectTransform panel = BuildRoadmapPanel(canvas.transform, font,
             out Button discord, out Button tiktok, out Button instagram, out Button youtube);
 
-        AssignViewReferences(view, newGame, loadGame, settings, quit, feedback, versionText,
+        AssignViewReferences(view, canvas.transform, continueBtn, newGame, loadGame, settings, quit, feedback, versionText,
             discord, tiktok, instagram, youtube);
 
         EnsureFolder("Assets/UI");
@@ -184,7 +265,7 @@ public static class MainMenuUIBuilder
     static void BuildLogo(Transform parent)
     {
         RectTransform rect = CreateUIObject("Logo", parent);
-        SetCenterAnchored(rect, new Vector2(0f, 250f), new Vector2(560f, 400f));
+        SetCenterAnchored(rect, new Vector2(0f, 340f), new Vector2(560f, 400f));
 
         var image = rect.gameObject.AddComponent<Image>();
         image.color = new Color(1f, 1f, 1f, 0.15f);
@@ -332,6 +413,8 @@ public static class MainMenuUIBuilder
 
     static void AssignViewReferences(
         MainMenuView view,
+        Transform canvasRoot,
+        Button continueButton,
         Button newGame,
         Button loadGame,
         Button settings,
@@ -343,18 +426,29 @@ public static class MainMenuUIBuilder
         Button instagram,
         Button youtube)
     {
+        Transform logo = canvasRoot != null ? canvasRoot.Find("Logo") : null;
+        RectTransform logoRect = logo != null ? logo.GetComponent<RectTransform>() : null;
+
         var serialized = new SerializedObject(view);
+        serialized.FindProperty("continueButton").objectReferenceValue = continueButton;
         serialized.FindProperty("newGameButton").objectReferenceValue = newGame;
         serialized.FindProperty("loadGameButton").objectReferenceValue = loadGame;
         serialized.FindProperty("settingsButton").objectReferenceValue = settings;
         serialized.FindProperty("quitButton").objectReferenceValue = quit;
         serialized.FindProperty("feedbackButton").objectReferenceValue = feedback;
+        serialized.FindProperty("logoRect").objectReferenceValue = logoRect;
         serialized.FindProperty("versionText").objectReferenceValue = versionText;
         serialized.FindProperty("discordButton").objectReferenceValue = discord;
         serialized.FindProperty("tiktokButton").objectReferenceValue = tiktok;
         serialized.FindProperty("instagramButton").objectReferenceValue = instagram;
         serialized.FindProperty("youtubeButton").objectReferenceValue = youtube;
         serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static Transform FindMenuCanvas()
+    {
+        GameObject canvasGo = GameObject.Find(CanvasRootName);
+        return canvasGo != null ? canvasGo.transform : null;
     }
 
     // ---------- layout helpers ----------
@@ -485,6 +579,7 @@ public static class MainMenuUIBuilder
 
         table.EditorEnsureRowSizes();
 
+        table.EditorEnsureKey(LocalizationKeys.MenuContinue, "Continue", "Devam Et");
         table.EditorEnsureKey(LocalizationKeys.MenuNewGame, "New Game", "Yeni Oyun");
         table.EditorEnsureKey(LocalizationKeys.MenuLoadGame, "Load Game", "Oyun Yükle");
         table.EditorEnsureKey(LocalizationKeys.MenuSettings, "Settings", "Ayarlar");

@@ -5,6 +5,7 @@
 public static class LocalizationKeys
 {
     // Main menu buttons
+    public const string MenuContinue = "menu.continue";
     public const string MenuNewGame = "menu.new_game";
     public const string MenuLoadGame = "menu.load_game";
     public const string MenuSettings = "menu.settings";
