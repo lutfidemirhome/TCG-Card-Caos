@@ -32,4 +32,7 @@ public static class LocalizationKeys
     public const string PauseBack = "pause.back";
     public const string PauseResume = "pause.resume";
     public const string PauseSave = "pause.save";
+
+    // Loading overlay
+    public const string UiLoading = "ui.loading";
 }

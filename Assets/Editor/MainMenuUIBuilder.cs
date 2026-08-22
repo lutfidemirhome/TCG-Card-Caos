@@ -1738,6 +1738,7 @@ public static class MainMenuUIBuilder
         table.EditorEnsureKey(LocalizationKeys.PauseBack, "Back", "Geri");
         table.EditorEnsureKey(LocalizationKeys.PauseResume, "Resume", "Devam");
         table.EditorEnsureKey(LocalizationKeys.PauseSave, "Save Game", "Oyunu Kaydet");
+        table.EditorEnsureKey(LocalizationKeys.UiLoading, "Loading", "Yükleniyor");
 
         EditorUtility.SetDirty(table);
         AssetDatabase.SaveAssets();

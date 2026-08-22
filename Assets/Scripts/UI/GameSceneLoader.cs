@@ -91,7 +91,8 @@ public class GameSceneLoader : MonoBehaviour
         _startedViaMenuLoader = true;
 
         LoadingScreenUI loadingScreen = LoadingScreenUI.Ensure();
-        loadingScreen.Show();
+        if (loadingScreen != null)
+            loadingScreen.Show();
 
         InGamePauseView pause = Object.FindFirstObjectByType<InGamePauseView>();
         if (pause != null)
@@ -131,7 +132,8 @@ public class GameSceneLoader : MonoBehaviour
         if (loadingScreen == null)
             loadingScreen = LoadingScreenUI.Ensure();
 
-        loadingScreen.Show();
+        if (loadingScreen != null)
+            loadingScreen.Show();
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -151,7 +153,8 @@ public class GameSceneLoader : MonoBehaviour
         {
             Application.backgroundLoadingPriority = previousPriority;
             Debug.LogError("GameSceneLoader: Failed to start loading " + GameScenes.Game + ".");
-            loadingScreen.Hide();
+            if (loadingScreen != null)
+                loadingScreen.Hide();
             _isLoading = false;
             yield break;
         }
@@ -179,7 +182,8 @@ public class GameSceneLoader : MonoBehaviour
             yield return null;
 
         yield return null;
-        loadingScreen.Hide();
+        if (loadingScreen != null)
+            loadingScreen.Hide();
         _isLoading = false;
     }
 
