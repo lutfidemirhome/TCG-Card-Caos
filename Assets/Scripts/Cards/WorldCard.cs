@@ -1519,12 +1519,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.SetParent(slot, false);
         transform.localRotation = Quaternion.identity;
         transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
-        // CardMesh is center-pivoted; lift by half height so the bottom sits on the slot plane.
-        // Do NOT use MeshRenderer.bounds here — after an instant reparent (save restore) bounds can
-        // still reflect the pre-parent world pose and bury the card inside the cabinet mesh.
+        // CardMesh is center-pivoted. localScale is already WorldCardScale, so half-height in
+        // parent space is Height * 0.5 * scale — omit the scale and the card sinks into the slot.
         transform.localPosition = new Vector3(
             0f,
-            CardDimensions.Height * 0.5f + surfacePadding,
+            CardDimensions.Height * 0.5f * CardDimensions.WorldCardScale + surfacePadding,
             0f);
 
         CardGroundQuery.TrackShelfCard(this);
@@ -1557,7 +1556,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             float padding = shelf != null ? shelf.SurfacePadding : 0.003f;
             transform.localPosition = new Vector3(
                 0f,
-                CardDimensions.Height * 0.5f + padding,
+                CardDimensions.Height * 0.5f * CardDimensions.WorldCardScale + padding,
                 0f);
         }
 

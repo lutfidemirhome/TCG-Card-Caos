@@ -121,6 +121,31 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     }
 
     /// <summary>
+    /// Re-applies a saved world pose without the flat-floor visual lift that would shift a leaning
+    /// pack (e.g. against glass) along its local up and push it through walls on load.
+    /// </summary>
+    public void RestoreSavedWorldPose(bool faceDown, int stackLayer)
+    {
+        _state = PackState.World;
+        _groundShowsBack = faceDown;
+        SetGroundStackLayer(stackLayer);
+
+        // Flat packs match scatter/spawn (ground mesh lift). Tilted packs match post-throw settle
+        // (physics visual, mesh centred on root) — see CardSettlePlacement.FlatUpDot.
+        bool upright = Mathf.Abs(transform.up.y) >= 0.94f;
+        ApplyWorldVisualOrientation(alignPackModelToGround: upright);
+
+        if (_collider != null)
+        {
+            _collider.enabled = true;
+            if (_collider is BoxCollider boxCollider)
+                boxCollider.isTrigger = false;
+        }
+
+        ApplyPackModelShadowSettings();
+    }
+
+    /// <summary>
     /// Moves the pack and drags its physics body along — see <see cref="WorldCard.SetGroundRestPosition"/>
     /// for why the transform alone is not enough with Auto Sync Transforms off.
     /// </summary>

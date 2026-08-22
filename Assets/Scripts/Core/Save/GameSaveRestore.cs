@@ -443,8 +443,7 @@ public static class GameSaveRestore
 
         pack.transform.SetParent(scatterRoot, true);
         pack.transform.SetPositionAndRotation(record.Position, record.Rotation);
-        pack.SetGroundShowsBack(record.faceDown);
-        pack.SetGroundStackLayer(record.stackLayer);
+        pack.RestoreSavedWorldPose(record.faceDown, record.stackLayer);
         CardGroundStack.TrackPack(pack);
     }
 
