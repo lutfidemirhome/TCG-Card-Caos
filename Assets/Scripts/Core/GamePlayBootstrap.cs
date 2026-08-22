@@ -18,6 +18,11 @@ static class GamePlayBootstrap
         _bootstrappedSceneHandle = -1;
     }
 
+    public static void PrepareForSceneReload()
+    {
+        _bootstrappedSceneHandle = -1;
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void InitializeFirstScene()
     {

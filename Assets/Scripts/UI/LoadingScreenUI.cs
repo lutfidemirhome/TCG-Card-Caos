@@ -39,7 +39,7 @@ public class LoadingScreenUI : MonoBehaviour
 
     void BuildUi()
     {
-        Canvas canvas = RuntimeOverlayCanvasFactory.Create(transform, "LoadingCanvas", sortingOrder: 200, matchWidthOrHeight: 0.5f);
+        Canvas canvas = RuntimeOverlayCanvasFactory.Create(transform, "LoadingCanvas", sortingOrder: 1000, matchWidthOrHeight: 0.5f);
 
         var backgroundGo = new GameObject("Background");
         backgroundGo.transform.SetParent(canvas.transform, false);
@@ -109,8 +109,13 @@ public class LoadingScreenUI : MonoBehaviour
 
     public void Show()
     {
+        Canvas canvas = GetComponentInChildren<Canvas>(true);
+        if (canvas != null)
+            canvas.sortingOrder = 1000;
+
         _showTime = Time.unscaledTime;
         gameObject.SetActive(true);
+        transform.SetAsLastSibling();
         UpdateLabel();
     }
 

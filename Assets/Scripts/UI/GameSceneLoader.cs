@@ -27,6 +27,8 @@ public class GameSceneLoader : MonoBehaviour
 
     public static bool StartedViaMenuLoader => _startedViaMenuLoader;
 
+    public static bool IsLoading => _isLoading;
+
     public static GameLoadMode PendingLoadMode
     {
         get
@@ -85,9 +87,18 @@ public class GameSceneLoader : MonoBehaviour
         if (_isLoading || !Application.isPlaying)
             return;
 
+        _isLoading = true;
         _startedViaMenuLoader = true;
+
+        LoadingScreenUI loadingScreen = LoadingScreenUI.Ensure();
+        loadingScreen.Show();
+
+        InGamePauseView pause = Object.FindFirstObjectByType<InGamePauseView>();
+        if (pause != null)
+            pause.Hide();
+
         GamePause.SetPaused(false);
-        EnsureRunner().StartCoroutine(LoadGameRoutine());
+        EnsureRunner().StartCoroutine(LoadGameRoutine(loadingScreen));
     }
 
     static void ConsumeEditorPendingIfNeeded()
@@ -115,11 +126,11 @@ public class GameSceneLoader : MonoBehaviour
         return _runner;
     }
 
-    static IEnumerator LoadGameRoutine()
+    static IEnumerator LoadGameRoutine(LoadingScreenUI loadingScreen)
     {
-        _isLoading = true;
+        if (loadingScreen == null)
+            loadingScreen = LoadingScreenUI.Ensure();
 
-        LoadingScreenUI loadingScreen = LoadingScreenUI.Ensure();
         loadingScreen.Show();
 
         Cursor.lockState = CursorLockMode.None;
@@ -127,14 +138,14 @@ public class GameSceneLoader : MonoBehaviour
 
         yield return null;
 
-        while (!GameAssetPrewarm.IsComplete)
-            yield return null;
-
+        GameAssetPrewarm.EnsureReady();
+        GamePlayBootstrap.PrepareForSceneReload();
         CardInstancedRenderManager.ResetGameplayReady();
 
         ThreadPriority previousPriority = Application.backgroundLoadingPriority;
         Application.backgroundLoadingPriority = ThreadPriority.Low;
 
+        bool reloadActiveGame = GameScenes.IsActiveGameScene();
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(GameScenes.Game, LoadSceneMode.Single);
         if (loadOperation == null)
         {
@@ -145,12 +156,19 @@ public class GameSceneLoader : MonoBehaviour
             yield break;
         }
 
-        loadOperation.allowSceneActivation = false;
+        // Reloading the scene you are already in deadlocks if activation is held at 0.9.
+        if (reloadActiveGame)
+        {
+            loadOperation.allowSceneActivation = true;
+        }
+        else
+        {
+            loadOperation.allowSceneActivation = false;
+            while (loadOperation.progress < 0.9f)
+                yield return null;
 
-        while (loadOperation.progress < 0.9f)
-            yield return null;
-
-        loadOperation.allowSceneActivation = true;
+            loadOperation.allowSceneActivation = true;
+        }
 
         while (!loadOperation.isDone)
             yield return null;

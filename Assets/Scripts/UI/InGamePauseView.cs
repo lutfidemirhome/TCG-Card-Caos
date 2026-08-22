@@ -48,6 +48,9 @@ public class InGamePauseView : MonoBehaviour
 
     void Update()
     {
+        if (GameSceneLoader.IsLoading)
+            return;
+
         if (!GameScenes.IsActiveGameScene())
             return;
 

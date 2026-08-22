@@ -11,6 +11,19 @@ public static class GameAssetPrewarm
 
     public static bool IsComplete => _complete;
 
+    /// <summary>
+    /// In-game load never went through the menu prewarm. Don't block the loading screen forever.
+    /// </summary>
+    public static void EnsureReady()
+    {
+        if (_complete)
+            return;
+
+        CardArtLibrary.EnsureLoaded();
+        _started = true;
+        _complete = true;
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
     {
