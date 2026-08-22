@@ -4,15 +4,15 @@ using UnityEngine;
 
 public static class CardScatterUtility
 {
-    public const int DefaultScatterCount = 100;
-    public const int UncommonScatterCount = 50;
-    public const int RareScatterCount = 30;
+    public const int DefaultScatterCount = 0;
+    public const int UncommonScatterCount = 0;
+    public const int RareScatterCount = 0;
     public const int NormalScatterCount = DefaultScatterCount + UncommonScatterCount + RareScatterCount;
     public const int FireCommonScatterCount = 100;
     public const int FireUncommonScatterCount = 50;
     public const int FireRareScatterCount = 30;
     public const int FireScatterCount = FireCommonScatterCount + FireUncommonScatterCount + FireRareScatterCount;
-    public const int GrassCommonScatterCount = 100;
+    public const int GrassCommonScatterCount = 0;
     public const int GrassUncommonScatterCount = 50;
     public const int GrassRareScatterCount = 30;
     public const int GrassScatterCount = GrassCommonScatterCount + GrassUncommonScatterCount + GrassRareScatterCount;
@@ -25,6 +25,17 @@ public static class CardScatterUtility
     public const string TestPackPrefix = "BoosterPack_";
     public static int PackReservedCardCount => DefaultPackScatterCount * CardDimensions.CardsPerBoosterPack;
     public static int GroundScatterCount => FullScatterCount - PackReservedCardCount;
+
+    /// <summary>
+    /// Demo: cabinets removed for these categories — do not scatter their cards on the floor.
+    /// </summary>
+    static readonly HashSet<string> DemoExcludedGroundCategories = new HashSet<string>
+    {
+        CardShelfCategories.GrassCommon,
+        CardShelfCategories.NormalCommon,
+        CardShelfCategories.NormalRare,
+        CardShelfCategories.NormalUncommon,
+    };
 
     const int CardsPerSpawnFrame = 6;
     const int PositionsPerYield = 12;
@@ -519,11 +530,23 @@ public static class CardScatterUtility
                 continue;
             }
 
+            if (string.IsNullOrWhiteSpace(shelfCategoryId)
+                && IsDemoExcludedGroundCategory(definition.ShelfCategoryId))
+            {
+                continue;
+            }
+
             definitions.Add(definition);
         }
 
         definitions.Sort((a, b) => string.CompareOrdinal(a.DefinitionId, b.DefinitionId));
         return definitions;
+    }
+
+    static bool IsDemoExcludedGroundCategory(string categoryId)
+    {
+        return !string.IsNullOrWhiteSpace(categoryId)
+            && DemoExcludedGroundCategories.Contains(categoryId);
     }
 
     public static int CountScatterPacks()

@@ -69,6 +69,8 @@ static class GamePlayBootstrap
         if (camera.GetComponent<CrosshairUI>() == null)
             camera.gameObject.AddComponent<CrosshairUI>();
 
+        TempPlaytestPauseUI.EnsureOn(camera);
+
         if (camera.GetComponent<InteractionController>() == null)
             camera.gameObject.AddComponent<InteractionController>();
 
