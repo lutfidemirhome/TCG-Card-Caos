@@ -791,7 +791,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_cardVisual == null)
             return;
 
+        // Hand always shows the front. The bake below assumes WorldVisualRotation (front-up local).
+        // A leftover groundShowsBack from a face-down pickup would apply an extra 180° and flash
+        // the back toward the camera — most obvious when throwing while looking upward.
         transform.rotation = _cardVisual.rotation * Quaternion.Inverse(CardArtLibrary.WorldVisualRotation);
+        groundShowsBack = false;
         ApplyWorldVisualOrientation();
     }
 
