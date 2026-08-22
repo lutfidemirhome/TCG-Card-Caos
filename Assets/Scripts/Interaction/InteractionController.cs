@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class InteractionController : MonoBehaviour
 {
     [SerializeField] Camera viewCamera;
-    [SerializeField] float interactDistance = 3f;
+    [SerializeField] float interactDistance = 4.5f;
     [SerializeField] LayerMask interactMask = ~0;
     [SerializeField] KeyCode interactKey = KeyCode.E;
     [Tooltip("Seconds to look at a card before the inspect preview and interact prompt appear. 0 = instant.")]
