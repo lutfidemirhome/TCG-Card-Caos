@@ -113,13 +113,18 @@ public sealed class PackRevealBackdrop : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            t = t * t * (3f - 2f * t);
-            SetAlpha(Mathf.Lerp(startAlpha, targetAlpha, t));
+            SetFadeProgress(elapsed / duration, targetAlpha, startAlpha);
             yield return null;
         }
 
         SetAlpha(targetAlpha);
+    }
+
+    public void SetFadeProgress(float normalizedT, float targetAlpha, float startAlpha = 0f)
+    {
+        normalizedT = Mathf.Clamp01(normalizedT);
+        float t = normalizedT * normalizedT * (3f - 2f * normalizedT);
+        SetAlpha(Mathf.Lerp(startAlpha, targetAlpha, t));
     }
 
     void SetAlpha(float alpha)

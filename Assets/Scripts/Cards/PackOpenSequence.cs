@@ -20,6 +20,7 @@ public static class PackOpenSequence
     const float RevealCardSpacingFactor = 1.12f;
     const float RevealCardAnchorHeight = 0.02f;
     const float PackRevealLocalYOffsetFactor = 0.44f;
+    const float PackMoveToRevealDuration = 0.1f;
     const float PackDriftDurationFactor = 0.075f;
     const float PackExitDropFactor = 1.35f;
     const float PackPostShakePause = 0.05f;
@@ -32,7 +33,7 @@ public static class PackOpenSequence
     const float PackEjectLocalYOffsetFactor = 0.22f;
     const float PackEjectLocalZInsetFactor = 2.8f;
     const float RevealBackdropAlpha = 0.62f;
-    const float RevealBackdropFadeInDuration = 0.28f;
+    const float RevealBackdropFadeInDuration = 0.12f;
     const float RevealBackdropFadeOutDuration = 0.32f;
 
     public static IEnumerator Run(PlayerCardHand hand, WorldBoosterPack pack, Camera camera)
@@ -50,8 +51,6 @@ public static class PackOpenSequence
         float revealDistance = hand.OpenRevealDistance;
         float packOnlyWorldDown = RevealCardAnchorHeight - hand.OpenRevealHeight;
         PackRevealBackdrop backdrop = PackRevealBackdrop.Create(camera, revealDistance);
-        if (backdrop != null)
-            yield return backdrop.FadeTo(RevealBackdropAlpha, RevealBackdropFadeInDuration);
 
         Transform revealRoot = new GameObject("PackRevealRoot").transform;
         revealRoot.SetParent(camera.transform, false);
@@ -68,8 +67,8 @@ public static class PackOpenSequence
             -CardDimensions.Height * revealScale * PackRevealLocalYOffsetFactor - packOnlyWorldDown,
             0f);
 
-        // Move pack toward the reveal anchor, facing the player like a held pack.
-        float moveInDuration = duration * 0.22f;
+        // Snap pack toward the reveal anchor; backdrop fades in at the same time.
+        float moveInDuration = PackMoveToRevealDuration;
         float elapsed = 0f;
         Vector3 packStartWorldPos = pack.transform.position;
         Quaternion packStartWorldRot = pack.transform.rotation;
@@ -79,12 +78,18 @@ public static class PackOpenSequence
         while (elapsed < moveInDuration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, elapsed / moveInDuration);
+            float t = Mathf.Clamp01(elapsed / moveInDuration);
+            t = 1f - Mathf.Pow(1f - t, 3f);
             pack.transform.position = Vector3.Lerp(packStartWorldPos, packRevealWorldPos, t);
             pack.transform.rotation = Quaternion.Slerp(packStartWorldRot, packRevealWorldRotation, t);
             pack.transform.localScale = Vector3.Lerp(packStartScale, Vector3.one * revealScale, t);
+            if (backdrop != null)
+                backdrop.SetFadeProgress(elapsed / RevealBackdropFadeInDuration, RevealBackdropAlpha);
             yield return null;
         }
+
+        if (backdrop != null)
+            backdrop.SetFadeProgress(1f, RevealBackdropAlpha);
 
         pack.transform.SetParent(revealRoot, false);
         pack.transform.localPosition = packRevealLocalStart;
