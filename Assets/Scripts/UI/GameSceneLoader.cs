@@ -9,10 +9,23 @@ public class GameSceneLoader : MonoBehaviour
 {
     public const string EditorPendingSlotKey = "TCGCardCaos.PendingSaveSlot";
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        _runner = null;
+        _isLoading = false;
+        _startedViaMenuLoader = false;
+        _pendingLoadMode = GameLoadMode.NewGame;
+        _pendingSlotId = null;
+    }
+
     static GameSceneLoader _runner;
     static bool _isLoading;
+    static bool _startedViaMenuLoader;
     static GameLoadMode _pendingLoadMode = GameLoadMode.NewGame;
     static string _pendingSlotId;
+
+    public static bool StartedViaMenuLoader => _startedViaMenuLoader;
 
     public static GameLoadMode PendingLoadMode
     {
@@ -64,6 +77,7 @@ public class GameSceneLoader : MonoBehaviour
     {
         _pendingLoadMode = GameLoadMode.NewGame;
         _pendingSlotId = null;
+        _startedViaMenuLoader = false;
     }
 
     public static void LoadGame()
@@ -71,6 +85,7 @@ public class GameSceneLoader : MonoBehaviour
         if (_isLoading || !Application.isPlaying)
             return;
 
+        _startedViaMenuLoader = true;
         EnsureRunner().StartCoroutine(LoadGameRoutine());
     }
 

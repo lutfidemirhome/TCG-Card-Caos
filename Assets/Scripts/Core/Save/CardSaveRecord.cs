@@ -22,6 +22,8 @@ public class CardSaveRecord
     public string shelfId = string.Empty;
     public int slotRow;
     public int slotColumn;
+    public string shelfSlotName = string.Empty;
+    public string shelfSlotPath = string.Empty;
     public string psaCabinetId = string.Empty;
     public int psaCabinetSlot;
 

@@ -13,7 +13,7 @@ public static class GameSaveEditorMenu
             return;
         }
 
-        GameSaveManager.EnsureExists().RequestAutosave(GameSaveManager.SaveRequestKind.Autosave);
+        GameSaveManager.EnsureExists().ForceAutosaveNow();
     }
 
     [MenuItem("TCG Card Caos/Save/Load Latest")]

@@ -11,6 +11,9 @@ public static class GameSaveRestore
 
     static readonly HashSet<string> RestoredIds = new HashSet<string>();
     static bool _remappedIds;
+    static int _shelfRestored;
+    static int _shelfFailed;
+    static int _psaRestored;
     public static bool LastRestoreSucceeded { get; private set; }
 
     public static IEnumerator RestoreRoutine(string slotId)
@@ -28,9 +31,13 @@ public static class GameSaveRestore
         yield return null;
 
         PersistentIdRegistry.RebuildWorldLookups();
+        PrepareShelvesForRestore();
         Transform scatterRoot = CardScatterUtility.GetOrCreateScatterRoot();
         RestoredIds.Clear();
         _remappedIds = false;
+        _shelfRestored = 0;
+        _shelfFailed = 0;
+        _psaRestored = 0;
 
         int processed = 0;
         if (data.cards != null)
@@ -55,6 +62,9 @@ public static class GameSaveRestore
             }
         }
 
+        FinalizeShelfRestores();
+        yield return null;
+
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null)
             hand.RestoreSelectionIndex(data.handSelectedIndex);
@@ -67,6 +77,33 @@ public static class GameSaveRestore
             GameSaveDirtyTracker.Clear();
         LastRestoreSucceeded = true;
         GameSaveEvents.RaiseLoadCompleted(slotId);
+        LogRestore(slotId, data);
+    }
+
+    static void LogRestore(string slotId, GameSaveData data)
+    {
+        int shelfCards = 0;
+        int psaCards = 0;
+        if (data != null && data.cards != null)
+        {
+            for (int i = 0; i < data.cards.Length; i++)
+            {
+                CardSaveRecord card = data.cards[i];
+                if (card == null)
+                    continue;
+                if (card.location == CardRuntimeLocation.Shelf)
+                    shelfCards++;
+                else if (card.location == CardRuntimeLocation.PsaCabinet)
+                    psaCards++;
+            }
+        }
+
+        Debug.Log(
+            "[Save] Restored " + slotId
+            + " shelf=" + _shelfRestored + "/" + shelfCards
+            + (_shelfFailed > 0 ? " missing=" + _shelfFailed : string.Empty)
+            + " psa=" + _psaRestored + "/" + psaCards
+            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0));
     }
 
     static string AllocateRestoreId(string savedId)
@@ -96,11 +133,18 @@ public static class GameSaveRestore
         switch (record.location)
         {
             case CardRuntimeLocation.Shelf:
-                if (!TryRestoreShelfCard(card, record))
+                if (TryRestoreShelfCard(card, record))
+                    _shelfRestored++;
+                else
+                {
+                    _shelfFailed++;
                     PlaceWorldCard(card, record, scatterRoot);
+                }
                 break;
             case CardRuntimeLocation.PsaCabinet:
-                if (!TryRestorePsaCard(card, record))
+                if (TryRestorePsaCard(card, record))
+                    _psaRestored++;
+                else
                     PlaceWorldCard(card, record, scatterRoot);
                 break;
             case CardRuntimeLocation.Held:
@@ -141,36 +185,148 @@ public static class GameSaveRestore
 
     static void PlaceWorldCard(WorldCard card, CardSaveRecord record, Transform scatterRoot)
     {
-        card.PlaceOnSurface(scatterRoot, record.Position, record.Rotation);
+        card.transform.SetParent(scatterRoot, true);
+        card.transform.SetPositionAndRotation(record.Position, record.Rotation);
+        card.transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
         card.SetGroundShowsBack(record.faceDown);
         card.SetGroundStackLayer(record.stackLayer);
     }
 
     static bool TryRestoreShelfCard(WorldCard card, CardSaveRecord record)
     {
-        CardShelf shelf = FindShelf(record.shelfId);
-        if (shelf == null)
+        CardArtLibrary.EnsureLoaded();
+        CardShelfSlot slot = FindShelfSlot(record);
+        if (slot == null)
         {
-            Debug.LogWarning("[Save] Missing shelf '" + record.shelfId + "'.");
+            Debug.LogWarning(
+                "[Save] Missing shelf slot '" + record.shelfId
+                + "' path='" + record.shelfSlotPath
+                + "' r" + record.slotRow + " c" + record.slotColumn + ".");
             return false;
         }
 
-        return shelf.TryRestoreCard(card, record.slotRow, record.slotColumn);
+        CardShelf owner = slot.GetComponentInParent<CardShelf>();
+        float padding = owner != null ? owner.SurfacePadding : 0.003f;
+        bool isCorrect = owner != null && owner.IsCorrectPlacement(card, slot);
+        // Skip green/red flash on load — StartCoroutine during bulk restore is noisy and
+        // RefreshRenderMode at flash end is unnecessary when we re-finalize visuals after.
+        return slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
+    }
+
+    static void PrepareShelvesForRestore()
+    {
+        CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < shelves.Length; i++)
+        {
+            if (shelves[i] != null)
+                shelves[i].RefreshSlotCache();
+        }
+    }
+
+    static CardShelfSlot FindShelfSlot(CardSaveRecord record)
+    {
+        CardShelf shelf = FindShelf(record.shelfId);
+        if (shelf == null)
+            return null;
+
+        return ResolveSlotOnShelf(shelf, record);
+    }
+
+    static CardShelfSlot ResolveSlotOnShelf(CardShelf shelf, CardSaveRecord record)
+    {
+        if (shelf == null)
+            return null;
+
+        if (!string.IsNullOrEmpty(record.shelfSlotPath))
+        {
+            CardShelfSlot byPath = shelf.FindSlotByRelativePath(record.shelfSlotPath);
+            if (byPath != null)
+                return byPath;
+        }
+
+        if (!string.IsNullOrEmpty(record.shelfSlotName))
+        {
+            CardShelfSlot byName = shelf.FindSlotByRelativePath(record.shelfSlotName);
+            if (byName != null)
+                return byName;
+        }
+
+        CardShelfSlot authored = shelf.FindSlotByAuthoredHierarchy(
+            record.slotRow,
+            record.slotColumn);
+        if (authored != null)
+            return authored;
+
+        return shelf.FindSlotForRestore(null, record.slotRow, record.slotColumn, record.Position);
+    }
+
+    static void FinalizeShelfRestores()
+    {
+        CardShelfSlot[] slots = UnityEngine.Object.FindObjectsByType<CardShelfSlot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        int shelfVisualCount = 0;
+        for (int i = 0; i < slots.Length; i++)
+        {
+            CardShelfSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card == null)
+                continue;
+
+            CardShelf shelf = slot.GetComponentInParent<CardShelf>();
+            float padding = shelf != null ? shelf.SurfacePadding : 0.003f;
+            bool isCorrect = shelf != null && shelf.IsCorrectPlacement(card, slot);
+            slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
+            card.RefreshShelfVisualAfterLoad();
+            shelfVisualCount++;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log(
+                "[Save] Finalize shelf '" + card.name
+                + "' y=" + card.transform.position.y.ToString("0.000")
+                + " mesh=" + (card.GetComponentInChildren<MeshRenderer>() != null));
+#endif
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (shelfVisualCount > 0)
+            Debug.Log("[Save] Finalized " + shelfVisualCount + " shelf card visuals.");
+#endif
     }
 
     static CardShelf FindShelf(string shelfId)
     {
-        if (!string.IsNullOrEmpty(shelfId)
-            && PersistentIdRegistry.TryGetShelf(shelfId, out CardShelf shelf)
-            && shelf != null)
+        if (string.IsNullOrEmpty(shelfId))
+            return null;
+
+        if (PersistentIdRegistry.TryGetShelf(shelfId, out CardShelf shelf) && shelf != null)
             return shelf;
+
+        CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < shelves.Length; i++)
+        {
+            CardShelf candidate = shelves[i];
+            if (candidate == null)
+                continue;
+
+            string path = PersistentId.BuildPathFallback(candidate.transform);
+            if (path == shelfId)
+                return candidate;
+        }
 
         string objectName = ShelfObjectName(shelfId);
         if (string.IsNullOrEmpty(objectName))
             return null;
 
-        foreach (CardShelf candidate in PersistentIdRegistry.AllShelves)
+        for (int i = 0; i < shelves.Length; i++)
         {
+            CardShelf candidate = shelves[i];
             if (candidate != null && candidate.gameObject.name == objectName)
                 return candidate;
         }
@@ -228,7 +384,7 @@ public static class GameSaveRestore
                 return slot;
         }
 
-        PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
+        PsaCabinetSlot[] slots = UnityEngine.Object.FindObjectsByType<PsaCabinetSlot>(
             FindObjectsInactive.Exclude,
             FindObjectsSortMode.None);
         PsaCabinetSlot occupiedFallback = null;

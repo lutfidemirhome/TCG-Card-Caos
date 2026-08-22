@@ -877,7 +877,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_cardVisual == null)
             return;
 
-        _cardVisual.localRotation = CardArtLibrary.WorldVisualRotation;
+        _cardVisual.localRotation = groundShowsBack
+            ? CardArtLibrary.WorldVisualRotation * Quaternion.Euler(180f, 0f, 0f)
+            : CardArtLibrary.WorldVisualRotation;
         _cardVisual.localScale = CardArtLibrary.WorldVisualScale;
         SetCardVisualMesh(CardArtLibrary.CardMesh);
     }
@@ -1178,6 +1180,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
+        if (groundShowsBack)
+        {
+            EnsureCardVisual();
+            ApplyWorldVisualOrientation();
+            ReleaseInteractionOutline();
+            ReleaseShelfStatusOutline();
+            SetWorldColliderEnabled(false);
+            CardGroundStack.Track(this);
+            return;
+        }
+
         ReleaseCardVisual();
         ReleaseInteractionOutline();
         ReleaseShelfStatusOutline();
@@ -1215,6 +1228,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         var visualGo = new GameObject("CardVisual");
         visualGo.transform.SetParent(transform, false);
         visualGo.transform.localRotation = CardArtLibrary.WorldVisualRotation;
+        CardLayers.ApplyToGameObject(visualGo);
 
         var meshFilter = visualGo.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = CardArtLibrary.CardMesh;
@@ -1488,8 +1502,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         RemovePhysics();
         _scaleTransitionActive = false;
 
+        CardInstancedRenderManager.ReleaseFromGround(this);
+
         EnsureCardVisual();
         ApplyShelfVisualOrientation();
+        ApplyCardVisualTextureQuality();
 
         if (_collider != null && _collider is BoxCollider boxCollider)
             CardCollisionUtility.ApplyUprightShelfSize(boxCollider);
@@ -1497,45 +1514,48 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.SetParent(slot, false);
         transform.localRotation = Quaternion.identity;
         transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
-        transform.localPosition = Vector3.zero;
+        // CardMesh is center-pivoted; lift by half height so the bottom sits on the slot plane.
+        // Do NOT use MeshRenderer.bounds here — after an instant reparent (save restore) bounds can
+        // still reflect the pre-parent world pose and bury the card inside the cabinet mesh.
+        transform.localPosition = new Vector3(
+            0f,
+            CardDimensions.Height * 0.5f + surfacePadding,
+            0f);
 
-        AlignBottomToSlotPlane(slot, surfacePadding);
         CardGroundQuery.TrackShelfCard(this);
         SetPlayerAimFocus(false);
         RefreshRenderMode();
     }
 
-    void AlignBottomToSlotPlane(Transform slot, float surfacePadding)
+    public void RefreshShelfVisualAfterLoad()
     {
-        MeshRenderer meshRenderer = _cardVisual != null
-            ? _cardVisual.GetComponent<MeshRenderer>()
-            : GetComponentInChildren<MeshRenderer>();
-
-        if (meshRenderer == null)
-        {
-            transform.localPosition = Vector3.up * surfacePadding;
+        CardArtLibrary.EnsureLoaded();
+        CardInstancedRenderManager.ReleaseFromGround(this);
+        EnsureCardVisual();
+        ApplyShelfVisualOrientation();
+        ApplyCardVisualTextureQuality();
+        if (_cardVisual == null)
             return;
-        }
 
-        Bounds bounds = meshRenderer.bounds;
-        Vector3 center = bounds.center;
-        Vector3 extents = bounds.extents;
-        float minLocalY = float.MaxValue;
+        if (!_cardVisual.gameObject.activeSelf)
+            _cardVisual.gameObject.SetActive(true);
 
-        for (int ix = -1; ix <= 1; ix += 2)
+        MeshRenderer renderer = _cardVisual.GetComponent<MeshRenderer>();
+        if (renderer != null)
+            renderer.enabled = true;
+
+        if (transform.parent != null)
         {
-            for (int iy = -1; iy <= 1; iy += 2)
-            {
-                for (int iz = -1; iz <= 1; iz += 2)
-                {
-                    Vector3 corner = center + Vector3.Scale(extents, new Vector3(ix, iy, iz));
-                    float localY = slot.InverseTransformPoint(corner).y;
-                    if (localY < minLocalY)
-                        minLocalY = localY;
-                }
-            }
+            transform.localRotation = Quaternion.identity;
+            transform.localScale = Vector3.one * CardDimensions.WorldCardScale;
+            CardShelf shelf = GetComponentInParent<CardShelf>();
+            float padding = shelf != null ? shelf.SurfacePadding : 0.003f;
+            transform.localPosition = new Vector3(
+                0f,
+                CardDimensions.Height * 0.5f + padding,
+                0f);
         }
 
-        transform.localPosition = new Vector3(0f, -minLocalY + surfacePadding, 0f);
+        RefreshRenderMode();
     }
 }

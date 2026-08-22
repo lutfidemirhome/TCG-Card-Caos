@@ -212,6 +212,9 @@ public static class CardGroundStack
             WorldCard card = GroundCards[i];
             if (card == null || card.IsInHand)
                 continue;
+            if (card.GetComponentInParent<CardShelfSlot>() != null
+                || card.GetComponentInParent<PsaCabinetSlot>() != null)
+                continue;
 
             long key = CellKey(card.transform.position, cellSize);
             if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
@@ -293,6 +296,10 @@ public static class CardGroundStack
             // flat layer height cannot describe a card resting on a pack or on a tilted neighbour, so
             // it keeps its own height and only reserves this layer for the cards around it.
             if (card == null || card.IsInHand || card.HasActivePhysics)
+                continue;
+            // Shelf / PSA cards must keep their display pose — never flatten them to ground Y.
+            if (card.GetComponentInParent<CardShelfSlot>() != null
+                || card.GetComponentInParent<PsaCabinetSlot>() != null)
                 continue;
 
             card.SetGroundStackLayer(layer);

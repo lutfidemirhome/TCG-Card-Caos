@@ -141,7 +141,7 @@ public sealed class GameSaveManager : MonoBehaviour
     public static void NotifyNewGameWorldReady()
     {
         EnsureExists();
-        GameSaveDirtyTracker.MarkDirty();
+        GameSaveDirtyTracker.Clear();
         _instance.BeginGameplaySession(fromSave: false, 0d);
     }
 
@@ -186,6 +186,25 @@ public sealed class GameSaveManager : MonoBehaviour
             return;
 
         StartCoroutine(CommitRoutine(kind, manualSlotId: null));
+    }
+
+    public void ForceAutosaveNow()
+    {
+        if (!GameScenes.IsActiveGameScene())
+        {
+            Debug.LogWarning("[Save] Autosave skipped: MainScene is not active.");
+            return;
+        }
+
+        GameSaveDirtyTracker.MarkDirty();
+        if (_saveInProgress)
+        {
+            _autosaveQueued = true;
+            Debug.Log("[Save] Autosave queued; wait a moment.");
+            return;
+        }
+
+        CommitSynchronous(SaveRequestKind.Autosave, null);
     }
 
     public void SaveManual(string slotId = null)
@@ -315,6 +334,7 @@ public sealed class GameSaveManager : MonoBehaviour
                 if (kind != SaveRequestKind.Manual)
                     AdvanceAutosaveIndex(slotIndex);
                 GameSaveEvents.RaiseSaveCompleted(metadata);
+                LogSave(kind, slotId, data, 0f, 0f, 0f);
             }
             else
             {
@@ -422,15 +442,27 @@ public sealed class GameSaveManager : MonoBehaviour
 
     void LogSave(SaveRequestKind kind, string slotId, GameSaveData data, float collectMs, float serializeMs, float writeMs)
     {
-        if (_settings == null || !_settings.DebugLogs)
-            return;
+        int shelfCards = 0;
+        int psaCards = 0;
+        if (data != null && data.cards != null)
+        {
+            for (int i = 0; i < data.cards.Length; i++)
+            {
+                CardSaveRecord card = data.cards[i];
+                if (card == null)
+                    continue;
+                if (card.location == CardRuntimeLocation.Shelf)
+                    shelfCards++;
+                else if (card.location == CardRuntimeLocation.PsaCabinet)
+                    psaCards++;
+            }
+        }
 
         Debug.Log(
-            "[Save] Completed " + kind + " slot=" + slotId
-            + " cards=" + (data.cards != null ? data.cards.Length : 0)
-            + " collect=" + collectMs.ToString("0.0") + "ms"
-            + " serialize=" + serializeMs.ToString("0.0") + "ms"
-            + " write=" + writeMs.ToString("0.0") + "ms");
+            "[Save] Completed " + kind + " " + slotId
+            + " shelf=" + shelfCards
+            + " psa=" + psaCards
+            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0));
     }
 
     void LoadLatestFromGameplay()
@@ -458,7 +490,20 @@ public sealed class GameSaveManager : MonoBehaviour
     public static SaveSlotMetadata GetLatestValidSave()
     {
         List<SaveSlotMetadata> slots = SaveFileIO.ListCompatibleSlots();
-        return slots.Count > 0 ? slots[0] : null;
+        if (slots.Count == 0)
+            return null;
+
+        SaveSlotMetadata newest = slots[0];
+        if (newest.cardsPlaced > 0 || newest.playTimeSeconds >= 30d)
+            return newest;
+
+        for (int i = 1; i < slots.Count; i++)
+        {
+            if (slots[i].cardsPlaced > 0)
+                return slots[i];
+        }
+
+        return newest;
     }
 
     public static void DeleteSaveSlot(string slotId)

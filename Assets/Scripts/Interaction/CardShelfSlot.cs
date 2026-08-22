@@ -96,6 +96,27 @@ public class CardShelfSlot : MonoBehaviour
         SyncIndicesFromName();
     }
 
+    public bool RestoreOccupiedCard(WorldCard card, float surfacePadding, bool isCorrect)
+    {
+        return RestoreOccupiedCard(card, surfacePadding, isCorrect, playPlacementFeedback: true);
+    }
+
+    public bool RestoreOccupiedCard(
+        WorldCard card,
+        float surfacePadding,
+        bool isCorrect,
+        bool playPlacementFeedback)
+    {
+        if (card == null)
+            return false;
+
+        Occupy(card);
+        card.PlaceOnShelfSlot(transform, surfacePadding);
+        if (playPlacementFeedback)
+            card.NotifyShelfPlacement(isCorrect);
+        return true;
+    }
+
     public void Occupy(WorldCard card)
     {
         occupiedCard = card;

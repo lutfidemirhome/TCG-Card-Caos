@@ -332,27 +332,147 @@ public class CardShelf : MonoBehaviour, IInteractable
         return true;
     }
 
+    public float SurfacePadding => surfacePadding;
+
     public bool TryRestoreCard(WorldCard card, int rowIndex, int columnIndex)
+    {
+        return TryRestoreCard(card, rowIndex, columnIndex, null, Vector3.zero);
+    }
+
+    public bool TryRestoreCard(
+        WorldCard card,
+        int rowIndex,
+        int columnIndex,
+        string slotName,
+        Vector3 worldHint)
     {
         if (card == null)
             return false;
 
-        RefreshSlotCache();
-        for (int i = 0; i < _slots.Count; i++)
-        {
-            CardShelfSlot slot = _slots[i];
-            if (slot == null || slot.RowIndex != rowIndex || slot.ColumnIndex != columnIndex)
-                continue;
-            if (!slot.IsEmpty && slot.OccupiedCard != card)
-                return false;
+        CardShelfSlot slot = FindSlotForRestore(card, rowIndex, columnIndex, worldHint);
+        if (slot == null)
+            return false;
 
-            slot.Occupy(card);
-            card.PlaceOnShelfSlot(slot.transform, surfacePadding);
-            card.NotifyShelfPlacement(IsCorrectPlacement(card, slot));
-            return true;
+        return slot.RestoreOccupiedCard(card, surfacePadding, IsCorrectPlacement(card, slot));
+    }
+
+    public CardShelfSlot FindSlotByRelativePath(string relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+            return null;
+
+        Transform found = FindRelativeTransform(transform, relativePath);
+        if (found == null)
+            return null;
+
+        return found.GetComponent<CardShelfSlot>();
+    }
+
+    static Transform FindRelativeTransform(Transform root, string relativePath)
+    {
+        if (root == null || string.IsNullOrEmpty(relativePath))
+            return null;
+
+        string[] parts = relativePath.Split('/');
+        Transform current = root;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (string.IsNullOrEmpty(parts[i]))
+                continue;
+
+            current = FindDirectChild(current, parts[i]);
+            if (current == null)
+                return null;
         }
 
-        return false;
+        return current;
+    }
+
+    static Transform FindDirectChild(Transform parent, string childName)
+    {
+        if (parent == null)
+            return null;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child != null && child.name == childName)
+                return child;
+        }
+
+        return null;
+    }
+
+    public CardShelfSlot FindSlotByAuthoredHierarchy(int rowIndex, int columnIndex)
+    {
+        string levelName = rowIndex <= 0 ? "ShelfSlots_Level" : "ShelfSlots_Level (" + rowIndex + ")";
+        string slotName = CardShelfSlotNaming.BuildName(0, columnIndex);
+        Transform level = FindDescendant(transform, levelName);
+        if (level == null)
+            return null;
+
+        for (int i = 0; i < level.childCount; i++)
+        {
+            Transform child = level.GetChild(i);
+            if (child == null || child.name != slotName || !child.gameObject.activeInHierarchy)
+                continue;
+
+            return child.GetComponent<CardShelfSlot>();
+        }
+
+        return null;
+    }
+
+    static Transform FindDescendant(Transform root, string objectName)
+    {
+        if (root == null || !root.gameObject.activeInHierarchy)
+            return null;
+        if (root.name == objectName)
+            return root;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform found = FindDescendant(root.GetChild(i), objectName);
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    public CardShelfSlot FindSlotForRestore(WorldCard card, int rowIndex, int columnIndex, Vector3 worldHint)
+    {
+        CardShelfSlot[] slots = GetComponentsInChildren<CardShelfSlot>(true);
+        CardShelfSlot rowColMatch = null;
+        CardShelfSlot nearest = null;
+        float nearestSq = 3f * 3f;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            CardShelfSlot slot = slots[i];
+            if (slot == null)
+                continue;
+
+            slot.SyncIndicesFromHierarchy();
+            if (!slot.gameObject.activeInHierarchy)
+                continue;
+            if (!slot.IsEmpty && slot.OccupiedCard != card)
+                continue;
+
+            if (rowColMatch == null
+                && slot.RowIndex == rowIndex
+                && slot.ColumnIndex == columnIndex)
+                rowColMatch = slot;
+
+            float sq = (slot.transform.position - worldHint).sqrMagnitude;
+            if (sq < nearestSq)
+            {
+                nearestSq = sq;
+                nearest = slot;
+            }
+        }
+
+        return rowColMatch != null ? rowColMatch : nearest;
     }
 
     public bool IsAimOnOccupiedSlot(Vector3 aim)

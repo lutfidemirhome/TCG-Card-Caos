@@ -74,7 +74,7 @@ public static class PersistentIdRegistry
                 Packs[id] = pack;
         }
 
-        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < shelves.Length; i++)
         {
             CardShelf shelf = shelves[i];

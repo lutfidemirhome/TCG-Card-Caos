@@ -12,6 +12,8 @@ public static class GameSaveWorldCollector
     static readonly List<WorldBoosterPack> HeldPackScratch = new List<WorldBoosterPack>(4);
     static readonly HashSet<WorldCard> HeldCardSet = new HashSet<WorldCard>();
     static readonly HashSet<WorldBoosterPack> HeldPackSet = new HashSet<WorldBoosterPack>();
+    static readonly Dictionary<WorldCard, CardShelfSlot> OccupiedShelfSlotByCard =
+        new Dictionary<WorldCard, CardShelfSlot>(64);
 
     public static GameSaveData Collect(string slotId, SaveSlotType slotType, int slotIndex)
     {
@@ -23,6 +25,7 @@ public static class GameSaveWorldCollector
         HeldPackScratch.Clear();
         HeldCardSet.Clear();
         HeldPackSet.Clear();
+        BuildOccupiedShelfSlotMap();
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null)
@@ -110,17 +113,16 @@ public static class GameSaveWorldCollector
             return record;
         }
 
-        CardShelfSlot shelfSlot = card.GetComponentInParent<CardShelfSlot>();
-        if (shelfSlot != null)
+        if (OccupiedShelfSlotByCard.TryGetValue(card, out CardShelfSlot occupiedSlot))
         {
-            CardShelf shelf = shelfSlot.GetComponentInParent<CardShelf>();
-            if (shelf != null)
-                PersistentId.GetOrCreate(shelf.gameObject);
+            ApplyShelfRecord(record, card, occupiedSlot);
+            return record;
+        }
 
-            record.location = CardRuntimeLocation.Shelf;
-            record.shelfId = PersistentId.Resolve(shelf);
-            record.slotRow = shelfSlot.RowIndex;
-            record.slotColumn = shelfSlot.ColumnIndex;
+        CardShelfSlot parentSlot = card.GetComponentInParent<CardShelfSlot>();
+        if (parentSlot != null)
+        {
+            ApplyShelfRecord(record, card, parentSlot);
             return record;
         }
 
@@ -246,5 +248,76 @@ public static class GameSaveWorldCollector
                 cabinetsCompleted++;
             }
         }
+    }
+
+    static void BuildOccupiedShelfSlotMap()
+    {
+        OccupiedShelfSlotByCard.Clear();
+        CardShelfSlot[] slots = Object.FindObjectsByType<CardShelfSlot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            CardShelfSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card != null)
+                OccupiedShelfSlotByCard[card] = slot;
+        }
+    }
+
+    static void ApplyShelfRecord(CardSaveRecord record, WorldCard card, CardShelfSlot shelfSlot)
+    {
+        if (record == null || card == null || shelfSlot == null)
+            return;
+
+        CardShelf shelf = shelfSlot.GetComponentInParent<CardShelf>();
+        if (shelf != null)
+            PersistentId.GetOrCreate(shelf.gameObject);
+
+        shelfSlot.SyncIndicesFromHierarchy();
+        record.location = CardRuntimeLocation.Shelf;
+        record.shelfId = shelf != null
+            ? PersistentId.BuildPathFallback(shelf.transform)
+            : string.Empty;
+        record.slotRow = shelfSlot.RowIndex;
+        record.slotColumn = shelfSlot.ColumnIndex;
+        record.shelfSlotName = shelfSlot.gameObject.name;
+        record.shelfSlotPath = BuildChildPath(shelf != null ? shelf.transform : null, shelfSlot.transform);
+        SetShelfRecordPose(record, shelfSlot, shelf);
+    }
+
+    static void SetShelfRecordPose(CardSaveRecord record, CardShelfSlot shelfSlot, CardShelf shelf)
+    {
+        if (record == null || shelfSlot == null)
+            return;
+
+        float padding = shelf != null ? shelf.SurfacePadding : 0.003f;
+        float halfHeight = CardDimensions.Height * CardDimensions.WorldCardScale * 0.5f;
+        Transform slotTransform = shelfSlot.transform;
+        record.SetPosition(slotTransform.position + slotTransform.up * (halfHeight + padding));
+        record.SetRotation(slotTransform.rotation);
+    }
+
+    static string BuildChildPath(Transform root, Transform child)
+    {
+        if (root == null || child == null || !child.IsChildOf(root))
+            return string.Empty;
+
+        var parts = new System.Collections.Generic.List<string>(8);
+        Transform current = child;
+        while (current != null && current != root)
+        {
+            parts.Add(current.name);
+            current = current.parent;
+        }
+
+        if (current != root)
+            return string.Empty;
+
+        parts.Reverse();
+        return string.Join("/", parts);
     }
 }

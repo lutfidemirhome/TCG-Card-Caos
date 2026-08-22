@@ -65,6 +65,17 @@ public class CardInstancedRenderManager : MonoBehaviour
         string pendingSlotId = GameSceneLoader.PendingSlotId;
         bool restoreFromSave = loadMode == GameLoadMode.Continue || loadMode == GameLoadMode.LoadSlot;
 
+        if (!restoreFromSave && !GameSceneLoader.StartedViaMenuLoader)
+        {
+            SaveSlotMetadata latest = GameSaveManager.GetLatestValidSave();
+            if (latest != null)
+            {
+                pendingSlotId = latest.slotId;
+                restoreFromSave = true;
+                Debug.Log("[Save] Editor/direct play: restoring latest " + latest.slotId + ".");
+            }
+        }
+
         if (restoreFromSave)
         {
             if (string.IsNullOrEmpty(pendingSlotId) && loadMode == GameLoadMode.Continue)
@@ -75,6 +86,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
             if (!string.IsNullOrEmpty(pendingSlotId))
             {
+                Debug.Log("[Save] Restoring " + pendingSlotId + "...");
                 yield return GameSaveRestore.RestoreRoutine(pendingSlotId);
                 if (GameSaveRestore.LastRestoreSucceeded)
                     GameSaveManager.NotifySaveRestored();
@@ -101,6 +113,8 @@ public class CardInstancedRenderManager : MonoBehaviour
         DeferGroundRegistration = false;
         yield return RegisterAllGroundCardsRoutine();
         yield return CardGroundStack.RebuildAllAsync();
+        // Re-apply shelf poses AFTER ground rebuild — ApplyPileLayers used to snap Y to floor.
+        RefreshAllShelfCardVisuals();
         yield return null;
 
         Debug.Log(
@@ -114,6 +128,44 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         IsGameplayReady = true;
         _playModeSetupRoutine = null;
+    }
+
+    static void RefreshAllShelfCardVisuals()
+    {
+        CardArtLibrary.EnsureLoaded();
+        CardShelfSlot[] slots = Object.FindObjectsByType<CardShelfSlot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        int count = 0;
+        for (int i = 0; i < slots.Length; i++)
+        {
+            CardShelfSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card == null)
+                continue;
+
+            CardShelf shelf = slot.GetComponentInParent<CardShelf>();
+            float padding = shelf != null ? shelf.SurfacePadding : 0.003f;
+            bool isCorrect = shelf != null && shelf.IsCorrectPlacement(card, slot);
+            slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
+            card.RefreshShelfVisualAfterLoad();
+            count++;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log(
+                "[Save] Shelf visual '" + card.name
+                + "' y=" + card.transform.position.y.ToString("0.000")
+                + " parent=" + (card.transform.parent != null ? card.transform.parent.name : "null")
+                + " mesh=" + (card.GetComponentInChildren<MeshRenderer>() != null));
+#endif
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (count > 0)
+            Debug.Log("[Save] Re-applied " + count + " shelf card poses after ground rebuild.");
+#endif
     }
 
     IEnumerator SpawnNewWorldRoutine()
