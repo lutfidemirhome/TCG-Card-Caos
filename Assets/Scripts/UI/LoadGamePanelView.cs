@@ -8,6 +8,7 @@ public class LoadGamePanelView : MonoBehaviour
 {
     [SerializeField] GameObject root;
     [SerializeField] Button cancelButton;
+    [SerializeField] ScrollRect scrollRect;
     [SerializeField] LoadGameSlotView[] slots;
 
     public bool IsOpen => root != null && root.activeSelf;
@@ -21,7 +22,6 @@ public class LoadGamePanelView : MonoBehaviour
         }
 
         BindPlaceholderSlots();
-        Hide();
     }
 
     public void Show()
@@ -30,6 +30,21 @@ public class LoadGamePanelView : MonoBehaviour
             root.SetActive(true);
         else
             gameObject.SetActive(true);
+
+        RefreshScroll();
+    }
+
+    void RefreshScroll()
+    {
+        if (scrollRect == null)
+            scrollRect = GetComponentInChildren<ScrollRect>(true);
+
+        if (scrollRect == null || scrollRect.content == null)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
+        scrollRect.verticalNormalizedPosition = 1f;
     }
 
     public void Hide()

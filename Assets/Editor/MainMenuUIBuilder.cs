@@ -167,6 +167,88 @@ public static class MainMenuUIBuilder
         Debug.Log("[MainMenuUIBuilder] Panel_LoadGame added. Dress Images in Hierarchy, then wire save data later.");
     }
 
+    [MenuItem("TCG Card Caos/UI/Fix Load Game Scroll")]
+    public static void FixLoadGameScrollInMenu()
+    {
+        if (!File.Exists(MenuScenePath))
+            return;
+
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+
+        UnityEngine.SceneManagement.Scene scene =
+            EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
+
+        Transform panel = FindMenuCanvas()?.Find("Panel_LoadGame");
+        if (panel == null)
+        {
+            Debug.LogError("[MainMenuUIBuilder] Panel_LoadGame not found.");
+            return;
+        }
+
+        Transform listFrame = panel.Find("ListFrame");
+        if (listFrame == null)
+        {
+            Debug.LogError("[MainMenuUIBuilder] ListFrame not found.");
+            return;
+        }
+
+        RectTransform listRect = (RectTransform)listFrame;
+        SetCenterAnchored(listRect, new Vector2(0f, 20f), new Vector2(1320f, 640f));
+
+        Transform viewport = listFrame.Find("Viewport");
+        if (viewport != null)
+            StretchToParent((RectTransform)viewport, new Vector4(28f, 28f, 56f, 28f));
+
+        Transform scrollbar = listFrame.Find("Scrollbar");
+        if (scrollbar != null)
+        {
+            RectTransform scrollbarRect = (RectTransform)scrollbar;
+            scrollbarRect.anchorMin = new Vector2(1f, 0f);
+            scrollbarRect.anchorMax = new Vector2(1f, 1f);
+            scrollbarRect.pivot = new Vector2(1f, 0.5f);
+            scrollbarRect.anchoredPosition = new Vector2(-18f, 0f);
+            scrollbarRect.sizeDelta = new Vector2(22f, -72f);
+
+            Transform handle = scrollbar.Find("Sliding Area/Handle");
+            if (handle != null)
+            {
+                RectTransform handleRect = (RectTransform)handle;
+                handleRect.anchorMin = new Vector2(0f, 0f);
+                handleRect.anchorMax = new Vector2(1f, 0f);
+                handleRect.pivot = new Vector2(0.5f, 0.5f);
+                handleRect.anchoredPosition = Vector2.zero;
+                handleRect.sizeDelta = new Vector2(0f, 40f);
+            }
+        }
+
+        ScrollRect scrollRect = listFrame.GetComponent<ScrollRect>();
+        LoadGamePanelView panelView = panel.GetComponent<LoadGamePanelView>();
+        if (panelView != null && scrollRect != null)
+        {
+            var serialized = new SerializedObject(panelView);
+            serialized.FindProperty("scrollRect").objectReferenceValue = scrollRect;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        foreach (Transform slot in panel.GetComponentsInChildren<Transform>(true))
+        {
+            if (!slot.name.StartsWith("Slot_"))
+                continue;
+
+            LayoutElement layout = slot.GetComponent<LayoutElement>();
+            if (layout == null)
+                continue;
+
+            layout.minHeight = 300f;
+            layout.preferredHeight = 300f;
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, MenuScenePath);
+        Debug.Log("[MainMenuUIBuilder] Load Game scroll layout fixed.");
+    }
+
     [MenuItem("TCG Card Caos/UI/Build Main Menu UI")]
     public static void BuildMainMenuUI()
     {
@@ -583,6 +665,7 @@ public static class MainMenuUIBuilder
 
         LoadGameSlotView slot1 = BuildLoadGameSlot(content, "Slot_1", font, slotSprite, thumbnailTexture);
         LoadGameSlotView slot2 = BuildLoadGameSlot(content, "Slot_2", font, slotSprite, thumbnailTexture);
+        BuildLoadGameSlot(content, "Slot_3", font, slotSprite, thumbnailTexture);
 
         RectTransform scrollbarRect = CreateUIObject("Scrollbar", listFrame);
         scrollbarRect.anchorMin = new Vector2(1f, 0f);
@@ -602,7 +685,11 @@ public static class MainMenuUIBuilder
         StretchToParent(slidingArea, new Vector4(0f, 18f, 0f, 18f));
 
         RectTransform handle = CreateUIObject("Handle", slidingArea);
-        handle.sizeDelta = new Vector2(36f, 36f);
+        handle.anchorMin = new Vector2(0f, 0f);
+        handle.anchorMax = new Vector2(1f, 0f);
+        handle.pivot = new Vector2(0.5f, 0.5f);
+        handle.anchoredPosition = Vector2.zero;
+        handle.sizeDelta = new Vector2(0f, 40f);
         var handleImage = handle.gameObject.AddComponent<Image>();
         handleImage.sprite = scrollHandleSprite;
         handleImage.color = Color.white;
@@ -624,6 +711,7 @@ public static class MainMenuUIBuilder
         var panelSerialized = new SerializedObject(panelView);
         panelSerialized.FindProperty("root").objectReferenceValue = root.gameObject;
         panelSerialized.FindProperty("cancelButton").objectReferenceValue = cancel;
+        panelSerialized.FindProperty("scrollRect").objectReferenceValue = scrollRect;
         SerializedProperty slotsProp = panelSerialized.FindProperty("slots");
         slotsProp.arraySize = 2;
         slotsProp.GetArrayElementAtIndex(0).objectReferenceValue = slot1;
@@ -643,8 +731,8 @@ public static class MainMenuUIBuilder
     {
         RectTransform slot = CreateUIObject(objectName, parent);
         var layoutElement = slot.gameObject.AddComponent<LayoutElement>();
-        layoutElement.preferredHeight = 188f;
-        layoutElement.minHeight = 188f;
+        layoutElement.preferredHeight = 300f;
+        layoutElement.minHeight = 300f;
 
         var background = slot.gameObject.AddComponent<Image>();
         background.sprite = slotSprite;
