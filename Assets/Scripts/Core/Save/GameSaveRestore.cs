@@ -267,7 +267,6 @@ public static class GameSaveRestore
         CardShelfSlot[] slots = UnityEngine.Object.FindObjectsByType<CardShelfSlot>(
             FindObjectsInactive.Exclude,
             FindObjectsSortMode.None);
-        int shelfVisualCount = 0;
         for (int i = 0; i < slots.Length; i++)
         {
             CardShelfSlot slot = slots[i];
@@ -283,19 +282,7 @@ public static class GameSaveRestore
             bool isCorrect = shelf != null && shelf.IsCorrectPlacement(card, slot);
             slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
             card.RefreshShelfVisualAfterLoad();
-            shelfVisualCount++;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log(
-                "[Save] Finalize shelf '" + card.name
-                + "' y=" + card.transform.position.y.ToString("0.000")
-                + " mesh=" + (card.GetComponentInChildren<MeshRenderer>() != null));
-#endif
         }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (shelfVisualCount > 0)
-            Debug.Log("[Save] Finalized " + shelfVisualCount + " shelf card visuals.");
-#endif
     }
 
     static CardShelf FindShelf(string shelfId)

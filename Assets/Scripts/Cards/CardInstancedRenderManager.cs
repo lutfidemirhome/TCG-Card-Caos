@@ -136,7 +136,6 @@ public class CardInstancedRenderManager : MonoBehaviour
         CardShelfSlot[] slots = Object.FindObjectsByType<CardShelfSlot>(
             FindObjectsInactive.Exclude,
             FindObjectsSortMode.None);
-        int count = 0;
         for (int i = 0; i < slots.Length; i++)
         {
             CardShelfSlot slot = slots[i];
@@ -152,20 +151,7 @@ public class CardInstancedRenderManager : MonoBehaviour
             bool isCorrect = shelf != null && shelf.IsCorrectPlacement(card, slot);
             slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
             card.RefreshShelfVisualAfterLoad();
-            count++;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log(
-                "[Save] Shelf visual '" + card.name
-                + "' y=" + card.transform.position.y.ToString("0.000")
-                + " parent=" + (card.transform.parent != null ? card.transform.parent.name : "null")
-                + " mesh=" + (card.GetComponentInChildren<MeshRenderer>() != null));
-#endif
         }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (count > 0)
-            Debug.Log("[Save] Re-applied " + count + " shelf card poses after ground rebuild.");
-#endif
     }
 
     IEnumerator SpawnNewWorldRoutine()
