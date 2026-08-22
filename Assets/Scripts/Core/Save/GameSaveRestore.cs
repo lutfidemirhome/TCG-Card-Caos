@@ -63,6 +63,7 @@ public static class GameSaveRestore
         }
 
         FinalizeShelfRestores();
+        FinalizePsaRestores();
         yield return null;
 
         PlayerCardHand hand = PlayerCardHand.Instance;
@@ -285,6 +286,25 @@ public static class GameSaveRestore
         }
     }
 
+    static void FinalizePsaRestores()
+    {
+        PsaCabinetSlot[] slots = UnityEngine.Object.FindObjectsByType<PsaCabinetSlot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card == null)
+                continue;
+
+            slot.RestoreOccupiedCard(card, playPlacementFeedback: false);
+        }
+    }
+
     static CardShelf FindShelf(string shelfId)
     {
         if (string.IsNullOrEmpty(shelfId))
@@ -347,7 +367,7 @@ public static class GameSaveRestore
             return false;
         }
 
-        return slot.RestoreOccupiedCard(card);
+        return slot.RestoreOccupiedCard(card, playPlacementFeedback: false);
     }
 
     static PsaCabinetSlot FindPsaSlot(string cabinetId, int slotNumber)

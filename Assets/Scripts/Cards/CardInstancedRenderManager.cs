@@ -113,8 +113,9 @@ public class CardInstancedRenderManager : MonoBehaviour
         DeferGroundRegistration = false;
         yield return RegisterAllGroundCardsRoutine();
         yield return CardGroundStack.RebuildAllAsync();
-        // Re-apply shelf poses AFTER ground rebuild — ApplyPileLayers used to snap Y to floor.
+        // Re-apply shelf/PSA poses AFTER ground rebuild — ApplyPileLayers used to snap Y to floor.
         RefreshAllShelfCardVisuals();
+        RefreshAllPsaCabinetCardVisuals();
         yield return null;
 
         Debug.Log(
@@ -151,6 +152,25 @@ public class CardInstancedRenderManager : MonoBehaviour
             bool isCorrect = shelf != null && shelf.IsCorrectPlacement(card, slot);
             slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
             card.RefreshShelfVisualAfterLoad();
+        }
+    }
+
+    static void RefreshAllPsaCabinetCardVisuals()
+    {
+        PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card == null)
+                continue;
+
+            slot.RestoreOccupiedCard(card, playPlacementFeedback: false);
         }
     }
 

@@ -748,6 +748,11 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     public bool RestoreOccupiedCard(WorldCard card)
     {
+        return RestoreOccupiedCard(card, playPlacementFeedback: true);
+    }
+
+    public bool RestoreOccupiedCard(WorldCard card, bool playPlacementFeedback)
+    {
         if (card == null)
             return false;
 
@@ -760,7 +765,8 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             out _,
             out _);
         card.PlaceOnPsaCabinetSlot(parent, localPosition, localRotation, localScale);
-        card.NotifyShelfPlacement(IsCorrectPlacement(card));
+        if (playPlacementFeedback)
+            card.NotifyShelfPlacement(IsCorrectPlacement(card));
         return true;
     }
 

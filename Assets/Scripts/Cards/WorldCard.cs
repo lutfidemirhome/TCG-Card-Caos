@@ -546,12 +546,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (anchor == null)
             return;
 
-        _usePsaCabinetPlacement = true;
         _psaCabinetLocalPosition = localPosition;
         _psaCabinetLocalRotation = localRotation;
         _psaCabinetLocalScale = localScale;
 
         BeginShelfFlight(anchor, targetWorldScale, duration, arcHeight, 0f, onComplete);
+        // BeginShelfFlight clears this flag; re-assert after so CompleteShelfFlight uses PSA pose.
+        _usePsaCabinetPlacement = true;
     }
 
     public void BeginShelfFlight(

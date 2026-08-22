@@ -14,6 +14,8 @@ public static class GameSaveWorldCollector
     static readonly HashSet<WorldBoosterPack> HeldPackSet = new HashSet<WorldBoosterPack>();
     static readonly Dictionary<WorldCard, CardShelfSlot> OccupiedShelfSlotByCard =
         new Dictionary<WorldCard, CardShelfSlot>(64);
+    static readonly Dictionary<WorldCard, PsaCabinetSlot> OccupiedPsaSlotByCard =
+        new Dictionary<WorldCard, PsaCabinetSlot>(16);
 
     public static GameSaveData Collect(string slotId, SaveSlotType slotType, int slotIndex)
     {
@@ -26,6 +28,7 @@ public static class GameSaveWorldCollector
         HeldCardSet.Clear();
         HeldPackSet.Clear();
         BuildOccupiedShelfSlotMap();
+        BuildOccupiedPsaSlotMap();
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null)
@@ -126,16 +129,16 @@ public static class GameSaveWorldCollector
             return record;
         }
 
+        if (OccupiedPsaSlotByCard.TryGetValue(card, out PsaCabinetSlot occupiedPsaSlot))
+        {
+            ApplyPsaRecord(record, occupiedPsaSlot);
+            return record;
+        }
+
         PsaCabinetSlot psaSlot = card.GetComponentInParent<PsaCabinetSlot>();
         if (psaSlot != null)
         {
-            PsaCabinet cabinet = ResolvePsaCabinet(psaSlot);
-            if (cabinet != null)
-                PersistentId.GetOrCreate(cabinet.gameObject);
-
-            record.location = CardRuntimeLocation.PsaCabinet;
-            record.psaCabinetId = cabinet != null ? PersistentId.Resolve(cabinet) : string.Empty;
-            record.psaCabinetSlot = psaSlot.SlotNumber;
+            ApplyPsaRecord(record, psaSlot);
             return record;
         }
 
@@ -266,6 +269,45 @@ public static class GameSaveWorldCollector
             if (card != null)
                 OccupiedShelfSlotByCard[card] = slot;
         }
+    }
+
+    static void BuildOccupiedPsaSlotMap()
+    {
+        OccupiedPsaSlotByCard.Clear();
+        PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            // Skip stale occupancy once the card has left the holder (hand / world throw).
+            if (card == null || card.IsInHand)
+                continue;
+
+            // Keep in-flight placements (Occupy runs before parent) and seated cards only.
+            if (!card.IsFlyingToShelf && card.GetComponentInParent<PsaCabinetSlot>() != slot)
+                continue;
+
+            OccupiedPsaSlotByCard[card] = slot;
+        }
+    }
+
+    static void ApplyPsaRecord(CardSaveRecord record, PsaCabinetSlot psaSlot)
+    {
+        if (record == null || psaSlot == null)
+            return;
+
+        PsaCabinet cabinet = ResolvePsaCabinet(psaSlot);
+        if (cabinet != null)
+            PersistentId.GetOrCreate(cabinet.gameObject);
+
+        record.location = CardRuntimeLocation.PsaCabinet;
+        record.psaCabinetId = cabinet != null ? PersistentId.Resolve(cabinet) : string.Empty;
+        record.psaCabinetSlot = psaSlot.SlotNumber;
     }
 
     static void ApplyShelfRecord(CardSaveRecord record, WorldCard card, CardShelfSlot shelfSlot)
