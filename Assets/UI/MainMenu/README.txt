@@ -12,6 +12,7 @@ The menu layout lives in two places:
 
 3. Photoshop slices go here:
    Assets/UI/MainMenu/Art/
+   Assets/UI/LoadGame/Art/          (load game + confirm overlay)
 
 4. Translations:
    Assets/Resources/Localization/LocalizationTable.asset

@@ -35,6 +35,9 @@ public class LoadGameCircularScrollThumb : MonoBehaviour
 
     void OnRectTransformDimensionsChange()
     {
+        if (!Application.isPlaying || !isActiveAndEnabled)
+            return;
+
         ApplyFixedThumb();
     }
 
@@ -59,13 +62,4 @@ public class LoadGameCircularScrollThumb : MonoBehaviour
         handle.localScale = Vector3.one;
     }
 
-#if UNITY_EDITOR
-    void OnValidate()
-    {
-        if (!isActiveAndEnabled)
-            return;
-
-        ApplyFixedThumb();
-    }
-#endif
 }

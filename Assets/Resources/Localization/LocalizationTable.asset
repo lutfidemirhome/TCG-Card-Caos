@@ -231,16 +231,17 @@ MonoBehaviour:
     values:
     - Are you sure you want to load this game?
     - "Bu oyunu y\xFCklemek istedi\u011Fine emin misin?"
-    - "\u00CAtes-vous s\xFBr de vouloir charger cette partie\u00A0?"
-    - "Sei sicuro di voler caricare questa partita?"
+    - "\xCAtes-vous s\xFBr de vouloir charger cette partie\_?"
+    - Sei sicuro di voler caricare questa partita?
     - "M\xF6chtest du dieses Spiel wirklich laden?"
     - "\xBFSeguro que quieres cargar esta partida?"
-    - "Tem a certeza de que quer carregar este jogo?"
+    - Tem a certeza de que quer carregar este jogo?
     - "\u786E\u5B9A\u8981\u52A0\u8F7D\u6B64\u6E38\u620F\u5417\uFF1F"
     - "\u78BA\u5B9A\u8981\u8F09\u5165\u6B64\u904A\u6232\u55CE\uFF1F"
     - "\u3053\u306E\u30B2\u30FC\u30E0\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3059\u304B\uFF1F"
     - "\uC774 \uAC8C\uC784\uC744 \uBD88\uB7EC\uC624\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?"
-    - "\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u044D\u0442\u0443 \u0438\u0433\u0440\u0443?"
+    - "\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u044D\u0442\u0443
+      \u0438\u0433\u0440\u0443?"
   - key: load.confirm_yes
     values:
     - Yes

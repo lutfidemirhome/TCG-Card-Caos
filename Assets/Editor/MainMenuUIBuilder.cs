@@ -179,14 +179,17 @@ public static class MainMenuUIBuilder
             return;
         }
 
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-            return;
-
         EnsureLocalizationTable();
         EnsureLoadGameConfirmPlaceholders();
 
-        UnityEngine.SceneManagement.Scene scene =
-            EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
+        UnityEngine.SceneManagement.Scene scene = EditorSceneManager.GetActiveScene();
+        if (scene.path != MenuScenePath)
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
+            scene = EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
+        }
 
         Transform canvas = FindMenuCanvas();
         if (canvas == null)
@@ -206,12 +209,14 @@ public static class MainMenuUIBuilder
         }
 
         Transform existing = loadPanel.Find("Panel_LoadConfirm");
-        if (existing != null)
-            Object.DestroyImmediate(existing.gameObject);
+        LoadGameConfirmView confirm = existing != null
+            ? CompleteLoadGameConfirm(existing, FindPreferredFont())
+            : BuildLoadGameConfirm(loadPanel, FindPreferredFont());
 
-        LoadGameConfirmView confirm = BuildLoadGameConfirm(loadPanel, FindPreferredFont());
         LoadGamePanelView panelView = loadPanel.GetComponent<LoadGamePanelView>();
         AssignLoadGameConfirm(panelView, confirm);
+        EnsureLoadGameBackground(loadPanel);
+        EnsureLoadGameDrawOrder(loadPanel);
 
         // Make sure every authored slot row is wired into the panel array.
         LoadGameSlotView[] allSlots = loadPanel.GetComponentsInChildren<LoadGameSlotView>(true);
@@ -236,6 +241,100 @@ public static class MainMenuUIBuilder
         Debug.Log(
             "[MainMenuUIBuilder] Panel_LoadConfirm added under Panel_LoadGame. "
             + "Replace placeholder Images: confirm_band / yes_button / no_button in Assets/UI/LoadGame/Art.");
+    }
+
+    [MenuItem("TCG Card Caos/UI/Select Load Game Confirm For Editing")]
+    public static void SelectLoadGameConfirmForEditing()
+    {
+        EnsureLocalizationTable();
+        EnsureLoadGameConfirmPlaceholders();
+
+        Transform loadPanel = FindLoadGamePanelForEditing();
+        if (loadPanel == null)
+        {
+            EditorUtility.DisplayDialog(
+                "Load Confirm",
+                "Panel_LoadGame not found.\n\nRun: TCG Card Caos → UI → Add Load Game Panel",
+                "OK");
+            return;
+        }
+
+        Transform confirm = loadPanel.Find("Panel_LoadConfirm");
+        if (confirm == null || !IsLoadGameConfirmComplete(confirm))
+        {
+            if (confirm != null)
+                Object.DestroyImmediate(confirm.gameObject);
+
+            LoadGameConfirmView built = BuildLoadGameConfirm(loadPanel, FindPreferredFont());
+            AssignLoadGameConfirm(loadPanel.GetComponent<LoadGamePanelView>(), built);
+            confirm = built.transform;
+            EditorSceneManager.MarkSceneDirty(loadPanel.gameObject.scene);
+        }
+        else
+        {
+            LoadGameConfirmView view = confirm.GetComponent<LoadGameConfirmView>();
+            if (view == null)
+                view = confirm.gameObject.AddComponent<LoadGameConfirmView>();
+            WireLoadGameConfirmReferences(view, confirm);
+            AssignLoadGameConfirm(loadPanel.GetComponent<LoadGamePanelView>(), view);
+        }
+
+        EnsureLoadGameBackground(loadPanel);
+        EnsureLoadGameDrawOrder(loadPanel);
+
+        Selection.activeGameObject = confirm.gameObject;
+        EditorGUIUtility.PingObject(confirm.gameObject);
+
+        Debug.Log(
+            "[MainMenuUIBuilder] Panel_LoadConfirm is under Panel_LoadGame (inactive by default).\n"
+            + "Enable Panel_LoadConfirm in Hierarchy when you want to preview or edit it.\n"
+            + "Labels: Band → ButtonRow → Button_Yes/No → Label");
+    }
+
+    static Transform FindLoadGamePanelForEditing()
+    {
+        Transform loadPanel = FindLoadGamePanelInLoadedScenes();
+        if (loadPanel != null)
+            return loadPanel;
+
+        if (!File.Exists(MenuScenePath))
+            return null;
+
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return null;
+
+        EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
+        return FindLoadGamePanelInLoadedScenes();
+    }
+
+    static Transform FindLoadGamePanelInLoadedScenes()
+    {
+        Transform canvas = FindMenuCanvas();
+        if (canvas != null)
+        {
+            Transform loadPanel = canvas.Find("Panel_LoadGame");
+            if (loadPanel != null)
+                return loadPanel;
+        }
+
+        for (int i = 0; i < EditorSceneManager.sceneCount; i++)
+        {
+            UnityEngine.SceneManagement.Scene scene = EditorSceneManager.GetSceneAt(i);
+            if (!scene.isLoaded)
+                continue;
+
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.name != CanvasRootName && root.name != LegacyMenuRootName)
+                    continue;
+
+                Transform loadPanel = root.transform.Find("Panel_LoadGame");
+                if (loadPanel != null)
+                    return loadPanel;
+            }
+        }
+
+        return null;
     }
 
     [MenuItem("TCG Card Caos/UI/Fix Load Game Scroll")]
@@ -658,7 +757,6 @@ public static class MainMenuUIBuilder
         EnsureFolder("Assets/UI/LoadGame");
         EnsureFolder(LoadGameArtFolder);
 
-        Sprite background = LoadGameSprite("load_game_bg.png");
         Sprite listFrameSprite = LoadGameSprite("panel_1.png");
         Sprite slotSprite = LoadGameSprite("panel_2.png");
         Sprite scrollBarSprite = LoadGameSprite("scroll_bar.png");
@@ -675,19 +773,13 @@ public static class MainMenuUIBuilder
 
         var panelView = root.gameObject.AddComponent<LoadGamePanelView>();
 
-        RectTransform dimmer = CreateUIObject("Dimmer", root);
-        StretchToParent(dimmer, Vector4.zero);
-        var dimmerImage = dimmer.gameObject.AddComponent<Image>();
-        dimmerImage.sprite = background;
-        dimmerImage.color = Color.white;
-        dimmerImage.raycastTarget = true;
+        EnsureLoadGameBackground(root);
 
         RectTransform titleRect = CreateUIObject("Title", root);
         SetCenterAnchored(titleRect, new Vector2(0f, 430f), new Vector2(720f, 88f));
         TMP_Text title = CreateText(titleRect, font, 64f, TextAlignmentOptions.Center, Color.white);
         title.fontStyle = FontStyles.Bold;
-        title.outlineWidth = 0.28f;
-        title.outlineColor = Color.black;
+        ApplyTextOutline(title, 0.28f, Color.black);
         EnableAutoSize(title, 32f, 64f);
         AddLocalizedText(titleRect.gameObject, LocalizationKeys.LoadGameTitle);
 
@@ -770,6 +862,7 @@ public static class MainMenuUIBuilder
         Button cancel = BuildLoadGameCancelButton(root, cancelSprite);
 
         LoadGameConfirmView confirm = BuildLoadGameConfirm(root, font);
+        EnsureLoadGameDrawOrder(root);
 
         var panelSerialized = new SerializedObject(panelView);
         panelSerialized.FindProperty("root").objectReferenceValue = root.gameObject;
@@ -804,10 +897,6 @@ public static class MainMenuUIBuilder
         EnsureFolder(LoadGameArtFolder);
         EnsureLoadGameConfirmPlaceholders();
 
-        Sprite bandSprite = LoadGameSprite("confirm_band.png");
-        Sprite yesSprite = LoadGameSprite("yes_button.png");
-        Sprite noSprite = LoadGameSprite("no_button.png");
-
         RectTransform root = CreateUIObject("Panel_LoadConfirm", parent);
         root.anchorMin = Vector2.zero;
         root.anchorMax = Vector2.one;
@@ -831,59 +920,260 @@ public static class MainMenuUIBuilder
         band.pivot = new Vector2(0.5f, 0.5f);
         band.anchoredPosition = Vector2.zero;
         band.sizeDelta = new Vector2(0f, 395f);
-        var bandImage = band.gameObject.AddComponent<Image>();
-        bandImage.sprite = bandSprite ?? LoadGameSprite("panel_3.png");
-        bandImage.type = Image.Type.Sliced;
-        bandImage.color = Color.white;
-        bandImage.raycastTarget = true;
+        band.gameObject.AddComponent<Image>();
+        ApplySolidColorImage(band.GetComponent<Image>(), new Color(0.12f, 0.22f, 0.42f, 1f));
 
-        RectTransform messageRect = CreateUIObject("Message", band);
-        SetCenterAnchored(messageRect, new Vector2(0f, 92f), new Vector2(1500f, 90f));
-        TMP_Text message = CreateText(messageRect, font, 52f, TextAlignmentOptions.Center, Color.white);
-        message.fontStyle = FontStyles.Bold;
-        message.outlineWidth = 0.28f;
-        message.outlineColor = Color.black;
-        EnableAutoSize(message, 28f, 52f);
-        AddLocalizedText(messageRect.gameObject, LocalizationKeys.LoadGameConfirmMessage);
-
-        RectTransform buttonRow = CreateUIObject("ButtonRow", band);
-        SetCenterAnchored(buttonRow, new Vector2(0f, -82f), new Vector2(560f, 95f));
-        var rowLayout = buttonRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.childAlignment = TextAnchor.MiddleCenter;
-        rowLayout.spacing = 72f;
-        rowLayout.childControlWidth = false;
-        rowLayout.childControlHeight = false;
-        rowLayout.childForceExpandWidth = false;
-        rowLayout.childForceExpandHeight = false;
-
-        Button yesButton = BuildConfirmChoiceButton(
-            buttonRow,
-            "Button_Yes",
-            yesSprite,
-            new Color(0.45f, 0.85f, 0.20f, 1f));
-
-        Button noButton = BuildConfirmChoiceButton(
-            buttonRow,
-            "Button_No",
-            noSprite,
-            new Color(0.95f, 0.42f, 0.12f, 1f));
-
-        var confirmSerialized = new SerializedObject(confirmView);
-        confirmSerialized.FindProperty("root").objectReferenceValue = root.gameObject;
-        confirmSerialized.FindProperty("yesButton").objectReferenceValue = yesButton;
-        confirmSerialized.FindProperty("noButton").objectReferenceValue = noButton;
-        confirmSerialized.FindProperty("messageText").objectReferenceValue = message;
-        confirmSerialized.ApplyModifiedPropertiesWithoutUndo();
-
+        CompleteLoadGameConfirm(root, font);
         root.gameObject.SetActive(false);
         return confirmView;
+    }
+
+    static LoadGameConfirmView CompleteLoadGameConfirm(Transform confirmRoot, TMP_FontAsset font)
+    {
+        EnsureLoadGameConfirmPlaceholders();
+
+        var confirmView = confirmRoot.GetComponent<LoadGameConfirmView>();
+        if (confirmView == null)
+            confirmView = confirmRoot.gameObject.AddComponent<LoadGameConfirmView>();
+
+        Transform band = confirmRoot.Find("Band");
+        if (band == null)
+        {
+            RectTransform bandRect = CreateUIObject("Band", confirmRoot);
+            bandRect.anchorMin = new Vector2(0f, 0.5f);
+            bandRect.anchorMax = new Vector2(1f, 0.5f);
+            bandRect.pivot = new Vector2(0.5f, 0.5f);
+            bandRect.anchoredPosition = Vector2.zero;
+            bandRect.sizeDelta = new Vector2(0f, 395f);
+            bandRect.gameObject.AddComponent<Image>();
+            band = bandRect;
+        }
+
+        ApplySolidColorImage(
+            band.GetComponent<Image>(),
+            new Color(0.12f, 0.22f, 0.42f, 1f));
+
+        Transform buttonRow = band.Find("ButtonRow");
+        if (buttonRow == null)
+        {
+            RectTransform row = CreateUIObject("ButtonRow", band);
+            SetCenterAnchored(row, new Vector2(0f, -82f), new Vector2(560f, 95f));
+            var rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            rowLayout.childAlignment = TextAnchor.MiddleCenter;
+            rowLayout.spacing = 72f;
+            rowLayout.childControlWidth = false;
+            rowLayout.childControlHeight = false;
+            rowLayout.childForceExpandWidth = false;
+            rowLayout.childForceExpandHeight = false;
+            buttonRow = row;
+        }
+
+        if (buttonRow.Find("Button_Yes") == null)
+        {
+            BuildConfirmChoiceButton(
+                buttonRow,
+                "Button_Yes",
+                LoadGameSprite("yes_button.png"),
+                new Color(0.45f, 0.85f, 0.20f, 1f),
+                LocalizationKeys.LoadGameConfirmYes,
+                "Yes");
+        }
+
+        if (buttonRow.Find("Button_No") == null)
+        {
+            BuildConfirmChoiceButton(
+                buttonRow,
+                "Button_No",
+                LoadGameSprite("no_button.png"),
+                new Color(0.95f, 0.42f, 0.12f, 1f),
+                LocalizationKeys.LoadGameConfirmNo,
+                "No");
+        }
+
+        Transform message = band.Find("Message");
+        if (message == null)
+        {
+            RectTransform messageRect = CreateUIObject("Message", band);
+            SetCenterAnchored(messageRect, new Vector2(0f, 92f), new Vector2(1500f, 90f));
+            message = messageRect;
+        }
+
+        StyleConfirmLabel(
+            message.gameObject,
+            font,
+            52f,
+            LocalizationKeys.LoadGameConfirmMessage,
+            "Are you sure you want to load this game?");
+
+        WireLoadGameConfirmReferences(confirmView, confirmRoot);
+        confirmRoot.gameObject.SetActive(false);
+        return confirmView;
+    }
+
+    static void StyleConfirmLabel(
+        GameObject target,
+        TMP_FontAsset font,
+        float fontSize,
+        string localizationKey,
+        string fallbackText)
+    {
+        TMP_Text label = target.GetComponent<TMP_Text>();
+        if (label == null)
+            label = CreateText(target.GetComponent<RectTransform>(), font, fontSize, TextAlignmentOptions.Center, Color.white);
+
+        label.fontStyle = FontStyles.Bold;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        label.text = fallbackText;
+        CopyExistingMenuTextMaterial(label);
+
+        if (target.GetComponent<LocalizedText>() == null)
+        {
+            try
+            {
+                AddLocalizedText(target, localizationKey);
+            }
+            catch (System.Exception)
+            {
+            }
+        }
+    }
+
+    static void CopyExistingMenuTextMaterial(TMP_Text target)
+    {
+        if (target == null)
+            return;
+
+        Transform loadPanel = target.transform;
+        while (loadPanel != null && loadPanel.name != "Panel_LoadGame")
+            loadPanel = loadPanel.parent;
+
+        TMP_Text title = loadPanel != null
+            ? loadPanel.Find("Title")?.GetComponent<TMP_Text>()
+            : null;
+        if (title == null || title.fontSharedMaterial == null)
+            return;
+
+        target.font = title.font;
+        target.fontSharedMaterial = title.fontSharedMaterial;
+    }
+
+    static bool IsLoadGameConfirmComplete(Transform confirmRoot)
+    {
+        if (confirmRoot == null)
+            return false;
+
+        Transform band = confirmRoot.Find("Band");
+        if (band == null)
+            return false;
+
+        if (band.Find("Message") == null)
+            return false;
+
+        Transform buttonRow = band.Find("ButtonRow");
+        if (buttonRow == null)
+            return false;
+
+        return buttonRow.Find("Button_Yes") != null && buttonRow.Find("Button_No") != null;
+    }
+
+    static void WireLoadGameConfirmReferences(LoadGameConfirmView confirm, Transform confirmRoot)
+    {
+        if (confirm == null || confirmRoot == null)
+            return;
+
+        Transform band = confirmRoot.Find("Band");
+        Button yes = band != null ? band.Find("ButtonRow/Button_Yes")?.GetComponent<Button>() : null;
+        Button no = band != null ? band.Find("ButtonRow/Button_No")?.GetComponent<Button>() : null;
+
+        var serialized = new SerializedObject(confirm);
+        serialized.FindProperty("root").objectReferenceValue = confirmRoot.gameObject;
+        serialized.FindProperty("yesButton").objectReferenceValue = yes;
+        serialized.FindProperty("noButton").objectReferenceValue = no;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static void EnsureLoadGameBackground(Transform loadPanel)
+    {
+        if (loadPanel == null)
+            return;
+
+        Transform backgroundTransform = loadPanel.Find("Background");
+        Transform dimmer = loadPanel.Find("Dimmer");
+        if (backgroundTransform == null && dimmer != null)
+        {
+            dimmer.gameObject.name = "Background";
+            backgroundTransform = dimmer;
+        }
+
+        if (backgroundTransform == null)
+        {
+            RectTransform created = CreateUIObject("Background", loadPanel);
+            StretchToParent(created, Vector4.zero);
+            created.gameObject.AddComponent<Image>();
+            backgroundTransform = created;
+        }
+
+        RectTransform rect = backgroundTransform as RectTransform;
+        if (rect != null)
+            StretchToParent(rect, Vector4.zero);
+
+        Image image = backgroundTransform.GetComponent<Image>();
+        if (image == null)
+            image = backgroundTransform.gameObject.AddComponent<Image>();
+
+        ApplySolidColorImage(image, new Color(0.039f, 0.047f, 0.114f, 1f));
+
+        backgroundTransform.SetAsFirstSibling();
+    }
+
+    static void ApplySolidColorImage(Image image, Color defaultColor)
+    {
+        if (image == null)
+            return;
+
+        bool stillUsingSprite = image.sprite != null;
+        image.sprite = null;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = false;
+        image.raycastTarget = true;
+        if (stillUsingSprite || image.color == Color.white)
+            image.color = defaultColor;
+    }
+
+    static void EnsureLoadGameDrawOrder(Transform loadPanel)
+    {
+        if (loadPanel == null)
+            return;
+
+        Transform background = loadPanel.Find("Background") ?? loadPanel.Find("Dimmer");
+        if (background != null)
+            background.SetAsFirstSibling();
+
+        Transform cancel = loadPanel.Find("Button_Cancel");
+        Transform confirm = loadPanel.Find("Panel_LoadConfirm");
+        if (confirm != null)
+            confirm.SetAsLastSibling();
+
+        if (cancel != null && confirm != null)
+        {
+            int confirmIndex = confirm.GetSiblingIndex();
+            cancel.SetSiblingIndex(confirmIndex);
+            confirm.SetAsLastSibling();
+        }
+        else if (cancel != null)
+        {
+            cancel.SetAsLastSibling();
+        }
     }
 
     static Button BuildConfirmChoiceButton(
         Transform parent,
         string objectName,
         Sprite sprite,
-        Color fallbackTint)
+        Color fallbackTint,
+        string localizationKey,
+        string fallbackText)
     {
         RectTransform rect = CreateUIObject(objectName, parent);
         var layout = rect.gameObject.AddComponent<LayoutElement>();
@@ -905,6 +1195,10 @@ public static class MainMenuUIBuilder
         colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
         colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
         button.colors = colors;
+
+        RectTransform labelRect = CreateUIObject("Label", rect);
+        StretchToParent(labelRect, new Vector4(12f, 8f, 12f, 8f));
+        StyleConfirmLabel(labelRect.gameObject, FindPreferredFont(), 38f, localizationKey, fallbackText);
 
         return button;
     }
@@ -1278,10 +1572,45 @@ public static class MainMenuUIBuilder
         text.color = color;
         text.richText = true;
 
+        EnsureTmpFont(text, font);
+        return text;
+    }
+
+    static void EnsureTmpFont(TMP_Text text, TMP_FontAsset preferredFont = null)
+    {
+        if (text == null || text.font != null)
+            return;
+
+        TMP_FontAsset font = preferredFont ?? FindPreferredFont();
+        if (font == null)
+            font = TMP_Settings.defaultFontAsset;
+
         if (font != null)
             text.font = font;
+    }
 
-        return text;
+    static void ApplyTextOutline(TMP_Text text, float width, Color color)
+    {
+        if (text == null)
+            return;
+
+        EnsureTmpFont(text);
+        if (text.font == null)
+            return;
+
+        try
+        {
+            text.ForceMeshUpdate(true);
+            if (text.fontSharedMaterial == null)
+                return;
+
+            text.outlineWidth = width;
+            text.outlineColor = color;
+        }
+        catch (System.Exception)
+        {
+            // Some TMP materials are not outline-ready during editor build; text still renders.
+        }
     }
 
     /// <summary>

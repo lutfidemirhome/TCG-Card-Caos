@@ -7,9 +7,14 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Authored Load Game overlay. Lists save slots; clicking one asks for confirm, Yes loads that save.
+/// Layout and art live in MenuScene under Panel_LoadGame (edit in Hierarchy like other menu panels).
 /// </summary>
 public class LoadGamePanelView : MonoBehaviour
 {
+    const string MissingConfirmHint =
+        "Panel_LoadConfirm not found under Panel_LoadGame. "
+        + "Run: TCG Card Caos → UI → Add Load Game Confirm Dialog";
+
     [SerializeField] GameObject root;
     [SerializeField] Button cancelButton;
     [SerializeField] ScrollRect scrollRect;
@@ -39,128 +44,13 @@ public class LoadGamePanelView : MonoBehaviour
             confirmView.Hide();
     }
 
-    void Start()
-    {
-        if (confirmView != null)
-            confirmView.DressFromResources();
-    }
-
     void EnsureConfirmView()
     {
         if (confirmView == null)
             confirmView = GetComponentInChildren<LoadGameConfirmView>(true);
 
-        if (confirmView != null)
-            return;
-
-        confirmView = BuildRuntimeConfirmOverlay();
-    }
-
-    LoadGameConfirmView BuildRuntimeConfirmOverlay()
-    {
-        var rootGo = new GameObject("Panel_LoadConfirm", typeof(RectTransform));
-        rootGo.transform.SetParent(transform, false);
-        RectTransform root = (RectTransform)rootGo.transform;
-        root.anchorMin = Vector2.zero;
-        root.anchorMax = Vector2.one;
-        root.offsetMin = Vector2.zero;
-        root.offsetMax = Vector2.zero;
-        root.SetAsLastSibling();
-
-        var view = rootGo.AddComponent<LoadGameConfirmView>();
-
-        var dimmerGo = new GameObject("Dimmer", typeof(RectTransform));
-        dimmerGo.transform.SetParent(root, false);
-        RectTransform dimmer = (RectTransform)dimmerGo.transform;
-        dimmer.anchorMin = Vector2.zero;
-        dimmer.anchorMax = Vector2.one;
-        dimmer.offsetMin = Vector2.zero;
-        dimmer.offsetMax = Vector2.zero;
-        var dimmerImage = dimmerGo.AddComponent<Image>();
-        dimmerImage.color = new Color(0.02f, 0.04f, 0.10f, 0.82f);
-        dimmerImage.raycastTarget = true;
-
-        var bandGo = new GameObject("Band", typeof(RectTransform));
-        bandGo.transform.SetParent(root, false);
-        RectTransform band = (RectTransform)bandGo.transform;
-        band.anchorMin = new Vector2(0f, 0.5f);
-        band.anchorMax = new Vector2(1f, 0.5f);
-        band.pivot = new Vector2(0.5f, 0.5f);
-        band.anchoredPosition = Vector2.zero;
-        band.sizeDelta = new Vector2(0f, 395f);
-        var bandImage = bandGo.AddComponent<Image>();
-        Sprite bandSprite = LoadGameConfirmArt.Band;
-        bandImage.sprite = bandSprite;
-        bandImage.type = bandSprite != null ? Image.Type.Sliced : Image.Type.Simple;
-        bandImage.color = bandSprite != null ? Color.white : new Color(0.12f, 0.22f, 0.42f, 1f);
-        bandImage.raycastTarget = true;
-
-        var messageGo = new GameObject("Message", typeof(RectTransform));
-        messageGo.transform.SetParent(band, false);
-        RectTransform messageRect = (RectTransform)messageGo.transform;
-        messageRect.anchorMin = messageRect.anchorMax = messageRect.pivot = new Vector2(0.5f, 0.5f);
-        messageRect.anchoredPosition = new Vector2(0f, 92f);
-        messageRect.sizeDelta = new Vector2(1500f, 90f);
-        var message = messageGo.AddComponent<TextMeshProUGUI>();
-        message.text = Localization.Get(LocalizationKeys.LoadGameConfirmMessage);
-        message.alignment = TextAlignmentOptions.Center;
-        message.fontSize = 52f;
-        message.color = Color.white;
-        message.fontStyle = FontStyles.Bold;
-        message.outlineWidth = 0.28f;
-        message.outlineColor = Color.black;
-        message.raycastTarget = false;
-
-        var rowGo = new GameObject("ButtonRow", typeof(RectTransform));
-        rowGo.transform.SetParent(band, false);
-        RectTransform row = (RectTransform)rowGo.transform;
-        row.anchorMin = row.anchorMax = row.pivot = new Vector2(0.5f, 0.5f);
-        row.anchoredPosition = new Vector2(0f, -82f);
-        row.sizeDelta = new Vector2(560f, 95f);
-        var layout = rowGo.AddComponent<HorizontalLayoutGroup>();
-        layout.childAlignment = TextAnchor.MiddleCenter;
-        layout.spacing = 72f;
-        layout.childControlWidth = false;
-        layout.childControlHeight = false;
-
-        Button yes = BuildRuntimeChoiceButton(row, "Button_Yes", LoadGameConfirmArt.YesButton);
-        Button no = BuildRuntimeChoiceButton(row, "Button_No", LoadGameConfirmArt.NoButton);
-
-        view.Configure(rootGo, yes, no, message);
-        rootGo.SetActive(false);
-        return view;
-    }
-
-    static Button BuildRuntimeChoiceButton(Transform parent, string name, Sprite sprite)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        RectTransform rect = (RectTransform)go.transform;
-        var layout = go.AddComponent<LayoutElement>();
-        layout.preferredWidth = 244f;
-        layout.preferredHeight = 95f;
-        layout.minWidth = 244f;
-        layout.minHeight = 95f;
-        rect.sizeDelta = new Vector2(244f, 95f);
-
-        var image = go.AddComponent<Image>();
-        if (sprite != null)
-        {
-            image.sprite = sprite;
-            image.type = Image.Type.Sliced;
-            image.color = Color.white;
-            image.preserveAspect = true;
-        }
-        else
-        {
-            image.color = name.Contains("Yes")
-                ? new Color(0.45f, 0.85f, 0.20f, 1f)
-                : new Color(0.95f, 0.42f, 0.12f, 1f);
-        }
-
-        var button = go.AddComponent<Button>();
-        button.targetGraphic = image;
-        return button;
+        if (confirmView == null)
+            Debug.LogWarning("[LoadGamePanelView] " + MissingConfirmHint);
     }
 
     void OnDestroy()
@@ -234,6 +124,7 @@ public class LoadGamePanelView : MonoBehaviour
         else
             gameObject.SetActive(true);
 
+        transform.SetAsLastSibling();
         HideConfirm();
         RefreshSlotList();
         RefreshScroll();
@@ -308,7 +199,7 @@ public class LoadGamePanelView : MonoBehaviour
         if (confirmView != null)
             confirmView.Show();
         else
-            OnConfirmYes();
+            Debug.LogWarning("[LoadGamePanelView] " + MissingConfirmHint);
     }
 
     void OnConfirmYes()

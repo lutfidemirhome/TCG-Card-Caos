@@ -68,8 +68,23 @@ public class LocalizedText : MonoBehaviour
 #if UNITY_EDITOR
     void OnValidate()
     {
-        if (!Application.isPlaying)
-            Apply();
+        if (Application.isPlaying)
+            return;
+
+        if (_text == null)
+            _text = GetComponent<TMP_Text>();
+
+        if (_text == null || string.IsNullOrEmpty(key))
+            return;
+
+        string value = Localization.Get(key);
+        if (string.IsNullOrEmpty(value))
+            return;
+
+        value = value.Replace("\\n", "\n").Replace("\r\n", "\n");
+        _text.text = uppercase
+            ? GameLanguages.ToUpper(value, Localization.CurrentLanguage)
+            : value;
     }
 #endif
 }
