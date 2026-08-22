@@ -687,6 +687,8 @@ public static class CardScatterUtility
         CardInteractionFocus.ClearFocus();
     }
 
+    public static Transform GetOrCreateScatterRoot() => EnsureScatterRoot();
+
     static Transform EnsureScatterRoot()
     {
         Transform existing = FindScatterRootTransform();

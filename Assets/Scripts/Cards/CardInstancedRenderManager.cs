@@ -59,17 +59,45 @@ public class CardInstancedRenderManager : MonoBehaviour
         yield return null;
 
         CardArtLibrary.EnsureLoaded();
-        int runtimeTarget = CardScatterUtility.ConsumeRuntimePlayScatterCount();
-        if (runtimeTarget > 0)
+        GameSaveManager.EnsureExists();
+
+        GameLoadMode loadMode = GameSceneLoader.PendingLoadMode;
+        string pendingSlotId = GameSceneLoader.PendingSlotId;
+        bool restoreFromSave = loadMode == GameLoadMode.Continue || loadMode == GameLoadMode.LoadSlot;
+
+        if (restoreFromSave)
         {
-            yield return CardScatterUtility.SpawnScatteredCardsAsync(runtimeTarget);
+            if (string.IsNullOrEmpty(pendingSlotId) && loadMode == GameLoadMode.Continue)
+            {
+                SaveSlotMetadata latest = GameSaveManager.GetLatestValidSave();
+                pendingSlotId = latest != null ? latest.slotId : null;
+            }
+
+            if (!string.IsNullOrEmpty(pendingSlotId))
+            {
+                yield return GameSaveRestore.RestoreRoutine(pendingSlotId);
+                if (GameSaveRestore.LastRestoreSucceeded)
+                    GameSaveManager.NotifySaveRestored();
+                else
+                {
+                    yield return SpawnNewWorldRoutine();
+                    GameSaveManager.NotifyNewGameWorldReady();
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[Save] Continue/Load requested but no valid slot was found. Starting a new scatter.");
+                yield return SpawnNewWorldRoutine();
+                GameSaveManager.NotifyNewGameWorldReady();
+            }
         }
         else
         {
-            CardScatterUtility.ClearTestCards();
-            yield return CardScatterUtility.SpawnScatteredCardsAsync(CardScatterUtility.FullScatterCount);
+            yield return SpawnNewWorldRoutine();
+            GameSaveManager.NotifyNewGameWorldReady();
         }
 
+        GameSceneLoader.ClearPendingLoad();
         DeferGroundRegistration = false;
         yield return RegisterAllGroundCardsRoutine();
         yield return CardGroundStack.RebuildAllAsync();
@@ -86,6 +114,19 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         IsGameplayReady = true;
         _playModeSetupRoutine = null;
+    }
+
+    IEnumerator SpawnNewWorldRoutine()
+    {
+        int runtimeTarget = CardScatterUtility.ConsumeRuntimePlayScatterCount();
+        if (runtimeTarget > 0)
+        {
+            yield return CardScatterUtility.SpawnScatteredCardsAsync(runtimeTarget);
+            yield break;
+        }
+
+        CardScatterUtility.ClearTestCards();
+        yield return CardScatterUtility.SpawnScatteredCardsAsync(CardScatterUtility.FullScatterCount);
     }
 
     IEnumerator RegisterAllGroundCardsRoutine()

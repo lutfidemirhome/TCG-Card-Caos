@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,6 +23,20 @@ public class LoadGamePanelView : MonoBehaviour
         }
 
         BindPlaceholderSlots();
+        ApplyValueTextStyleFromCancelButton();
+    }
+
+    void ApplyValueTextStyleFromCancelButton()
+    {
+        if (cancelButton == null || slots == null)
+            return;
+
+        TMP_Text cancelLabel = cancelButton.GetComponentInChildren<TMP_Text>(true);
+        if (cancelLabel == null)
+            return;
+
+        for (int i = 0; i < slots.Length; i++)
+            slots[i]?.ApplyValueTextStyle(cancelLabel);
     }
 
     public void Show()

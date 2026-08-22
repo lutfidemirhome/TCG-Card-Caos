@@ -7,33 +7,84 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public class GameSceneLoader : MonoBehaviour
 {
+    public const string EditorPendingSlotKey = "TCGCardCaos.PendingSaveSlot";
+
     static GameSceneLoader _runner;
     static bool _isLoading;
     static GameLoadMode _pendingLoadMode = GameLoadMode.NewGame;
+    static string _pendingSlotId;
 
-    public static GameLoadMode PendingLoadMode => _pendingLoadMode;
+    public static GameLoadMode PendingLoadMode
+    {
+        get
+        {
+            ConsumeEditorPendingIfNeeded();
+            return _pendingLoadMode;
+        }
+    }
+
+    public static string PendingSlotId
+    {
+        get
+        {
+            ConsumeEditorPendingIfNeeded();
+            return _pendingSlotId;
+        }
+    }
 
     public static void StartNewGame()
     {
         _pendingLoadMode = GameLoadMode.NewGame;
+        _pendingSlotId = null;
         LoadGame();
     }
 
     public static void ContinueGame()
     {
-        if (!GameSaveStore.HasAnySave())
+        SaveSlotMetadata latest = GameSaveManager.GetLatestValidSave();
+        if (latest == null)
             return;
 
         _pendingLoadMode = GameLoadMode.Continue;
+        _pendingSlotId = latest.slotId;
         LoadGame();
+    }
+
+    public static void LoadSaveSlot(string slotId)
+    {
+        if (string.IsNullOrEmpty(slotId) || !SaveFileIO.TryLoadMetadata(slotId, out _))
+            return;
+
+        _pendingLoadMode = GameLoadMode.LoadSlot;
+        _pendingSlotId = slotId;
+        LoadGame();
+    }
+
+    public static void ClearPendingLoad()
+    {
+        _pendingLoadMode = GameLoadMode.NewGame;
+        _pendingSlotId = null;
     }
 
     public static void LoadGame()
     {
-        if (_isLoading)
+        if (_isLoading || !Application.isPlaying)
             return;
 
         EnsureRunner().StartCoroutine(LoadGameRoutine());
+    }
+
+    static void ConsumeEditorPendingIfNeeded()
+    {
+#if UNITY_EDITOR
+        string slotId = UnityEditor.SessionState.GetString(EditorPendingSlotKey, string.Empty);
+        if (string.IsNullOrEmpty(slotId))
+            return;
+
+        UnityEditor.SessionState.EraseString(EditorPendingSlotKey);
+        _pendingLoadMode = GameLoadMode.LoadSlot;
+        _pendingSlotId = slotId;
+#endif
     }
 
     static GameSceneLoader EnsureRunner()
@@ -42,7 +93,8 @@ public class GameSceneLoader : MonoBehaviour
             return _runner;
 
         var root = new GameObject(nameof(GameSceneLoader));
-        DontDestroyOnLoad(root);
+        if (Application.isPlaying)
+            DontDestroyOnLoad(root);
         _runner = root.AddComponent<GameSceneLoader>();
         return _runner;
     }
@@ -91,14 +143,6 @@ public class GameSceneLoader : MonoBehaviour
 
         while (!CardInstancedRenderManager.IsGameplayReady)
             yield return null;
-
-        if (_pendingLoadMode == GameLoadMode.Continue)
-        {
-            if (!GameSaveStore.TryApplyLatestSave(out string saveError))
-                Debug.LogWarning("[GameSceneLoader] " + saveError);
-        }
-
-        _pendingLoadMode = GameLoadMode.NewGame;
 
         yield return null;
         loadingScreen.Hide();

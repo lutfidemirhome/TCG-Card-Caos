@@ -24,6 +24,7 @@ public static class PackFactory
 
         var pack = root.AddComponent<WorldBoosterPack>();
         pack.Initialize(packDefinition, packVariantIndex, preRolledContents);
+        PersistentId.GetOrCreate(root).AssignNew();
         return pack;
     }
 

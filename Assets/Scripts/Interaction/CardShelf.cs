@@ -44,6 +44,7 @@ public class CardShelf : MonoBehaviour, IInteractable
     {
         if (placementRoot == null)
             placementRoot = transform;
+        PersistentId.GetOrCreate(gameObject);
         RefreshSlotCache();
     }
 
@@ -302,6 +303,58 @@ public class CardShelf : MonoBehaviour, IInteractable
         ClearAim();
     }
 
+    public int CountOccupiedSlots()
+    {
+        RefreshSlotCache();
+        int count = 0;
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            if (_slots[i] != null && !_slots[i].IsEmpty)
+                count++;
+        }
+
+        return count;
+    }
+
+    public bool IsComplete()
+    {
+        RefreshSlotCache();
+        if (_slots.Count == 0)
+            return false;
+
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || slot.IsEmpty || !IsCorrectPlacement(slot.OccupiedCard, slot))
+                return false;
+        }
+
+        return true;
+    }
+
+    public bool TryRestoreCard(WorldCard card, int rowIndex, int columnIndex)
+    {
+        if (card == null)
+            return false;
+
+        RefreshSlotCache();
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || slot.RowIndex != rowIndex || slot.ColumnIndex != columnIndex)
+                continue;
+            if (!slot.IsEmpty && slot.OccupiedCard != card)
+                return false;
+
+            slot.Occupy(card);
+            card.PlaceOnShelfSlot(slot.transform, surfacePadding);
+            card.NotifyShelfPlacement(IsCorrectPlacement(card, slot));
+            return true;
+        }
+
+        return false;
+    }
+
     public bool IsAimOnOccupiedSlot(Vector3 aim)
     {
         RefreshOccupancy();
@@ -334,6 +387,9 @@ public class CardShelf : MonoBehaviour, IInteractable
                 RemoveShelfFlight(card);
                 card.NotifyShelfPlacement(isCorrect);
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
+                GameSaveSignals.MarkDirty();
+                if (IsComplete())
+                    GameSaveSignals.NotifyMilestone();
             });
     }
 

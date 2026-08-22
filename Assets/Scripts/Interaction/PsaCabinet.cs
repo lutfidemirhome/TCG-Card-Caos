@@ -12,7 +12,49 @@ public class PsaCabinet : MonoBehaviour
 
     void Awake()
     {
+        PersistentId.GetOrCreate(gameObject);
         CollectSlots();
+    }
+
+    public int CountOccupiedSlots()
+    {
+        CollectSlots();
+        int count = 0;
+        if (slots == null)
+            return 0;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] != null && !slots[i].IsEmpty)
+                count++;
+        }
+
+        return count;
+    }
+
+    public bool IsComplete()
+    {
+        CollectSlots();
+        if (slots == null || slots.Length == 0)
+            return false;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty || !slot.IsCorrectPlacement(slot.OccupiedCard))
+                return false;
+        }
+
+        return true;
+    }
+
+    public bool TryRestoreCard(WorldCard card, int slotNumber)
+    {
+        PsaCabinetSlot slot = FindSlot(slotNumber);
+        if (slot == null || card == null)
+            return false;
+
+        return slot.RestoreOccupiedCard(card);
     }
 
     public void CollectSlots()

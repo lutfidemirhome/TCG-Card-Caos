@@ -37,6 +37,7 @@ public static class CardFactory
 
         var card = root.AddComponent<WorldCard>();
         card.Initialize(cardDefinition, paletteIndex);
+        PersistentId.GetOrCreate(root).AssignNew();
         return card;
     }
 
@@ -69,6 +70,7 @@ public static class CardFactory
 
         var card = root.AddComponent<WorldCard>();
         card.InitializePsa(slotNumber, variantIndex);
+        PersistentId.GetOrCreate(root).AssignNew();
         return card;
     }
 

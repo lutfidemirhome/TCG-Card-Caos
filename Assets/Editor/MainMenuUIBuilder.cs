@@ -193,32 +193,33 @@ public static class MainMenuUIBuilder
             return;
         }
 
-        RectTransform listRect = (RectTransform)listFrame;
-        SetCenterAnchored(listRect, new Vector2(0f, 20f), new Vector2(1320f, 640f));
-
-        Transform viewport = listFrame.Find("Viewport");
-        if (viewport != null)
-            StretchToParent((RectTransform)viewport, new Vector4(28f, 28f, 56f, 28f));
-
         Transform scrollbar = listFrame.Find("Scrollbar");
         if (scrollbar != null)
         {
-            RectTransform scrollbarRect = (RectTransform)scrollbar;
-            scrollbarRect.anchorMin = new Vector2(1f, 0f);
-            scrollbarRect.anchorMax = new Vector2(1f, 1f);
-            scrollbarRect.pivot = new Vector2(1f, 0.5f);
-            scrollbarRect.anchoredPosition = new Vector2(-18f, 0f);
-            scrollbarRect.sizeDelta = new Vector2(22f, -72f);
-
             Transform handle = scrollbar.Find("Sliding Area/Handle");
             if (handle != null)
             {
                 RectTransform handleRect = (RectTransform)handle;
-                handleRect.anchorMin = new Vector2(0f, 0f);
-                handleRect.anchorMax = new Vector2(1f, 0f);
-                handleRect.pivot = new Vector2(0.5f, 0.5f);
-                handleRect.anchoredPosition = Vector2.zero;
-                handleRect.sizeDelta = new Vector2(0f, 40f);
+                handleRect.localScale = Vector3.one;
+
+                Image handleImage = handle.GetComponent<Image>();
+                if (handleImage != null)
+                    handleImage.preserveAspect = true;
+            }
+
+            LoadGameCircularScrollThumb thumb = scrollbar.GetComponent<LoadGameCircularScrollThumb>();
+            if (thumb == null)
+                thumb = scrollbar.gameObject.AddComponent<LoadGameCircularScrollThumb>();
+
+            Scrollbar scrollbarComponent = scrollbar.GetComponent<Scrollbar>();
+            Transform slidingArea = scrollbar.Find("Sliding Area");
+            if (scrollbarComponent != null && slidingArea != null && handle != null)
+            {
+                var serialized = new SerializedObject(thumb);
+                serialized.FindProperty("scrollbar").objectReferenceValue = scrollbarComponent;
+                serialized.FindProperty("slidingArea").objectReferenceValue = slidingArea;
+                serialized.FindProperty("handle").objectReferenceValue = handle;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
             }
         }
 
@@ -231,22 +232,9 @@ public static class MainMenuUIBuilder
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        foreach (Transform slot in panel.GetComponentsInChildren<Transform>(true))
-        {
-            if (!slot.name.StartsWith("Slot_"))
-                continue;
-
-            LayoutElement layout = slot.GetComponent<LayoutElement>();
-            if (layout == null)
-                continue;
-
-            layout.minHeight = 300f;
-            layout.preferredHeight = 300f;
-        }
-
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, MenuScenePath);
-        Debug.Log("[MainMenuUIBuilder] Load Game scroll layout fixed.");
+        Debug.Log("[MainMenuUIBuilder] Load Game circular scroll thumb fixed.");
     }
 
     [MenuItem("TCG Card Caos/UI/Build Main Menu UI")]
@@ -693,8 +681,10 @@ public static class MainMenuUIBuilder
         var handleImage = handle.gameObject.AddComponent<Image>();
         handleImage.sprite = scrollHandleSprite;
         handleImage.color = Color.white;
+        handleImage.preserveAspect = true;
         scrollbar.targetGraphic = handleImage;
         scrollbar.handleRect = handle;
+        scrollbar.gameObject.AddComponent<LoadGameCircularScrollThumb>();
 
         var scrollRect = listFrame.gameObject.AddComponent<ScrollRect>();
         scrollRect.content = content;
@@ -833,8 +823,7 @@ public static class MainMenuUIBuilder
         var valueElement = valueRect.gameObject.AddComponent<LayoutElement>();
         valueElement.preferredWidth = 420f;
         valueElement.flexibleWidth = 1f;
-        TMP_Text value = CreateText(valueRect, font, 22f, TextAlignmentOptions.Left,
-            new Color(0.10f, 0.11f, 0.14f));
+        TMP_Text value = CreateText(valueRect, font, 22f, TextAlignmentOptions.Left, Color.white);
         value.raycastTarget = false;
         EnableAutoSize(value, 14f, 22f);
         value.text = "—";

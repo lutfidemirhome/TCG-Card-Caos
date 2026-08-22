@@ -1,30 +1,36 @@
-using System.IO;
-using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
-/// Tracks whether a latest save exists and loads it when the player chooses Continue.
-/// Gameplay systems can write to <see cref="LatestSavePath"/> when persistence is implemented.
+/// Public save API for menus and gameplay. UI must not read files or JSON.
 /// </summary>
 public static class GameSaveStore
 {
-    public const string LatestSaveFileName = "save_latest.dat";
+    public static bool HasAnySave() => GameSaveManager.HasAnyCompatibleSave();
 
-    public static string LatestSavePath =>
-        Path.Combine(Application.persistentDataPath, LatestSaveFileName);
+    public static List<SaveSlotMetadata> GetSaveSlots() => GameSaveManager.GetSaveSlots();
 
-    public static bool HasAnySave() => File.Exists(LatestSavePath);
+    public static SaveSlotMetadata GetLatestValidSave() => GameSaveManager.GetLatestValidSave();
 
-    public static bool TryApplyLatestSave(out string error)
+    public static void LoadSaveSlot(string slotId) => GameSaveManager.LoadSaveSlot(slotId);
+
+    public static void SaveManual(string slotId = null)
     {
-        if (!HasAnySave())
-        {
-            error = "No save file found.";
-            return false;
-        }
-
-        // Persistence hooks will deserialize and apply state here.
-        Debug.Log("[GameSaveStore] Continue requested from " + LatestSavePath + " (load not implemented yet).");
-        error = null;
-        return true;
+        GameSaveManager.EnsureExists().SaveManual(slotId);
     }
+
+    public static void DeleteSaveSlot(string slotId) => GameSaveManager.DeleteSaveSlot(slotId);
+
+    public static void SaveAndQuit()
+    {
+        GameSaveManager.EnsureExists().SaveAndQuit();
+    }
+
+    public static void SaveBeforeLeaveGameplay()
+    {
+        GameSaveManager.EnsureExists().SaveBeforeLeaveGameplay();
+    }
+
+    public static void CreateNewGame() => GameSaveManager.CreateNewGame();
+
+    public static bool TryApplyLatestSave(out string error) => GameSaveManager.TryRestorePending(out error);
 }

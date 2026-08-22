@@ -442,6 +442,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         callback?.Invoke();
     }
 
+    public void RestoreIntoHand(Transform handAnchor, float targetHandScale)
+    {
+        BeginPickupFlight(handAnchor, targetHandScale, 0.05f, 0f);
+        CompletePickupFlight();
+    }
+
     /// <summary>
     /// Shows a detail card during pack reveal before the card joins the hand fan.
     /// When <paramref name="showsBack"/> is true, the card back faces the camera first.
@@ -1425,7 +1431,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.SetPositionAndRotation(worldPosition, worldRotation);
         transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
 
-        ReleaseCardVisual();
+        if (!UsesPsaSlab)
+            ReleaseCardVisual();
+
         RefreshRenderMode();
     }
 

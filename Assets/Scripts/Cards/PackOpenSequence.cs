@@ -217,6 +217,7 @@ public static class PackOpenSequence
         Object.Destroy(revealRoot.gameObject);
         hand.ClearHeldPackReference(pack);
         hand.SetHandInputLocked(false);
+        GameSaveSignals.NotifyMilestone();
     }
 
     static IEnumerator PackRevealSettleRoutine(

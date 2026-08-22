@@ -746,6 +746,24 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         RefreshLabel();
     }
 
+    public bool RestoreOccupiedCard(WorldCard card)
+    {
+        if (card == null)
+            return false;
+
+        Occupy(card);
+        BuildPlacementLocalPose(
+            out Transform parent,
+            out Vector3 localPosition,
+            out Quaternion localRotation,
+            out Vector3 localScale,
+            out _,
+            out _);
+        card.PlaceOnPsaCabinetSlot(parent, localPosition, localRotation, localScale);
+        card.NotifyShelfPlacement(IsCorrectPlacement(card));
+        return true;
+    }
+
     public void Occupy(WorldCard card)
     {
         occupiedCard = card;
@@ -914,6 +932,10 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
                 RemovePlacementFlight(card);
                 card.NotifyShelfPlacement(IsCorrectPlacement(card));
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
+                GameSaveSignals.MarkDirty();
+                PsaCabinet cabinet = GetComponentInParent<PsaCabinet>();
+                if (cabinet != null && cabinet.IsComplete())
+                    GameSaveSignals.NotifyMilestone();
             });
     }
 

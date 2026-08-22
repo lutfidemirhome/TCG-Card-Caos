@@ -48,8 +48,10 @@ public class LoadGameSlotView : MonoBehaviour
 
         if (thumbnail != null)
         {
-            thumbnail.texture = thumbnailTexture;
-            thumbnail.color = thumbnailTexture != null
+            if (thumbnailTexture != null)
+                thumbnail.texture = thumbnailTexture;
+
+            thumbnail.color = thumbnail.texture != null
                 ? Color.white
                 : new Color(0.22f, 0.26f, 0.34f, 1f);
         }
@@ -62,5 +64,28 @@ public class LoadGameSlotView : MonoBehaviour
 
         label.text = value ?? string.Empty;
         UiTextFit.Apply(label);
+    }
+
+    public void ApplyValueTextStyle(TMP_Text styleSource)
+    {
+        if (styleSource == null)
+            return;
+
+        Material material = styleSource.fontSharedMaterial;
+        Color color = styleSource.color;
+
+        ApplyValueTextStyle(dateValueText, material, color);
+        ApplyValueTextStyle(playTimeValueText, material, color);
+        ApplyValueTextStyle(cardsValueText, material, color);
+        ApplyValueTextStyle(shelvesValueText, material, color);
+    }
+
+    static void ApplyValueTextStyle(TMP_Text label, Material material, Color color)
+    {
+        if (label == null || material == null)
+            return;
+
+        label.fontSharedMaterial = material;
+        label.color = color;
     }
 }

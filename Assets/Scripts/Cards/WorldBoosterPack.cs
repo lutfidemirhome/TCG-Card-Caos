@@ -1142,6 +1142,17 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         callback?.Invoke();
     }
 
+    public IReadOnlyList<CardDefinition> PeekPreRolledContents()
+    {
+        return _preRolledContents;
+    }
+
+    public void RestoreIntoHand(Transform handAnchor, float targetHandScale)
+    {
+        BeginPickupFlight(handAnchor, targetHandScale, 0.05f, 0f);
+        CompletePickupFlight();
+    }
+
     public void ApplyHeldPose(Vector3 localPosition, Quaternion localRotation, float scale)
     {
         if (_state != PackState.Held && _state != PackState.Opening)

@@ -448,6 +448,7 @@ public class PlayerCardHand : MonoBehaviour
             pickupFlightArcHeight,
             () => OnCardPickupFlightComplete(newCardIndex));
         GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
+        GameSaveSignals.MarkDirty();
         return true;
     }
 
@@ -600,6 +601,7 @@ public class PlayerCardHand : MonoBehaviour
             pickupFlightArcHeight,
             () => OnPackPickupFlightComplete(packListIndex));
         GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
+        GameSaveSignals.MarkDirty();
         return true;
     }
 
@@ -734,6 +736,7 @@ public class PlayerCardHand : MonoBehaviour
                 OnCardPickupFlightComplete(newCardIndex);
                 GameSoundEffects.PlayPack(GameSoundEffects.PackId.WhileGathering);
             });
+        GameSaveSignals.MarkDirty();
     }
 
     public bool TryDropHeldPack()
@@ -766,6 +769,7 @@ public class PlayerCardHand : MonoBehaviour
             throwDirection.Normalize();
 
         pack.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
+        GameSaveSignals.MarkDirty();
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
         return true;
     }
@@ -854,6 +858,7 @@ public class PlayerCardHand : MonoBehaviour
 
         selectedCard.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
+        GameSaveSignals.MarkDirty();
         return true;
     }
 
@@ -1050,6 +1055,67 @@ public class PlayerCardHand : MonoBehaviour
             SelectedLift = CardDimensions.Height * EffectiveHeldScale * selectedLiftPercent,
             SelectedForwardMargin = selectedForwardMargin,
         };
+    }
+
+    public void CopyHeldCards(List<WorldCard> destination)
+    {
+        if (destination == null)
+            return;
+
+        destination.Clear();
+        destination.AddRange(_cards);
+    }
+
+    public void CopyHeldPacks(List<WorldBoosterPack> destination)
+    {
+        if (destination == null)
+            return;
+
+        destination.Clear();
+        destination.AddRange(_heldPacks);
+    }
+
+    public bool RestoreHeldCard(WorldCard card)
+    {
+        if (card == null)
+            return false;
+
+        EnsureHandAnchor();
+        UpdateHandAnchorTransform();
+        if (!_cards.Contains(card))
+            _cards.Add(card);
+        if (!HasHandFanEntry(card))
+            AddHandFanEntry(new HandFanEntry { Card = card });
+
+        card.RestoreIntoHand(_handAnchor, EffectiveHeldScale);
+        ClampSelectionIndex();
+        ApplyFanLayout();
+        return true;
+    }
+
+    public bool RestoreHeldPack(WorldBoosterPack pack)
+    {
+        if (pack == null)
+            return false;
+
+        EnsureHandAnchor();
+        UpdateHandAnchorTransform();
+        if (!_heldPacks.Contains(pack))
+            _heldPacks.Add(pack);
+        if (!HasHandFanEntry(pack))
+            AddHandFanEntry(new HandFanEntry { Pack = pack });
+
+        pack.RestoreIntoHand(_handAnchor, EffectiveHeldScale);
+        ClampSelectionIndex();
+        ApplyFanLayout();
+        return true;
+    }
+
+    public void RestoreSelectionIndex(int index)
+    {
+        _selectedIndex = index;
+        ClampSelectionIndex();
+        ApplyFanLayout();
     }
 
     struct HandFanEntry

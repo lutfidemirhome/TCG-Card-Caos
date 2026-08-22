@@ -50,6 +50,7 @@ static class GamePlayBootstrap
         _bootstrappedSceneHandle = scene.handle;
 
         CardInstancedRenderManager.BeginBulkGroundLoad();
+        GameSaveManager.EnsureExists();
         EnsureCameraSystems();
         EnsurePlayerHand();
         StoreLighting.EnsureExists();
