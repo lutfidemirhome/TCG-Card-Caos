@@ -22,11 +22,11 @@ MonoBehaviour:
     - Fortsetzen
     - Continuar
     - Continuar
-    - "继续"
-    - "繼續"
-    - "続ける"
-    - "계속하기"
-    - "Продолжить"
+    - "\u7EE7\u7EED"
+    - "\u7E7C\u7E8C"
+    - "\u7D9A\u3051\u308B"
+    - "\uACC4\uC18D\uD558\uAE30"
+    - "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C"
   - key: menu.new_game
     values:
     - New Game
@@ -36,53 +36,53 @@ MonoBehaviour:
     - Neues Spiel
     - Nueva partida
     - Novo jogo
-    - "新游戏"
-    - "新遊戲"
-    - "新しいゲーム"
-    - "새 게임"
-    - "Новая игра"
+    - "\u65B0\u6E38\u620F"
+    - "\u65B0\u904A\u6232"
+    - "\u65B0\u3057\u3044\u30B2\u30FC\u30E0"
+    - "\uC0C8 \uAC8C\uC784"
+    - "\u041D\u043E\u0432\u0430\u044F \u0438\u0433\u0440\u0430"
   - key: menu.load_game
     values:
     - Load Game
-    - "Oyun Yükle"
+    - "Oyun Y\xFCkle"
     - Charger une partie
     - Carica partita
     - Spiel laden
     - Cargar partida
     - Carregar jogo
-    - "加载游戏"
-    - "載入遊戲"
-    - "ゲームを読み込む"
-    - "게임 불러오기"
-    - "Загрузить игру"
+    - "\u52A0\u8F7D\u6E38\u620F"
+    - "\u8F09\u5165\u904A\u6232"
+    - "\u30B2\u30FC\u30E0\u3092\u8AAD\u307F\u8FBC\u3080"
+    - "\uAC8C\uC784 \uBD88\uB7EC\uC624\uAE30"
+    - "\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0438\u0433\u0440\u0443"
   - key: menu.settings
     values:
     - Settings
     - Ayarlar
-    - "Paramètres"
+    - "Param\xE8tres"
     - Impostazioni
     - Einstellungen
     - Ajustes
-    - "Configurações"
-    - "设置"
-    - "設定"
-    - "設定"
-    - "설정"
-    - "Настройки"
+    - "Configura\xE7\xF5es"
+    - "\u8BBE\u7F6E"
+    - "\u8A2D\u5B9A"
+    - "\u8A2D\u5B9A"
+    - "\uC124\uC815"
+    - "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438"
   - key: menu.quit
     values:
     - Quit
-    - "Çıkış"
+    - "\xC7\u0131k\u0131\u015F"
     - Quitter
     - Esci
     - Beenden
     - Salir
     - Sair
-    - "退出"
-    - "退出"
-    - "終了"
-    - "종료"
-    - "Выйти"
+    - "\u9000\u51FA"
+    - "\u9000\u51FA"
+    - "\u7D42\u4E86"
+    - "\uC885\uB8CC"
+    - "\u0412\u044B\u0439\u0442\u0438"
   - key: menu.feedback
     values:
     - Feedback
@@ -92,11 +92,11 @@ MonoBehaviour:
     - Feedback
     - Comentarios
     - Feedback
-    - "反馈"
-    - "意見回饋"
-    - "フィードバック"
-    - "피드백"
-    - "Обратная связь"
+    - "\u53CD\u9988"
+    - "\u610F\u898B\u56DE\u994B"
+    - "\u30D5\u30A3\u30FC\u30C9\u30D0\u30C3\u30AF"
+    - "\uD53C\uB4DC\uBC31"
+    - "\u041E\u0431\u0440\u0430\u0442\u043D\u0430\u044F \u0441\u0432\u044F\u0437\u044C"
   - key: menu.follow_us
     values:
     - Follow Us
@@ -104,38 +104,182 @@ MonoBehaviour:
     - Suivez-nous
     - Seguici
     - Folge uns
-    - "Síguenos"
+    - "S\xEDguenos"
     - Siga-nos
-    - "关注我们"
-    - "關注我們"
-    - "フォローする"
-    - "팔로우하기"
-    - "Подписывайтесь"
+    - "\u5173\u6CE8\u6211\u4EEC"
+    - "\u95DC\u6CE8\u6211\u5011"
+    - "\u30D5\u30A9\u30ED\u30FC\u3059\u308B"
+    - "\uD314\uB85C\uC6B0\uD558\uAE30"
+    - "\u041F\u043E\u0434\u043F\u0438\u0441\u044B\u0432\u0430\u0439\u0442\u0435\u0441\u044C"
   - key: menu.roadmap.title
     values:
     - Planned For Full Release
-    - "Tam Sürümde Planlanan"
-    - "Prévu pour la version complète"
+    - "Tam S\xFCr\xFCmde Planlanan"
+    - "Pr\xE9vu pour la version compl\xE8te"
     - Pianificato per la versione completa
-    - "Für die Vollversion geplant"
-    - "Planificado para la versión completa"
-    - "Planejado para a versão completa"
-    - "完整版计划功能"
-    - "完整版計畫功能"
-    - "完全版で予定されている機能"
-    - "정식 출시 예정 기능"
-    - "Запланировано в полной версии"
+    - "F\xFCr die Vollversion geplant"
+    - "Planificado para la versi\xF3n completa"
+    - "Planejado para a vers\xE3o completa"
+    - "\u5B8C\u6574\u7248\u8BA1\u5212\u529F\u80FD"
+    - "\u5B8C\u6574\u7248\u8A08\u756B\u529F\u80FD"
+    - "\u5B8C\u5168\u7248\u3067\u4E88\u5B9A\u3055\u308C\u3066\u3044\u308B\u6A5F\u80FD"
+    - "\uC815\uC2DD \uCD9C\uC2DC \uC608\uC815 \uAE30\uB2A5"
+    - "\u0417\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043E
+      \u0432 \u043F\u043E\u043B\u043D\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438"
   - key: menu.roadmap.items
     values:
-    - "• 5,000+ Cards\n• Larger Play Area\n• More Card Categories\n• More Shelves & Storage\n• Additional Card Packs\n• More Graded Cards\n• New Rare Card Types\n• Skills & Upgrades\n• Achievements\n• Quality-of-Life Improvements\n…and more!"
-    - "• 5.000+ Kart\n• Daha Geniş Oyun Alanı\n• Daha Fazla Kart Kategorisi\n• Daha Fazla Raf ve Depolama\n• Ek Kart Paketleri\n• Daha Fazla Dereceli Kart\n• Yeni Nadir Kart Türleri\n• Yetenekler ve Geliştirmeler\n• Başarımlar\n• Kullanım Kolaylığı İyileştirmeleri\n…ve daha fazlası!"
-    - "• Plus de 5 000 cartes\n• Zone de jeu plus grande\n• Plus de catégories de cartes\n• Plus d'étagères et de stockage\n• Packs de cartes supplémentaires\n• Plus de cartes gradées\n• Nouveaux types de cartes rares\n• Compétences et améliorations\n• Succès\n• Améliorations de qualité de vie\n…et plus encore !"
-    - "• Oltre 5.000 carte\n• Area di gioco più grande\n• Più categorie di carte\n• Più scaffali e spazio di archiviazione\n• Pacchetti di carte aggiuntivi\n• Più carte classificate\n• Nuovi tipi di carte rare\n• Abilità e potenziamenti\n• Obiettivi\n• Miglioramenti della qualità della vita\n…e altro ancora!"
-    - "• Über 5.000 Karten\n• Größerer Spielbereich\n• Mehr Kartenkategorien\n• Mehr Regale & Lagerplatz\n• Zusätzliche Kartenpacks\n• Mehr bewertete Karten\n• Neue seltene Kartentypen\n• Fähigkeiten & Upgrades\n• Erfolge\n• Quality-of-Life-Verbesserungen\n…und mehr!"
-    - "• Más de 5.000 cartas\n• Área de juego más grande\n• Más categorías de cartas\n• Más estanterías y almacenamiento\n• Sobres de cartas adicionales\n• Más cartas clasificadas\n• Nuevos tipos de cartas raras\n• Habilidades y mejoras\n• Logros\n• Mejoras de calidad de vida\n…¡y mucho más!"
-    - "• Mais de 5.000 cartas\n• Área de jogo maior\n• Mais categorias de cartas\n• Mais prateleiras e armazenamento\n• Pacotes de cartas adicionais\n• Mais cartas graduadas\n• Novos tipos de cartas raras\n• Habilidades e melhorias\n• Conquistas\n• Melhorias de qualidade de vida\n…e muito mais!"
-    - "• 5,000+ 张卡牌\n• 更大的游戏区域\n• 更多卡牌类别\n• 更多货架与存储\n• 额外卡包\n• 更多评级卡\n• 新稀有卡类型\n• 技能与升级\n• 成就\n• 体验优化\n…还有更多！"
-    - "• 5,000+ 張卡牌\n• 更大的遊戲區域\n• 更多卡牌類別\n• 更多貨架與儲存空間\n• 額外卡包\n• 更多評級卡\n• 新稀有卡類型\n• 技能與升級\n• 成就\n• 體驗優化\n…還有更多！"
-    - "• 5,000枚以上のカード\n• より広いプレイエリア\n• より多くのカードカテゴリ\n• より多くの棚と収納\n• 追加カードパック\n• より多くのグレードカード\n• 新しいレアカードタイプ\n• スキルとアップグレード\n• 実績\n• クオリティ・オブ・ライフの改善\n…その他多数！"
-    - "• 5,000장 이상의 카드\n• 더 넓은 플레이 영역\n• 더 많은 카드 카테고리\n• 더 많은 선반 및 저장 공간\n• 추가 카드 팩\n• 더 많은 등급 카드\n• 새로운 희귀 카드 유형\n• 스킬 및 업그레이드\n• 업적\n• 사용성 개선\n…그리고 더 많은 것들!"
-    - "• 5 000+ карт\n• Большая игровая зона\n• Больше категорий карт\n• Больше полок и места для хранения\n• Дополнительные наборы карт\n• Больше оценённых карт\n• Новые типы редких карт\n• Навыки и улучшения\n• Достижения\n• Улучшения качества жизни\n…и многое другое!"
+    - "\u2022 5,000+ Cards\n\u2022 Larger Play Area\n\u2022 More Card Categories\n\u2022
+      More Shelves & Storage\n\u2022 Additional Card Packs\n\u2022 More Graded Cards\n\u2022
+      New Rare Card Types\n\u2022 Skills & Upgrades\n\u2022 Achievements\n\u2022
+      Quality-of-Life Improvements\n\u2026and more!"
+    - "\u2022 5.000+ Kart\n\u2022 Daha Geni\u015F Oyun Alan\u0131\n\u2022 Daha Fazla
+      Kart Kategorisi\n\u2022 Daha Fazla Raf ve Depolama\n\u2022 Ek Kart Paketleri\n\u2022
+      Daha Fazla Dereceli Kart\n\u2022 Yeni Nadir Kart T\xFCrleri\n\u2022 Yetenekler
+      ve Geli\u015Ftirmeler\n\u2022 Ba\u015Far\u0131mlar\n\u2022 Kullan\u0131m Kolayl\u0131\u011F\u0131
+      \u0130yile\u015Ftirmeleri\n\u2026ve daha fazlas\u0131!"
+    - "\u2022 Plus de 5 000 cartes\n\u2022 Zone de jeu plus grande\n\u2022 Plus de
+      cat\xE9gories de cartes\n\u2022 Plus d'\xE9tag\xE8res et de stockage\n\u2022
+      Packs de cartes suppl\xE9mentaires\n\u2022 Plus de cartes grad\xE9es\n\u2022
+      Nouveaux types de cartes rares\n\u2022 Comp\xE9tences et am\xE9liorations\n\u2022
+      Succ\xE8s\n\u2022 Am\xE9liorations de qualit\xE9 de vie\n\u2026et plus encore
+      !"
+    - "\u2022 Oltre 5.000 carte\n\u2022 Area di gioco pi\xF9 grande\n\u2022 Pi\xF9
+      categorie di carte\n\u2022 Pi\xF9 scaffali e spazio di archiviazione\n\u2022
+      Pacchetti di carte aggiuntivi\n\u2022 Pi\xF9 carte classificate\n\u2022 Nuovi
+      tipi di carte rare\n\u2022 Abilit\xE0 e potenziamenti\n\u2022 Obiettivi\n\u2022
+      Miglioramenti della qualit\xE0 della vita\n\u2026e altro ancora!"
+    - "\u2022 \xDCber 5.000 Karten\n\u2022 Gr\xF6\xDFerer Spielbereich\n\u2022 Mehr
+      Kartenkategorien\n\u2022 Mehr Regale & Lagerplatz\n\u2022 Zus\xE4tzliche Kartenpacks\n\u2022
+      Mehr bewertete Karten\n\u2022 Neue seltene Kartentypen\n\u2022 F\xE4higkeiten
+      & Upgrades\n\u2022 Erfolge\n\u2022 Quality-of-Life-Verbesserungen\n\u2026und
+      mehr!"
+    - "\u2022 M\xE1s de 5.000 cartas\n\u2022 \xC1rea de juego m\xE1s grande\n\u2022
+      M\xE1s categor\xEDas de cartas\n\u2022 M\xE1s estanter\xEDas y almacenamiento\n\u2022
+      Sobres de cartas adicionales\n\u2022 M\xE1s cartas clasificadas\n\u2022 Nuevos
+      tipos de cartas raras\n\u2022 Habilidades y mejoras\n\u2022 Logros\n\u2022
+      Mejoras de calidad de vida\n\u2026\xA1y mucho m\xE1s!"
+    - "\u2022 Mais de 5.000 cartas\n\u2022 \xC1rea de jogo maior\n\u2022 Mais categorias
+      de cartas\n\u2022 Mais prateleiras e armazenamento\n\u2022 Pacotes de cartas
+      adicionais\n\u2022 Mais cartas graduadas\n\u2022 Novos tipos de cartas raras\n\u2022
+      Habilidades e melhorias\n\u2022 Conquistas\n\u2022 Melhorias de qualidade de
+      vida\n\u2026e muito mais!"
+    - "\u2022 5,000+ \u5F20\u5361\u724C\n\u2022 \u66F4\u5927\u7684\u6E38\u620F\u533A\u57DF\n\u2022
+      \u66F4\u591A\u5361\u724C\u7C7B\u522B\n\u2022 \u66F4\u591A\u8D27\u67B6\u4E0E\u5B58\u50A8\n\u2022
+      \u989D\u5916\u5361\u5305\n\u2022 \u66F4\u591A\u8BC4\u7EA7\u5361\n\u2022 \u65B0\u7A00\u6709\u5361\u7C7B\u578B\n\u2022
+      \u6280\u80FD\u4E0E\u5347\u7EA7\n\u2022 \u6210\u5C31\n\u2022 \u4F53\u9A8C\u4F18\u5316\n\u2026\u8FD8\u6709\u66F4\u591A\uFF01"
+    - "\u2022 5,000+ \u5F35\u5361\u724C\n\u2022 \u66F4\u5927\u7684\u904A\u6232\u5340\u57DF\n\u2022
+      \u66F4\u591A\u5361\u724C\u985E\u5225\n\u2022 \u66F4\u591A\u8CA8\u67B6\u8207\u5132\u5B58\u7A7A\u9593\n\u2022
+      \u984D\u5916\u5361\u5305\n\u2022 \u66F4\u591A\u8A55\u7D1A\u5361\n\u2022 \u65B0\u7A00\u6709\u5361\u985E\u578B\n\u2022
+      \u6280\u80FD\u8207\u5347\u7D1A\n\u2022 \u6210\u5C31\n\u2022 \u9AD4\u9A57\u512A\u5316\n\u2026\u9084\u6709\u66F4\u591A\uFF01"
+    - "\u2022 5,000\u679A\u4EE5\u4E0A\u306E\u30AB\u30FC\u30C9\n\u2022 \u3088\u308A\u5E83\u3044\u30D7\u30EC\u30A4\u30A8\u30EA\u30A2\n\u2022
+      \u3088\u308A\u591A\u304F\u306E\u30AB\u30FC\u30C9\u30AB\u30C6\u30B4\u30EA\n\u2022
+      \u3088\u308A\u591A\u304F\u306E\u68DA\u3068\u53CE\u7D0D\n\u2022 \u8FFD\u52A0\u30AB\u30FC\u30C9\u30D1\u30C3\u30AF\n\u2022
+      \u3088\u308A\u591A\u304F\u306E\u30B0\u30EC\u30FC\u30C9\u30AB\u30FC\u30C9\n\u2022
+      \u65B0\u3057\u3044\u30EC\u30A2\u30AB\u30FC\u30C9\u30BF\u30A4\u30D7\n\u2022
+      \u30B9\u30AD\u30EB\u3068\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9\n\u2022
+      \u5B9F\u7E3E\n\u2022 \u30AF\u30AA\u30EA\u30C6\u30A3\u30FB\u30AA\u30D6\u30FB\u30E9\u30A4\u30D5\u306E\u6539\u5584\n\u2026\u305D\u306E\u4ED6\u591A\u6570\uFF01"
+    - "\u2022 5,000\uC7A5 \uC774\uC0C1\uC758 \uCE74\uB4DC\n\u2022 \uB354 \uB113\uC740
+      \uD50C\uB808\uC774 \uC601\uC5ED\n\u2022 \uB354 \uB9CE\uC740 \uCE74\uB4DC \uCE74\uD14C\uACE0\uB9AC\n\u2022
+      \uB354 \uB9CE\uC740 \uC120\uBC18 \uBC0F \uC800\uC7A5 \uACF5\uAC04\n\u2022 \uCD94\uAC00
+      \uCE74\uB4DC \uD329\n\u2022 \uB354 \uB9CE\uC740 \uB4F1\uAE09 \uCE74\uB4DC\n\u2022
+      \uC0C8\uB85C\uC6B4 \uD76C\uADC0 \uCE74\uB4DC \uC720\uD615\n\u2022 \uC2A4\uD0AC
+      \uBC0F \uC5C5\uADF8\uB808\uC774\uB4DC\n\u2022 \uC5C5\uC801\n\u2022 \uC0AC\uC6A9\uC131
+      \uAC1C\uC120\n\u2026\uADF8\uB9AC\uACE0 \uB354 \uB9CE\uC740 \uAC83\uB4E4!"
+    - "\u2022 5 000+ \u043A\u0430\u0440\u0442\n\u2022 \u0411\u043E\u043B\u044C\u0448\u0430\u044F
+      \u0438\u0433\u0440\u043E\u0432\u0430\u044F \u0437\u043E\u043D\u0430\n\u2022
+      \u0411\u043E\u043B\u044C\u0448\u0435 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0439
+      \u043A\u0430\u0440\u0442\n\u2022 \u0411\u043E\u043B\u044C\u0448\u0435 \u043F\u043E\u043B\u043E\u043A
+      \u0438 \u043C\u0435\u0441\u0442\u0430 \u0434\u043B\u044F \u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F\n\u2022
+      \u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435
+      \u043D\u0430\u0431\u043E\u0440\u044B \u043A\u0430\u0440\u0442\n\u2022 \u0411\u043E\u043B\u044C\u0448\u0435
+      \u043E\u0446\u0435\u043D\u0451\u043D\u043D\u044B\u0445 \u043A\u0430\u0440\u0442\n\u2022
+      \u041D\u043E\u0432\u044B\u0435 \u0442\u0438\u043F\u044B \u0440\u0435\u0434\u043A\u0438\u0445
+      \u043A\u0430\u0440\u0442\n\u2022 \u041D\u0430\u0432\u044B\u043A\u0438 \u0438
+      \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F\n\u2022 \u0414\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u044F\n\u2022
+      \u0423\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430
+      \u0436\u0438\u0437\u043D\u0438\n\u2026\u0438 \u043C\u043D\u043E\u0433\u043E\u0435
+      \u0434\u0440\u0443\u0433\u043E\u0435!"
+  - key: load.title
+    values:
+    - Load Game
+    - "Oyun Y\xFCkle"
+    - Charger une partie
+    - Carica partita
+    - Spiel laden
+    - Cargar partida
+    - Carregar jogo
+    - "\u52A0\u8F7D\u6E38\u620F"
+    - "\u8F09\u5165\u904A\u6232"
+    - "\u30B2\u30FC\u30E0\u3092\u8AAD\u307F\u8FBC\u3080"
+    - "\uAC8C\uC784 \uBD88\uB7EC\uC624\uAE30"
+    - "\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0438\u0433\u0440\u0443"
+  - key: load.cancel
+    values:
+    - Cancel
+    - "\u0130ptal"
+    - Annuler
+    - Annulla
+    - Abbrechen
+    - Cancelar
+    - Cancelar
+    - "\u53D6\u6D88"
+    - "\u53D6\u6D88"
+    - "\u30AD\u30E3\u30F3\u30BB\u30EB"
+    - "\uCDE8\uC18C"
+    - "\u041E\u0442\u043C\u0435\u043D\u0430"
+  - key: load.date
+    values:
+    - 'Date:'
+    - 'Tarih:'
+    - 'Date :'
+    - 'Data:'
+    - 'Datum:'
+    - 'Fecha:'
+    - 'Data:'
+    - "\u65E5\u671F\uFF1A"
+    - "\u65E5\u671F\uFF1A"
+    - "\u65E5\u4ED8\uFF1A"
+    - "\uB0A0\uC9DC:"
+    - "\u0414\u0430\u0442\u0430:"
+  - key: load.play_time
+    values:
+    - 'Play Time:'
+    - "Oynama S\xFCresi:"
+    - 'Temps de jeu :'
+    - 'Tempo di gioco:'
+    - 'Spielzeit:'
+    - 'Tiempo de juego:'
+    - 'Tempo de jogo:'
+    - "\u6E38\u620F\u65F6\u957F\uFF1A"
+    - "\u904A\u6232\u6642\u9577\uFF1A"
+    - "\u30D7\u30EC\u30A4\u6642\u9593\uFF1A"
+    - "\uD50C\uB808\uC774 \uC2DC\uAC04:"
+    - "\u0412\u0440\u0435\u043C\u044F \u0438\u0433\u0440\u044B:"
+  - key: load.cards_placed
+    values:
+    - 'Cards Placed:'
+    - "Yerle\u015Ftirilen Kartlar:"
+    - "Cartes plac\xE9es :"
+    - 'Carte posizionate:'
+    - 'Platzierte Karten:'
+    - 'Cartas colocadas:'
+    - 'Cartas colocadas:'
+    - "\u5DF2\u653E\u7F6E\u5361\u724C\uFF1A"
+    - "\u5DF2\u653E\u7F6E\u5361\u724C\uFF1A"
+    - "\u914D\u7F6E\u3057\u305F\u30AB\u30FC\u30C9\uFF1A"
+    - "\uBC30\uCE58\uB41C \uCE74\uB4DC:"
+    - "\u0420\u0430\u0437\u043C\u0435\u0449\u0435\u043D\u043E \u043A\u0430\u0440\u0442:"
+  - key: load.shelves
+    values:
+    - 'Shelves:'
+    - 'Raflar:'
+    - "\xC9tag\xE8res :"
+    - 'Scaffali:'
+    - 'Regale:'
+    - "Estanter\xEDas:"
+    - 'Prateleiras:'
+    - "\u8D27\u67B6\uFF1A"
+    - "\u8CA8\u67B6\uFF1A"
+    - "\u68DA\uFF1A"
+    - "\uC120\uBC18:"
+    - "\u041F\u043E\u043B\u043A\u0438:"

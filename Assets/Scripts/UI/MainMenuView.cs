@@ -37,6 +37,9 @@ public class MainMenuView : MonoBehaviour
     [SerializeField] Button instagramButton;
     [SerializeField] Button youtubeButton;
 
+    [Header("Load Game")]
+    [SerializeField] LoadGamePanelView loadGamePanel;
+
     [Header("Links")]
     [SerializeField] string feedbackUrl = "";
     [SerializeField] string discordUrl = "";
@@ -66,6 +69,9 @@ public class MainMenuView : MonoBehaviour
         Transform logo = transform.Find("Logo");
         if (logo != null)
             logoRect = logo.GetComponent<RectTransform>();
+
+        if (loadGamePanel == null)
+            loadGamePanel = GetComponentInChildren<LoadGamePanelView>(true);
     }
 
     void ApplyMenuLayout()
@@ -158,8 +164,13 @@ public class MainMenuView : MonoBehaviour
 
     static void OnNewGameClicked() => GameSceneLoader.StartNewGame();
 
-    static void OnLoadGameClicked() =>
-        Debug.Log("[MainMenu] Load Game is not implemented yet.");
+    void OnLoadGameClicked()
+    {
+        if (loadGamePanel != null)
+            loadGamePanel.Show();
+        else
+            Debug.Log("[MainMenu] Load Game panel is missing. Run TCG Card Caos → UI → Add Load Game Panel.");
+    }
 
     static void OnSettingsClicked() =>
         Debug.Log("[MainMenu] Settings is not implemented yet.");

@@ -16,4 +16,12 @@ public static class LocalizationKeys
     public const string MenuRoadmapTitle = "menu.roadmap.title";
     public const string MenuRoadmapItems = "menu.roadmap.items";
     public const string MenuFollowUs = "menu.follow_us";
+
+    // Load Game screen
+    public const string LoadGameTitle = "load.title";
+    public const string LoadGameCancel = "load.cancel";
+    public const string LoadGameDate = "load.date";
+    public const string LoadGamePlayTime = "load.play_time";
+    public const string LoadGameCardsPlaced = "load.cards_placed";
+    public const string LoadGameShelves = "load.shelves";
 }

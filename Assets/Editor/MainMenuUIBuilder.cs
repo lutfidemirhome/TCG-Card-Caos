@@ -17,6 +17,7 @@ public static class MainMenuUIBuilder
     const string MenuScenePath = "Assets/Scenes/MenuScene.unity";
     const string LocalizationFolder = "Assets/Resources/Localization";
     const string UiArtFolder = "Assets/UI/MainMenu/Art";
+    const string LoadGameArtFolder = "Assets/UI/LoadGame/Art";
     const string MenuPrefabPath = "Assets/UI/MainMenu/MainMenuCanvas.prefab";
     const string CanvasRootName = "MainMenuCanvas";
     const string LegacyMenuRootName = "MainMenu";
@@ -121,6 +122,51 @@ public static class MainMenuUIBuilder
         Debug.Log("[MainMenuUIBuilder] Button_Continue added above New Game (copied from Load Game).");
     }
 
+    [MenuItem("TCG Card Caos/UI/Add Load Game Panel")]
+    public static void AddLoadGamePanelToMenu()
+    {
+        if (!File.Exists(MenuScenePath))
+        {
+            EditorUtility.DisplayDialog(
+                "Load Game",
+                "MenuScene not found.\n\nRun: TCG Card Caos → UI → Build Main Menu UI",
+                "OK");
+            return;
+        }
+
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+
+        EnsureLocalizationTable();
+
+        UnityEngine.SceneManagement.Scene scene =
+            EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
+
+        Transform canvas = FindMenuCanvas();
+        if (canvas == null)
+        {
+            Debug.LogError("[MainMenuUIBuilder] MainMenuCanvas not found in MenuScene.");
+            return;
+        }
+
+        Transform existing = canvas.Find("Panel_LoadGame");
+        if (existing != null)
+            Object.DestroyImmediate(existing.gameObject);
+
+        LoadGamePanelView panel = BuildLoadGamePanel(canvas, FindPreferredFont());
+        MainMenuView view = canvas.GetComponent<MainMenuView>();
+        AssignLoadGamePanel(view, panel);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, MenuScenePath);
+
+        if (File.Exists(MenuPrefabPath))
+            PrefabUtility.SaveAsPrefabAsset(canvas.gameObject, MenuPrefabPath);
+
+        Selection.activeGameObject = panel.gameObject;
+        Debug.Log("[MainMenuUIBuilder] Panel_LoadGame added. Dress Images in Hierarchy, then wire save data later.");
+    }
+
     [MenuItem("TCG Card Caos/UI/Build Main Menu UI")]
     public static void BuildMainMenuUI()
     {
@@ -163,6 +209,9 @@ public static class MainMenuUIBuilder
 
         AssignViewReferences(view, canvas.transform, continueBtn, newGame, loadGame, settings, quit, feedback, versionText,
             discord, tiktok, instagram, youtube);
+
+        LoadGamePanelView loadPanel = BuildLoadGamePanel(canvas.transform, font);
+        AssignLoadGamePanel(view, loadPanel);
 
         EnsureFolder("Assets/UI");
         EnsureFolder("Assets/UI/MainMenu");
@@ -452,6 +501,366 @@ public static class MainMenuUIBuilder
         return canvasGo != null ? canvasGo.transform : null;
     }
 
+    static void AssignLoadGamePanel(MainMenuView view, LoadGamePanelView panel)
+    {
+        if (view == null || panel == null)
+            return;
+
+        var serialized = new SerializedObject(view);
+        serialized.FindProperty("loadGamePanel").objectReferenceValue = panel;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static LoadGamePanelView BuildLoadGamePanel(Transform parent, TMP_FontAsset font)
+    {
+        EnsureFolder("Assets/UI");
+        EnsureFolder("Assets/UI/LoadGame");
+        EnsureFolder(LoadGameArtFolder);
+
+        Sprite background = LoadGameSprite("load_game_bg.png");
+        Sprite listFrameSprite = LoadGameSprite("panel_1.png");
+        Sprite slotSprite = LoadGameSprite("panel_2.png");
+        Sprite scrollBarSprite = LoadGameSprite("scroll_bar.png");
+        Sprite scrollHandleSprite = LoadGameSprite("scroll_circle_icon.png");
+        Sprite cancelSprite = LoadGameSprite("cancel_button.png");
+        Texture thumbnailTexture = LoadGameTexture("image_load_game.png");
+
+        RectTransform root = CreateUIObject("Panel_LoadGame", parent);
+        root.anchorMin = Vector2.zero;
+        root.anchorMax = Vector2.one;
+        root.offsetMin = Vector2.zero;
+        root.offsetMax = Vector2.zero;
+        root.SetAsLastSibling();
+
+        var panelView = root.gameObject.AddComponent<LoadGamePanelView>();
+
+        RectTransform dimmer = CreateUIObject("Dimmer", root);
+        StretchToParent(dimmer, Vector4.zero);
+        var dimmerImage = dimmer.gameObject.AddComponent<Image>();
+        dimmerImage.sprite = background;
+        dimmerImage.color = Color.white;
+        dimmerImage.raycastTarget = true;
+
+        RectTransform titleRect = CreateUIObject("Title", root);
+        SetCenterAnchored(titleRect, new Vector2(0f, 430f), new Vector2(720f, 88f));
+        TMP_Text title = CreateText(titleRect, font, 64f, TextAlignmentOptions.Center, Color.white);
+        title.fontStyle = FontStyles.Bold;
+        title.outlineWidth = 0.28f;
+        title.outlineColor = Color.black;
+        EnableAutoSize(title, 32f, 64f);
+        AddLocalizedText(titleRect.gameObject, LocalizationKeys.LoadGameTitle);
+
+        RectTransform listFrame = CreateUIObject("ListFrame", root);
+        SetCenterAnchored(listFrame, new Vector2(0f, 20f), new Vector2(1320f, 640f));
+        var listImage = listFrame.gameObject.AddComponent<Image>();
+        listImage.sprite = listFrameSprite;
+        listImage.type = Image.Type.Sliced;
+        listImage.color = Color.white;
+
+        RectTransform viewport = CreateUIObject("Viewport", listFrame);
+        StretchToParent(viewport, new Vector4(28f, 28f, 56f, 28f));
+        viewport.gameObject.AddComponent<RectMask2D>();
+
+        RectTransform content = CreateUIObject("Content", viewport);
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = new Vector2(0f, 0f);
+
+        var layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.spacing = 18f;
+        layout.padding = new RectOffset(8, 8, 8, 8);
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        LoadGameSlotView slot1 = BuildLoadGameSlot(content, "Slot_1", font, slotSprite, thumbnailTexture);
+        LoadGameSlotView slot2 = BuildLoadGameSlot(content, "Slot_2", font, slotSprite, thumbnailTexture);
+
+        RectTransform scrollbarRect = CreateUIObject("Scrollbar", listFrame);
+        scrollbarRect.anchorMin = new Vector2(1f, 0f);
+        scrollbarRect.anchorMax = new Vector2(1f, 1f);
+        scrollbarRect.pivot = new Vector2(1f, 0.5f);
+        scrollbarRect.anchoredPosition = new Vector2(-18f, 0f);
+        scrollbarRect.sizeDelta = new Vector2(22f, -72f);
+
+        var track = scrollbarRect.gameObject.AddComponent<Image>();
+        track.sprite = scrollBarSprite;
+        track.color = Color.white;
+
+        var scrollbar = scrollbarRect.gameObject.AddComponent<Scrollbar>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+
+        RectTransform slidingArea = CreateUIObject("Sliding Area", scrollbarRect);
+        StretchToParent(slidingArea, new Vector4(0f, 18f, 0f, 18f));
+
+        RectTransform handle = CreateUIObject("Handle", slidingArea);
+        handle.sizeDelta = new Vector2(36f, 36f);
+        var handleImage = handle.gameObject.AddComponent<Image>();
+        handleImage.sprite = scrollHandleSprite;
+        handleImage.color = Color.white;
+        scrollbar.targetGraphic = handleImage;
+        scrollbar.handleRect = handle;
+
+        var scrollRect = listFrame.gameObject.AddComponent<ScrollRect>();
+        scrollRect.content = content;
+        scrollRect.viewport = viewport;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = 28f;
+        scrollRect.verticalScrollbar = scrollbar;
+        scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+
+        Button cancel = BuildLoadGameCancelButton(root, cancelSprite);
+
+        var panelSerialized = new SerializedObject(panelView);
+        panelSerialized.FindProperty("root").objectReferenceValue = root.gameObject;
+        panelSerialized.FindProperty("cancelButton").objectReferenceValue = cancel;
+        SerializedProperty slotsProp = panelSerialized.FindProperty("slots");
+        slotsProp.arraySize = 2;
+        slotsProp.GetArrayElementAtIndex(0).objectReferenceValue = slot1;
+        slotsProp.GetArrayElementAtIndex(1).objectReferenceValue = slot2;
+        panelSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        root.gameObject.SetActive(false);
+        return panelView;
+    }
+
+    static LoadGameSlotView BuildLoadGameSlot(
+        Transform parent,
+        string objectName,
+        TMP_FontAsset font,
+        Sprite slotSprite,
+        Texture thumbnailTexture)
+    {
+        RectTransform slot = CreateUIObject(objectName, parent);
+        var layoutElement = slot.gameObject.AddComponent<LayoutElement>();
+        layoutElement.preferredHeight = 188f;
+        layoutElement.minHeight = 188f;
+
+        var background = slot.gameObject.AddComponent<Image>();
+        background.sprite = slotSprite;
+        background.type = Image.Type.Sliced;
+        background.color = Color.white;
+
+        var button = slot.gameObject.AddComponent<Button>();
+        button.targetGraphic = background;
+        var colors = button.colors;
+        colors.highlightedColor = new Color(0.66f, 0.70f, 0.88f, 1f);
+        colors.pressedColor = new Color(0.50f, 0.54f, 0.72f, 1f);
+        button.colors = colors;
+
+        var slotView = slot.gameObject.AddComponent<LoadGameSlotView>();
+
+        RectTransform thumb = CreateUIObject("Thumbnail", slot);
+        thumb.anchorMin = new Vector2(0f, 0.5f);
+        thumb.anchorMax = new Vector2(0f, 0.5f);
+        thumb.pivot = new Vector2(0f, 0.5f);
+        thumb.anchoredPosition = new Vector2(18f, 0f);
+        thumb.sizeDelta = new Vector2(156f, 156f);
+        var thumbImage = thumb.gameObject.AddComponent<RawImage>();
+        thumbImage.texture = thumbnailTexture;
+        thumbImage.color = Color.white;
+        thumbImage.raycastTarget = false;
+
+        RectTransform saveNameRect = CreateUIObject("SaveName", slot);
+        saveNameRect.anchorMin = new Vector2(1f, 1f);
+        saveNameRect.anchorMax = new Vector2(1f, 1f);
+        saveNameRect.pivot = new Vector2(1f, 1f);
+        saveNameRect.anchoredPosition = new Vector2(-22f, -14f);
+        saveNameRect.sizeDelta = new Vector2(280f, 40f);
+        TMP_Text saveName = CreateText(saveNameRect, font, 26f, TextAlignmentOptions.Right,
+            new Color(0.10f, 0.12f, 0.16f));
+        saveName.raycastTarget = false;
+        EnableAutoSize(saveName, 16f, 26f);
+        saveName.text = "Auto Save 1";
+
+        RectTransform stats = CreateUIObject("Stats", slot);
+        stats.anchorMin = new Vector2(0f, 0.5f);
+        stats.anchorMax = new Vector2(1f, 0.5f);
+        stats.pivot = new Vector2(0f, 0.5f);
+        stats.anchoredPosition = new Vector2(192f, -8f);
+        stats.sizeDelta = new Vector2(-220f, 140f);
+
+        var statsLayout = stats.gameObject.AddComponent<VerticalLayoutGroup>();
+        statsLayout.childAlignment = TextAnchor.MiddleLeft;
+        statsLayout.spacing = 4f;
+        statsLayout.childControlWidth = true;
+        statsLayout.childControlHeight = true;
+        statsLayout.childForceExpandWidth = true;
+        statsLayout.childForceExpandHeight = false;
+
+        TMP_Text dateValue = BuildStatRow(stats, "Date", font, LocalizationKeys.LoadGameDate);
+        TMP_Text playTimeValue = BuildStatRow(stats, "PlayTime", font, LocalizationKeys.LoadGamePlayTime);
+        TMP_Text cardsValue = BuildStatRow(stats, "Cards", font, LocalizationKeys.LoadGameCardsPlaced);
+        TMP_Text shelvesValue = BuildStatRow(stats, "Shelves", font, LocalizationKeys.LoadGameShelves);
+
+        var slotSerialized = new SerializedObject(slotView);
+        slotSerialized.FindProperty("selectButton").objectReferenceValue = button;
+        slotSerialized.FindProperty("thumbnail").objectReferenceValue = thumbImage;
+        slotSerialized.FindProperty("saveNameText").objectReferenceValue = saveName;
+        slotSerialized.FindProperty("dateValueText").objectReferenceValue = dateValue;
+        slotSerialized.FindProperty("playTimeValueText").objectReferenceValue = playTimeValue;
+        slotSerialized.FindProperty("cardsValueText").objectReferenceValue = cardsValue;
+        slotSerialized.FindProperty("shelvesValueText").objectReferenceValue = shelvesValue;
+        slotSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        return slotView;
+    }
+
+    static TMP_Text BuildStatRow(Transform parent, string rowName, TMP_FontAsset font, string labelKey)
+    {
+        RectTransform row = CreateUIObject("Row_" + rowName, parent);
+        var rowElement = row.gameObject.AddComponent<LayoutElement>();
+        rowElement.preferredHeight = 30f;
+        rowElement.minHeight = 30f;
+
+        var rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        rowLayout.childAlignment = TextAnchor.MiddleLeft;
+        rowLayout.spacing = 10f;
+        rowLayout.childControlWidth = true;
+        rowLayout.childControlHeight = true;
+        rowLayout.childForceExpandWidth = false;
+        rowLayout.childForceExpandHeight = true;
+
+        RectTransform labelRect = CreateUIObject("Label", row);
+        var labelElement = labelRect.gameObject.AddComponent<LayoutElement>();
+        labelElement.preferredWidth = 210f;
+        labelElement.minWidth = 140f;
+        TMP_Text label = CreateText(labelRect, font, 22f, TextAlignmentOptions.Left,
+            new Color(0.12f, 0.13f, 0.16f));
+        label.raycastTarget = false;
+        EnableAutoSize(label, 14f, 22f);
+        AddLocalizedText(labelRect.gameObject, labelKey);
+
+        RectTransform valueRect = CreateUIObject("Value", row);
+        var valueElement = valueRect.gameObject.AddComponent<LayoutElement>();
+        valueElement.preferredWidth = 420f;
+        valueElement.flexibleWidth = 1f;
+        TMP_Text value = CreateText(valueRect, font, 22f, TextAlignmentOptions.Left,
+            new Color(0.10f, 0.11f, 0.14f));
+        value.raycastTarget = false;
+        EnableAutoSize(value, 14f, 22f);
+        value.text = "—";
+        return value;
+    }
+
+    static Button BuildLoadGameCancelButton(Transform parent, Sprite cancelSprite)
+    {
+        RectTransform rect = CreateUIObject("Button_Cancel", parent);
+        SetCornerAnchored(rect, new Vector2(1f, 0f), new Vector2(-210f, 78f), new Vector2(220f, 78f));
+
+        var image = rect.gameObject.AddComponent<Image>();
+        image.sprite = cancelSprite;
+        image.type = Image.Type.Simple;
+        image.color = Color.white;
+
+        var button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        return button;
+    }
+
+    static Sprite LoadGameSprite(string fileName)
+    {
+        return AssetDatabase.LoadAssetAtPath<Sprite>(LoadGameArtFolder + "/" + fileName);
+    }
+
+    static Texture LoadGameTexture(string fileName)
+    {
+        return AssetDatabase.LoadAssetAtPath<Texture>(LoadGameArtFolder + "/" + fileName);
+    }
+
+    static Sprite EnsureUiSprite(string fileName, Texture2D texture, float sliceBorder)
+    {
+        string assetPath = UiArtFolder + "/" + fileName;
+        File.WriteAllBytes(assetPath, texture.EncodeToPNG());
+        Object.DestroyImmediate(texture);
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+
+        var importer = (TextureImporter)AssetImporter.GetAtPath(assetPath);
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        importer.alphaIsTransparency = true;
+        importer.mipmapEnabled = false;
+        importer.filterMode = FilterMode.Bilinear;
+        if (sliceBorder > 0f)
+        {
+            importer.spriteBorder = new Vector4(sliceBorder, sliceBorder, sliceBorder, sliceBorder);
+        }
+
+        importer.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+    }
+
+    static Texture2D CreateRoundedPlaceholderTexture(int radius)
+    {
+        const int size = 64;
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                texture.SetPixel(x, y, IsInsideRoundedRect(x + 0.5f, y + 0.5f, size, size, radius)
+                    ? Color.white
+                    : Color.clear);
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    static Texture2D CreateCirclePlaceholderTexture()
+    {
+        const int size = 64;
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+        float center = size * 0.5f;
+        float radius = center - 1f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x + 0.5f - center;
+                float dy = y + 0.5f - center;
+                texture.SetPixel(x, y, dx * dx + dy * dy <= radius * radius ? Color.white : Color.clear);
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    static bool IsInsideRoundedRect(float x, float y, float width, float height, float radius)
+    {
+        radius = Mathf.Min(radius, width * 0.5f - 0.5f, height * 0.5f - 0.5f);
+
+        if (x >= radius && x <= width - radius)
+            return y >= 0f && y <= height;
+
+        if (y >= radius && y <= height - radius)
+            return x >= 0f && x <= width;
+
+        float cx = x < radius ? radius : width - radius;
+        float cy = y < radius ? radius : height - radius;
+        float dx = x - cx;
+        float dy = y - cy;
+        return dx * dx + dy * dy <= radius * radius;
+    }
+
     // ---------- layout helpers ----------
 
     static RectTransform CreateUIObject(string objectName, Transform parent)
@@ -593,6 +1002,12 @@ public static class MainMenuUIBuilder
         table.EditorEnsureKey(LocalizationKeys.MenuRoadmapTitle,
             "Planned For Full Release", "Tam Sürümde Planlanan");
         table.EditorEnsureKey(LocalizationKeys.MenuRoadmapItems, RoadmapItemsEnglish, RoadmapItemsTurkish);
+        table.EditorEnsureKey(LocalizationKeys.LoadGameTitle, "Load Game", "Oyun Yükle");
+        table.EditorEnsureKey(LocalizationKeys.LoadGameCancel, "Cancel", "İptal");
+        table.EditorEnsureKey(LocalizationKeys.LoadGameDate, "Date:", "Tarih:");
+        table.EditorEnsureKey(LocalizationKeys.LoadGamePlayTime, "Play Time:", "Oynama Süresi:");
+        table.EditorEnsureKey(LocalizationKeys.LoadGameCardsPlaced, "Cards Placed:", "Yerleştirilen Kartlar:");
+        table.EditorEnsureKey(LocalizationKeys.LoadGameShelves, "Shelves:", "Raflar:");
 
         EditorUtility.SetDirty(table);
         AssetDatabase.SaveAssets();
