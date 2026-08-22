@@ -216,6 +216,7 @@ public static class MainMenuUIBuilder
         LoadGamePanelView panelView = loadPanel.GetComponent<LoadGamePanelView>();
         AssignLoadGameConfirm(panelView, confirm);
         EnsureLoadGameBackground(loadPanel);
+        EnsureLoadGameCancelLabel(loadPanel);
         EnsureLoadGameDrawOrder(loadPanel);
 
         // Make sure every authored slot row is wired into the panel array.
@@ -280,6 +281,7 @@ public static class MainMenuUIBuilder
         }
 
         EnsureLoadGameBackground(loadPanel);
+        EnsureLoadGameCancelLabel(loadPanel);
         EnsureLoadGameDrawOrder(loadPanel);
 
         Selection.activeGameObject = confirm.gameObject;
@@ -751,6 +753,13 @@ public static class MainMenuUIBuilder
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    public static LoadGamePanelView CreateLoadGamePanel(Transform parent)
+    {
+        EnsureLocalizationTable();
+        EnsureLoadGameConfirmPlaceholders();
+        return BuildLoadGamePanel(parent, FindPreferredFont());
+    }
+
     static LoadGamePanelView BuildLoadGamePanel(Transform parent, TMP_FontAsset font)
     {
         EnsureFolder("Assets/UI");
@@ -859,7 +868,7 @@ public static class MainMenuUIBuilder
         scrollRect.verticalScrollbar = scrollbar;
         scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
 
-        Button cancel = BuildLoadGameCancelButton(root, cancelSprite);
+        Button cancel = BuildLoadGameCancelButton(root, cancelSprite, font);
 
         LoadGameConfirmView confirm = BuildLoadGameConfirm(root, font);
         EnsureLoadGameDrawOrder(root);
@@ -1021,11 +1030,9 @@ public static class MainMenuUIBuilder
         if (label == null)
             label = CreateText(target.GetComponent<RectTransform>(), font, fontSize, TextAlignmentOptions.Center, Color.white);
 
-        label.fontStyle = FontStyles.Bold;
         label.color = Color.white;
         label.raycastTarget = false;
         label.text = fallbackText;
-        CopyExistingMenuTextMaterial(label);
 
         if (target.GetComponent<LocalizedText>() == null)
         {
@@ -1406,7 +1413,7 @@ public static class MainMenuUIBuilder
         return value;
     }
 
-    static Button BuildLoadGameCancelButton(Transform parent, Sprite cancelSprite)
+    static Button BuildLoadGameCancelButton(Transform parent, Sprite cancelSprite, TMP_FontAsset font)
     {
         RectTransform rect = CreateUIObject("Button_Cancel", parent);
         SetCornerAnchored(rect, new Vector2(1f, 0f), new Vector2(-210f, 78f), new Vector2(220f, 78f));
@@ -1418,7 +1425,33 @@ public static class MainMenuUIBuilder
 
         var button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
+
+        RectTransform labelRect = CreateUIObject("Label", rect);
+        StretchToParent(labelRect, new Vector4(14f, 8f, 14f, 10f));
+        TMP_Text label = CreateText(labelRect, font, 36f, TextAlignmentOptions.Center, Color.white);
+        label.raycastTarget = false;
+        EnableAutoSize(label, 18f, 36f);
+        AddLocalizedText(labelRect.gameObject, LocalizationKeys.LoadGameCancel);
+        CopyExistingMenuTextMaterial(label);
         return button;
+    }
+
+    static void EnsureLoadGameCancelLabel(Transform loadPanel)
+    {
+        if (loadPanel == null)
+            return;
+
+        Transform cancel = loadPanel.Find("Button_Cancel");
+        if (cancel == null || cancel.GetComponentInChildren<TMP_Text>(true) != null)
+            return;
+
+        RectTransform labelRect = CreateUIObject("Label", cancel);
+        StretchToParent(labelRect, new Vector4(14f, 8f, 14f, 10f));
+        TMP_Text label = CreateText(labelRect, FindPreferredFont(), 36f, TextAlignmentOptions.Center, Color.white);
+        label.raycastTarget = false;
+        EnableAutoSize(label, 18f, 36f);
+        AddLocalizedText(labelRect.gameObject, LocalizationKeys.LoadGameCancel);
+        CopyExistingMenuTextMaterial(label);
     }
 
     static Sprite LoadGameSprite(string fileName)
@@ -1578,12 +1611,12 @@ public static class MainMenuUIBuilder
 
     static void EnsureTmpFont(TMP_Text text, TMP_FontAsset preferredFont = null)
     {
-        if (text == null || text.font != null)
+        if (text == null)
             return;
 
-        TMP_FontAsset font = preferredFont ?? FindPreferredFont();
-        if (font == null)
-            font = TMP_Settings.defaultFontAsset;
+        TMP_FontAsset font = preferredFont;
+        if (font == null || font.name.IndexOf("Baloo", System.StringComparison.OrdinalIgnoreCase) < 0)
+            font = FindPreferredFont();
 
         if (font != null)
             text.font = font;
@@ -1702,6 +1735,9 @@ public static class MainMenuUIBuilder
             "Bu oyunu yüklemek istediğine emin misin?");
         table.EditorEnsureKey(LocalizationKeys.LoadGameConfirmYes, "Yes", "Evet");
         table.EditorEnsureKey(LocalizationKeys.LoadGameConfirmNo, "No", "Hayır");
+        table.EditorEnsureKey(LocalizationKeys.PauseBack, "Back", "Geri");
+        table.EditorEnsureKey(LocalizationKeys.PauseResume, "Resume", "Devam");
+        table.EditorEnsureKey(LocalizationKeys.PauseSave, "Save Game", "Oyunu Kaydet");
 
         EditorUtility.SetDirty(table);
         AssetDatabase.SaveAssets();

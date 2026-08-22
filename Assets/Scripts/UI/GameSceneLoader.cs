@@ -86,6 +86,7 @@ public class GameSceneLoader : MonoBehaviour
             return;
 
         _startedViaMenuLoader = true;
+        GamePause.SetPaused(false);
         EnsureRunner().StartCoroutine(LoadGameRoutine());
     }
 

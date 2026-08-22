@@ -326,3 +326,45 @@ MonoBehaviour:
     - "\u68DA\uFF1A"
     - "\uC120\uBC18:"
     - "\u041F\u043E\u043B\u043A\u0438:"
+  - key: pause.back
+    values:
+    - Back
+    - Geri
+    - Retour
+    - Indietro
+    - Zur\xFCck
+    - Atr\xE1s
+    - Voltar
+    - "\u8FD4\u56DE"
+    - "\u8FD4\u56DE"
+    - "\u623B\u308B"
+    - "\uB4A4\uB85C"
+    - "\u041D\u0430\u0437\u0430\u0434"
+  - key: pause.resume
+    values:
+    - Resume
+    - Devam
+    - Reprendre
+    - Riprendi
+    - Fortsetzen
+    - Continuar
+    - Continuar
+    - "\u7EE7\u7EED"
+    - "\u7E7C\u7E8C"
+    - "\u518D\u958B"
+    - "\uACC4\uC18D"
+    - "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C"
+  - key: pause.save
+    values:
+    - Save Game
+    - Oyunu Kaydet
+    - Sauvegarder
+    - Salva
+    - Speichern
+    - Guardar
+    - Salvar
+    - "\u4FDD\u5B58"
+    - "\u5132\u5B58"
+    - "\u30BB\u30FC\u30D6"
+    - "\uC800\uC7A5"
+    - "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C"

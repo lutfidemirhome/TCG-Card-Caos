@@ -21,7 +21,6 @@ public class LocalizedText : MonoBehaviour
     void Awake()
     {
         _text = GetComponent<TMP_Text>();
-        EnsureFitComponent();
     }
 
     void OnEnable()
@@ -52,17 +51,6 @@ public class LocalizedText : MonoBehaviour
         _text.text = uppercase
             ? GameLanguages.ToUpper(value, Localization.CurrentLanguage)
             : value;
-        EnsureFitComponent();
-        UiTextFit.Apply(_text);
-    }
-
-    void EnsureFitComponent()
-    {
-        if (!Application.isPlaying)
-            return;
-
-        if (GetComponent<FitTextToBounds>() == null)
-            gameObject.AddComponent<FitTextToBounds>();
     }
 
 #if UNITY_EDITOR

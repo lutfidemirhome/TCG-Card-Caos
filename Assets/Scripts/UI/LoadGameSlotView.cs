@@ -78,14 +78,7 @@ public class LoadGameSlotView : MonoBehaviour
         SetText(shelvesValueText, shelvesPlaced + " / " + shelvesCapacity);
 
         if (thumbnail != null)
-        {
-            if (thumbnailTexture != null)
-                thumbnail.texture = thumbnailTexture;
-
-            thumbnail.color = thumbnail.texture != null
-                ? Color.white
-                : new Color(0.22f, 0.26f, 0.34f, 1f);
-        }
+            thumbnail.color = Color.white;
     }
 
     static string FormatSaveName(SaveSlotMetadata metadata)
@@ -131,7 +124,6 @@ public class LoadGameSlotView : MonoBehaviour
             return;
 
         label.text = value ?? string.Empty;
-        UiTextFit.Apply(label);
     }
 
     public void ApplyValueTextStyle(TMP_Text styleSource)

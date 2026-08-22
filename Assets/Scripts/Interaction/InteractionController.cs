@@ -65,6 +65,13 @@ public class InteractionController : MonoBehaviour
 
     void Update()
     {
+        if (GamePause.IsPaused)
+        {
+            _raycastAimedCard = null;
+            ClearTarget();
+            return;
+        }
+
         if (viewCamera == null || Cursor.lockState != CursorLockMode.Locked)
         {
             _raycastAimedCard = null;

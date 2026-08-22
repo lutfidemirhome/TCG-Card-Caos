@@ -68,7 +68,9 @@ public class FirstPersonController : MonoBehaviour
 
     void Update()
     {
-        HandleCursorToggle();
+        if (GamePause.IsPaused)
+            return;
+
         HandleLook();
 
         bool movementLocked = IsPackOpenMovementLocked();
@@ -89,12 +91,6 @@ public class FirstPersonController : MonoBehaviour
     {
         PlayerCardHand hand = PlayerCardHand.Instance;
         return hand != null && hand.IsPackOpenMovementLocked;
-    }
-
-    void HandleCursorToggle()
-    {
-        if (Input.GetKeyDown(KeyCode.Escape))
-            SetCursorLocked(!_cursorLocked);
     }
 
     void HandleLook()

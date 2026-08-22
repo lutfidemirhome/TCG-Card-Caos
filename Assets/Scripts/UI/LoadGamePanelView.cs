@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,7 +20,6 @@ public class LoadGamePanelView : MonoBehaviour
     [SerializeField] LoadGameConfirmView confirmView;
 
     string _pendingSlotId;
-    readonly List<Texture2D> _ownedThumbnails = new List<Texture2D>(8);
     bool _slotClicksWired;
 
     public bool IsOpen => root != null && root.activeSelf;
@@ -35,10 +32,10 @@ public class LoadGamePanelView : MonoBehaviour
             cancelButton.onClick.AddListener(Hide);
         }
 
+        EnsureCancelLabel();
         EnsureConfirmView();
         WireConfirmButtons();
         WireSlotClicks();
-        ApplyValueTextStyleFromCancelButton();
 
         if (confirmView != null)
             confirmView.Hide();
@@ -53,22 +50,42 @@ public class LoadGamePanelView : MonoBehaviour
             Debug.LogWarning("[LoadGamePanelView] " + MissingConfirmHint);
     }
 
-    void OnDestroy()
+    void EnsureCancelLabel()
     {
-        ReleaseOwnedThumbnails();
-    }
-
-    void ApplyValueTextStyleFromCancelButton()
-    {
-        if (cancelButton == null || slots == null)
+        if (cancelButton == null)
             return;
 
-        TMP_Text cancelLabel = cancelButton.GetComponentInChildren<TMP_Text>(true);
-        if (cancelLabel == null)
-            return;
+        TMP_Text label = cancelButton.GetComponentInChildren<TMP_Text>(true);
+        if (label == null)
+        {
+            var labelGo = new GameObject("Label", typeof(RectTransform));
+            labelGo.transform.SetParent(cancelButton.transform, false);
+            RectTransform labelRect = (RectTransform)labelGo.transform;
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(14f, 8f);
+            labelRect.offsetMax = new Vector2(-14f, -10f);
 
-        for (int i = 0; i < slots.Length; i++)
-            slots[i]?.ApplyValueTextStyle(cancelLabel);
+            var tmp = labelGo.AddComponent<TextMeshProUGUI>();
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.fontSize = 36f;
+            tmp.fontStyle = FontStyles.Normal;
+            tmp.color = Color.white;
+            tmp.raycastTarget = false;
+            UiMenuFont.Apply(tmp);
+            label = tmp;
+        }
+
+        label.fontStyle = FontStyles.Normal;
+
+        LocalizedText localized = label.GetComponent<LocalizedText>();
+        if (localized == null)
+            localized = label.gameObject.AddComponent<LocalizedText>();
+
+        if (string.IsNullOrEmpty(localized.Key))
+            localized.SetKey(LocalizationKeys.LoadGameCancel);
+        else if (string.IsNullOrEmpty(label.text))
+            localized.SetKey(localized.Key);
     }
 
     void WireConfirmButtons()
@@ -125,6 +142,7 @@ public class LoadGamePanelView : MonoBehaviour
             gameObject.SetActive(true);
 
         transform.SetAsLastSibling();
+        EnsureCancelLabel();
         HideConfirm();
         RefreshSlotList();
         RefreshScroll();
@@ -158,7 +176,6 @@ public class LoadGamePanelView : MonoBehaviour
     {
         EnsureSlotsArray();
         WireSlotClicks();
-        ReleaseOwnedThumbnails();
 
         if (slots == null || slots.Length == 0)
             return;
@@ -175,10 +192,7 @@ public class LoadGamePanelView : MonoBehaviour
             if (i < saveCount && saves[i] != null && !string.IsNullOrEmpty(saves[i].slotId))
             {
                 slot.gameObject.SetActive(true);
-                Texture2D thumb = TryLoadThumbnailTexture(saves[i]);
-                if (thumb != null)
-                    _ownedThumbnails.Add(thumb);
-                slot.Bind(saves[i], thumb);
+                slot.Bind(saves[i], null);
             }
             else
             {
@@ -186,8 +200,6 @@ public class LoadGamePanelView : MonoBehaviour
                 slot.gameObject.SetActive(false);
             }
         }
-
-        ApplyValueTextStyleFromCancelButton();
     }
 
     void OnSlotClicked(LoadGameSlotView slot)
@@ -226,44 +238,4 @@ public class LoadGamePanelView : MonoBehaviour
             confirmView.Hide();
     }
 
-    static Texture2D TryLoadThumbnailTexture(SaveSlotMetadata metadata)
-    {
-        if (metadata == null || !metadata.thumbnailAvailable)
-            return null;
-
-        string path = SaveFileIO.GetThumbnailPath(metadata.slotId);
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            return null;
-
-        try
-        {
-            byte[] bytes = File.ReadAllBytes(path);
-            if (bytes == null || bytes.Length == 0)
-                return null;
-
-            var texture = new Texture2D(2, 2, TextureFormat.RGB24, false);
-            if (!texture.LoadImage(bytes))
-            {
-                UnityEngine.Object.Destroy(texture);
-                return null;
-            }
-
-            return texture;
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
-    void ReleaseOwnedThumbnails()
-    {
-        for (int i = 0; i < _ownedThumbnails.Count; i++)
-        {
-            if (_ownedThumbnails[i] != null)
-                Destroy(_ownedThumbnails[i]);
-        }
-
-        _ownedThumbnails.Clear();
-    }
 }
