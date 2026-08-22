@@ -830,15 +830,15 @@ public static class MainMenuUIBuilder
         band.anchorMax = new Vector2(1f, 0.5f);
         band.pivot = new Vector2(0.5f, 0.5f);
         band.anchoredPosition = Vector2.zero;
-        band.sizeDelta = new Vector2(0f, 340f);
+        band.sizeDelta = new Vector2(0f, 395f);
         var bandImage = band.gameObject.AddComponent<Image>();
-        bandImage.sprite = bandSprite;
+        bandImage.sprite = bandSprite ?? LoadGameSprite("panel_3.png");
         bandImage.type = Image.Type.Sliced;
         bandImage.color = Color.white;
         bandImage.raycastTarget = true;
 
         RectTransform messageRect = CreateUIObject("Message", band);
-        SetCenterAnchored(messageRect, new Vector2(0f, 78f), new Vector2(1500f, 90f));
+        SetCenterAnchored(messageRect, new Vector2(0f, 92f), new Vector2(1500f, 90f));
         TMP_Text message = CreateText(messageRect, font, 52f, TextAlignmentOptions.Center, Color.white);
         message.fontStyle = FontStyles.Bold;
         message.outlineWidth = 0.28f;
@@ -847,10 +847,10 @@ public static class MainMenuUIBuilder
         AddLocalizedText(messageRect.gameObject, LocalizationKeys.LoadGameConfirmMessage);
 
         RectTransform buttonRow = CreateUIObject("ButtonRow", band);
-        SetCenterAnchored(buttonRow, new Vector2(0f, -70f), new Vector2(760f, 120f));
+        SetCenterAnchored(buttonRow, new Vector2(0f, -82f), new Vector2(560f, 95f));
         var rowLayout = buttonRow.gameObject.AddComponent<HorizontalLayoutGroup>();
         rowLayout.childAlignment = TextAnchor.MiddleCenter;
-        rowLayout.spacing = 48f;
+        rowLayout.spacing = 72f;
         rowLayout.childControlWidth = false;
         rowLayout.childControlHeight = false;
         rowLayout.childForceExpandWidth = false;
@@ -860,17 +860,13 @@ public static class MainMenuUIBuilder
             buttonRow,
             "Button_Yes",
             yesSprite,
-            new Color(0.45f, 0.85f, 0.20f, 1f),
-            LocalizationKeys.LoadGameConfirmYes,
-            font);
+            new Color(0.45f, 0.85f, 0.20f, 1f));
 
         Button noButton = BuildConfirmChoiceButton(
             buttonRow,
             "Button_No",
             noSprite,
-            new Color(0.95f, 0.42f, 0.12f, 1f),
-            LocalizationKeys.LoadGameConfirmNo,
-            font);
+            new Color(0.95f, 0.42f, 0.12f, 1f));
 
         var confirmSerialized = new SerializedObject(confirmView);
         confirmSerialized.FindProperty("root").objectReferenceValue = root.gameObject;
@@ -887,22 +883,21 @@ public static class MainMenuUIBuilder
         Transform parent,
         string objectName,
         Sprite sprite,
-        Color fallbackTint,
-        string localizationKey,
-        TMP_FontAsset font)
+        Color fallbackTint)
     {
         RectTransform rect = CreateUIObject(objectName, parent);
         var layout = rect.gameObject.AddComponent<LayoutElement>();
-        layout.preferredWidth = 300f;
-        layout.preferredHeight = 108f;
-        layout.minWidth = 300f;
-        layout.minHeight = 108f;
-        rect.sizeDelta = new Vector2(300f, 108f);
+        layout.preferredWidth = 244f;
+        layout.preferredHeight = 95f;
+        layout.minWidth = 244f;
+        layout.minHeight = 95f;
+        rect.sizeDelta = new Vector2(244f, 95f);
 
         var image = rect.gameObject.AddComponent<Image>();
         image.sprite = sprite;
         image.type = Image.Type.Sliced;
         image.color = sprite != null ? Color.white : fallbackTint;
+        image.preserveAspect = true;
 
         var button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
@@ -911,22 +906,21 @@ public static class MainMenuUIBuilder
         colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
         button.colors = colors;
 
-        RectTransform labelRect = CreateUIObject("Label", rect);
-        StretchToParent(labelRect, new Vector4(12f, 12f, 12f, 16f));
-        TMP_Text label = CreateText(labelRect, font, 48f, TextAlignmentOptions.Center, Color.white);
-        label.fontStyle = FontStyles.Bold;
-        label.outlineWidth = 0.3f;
-        label.outlineColor = Color.black;
-        label.raycastTarget = false;
-        EnableAutoSize(label, 28f, 48f);
-        AddLocalizedText(labelRect.gameObject, localizationKey);
-
         return button;
     }
 
     static void EnsureLoadGameConfirmPlaceholders()
     {
         EnsureFolder(LoadGameArtFolder);
+
+        if (LoadGameSprite("confirm_band.png") == null && LoadGameSprite("panel_3.png") != null)
+        {
+            File.Copy(
+                LoadGameArtFolder + "/panel_3.png",
+                LoadGameArtFolder + "/confirm_band.png",
+                overwrite: true);
+            AssetDatabase.ImportAsset(LoadGameArtFolder + "/confirm_band.png", ImportAssetOptions.ForceUpdate);
+        }
 
         if (LoadGameSprite("confirm_band.png") == null)
         {

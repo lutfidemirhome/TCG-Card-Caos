@@ -39,6 +39,12 @@ public class LoadGamePanelView : MonoBehaviour
             confirmView.Hide();
     }
 
+    void Start()
+    {
+        if (confirmView != null)
+            confirmView.DressFromResources();
+    }
+
     void EnsureConfirmView()
     {
         if (confirmView == null)
@@ -81,16 +87,19 @@ public class LoadGamePanelView : MonoBehaviour
         band.anchorMax = new Vector2(1f, 0.5f);
         band.pivot = new Vector2(0.5f, 0.5f);
         band.anchoredPosition = Vector2.zero;
-        band.sizeDelta = new Vector2(0f, 340f);
+        band.sizeDelta = new Vector2(0f, 395f);
         var bandImage = bandGo.AddComponent<Image>();
-        bandImage.color = new Color(0.12f, 0.22f, 0.42f, 1f);
+        Sprite bandSprite = LoadGameConfirmArt.Band;
+        bandImage.sprite = bandSprite;
+        bandImage.type = bandSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+        bandImage.color = bandSprite != null ? Color.white : new Color(0.12f, 0.22f, 0.42f, 1f);
         bandImage.raycastTarget = true;
 
         var messageGo = new GameObject("Message", typeof(RectTransform));
         messageGo.transform.SetParent(band, false);
         RectTransform messageRect = (RectTransform)messageGo.transform;
         messageRect.anchorMin = messageRect.anchorMax = messageRect.pivot = new Vector2(0.5f, 0.5f);
-        messageRect.anchoredPosition = new Vector2(0f, 78f);
+        messageRect.anchoredPosition = new Vector2(0f, 92f);
         messageRect.sizeDelta = new Vector2(1500f, 90f);
         var message = messageGo.AddComponent<TextMeshProUGUI>();
         message.text = Localization.Get(LocalizationKeys.LoadGameConfirmMessage);
@@ -106,63 +115,51 @@ public class LoadGamePanelView : MonoBehaviour
         rowGo.transform.SetParent(band, false);
         RectTransform row = (RectTransform)rowGo.transform;
         row.anchorMin = row.anchorMax = row.pivot = new Vector2(0.5f, 0.5f);
-        row.anchoredPosition = new Vector2(0f, -70f);
-        row.sizeDelta = new Vector2(760f, 120f);
+        row.anchoredPosition = new Vector2(0f, -82f);
+        row.sizeDelta = new Vector2(560f, 95f);
         var layout = rowGo.AddComponent<HorizontalLayoutGroup>();
         layout.childAlignment = TextAnchor.MiddleCenter;
-        layout.spacing = 48f;
+        layout.spacing = 72f;
         layout.childControlWidth = false;
         layout.childControlHeight = false;
 
-        Button yes = BuildRuntimeChoiceButton(
-            row,
-            "Button_Yes",
-            new Color(0.45f, 0.85f, 0.20f, 1f),
-            Localization.Get(LocalizationKeys.LoadGameConfirmYes));
-        Button no = BuildRuntimeChoiceButton(
-            row,
-            "Button_No",
-            new Color(0.95f, 0.42f, 0.12f, 1f),
-            Localization.Get(LocalizationKeys.LoadGameConfirmNo));
+        Button yes = BuildRuntimeChoiceButton(row, "Button_Yes", LoadGameConfirmArt.YesButton);
+        Button no = BuildRuntimeChoiceButton(row, "Button_No", LoadGameConfirmArt.NoButton);
 
         view.Configure(rootGo, yes, no, message);
         rootGo.SetActive(false);
         return view;
     }
 
-    static Button BuildRuntimeChoiceButton(Transform parent, string name, Color color, string labelText)
+    static Button BuildRuntimeChoiceButton(Transform parent, string name, Sprite sprite)
     {
         var go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         RectTransform rect = (RectTransform)go.transform;
         var layout = go.AddComponent<LayoutElement>();
-        layout.preferredWidth = 300f;
-        layout.preferredHeight = 108f;
-        layout.minWidth = 300f;
-        layout.minHeight = 108f;
-        rect.sizeDelta = new Vector2(300f, 108f);
+        layout.preferredWidth = 244f;
+        layout.preferredHeight = 95f;
+        layout.minWidth = 244f;
+        layout.minHeight = 95f;
+        rect.sizeDelta = new Vector2(244f, 95f);
 
         var image = go.AddComponent<Image>();
-        image.color = color;
+        if (sprite != null)
+        {
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.color = Color.white;
+            image.preserveAspect = true;
+        }
+        else
+        {
+            image.color = name.Contains("Yes")
+                ? new Color(0.45f, 0.85f, 0.20f, 1f)
+                : new Color(0.95f, 0.42f, 0.12f, 1f);
+        }
+
         var button = go.AddComponent<Button>();
         button.targetGraphic = image;
-
-        var labelGo = new GameObject("Label", typeof(RectTransform));
-        labelGo.transform.SetParent(rect, false);
-        RectTransform labelRect = (RectTransform)labelGo.transform;
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = new Vector2(12f, 12f);
-        labelRect.offsetMax = new Vector2(-12f, -16f);
-        var label = labelGo.AddComponent<TextMeshProUGUI>();
-        label.text = labelText;
-        label.alignment = TextAlignmentOptions.Center;
-        label.fontSize = 48f;
-        label.color = Color.white;
-        label.fontStyle = FontStyles.Bold;
-        label.outlineWidth = 0.3f;
-        label.outlineColor = Color.black;
-        label.raycastTarget = false;
         return button;
     }
 
