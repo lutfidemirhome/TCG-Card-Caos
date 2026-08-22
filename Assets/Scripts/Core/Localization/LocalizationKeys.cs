@@ -24,4 +24,7 @@ public static class LocalizationKeys
     public const string LoadGamePlayTime = "load.play_time";
     public const string LoadGameCardsPlaced = "load.cards_placed";
     public const string LoadGameShelves = "load.shelves";
+    public const string LoadGameConfirmMessage = "load.confirm_message";
+    public const string LoadGameConfirmYes = "load.confirm_yes";
+    public const string LoadGameConfirmNo = "load.confirm_no";
 }

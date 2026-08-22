@@ -167,6 +167,77 @@ public static class MainMenuUIBuilder
         Debug.Log("[MainMenuUIBuilder] Panel_LoadGame added. Dress Images in Hierarchy, then wire save data later.");
     }
 
+    [MenuItem("TCG Card Caos/UI/Add Load Game Confirm Dialog")]
+    public static void AddLoadGameConfirmDialog()
+    {
+        if (!File.Exists(MenuScenePath))
+        {
+            EditorUtility.DisplayDialog(
+                "Load Confirm",
+                "MenuScene not found.\n\nRun: TCG Card Caos → UI → Build Main Menu UI",
+                "OK");
+            return;
+        }
+
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+
+        EnsureLocalizationTable();
+        EnsureLoadGameConfirmPlaceholders();
+
+        UnityEngine.SceneManagement.Scene scene =
+            EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
+
+        Transform canvas = FindMenuCanvas();
+        if (canvas == null)
+        {
+            Debug.LogError("[MainMenuUIBuilder] MainMenuCanvas not found in MenuScene.");
+            return;
+        }
+
+        Transform loadPanel = canvas.Find("Panel_LoadGame");
+        if (loadPanel == null)
+        {
+            EditorUtility.DisplayDialog(
+                "Load Confirm",
+                "Panel_LoadGame not found.\n\nRun: TCG Card Caos → UI → Add Load Game Panel",
+                "OK");
+            return;
+        }
+
+        Transform existing = loadPanel.Find("Panel_LoadConfirm");
+        if (existing != null)
+            Object.DestroyImmediate(existing.gameObject);
+
+        LoadGameConfirmView confirm = BuildLoadGameConfirm(loadPanel, FindPreferredFont());
+        LoadGamePanelView panelView = loadPanel.GetComponent<LoadGamePanelView>();
+        AssignLoadGameConfirm(panelView, confirm);
+
+        // Make sure every authored slot row is wired into the panel array.
+        LoadGameSlotView[] allSlots = loadPanel.GetComponentsInChildren<LoadGameSlotView>(true);
+        if (panelView != null && allSlots != null && allSlots.Length > 0)
+        {
+            var panelSerialized = new SerializedObject(panelView);
+            SerializedProperty slotsProp = panelSerialized.FindProperty("slots");
+            slotsProp.arraySize = allSlots.Length;
+            for (int i = 0; i < allSlots.Length; i++)
+                slotsProp.GetArrayElementAtIndex(i).objectReferenceValue = allSlots[i];
+            panelSerialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, MenuScenePath);
+
+        if (File.Exists(MenuPrefabPath))
+            PrefabUtility.SaveAsPrefabAsset(canvas.gameObject, MenuPrefabPath);
+
+        Selection.activeGameObject = confirm.gameObject;
+        EditorGUIUtility.PingObject(confirm.gameObject);
+        Debug.Log(
+            "[MainMenuUIBuilder] Panel_LoadConfirm added under Panel_LoadGame. "
+            + "Replace placeholder Images: confirm_band / yes_button / no_button in Assets/UI/LoadGame/Art.");
+    }
+
     [MenuItem("TCG Card Caos/UI/Fix Load Game Scroll")]
     public static void FixLoadGameScrollInMenu()
     {
@@ -653,7 +724,7 @@ public static class MainMenuUIBuilder
 
         LoadGameSlotView slot1 = BuildLoadGameSlot(content, "Slot_1", font, slotSprite, thumbnailTexture);
         LoadGameSlotView slot2 = BuildLoadGameSlot(content, "Slot_2", font, slotSprite, thumbnailTexture);
-        BuildLoadGameSlot(content, "Slot_3", font, slotSprite, thumbnailTexture);
+        LoadGameSlotView slot3 = BuildLoadGameSlot(content, "Slot_3", font, slotSprite, thumbnailTexture);
 
         RectTransform scrollbarRect = CreateUIObject("Scrollbar", listFrame);
         scrollbarRect.anchorMin = new Vector2(1f, 0f);
@@ -698,18 +769,235 @@ public static class MainMenuUIBuilder
 
         Button cancel = BuildLoadGameCancelButton(root, cancelSprite);
 
+        LoadGameConfirmView confirm = BuildLoadGameConfirm(root, font);
+
         var panelSerialized = new SerializedObject(panelView);
         panelSerialized.FindProperty("root").objectReferenceValue = root.gameObject;
         panelSerialized.FindProperty("cancelButton").objectReferenceValue = cancel;
         panelSerialized.FindProperty("scrollRect").objectReferenceValue = scrollRect;
+        panelSerialized.FindProperty("confirmView").objectReferenceValue = confirm;
         SerializedProperty slotsProp = panelSerialized.FindProperty("slots");
-        slotsProp.arraySize = 2;
+        slotsProp.arraySize = 3;
         slotsProp.GetArrayElementAtIndex(0).objectReferenceValue = slot1;
         slotsProp.GetArrayElementAtIndex(1).objectReferenceValue = slot2;
+        slotsProp.GetArrayElementAtIndex(2).objectReferenceValue = slot3;
         panelSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         root.gameObject.SetActive(false);
         return panelView;
+    }
+
+    static void AssignLoadGameConfirm(LoadGamePanelView panel, LoadGameConfirmView confirm)
+    {
+        if (panel == null || confirm == null)
+            return;
+
+        var serialized = new SerializedObject(panel);
+        serialized.FindProperty("confirmView").objectReferenceValue = confirm;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static LoadGameConfirmView BuildLoadGameConfirm(Transform parent, TMP_FontAsset font)
+    {
+        EnsureFolder("Assets/UI");
+        EnsureFolder("Assets/UI/LoadGame");
+        EnsureFolder(LoadGameArtFolder);
+        EnsureLoadGameConfirmPlaceholders();
+
+        Sprite bandSprite = LoadGameSprite("confirm_band.png");
+        Sprite yesSprite = LoadGameSprite("yes_button.png");
+        Sprite noSprite = LoadGameSprite("no_button.png");
+
+        RectTransform root = CreateUIObject("Panel_LoadConfirm", parent);
+        root.anchorMin = Vector2.zero;
+        root.anchorMax = Vector2.one;
+        root.offsetMin = Vector2.zero;
+        root.offsetMax = Vector2.zero;
+        root.SetAsLastSibling();
+
+        var confirmView = root.gameObject.AddComponent<LoadGameConfirmView>();
+
+        // Full-screen blocker so Load Game list cannot be clicked underneath.
+        RectTransform dimmer = CreateUIObject("Dimmer", root);
+        StretchToParent(dimmer, Vector4.zero);
+        var dimmerImage = dimmer.gameObject.AddComponent<Image>();
+        dimmerImage.color = new Color(0.02f, 0.04f, 0.10f, 0.82f);
+        dimmerImage.raycastTarget = true;
+
+        // Mock: wide navy band across the middle (~1/3 of 1080).
+        RectTransform band = CreateUIObject("Band", root);
+        band.anchorMin = new Vector2(0f, 0.5f);
+        band.anchorMax = new Vector2(1f, 0.5f);
+        band.pivot = new Vector2(0.5f, 0.5f);
+        band.anchoredPosition = Vector2.zero;
+        band.sizeDelta = new Vector2(0f, 340f);
+        var bandImage = band.gameObject.AddComponent<Image>();
+        bandImage.sprite = bandSprite;
+        bandImage.type = Image.Type.Sliced;
+        bandImage.color = Color.white;
+        bandImage.raycastTarget = true;
+
+        RectTransform messageRect = CreateUIObject("Message", band);
+        SetCenterAnchored(messageRect, new Vector2(0f, 78f), new Vector2(1500f, 90f));
+        TMP_Text message = CreateText(messageRect, font, 52f, TextAlignmentOptions.Center, Color.white);
+        message.fontStyle = FontStyles.Bold;
+        message.outlineWidth = 0.28f;
+        message.outlineColor = Color.black;
+        EnableAutoSize(message, 28f, 52f);
+        AddLocalizedText(messageRect.gameObject, LocalizationKeys.LoadGameConfirmMessage);
+
+        RectTransform buttonRow = CreateUIObject("ButtonRow", band);
+        SetCenterAnchored(buttonRow, new Vector2(0f, -70f), new Vector2(760f, 120f));
+        var rowLayout = buttonRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        rowLayout.childAlignment = TextAnchor.MiddleCenter;
+        rowLayout.spacing = 48f;
+        rowLayout.childControlWidth = false;
+        rowLayout.childControlHeight = false;
+        rowLayout.childForceExpandWidth = false;
+        rowLayout.childForceExpandHeight = false;
+
+        Button yesButton = BuildConfirmChoiceButton(
+            buttonRow,
+            "Button_Yes",
+            yesSprite,
+            new Color(0.45f, 0.85f, 0.20f, 1f),
+            LocalizationKeys.LoadGameConfirmYes,
+            font);
+
+        Button noButton = BuildConfirmChoiceButton(
+            buttonRow,
+            "Button_No",
+            noSprite,
+            new Color(0.95f, 0.42f, 0.12f, 1f),
+            LocalizationKeys.LoadGameConfirmNo,
+            font);
+
+        var confirmSerialized = new SerializedObject(confirmView);
+        confirmSerialized.FindProperty("root").objectReferenceValue = root.gameObject;
+        confirmSerialized.FindProperty("yesButton").objectReferenceValue = yesButton;
+        confirmSerialized.FindProperty("noButton").objectReferenceValue = noButton;
+        confirmSerialized.FindProperty("messageText").objectReferenceValue = message;
+        confirmSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        root.gameObject.SetActive(false);
+        return confirmView;
+    }
+
+    static Button BuildConfirmChoiceButton(
+        Transform parent,
+        string objectName,
+        Sprite sprite,
+        Color fallbackTint,
+        string localizationKey,
+        TMP_FontAsset font)
+    {
+        RectTransform rect = CreateUIObject(objectName, parent);
+        var layout = rect.gameObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = 300f;
+        layout.preferredHeight = 108f;
+        layout.minWidth = 300f;
+        layout.minHeight = 108f;
+        rect.sizeDelta = new Vector2(300f, 108f);
+
+        var image = rect.gameObject.AddComponent<Image>();
+        image.sprite = sprite;
+        image.type = Image.Type.Sliced;
+        image.color = sprite != null ? Color.white : fallbackTint;
+
+        var button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        ColorBlock colors = button.colors;
+        colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+        colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+        button.colors = colors;
+
+        RectTransform labelRect = CreateUIObject("Label", rect);
+        StretchToParent(labelRect, new Vector4(12f, 12f, 12f, 16f));
+        TMP_Text label = CreateText(labelRect, font, 48f, TextAlignmentOptions.Center, Color.white);
+        label.fontStyle = FontStyles.Bold;
+        label.outlineWidth = 0.3f;
+        label.outlineColor = Color.black;
+        label.raycastTarget = false;
+        EnableAutoSize(label, 28f, 48f);
+        AddLocalizedText(labelRect.gameObject, localizationKey);
+
+        return button;
+    }
+
+    static void EnsureLoadGameConfirmPlaceholders()
+    {
+        EnsureFolder(LoadGameArtFolder);
+
+        if (LoadGameSprite("confirm_band.png") == null)
+        {
+            Texture2D band = CreateSolidRoundedTexture(
+                64,
+                64,
+                8,
+                new Color(0.12f, 0.22f, 0.42f, 1f));
+            EnsureLoadGameUiSprite("confirm_band.png", band, 8f);
+        }
+
+        if (LoadGameSprite("yes_button.png") == null)
+        {
+            Texture2D yes = CreateSolidRoundedTexture(
+                64,
+                64,
+                14,
+                new Color(0.45f, 0.85f, 0.20f, 1f));
+            EnsureLoadGameUiSprite("yes_button.png", yes, 16f);
+        }
+
+        if (LoadGameSprite("no_button.png") == null)
+        {
+            Texture2D no = CreateSolidRoundedTexture(
+                64,
+                64,
+                14,
+                new Color(0.95f, 0.42f, 0.12f, 1f));
+            EnsureLoadGameUiSprite("no_button.png", no, 16f);
+        }
+    }
+
+    static Sprite EnsureLoadGameUiSprite(string fileName, Texture2D texture, float sliceBorder)
+    {
+        string assetPath = LoadGameArtFolder + "/" + fileName;
+        File.WriteAllBytes(assetPath, texture.EncodeToPNG());
+        Object.DestroyImmediate(texture);
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+
+        var importer = (TextureImporter)AssetImporter.GetAtPath(assetPath);
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        importer.alphaIsTransparency = true;
+        importer.mipmapEnabled = false;
+        importer.filterMode = FilterMode.Bilinear;
+        if (sliceBorder > 0f)
+            importer.spriteBorder = new Vector4(sliceBorder, sliceBorder, sliceBorder, sliceBorder);
+
+        importer.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+    }
+
+    static Texture2D CreateSolidRoundedTexture(int width, int height, int radius, Color fill)
+    {
+        var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                texture.SetPixel(
+                    x,
+                    y,
+                    IsInsideRoundedRect(x + 0.5f, y + 0.5f, width, height, radius) ? fill : Color.clear);
+            }
+        }
+
+        texture.Apply();
+        return texture;
     }
 
     static LoadGameSlotView BuildLoadGameSlot(
@@ -1085,6 +1373,12 @@ public static class MainMenuUIBuilder
         table.EditorEnsureKey(LocalizationKeys.LoadGamePlayTime, "Play Time:", "Oynama Süresi:");
         table.EditorEnsureKey(LocalizationKeys.LoadGameCardsPlaced, "Cards Placed:", "Yerleştirilen Kartlar:");
         table.EditorEnsureKey(LocalizationKeys.LoadGameShelves, "Shelves:", "Raflar:");
+        table.EditorEnsureKey(
+            LocalizationKeys.LoadGameConfirmMessage,
+            "Are you sure you want to load this game?",
+            "Bu oyunu yüklemek istediğine emin misin?");
+        table.EditorEnsureKey(LocalizationKeys.LoadGameConfirmYes, "Yes", "Evet");
+        table.EditorEnsureKey(LocalizationKeys.LoadGameConfirmNo, "No", "Hayır");
 
         EditorUtility.SetDirty(table);
         AssetDatabase.SaveAssets();
