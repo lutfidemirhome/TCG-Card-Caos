@@ -488,6 +488,7 @@ public sealed class GameSaveManager : MonoBehaviour
 
     public static List<SaveSlotMetadata> GetSaveSlots()
     {
+        SaveFileIO.CacheRootOnMainThread();
         return SaveFileIO.ListCompatibleSlots();
     }
 

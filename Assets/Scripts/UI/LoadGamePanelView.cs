@@ -20,7 +20,6 @@ public class LoadGamePanelView : MonoBehaviour
     [SerializeField] LoadGameConfirmView confirmView;
 
     string _pendingSlotId;
-    bool _slotClicksWired;
 
     public bool IsOpen => root != null && root.activeSelf;
 
@@ -108,8 +107,7 @@ public class LoadGamePanelView : MonoBehaviour
 
     void WireSlotClicks()
     {
-        EnsureSlotsArray();
-        if (slots == null || _slotClicksWired)
+        if (slots == null)
             return;
 
         for (int i = 0; i < slots.Length; i++)
@@ -122,16 +120,13 @@ public class LoadGamePanelView : MonoBehaviour
             slot.SelectButton.onClick.RemoveAllListeners();
             slot.SelectButton.onClick.AddListener(() => OnSlotClicked(captured));
         }
-
-        _slotClicksWired = true;
     }
 
     void EnsureSlotsArray()
     {
-        if (slots != null && slots.Length > 0)
-            return;
-
-        slots = GetComponentsInChildren<LoadGameSlotView>(true);
+        slots = SaveSlotListLayout.CollectInOrder(SaveSlotListLayout.FindContent(transform));
+        if (slots.Length == 0)
+            slots = GetComponentsInChildren<LoadGameSlotView>(true);
     }
 
     public void Show()
@@ -174,31 +169,50 @@ public class LoadGamePanelView : MonoBehaviour
 
     void RefreshSlotList()
     {
-        EnsureSlotsArray();
-        WireSlotClicks();
+        List<SaveSlotMetadata> saves = GameSaveStore.GetSaveSlots();
+        if (saves == null)
+            saves = new List<SaveSlotMetadata>();
 
+        int saveCount = 0;
+        for (int i = 0; i < saves.Count; i++)
+        {
+            if (saves[i] != null && !string.IsNullOrEmpty(saves[i].slotId))
+                saveCount++;
+        }
+
+        slots = SaveSlotListLayout.EnsureRows(transform, saveCount);
+        if (slots == null || slots.Length == 0)
+            EnsureSlotsArray();
+
+        WireSlotClicks();
         if (slots == null || slots.Length == 0)
             return;
 
-        List<SaveSlotMetadata> saves = GameSaveManager.GetSaveSlots();
-        int saveCount = saves != null ? saves.Count : 0;
-
-        for (int i = 0; i < slots.Length; i++)
+        Texture filledThumb = SaveGameArt.FilledSlotThumbnail;
+        int viewIndex = 0;
+        for (int i = 0; i < saves.Count; i++)
         {
-            LoadGameSlotView slot = slots[i];
+            SaveSlotMetadata save = saves[i];
+            if (save == null || string.IsNullOrEmpty(save.slotId))
+                continue;
+            if (viewIndex >= slots.Length)
+                break;
+
+            LoadGameSlotView slot = slots[viewIndex++];
             if (slot == null)
                 continue;
 
-            if (i < saveCount && saves[i] != null && !string.IsNullOrEmpty(saves[i].slotId))
-            {
-                slot.gameObject.SetActive(true);
-                slot.Bind(saves[i], null);
-            }
-            else
-            {
-                slot.ClearBinding();
-                slot.gameObject.SetActive(false);
-            }
+            slot.gameObject.SetActive(true);
+            slot.Bind(save, filledThumb);
+        }
+
+        for (int i = viewIndex; i < slots.Length; i++)
+        {
+            if (slots[i] == null)
+                continue;
+
+            slots[i].ClearBinding();
+            slots[i].gameObject.SetActive(false);
         }
     }
 

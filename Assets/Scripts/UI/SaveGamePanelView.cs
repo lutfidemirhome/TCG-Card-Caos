@@ -96,7 +96,7 @@ public class SaveGamePanelView : MonoBehaviour
 
     void EnsureSlotsArray()
     {
-        slots = CollectSlotsInOrder(FindSlotContent(transform));
+        slots = SaveSlotListLayout.CollectInOrder(SaveSlotListLayout.FindContent(transform));
     }
 
     void WireCancelButton()
@@ -280,7 +280,7 @@ public class SaveGamePanelView : MonoBehaviour
                 filledCount++;
         }
 
-        EnsureSlotRows(transform, filledCount + EmptySlotRows);
+        slots = SaveSlotListLayout.EnsureRows(transform, filledCount + EmptySlotRows);
         EnsureSlotsArray();
         WireSlotClicks();
         if (slots == null || slots.Length == 0)
@@ -560,7 +560,7 @@ public class SaveGamePanelView : MonoBehaviour
         if (confirm != null)
             confirm.name = ConfirmRootName;
 
-        EnsureSlotRows(clone.transform, EmptySlotRows + GameSaveSettings.AutosaveSlotCount);
+        SaveSlotListLayout.EnsureRows(clone.transform, EmptySlotRows + GameSaveSettings.AutosaveSlotCount);
         EnsureDressingSlots(clone.transform);
 
         var saveView = clone.GetComponent<SaveGamePanelView>();
@@ -571,62 +571,6 @@ public class SaveGamePanelView : MonoBehaviour
         saveView.EnsureReferences();
         saveView.ApplySaveCopy();
         return saveView;
-    }
-
-    static Transform FindSlotContent(Transform saveRoot)
-    {
-        if (saveRoot == null)
-            return null;
-
-        Transform content = saveRoot.Find("ListFrame/Viewport/Content");
-        if (content != null)
-            return content;
-
-        ScrollRect scroll = saveRoot.GetComponentInChildren<ScrollRect>(true);
-        return scroll != null ? scroll.content : null;
-    }
-
-    static LoadGameSlotView[] CollectSlotsInOrder(Transform content)
-    {
-        if (content == null)
-            return System.Array.Empty<LoadGameSlotView>();
-
-        var ordered = new List<LoadGameSlotView>(content.childCount);
-        for (int i = 0; i < content.childCount; i++)
-        {
-            LoadGameSlotView slot = content.GetChild(i).GetComponent<LoadGameSlotView>();
-            if (slot != null)
-                ordered.Add(slot);
-        }
-
-        return ordered.ToArray();
-    }
-
-    static void EnsureSlotRows(Transform saveRoot, int needed)
-    {
-        if (saveRoot == null || needed <= 0)
-            return;
-
-        Transform content = FindSlotContent(saveRoot);
-        LoadGameSlotView[] existing = CollectSlotsInOrder(content);
-        LoadGameSlotView template = existing.Length > 0
-            ? existing[0]
-            : saveRoot.GetComponentInChildren<LoadGameSlotView>(true);
-
-        if (template == null)
-            return;
-
-        if (content == null)
-            content = template.transform.parent;
-        if (content == null)
-            return;
-
-        for (int i = existing.Length; i < needed; i++)
-        {
-            GameObject extra = Instantiate(template.gameObject, content, false);
-            extra.name = "Slot_" + (i + 1);
-            extra.SetActive(true);
-        }
     }
 
     void ApplyDeleteHint()
