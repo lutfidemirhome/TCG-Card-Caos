@@ -57,18 +57,20 @@ public static class CardShelfRules
         if (!CanPlaceInSlot(shelfCategoryId, definition, slot))
             return false;
 
-        return MatchesSeriesRow(definition, slot, occupiedSlots, null);
+        return MatchesSeriesRow(definition, slot, occupiedSlots, null, shelfCategoryId);
     }
 
     /// <summary>
     /// First card of a series claims a row; later cards from that series must use the same row.
-    /// A row cannot mix cards from different series.
+    /// A row cannot mix cards from different series of this shelf category.
+    /// Off-category cards do not claim or block a row.
     /// </summary>
     public static bool MatchesSeriesRow(
         CardDefinition definition,
         CardShelfSlot slot,
         IReadOnlyList<CardShelfSlot> occupiedSlots,
-        CardShelfSlot excludeSlot)
+        CardShelfSlot excludeSlot,
+        string shelfCategoryId = null)
     {
         if (definition == null || slot == null)
             return false;
@@ -76,18 +78,19 @@ public static class CardShelfRules
         if (!CardShelfSeries.TryGetSeriesId(definition, out string seriesId))
             return true;
 
-        int? assignedRow = FindRowForSeries(seriesId, occupiedSlots, excludeSlot);
+        int? assignedRow = FindRowForSeries(seriesId, occupiedSlots, excludeSlot, shelfCategoryId);
         if (assignedRow.HasValue)
             return slot.RowIndex == assignedRow.Value;
 
-        string rowSeries = FindSeriesOnRow(slot.RowIndex, occupiedSlots, excludeSlot);
+        string rowSeries = FindSeriesOnRow(slot.RowIndex, occupiedSlots, excludeSlot, shelfCategoryId);
         return rowSeries == null || rowSeries == seriesId;
     }
 
     static int? FindRowForSeries(
         string seriesId,
         IReadOnlyList<CardShelfSlot> occupiedSlots,
-        CardShelfSlot excludeSlot)
+        CardShelfSlot excludeSlot,
+        string shelfCategoryId)
     {
         if (occupiedSlots == null || string.IsNullOrWhiteSpace(seriesId))
             return null;
@@ -100,7 +103,7 @@ public static class CardShelfRules
                 continue;
 
             WorldCard card = occupiedSlot.OccupiedCard;
-            if (card == null || card.Definition == null)
+            if (!CountsForSeriesRow(card, shelfCategoryId))
                 continue;
 
             if (!CardShelfSeries.TryGetSeriesId(card.Definition, out string occupiedSeriesId))
@@ -121,7 +124,8 @@ public static class CardShelfRules
     static string FindSeriesOnRow(
         int rowIndex,
         IReadOnlyList<CardShelfSlot> occupiedSlots,
-        CardShelfSlot excludeSlot)
+        CardShelfSlot excludeSlot,
+        string shelfCategoryId)
     {
         if (occupiedSlots == null)
             return null;
@@ -136,7 +140,7 @@ public static class CardShelfRules
                 continue;
 
             WorldCard card = occupiedSlot.OccupiedCard;
-            if (card == null || card.Definition == null)
+            if (!CountsForSeriesRow(card, shelfCategoryId))
                 continue;
 
             if (CardShelfSeries.TryGetSeriesId(card.Definition, out string occupiedSeriesId))
@@ -144,5 +148,14 @@ public static class CardShelfRules
         }
 
         return null;
+    }
+
+    static bool CountsForSeriesRow(WorldCard card, string shelfCategoryId)
+    {
+        if (card == null || card.Definition == null)
+            return false;
+
+        return string.IsNullOrWhiteSpace(shelfCategoryId)
+            || CategoriesMatch(shelfCategoryId, card.Definition.ShelfCategoryId);
     }
 }

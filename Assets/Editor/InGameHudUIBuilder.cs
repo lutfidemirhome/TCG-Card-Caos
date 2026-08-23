@@ -153,7 +153,6 @@ public static class InGameHudUIBuilder
         serialized.FindProperty("cardsValueText").objectReferenceValue = cards;
         serialized.FindProperty("handValueText").objectReferenceValue = hand;
         serialized.FindProperty("maxShelves").intValue = GameHudLimits.MaxShelves;
-        serialized.FindProperty("maxPlacedCards").intValue = GameHudLimits.MaxPlacedCards;
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 

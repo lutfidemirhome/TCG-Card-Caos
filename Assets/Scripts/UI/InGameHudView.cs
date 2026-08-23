@@ -11,7 +11,6 @@ public class InGameHudView : MonoBehaviour
     [SerializeField] TMP_Text cardsValueText;
     [SerializeField] TMP_Text handValueText;
     [SerializeField] int maxShelves = GameHudLimits.MaxShelves;
-    [SerializeField] int maxPlacedCards = GameHudLimits.MaxPlacedCards;
 
     void Awake()
     {
@@ -42,16 +41,9 @@ public class InGameHudView : MonoBehaviour
 
     void Refresh()
     {
-        GameSaveWorldCollector.CountProgress(
-            out int cardsPlaced,
-            out _,
-            out int shelvesCompleted,
-            out _,
-            out _,
-            out int totalCards);
-
-        SetCounter(shelvesValueText, shelvesCompleted, maxShelves);
-        SetCounter(cardsValueText, cardsPlaced, totalCards);
+        GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
+        SetCounter(shelvesValueText, progress.shelvesCompleted, maxShelves);
+        SetCounter(cardsValueText, progress.cardsPlaced, progress.totalCards);
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         int held = hand != null ? hand.OccupiedHandSlots : 0;

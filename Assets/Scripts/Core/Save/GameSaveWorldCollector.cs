@@ -64,8 +64,7 @@ public static class GameSaveWorldCollector
                 PackScratch.Add(record);
         }
 
-        CountProgress(out int cardsPlaced, out int totalShelves, out int shelvesCompleted,
-            out int totalCabinets, out int cabinetsCompleted, out int totalCards);
+        GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
 
         var data = new GameSaveData
         {
@@ -77,12 +76,12 @@ public static class GameSaveWorldCollector
             worldId = GameScenes.Game,
             timestampUnix = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             playTimeSeconds = GamePlayTime.TotalSeconds,
-            cardsPlaced = cardsPlaced,
-            totalCards = totalCards,
-            shelvesCompleted = shelvesCompleted,
-            totalShelves = totalShelves,
-            cabinetsCompleted = cabinetsCompleted,
-            totalCabinets = totalCabinets,
+            cardsPlaced = progress.cardsPlaced,
+            totalCards = progress.totalCards,
+            shelvesCompleted = progress.shelvesCompleted,
+            totalShelves = progress.totalShelves,
+            cabinetsCompleted = progress.cabinetsCompleted,
+            totalCabinets = progress.totalCabinets,
             handSelectedIndex = hand != null ? hand.SelectedIndex : 0,
             cards = CardScratch.ToArray(),
             packs = PackScratch.ToArray(),
@@ -233,189 +232,13 @@ public static class GameSaveWorldCollector
         out int cabinetsCompleted,
         out int totalCards)
     {
-        cardsPlaced = 0;
-        shelvesCompleted = 0;
-        cabinetsCompleted = 0;
-        totalShelves = GameHudLimits.MaxShelves;
-        totalCabinets = GameHudLimits.MaxShelves;
-        totalCards = CountOwnedCards();
-
-        var countedPsaRoots = new HashSet<Transform>();
-
-        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < shelves.Length; i++)
-        {
-            CardShelf shelf = shelves[i];
-            if (shelf == null)
-                continue;
-
-            cardsPlaced += shelf.CountCorrectlyPlacedCards();
-            if (shelf.IsComplete())
-                shelvesCompleted++;
-        }
-
-        PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < cabinets.Length; i++)
-        {
-            PsaCabinet cabinet = cabinets[i];
-            if (cabinet == null || !countedPsaRoots.Add(cabinet.transform))
-                continue;
-
-            cardsPlaced += cabinet.CountCorrectlyPlacedCards();
-            if (cabinet.IsComplete())
-            {
-                shelvesCompleted++;
-                cabinetsCompleted++;
-            }
-        }
-
-        CountOrphanPsaUnits(countedPsaRoots, ref cardsPlaced, ref shelvesCompleted, ref cabinetsCompleted);
-    }
-
-    static int CountOwnedCards()
-    {
-        int total = 0;
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < cards.Length; i++)
-        {
-            if (cards[i] != null)
-                total++;
-        }
-
-        WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < packs.Length; i++)
-        {
-            WorldBoosterPack pack = packs[i];
-            if (pack == null || pack.State == WorldBoosterPack.PackState.Opening)
-                continue;
-
-            IReadOnlyList<CardDefinition> contents = pack.PeekPreRolledContents();
-            if (contents != null && contents.Count > 0)
-            {
-                total += contents.Count;
-                continue;
-            }
-
-            total += CardDimensions.CardsPerBoosterPack;
-        }
-
-        return total;
-    }
-
-    static void CountOrphanPsaUnits(
-        HashSet<Transform> countedRoots,
-        ref int cardsPlaced,
-        ref int shelvesCompleted,
-        ref int cabinetsCompleted)
-    {
-        PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < slots.Length; i++)
-        {
-            PsaCabinetSlot slot = slots[i];
-            if (slot == null || !PsaArtLibrary.IsCabinetSlotNumber(slot.SlotNumber))
-                continue;
-
-            Transform root = ResolvePsaUnitRoot(slot);
-            if (root == null || !countedRoots.Add(root))
-                continue;
-
-            PsaCabinetSlot[] unitSlots = root.GetComponentsInChildren<PsaCabinetSlot>(true);
-            cardsPlaced += CountCorrectPsaSlots(unitSlots);
-            if (IsPsaSlotGroupComplete(unitSlots))
-            {
-                shelvesCompleted++;
-                cabinetsCompleted++;
-            }
-        }
-    }
-
-    static Transform ResolvePsaUnitRoot(PsaCabinetSlot slot)
-    {
-        if (slot == null)
-            return null;
-
-        PsaCabinet cabinet = slot.GetComponentInParent<PsaCabinet>();
-        if (cabinet != null)
-            return cabinet.transform;
-
-        Transform current = slot.transform;
-        Transform best = current;
-        while (current != null)
-        {
-            if (CountCabinetSlotsUnder(current) > 0)
-                best = current;
-            current = current.parent;
-        }
-
-        return best;
-    }
-
-    static int CountCabinetSlotsUnder(Transform root)
-    {
-        if (root == null)
-            return 0;
-
-        PsaCabinetSlot[] slots = root.GetComponentsInChildren<PsaCabinetSlot>(true);
-        int count = 0;
-        for (int i = 0; i < slots.Length; i++)
-        {
-            PsaCabinetSlot slot = slots[i];
-            if (slot != null && PsaArtLibrary.IsCabinetSlotNumber(slot.SlotNumber))
-                count++;
-        }
-
-        return count;
-    }
-
-    static int CountCorrectPsaSlots(PsaCabinetSlot[] slots)
-    {
-        int count = 0;
-        if (slots == null)
-            return 0;
-
-        for (int i = 0; i < slots.Length; i++)
-        {
-            PsaCabinetSlot slot = slots[i];
-            if (slot == null || slot.IsEmpty || !PsaArtLibrary.IsCabinetSlotNumber(slot.SlotNumber))
-                continue;
-
-            WorldCard card = slot.OccupiedCard;
-            if (card != null && !card.IsInHand && slot.IsCorrectPlacement(card))
-                count++;
-        }
-
-        return count;
-    }
-
-    static bool IsPsaSlotGroupComplete(PsaCabinetSlot[] slots)
-    {
-        bool hasCabinetSlot = false;
-        if (slots == null)
-            return false;
-
-        for (int i = 0; i < slots.Length; i++)
-        {
-            PsaCabinetSlot slot = slots[i];
-            if (slot == null || !PsaArtLibrary.IsCabinetSlotNumber(slot.SlotNumber))
-                continue;
-
-            hasCabinetSlot = true;
-            WorldCard card = slot.OccupiedCard;
-            if (slot.IsEmpty || card == null || card.IsInHand || !slot.IsCorrectPlacement(card))
-                return false;
-        }
-
-        return hasCabinetSlot;
+        GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
+        cardsPlaced = progress.cardsPlaced;
+        totalShelves = progress.totalShelves;
+        shelvesCompleted = progress.shelvesCompleted;
+        totalCabinets = progress.totalCabinets;
+        cabinetsCompleted = progress.cabinetsCompleted;
+        totalCards = progress.totalCards;
     }
 
     static void BuildOccupiedShelfSlotMap()

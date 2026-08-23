@@ -34129,7 +34129,6 @@ MonoBehaviour:
   cardsValueText: {fileID: 930000042}
   handValueText: {fileID: 930000072}
   maxShelves: 6
-  maxPlacedCards: 300
 --- !u!1 &930000010
 GameObject:
   m_ObjectHideFlags: 0
