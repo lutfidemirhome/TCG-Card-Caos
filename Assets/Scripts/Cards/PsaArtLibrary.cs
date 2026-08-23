@@ -54,10 +54,15 @@ public static class PsaArtLibrary
         slotNumber = ClampCabinetSlotNumber(slotNumber);
         variantIndex = Mathf.Max(1, variantIndex);
 
-        string path = $"{GetVariantResourceFolder(slotNumber, variantIndex)}/{SlabTextureFileName}";
-        Texture2D texture = Resources.Load<Texture2D>(path);
+        string uniqueName = GetVariantFolderName(slotNumber, variantIndex) + "_slab";
+        Texture2D texture = Resources.Load<Texture2D>(
+            GetVariantResourceFolder(slotNumber, variantIndex) + "/" + uniqueName);
+        if (texture == null)
+            texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, uniqueName);
+        if (texture == null)
+            texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, SlabTextureFileName);
         if (texture == null && variantIndex != 1)
-            texture = Resources.Load<Texture2D>($"{GetVariantResourceFolder(slotNumber, 1)}/{SlabTextureFileName}");
+            texture = GetSlabTexture(slotNumber, 1);
         return texture;
     }
 
@@ -67,12 +72,32 @@ public static class PsaArtLibrary
         slotNumber = ClampCabinetSlotNumber(slotNumber);
         variantIndex = Mathf.Max(1, variantIndex);
 
-        string folder = GetVariantResourceFolder(slotNumber, variantIndex);
         string previewName = GetVariantFolderName(slotNumber, variantIndex) + PreviewTextureSuffix;
-        Texture2D preview = Resources.Load<Texture2D>($"{folder}/{previewName}");
+        Texture2D preview = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, previewName);
         if (preview == null && variantIndex != 1)
             preview = GetVariantPreview(slotNumber, 1);
         return preview;
+    }
+
+    /// <summary>
+    /// Folder-scoped load. Every variant file is named card_diffuseMAT; a global
+    /// Resources.Load by that name can return psa_10 after the new imports.
+    /// </summary>
+    static Texture2D LoadNamedTextureInVariantFolder(int slotNumber, int variantIndex, string textureName)
+    {
+        string folder = GetVariantResourceFolder(slotNumber, variantIndex);
+        Texture2D[] textures = Resources.LoadAll<Texture2D>(folder);
+        if (textures != null)
+        {
+            for (int i = 0; i < textures.Length; i++)
+            {
+                Texture2D texture = textures[i];
+                if (texture != null && string.Equals(texture.name, textureName, StringComparison.Ordinal))
+                    return texture;
+            }
+        }
+
+        return Resources.Load<Texture2D>(folder + "/" + textureName);
     }
 
     public static bool HasVariant(int slotNumber, int variantIndex)

@@ -65,6 +65,8 @@ public class CardInstancedRenderManager : MonoBehaviour
         string pendingSlotId = GameSceneLoader.PendingSlotId;
         bool restoreFromSave = loadMode == GameLoadMode.Continue || loadMode == GameLoadMode.LoadSlot;
 
+#if UNITY_EDITOR
+        // Editor-only convenience. Player builds always honor New Game / Continue from the menu.
         if (!restoreFromSave && !GameSceneLoader.StartedViaMenuLoader)
         {
             SaveSlotMetadata latest = GameSaveManager.GetLatestValidSave();
@@ -75,6 +77,7 @@ public class CardInstancedRenderManager : MonoBehaviour
                 Debug.Log("[Save] Editor/direct play: restoring latest " + latest.slotId + ".");
             }
         }
+#endif
 
         if (restoreFromSave)
         {

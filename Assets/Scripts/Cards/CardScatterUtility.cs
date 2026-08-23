@@ -361,19 +361,11 @@ public static class CardScatterUtility
         if (scatterRoot == null)
             return;
 
-        PsaCabinet cabinet = UnityEngine.Object.FindFirstObjectByType<PsaCabinet>();
-        if (cabinet != null)
-        {
-            cabinet.SpawnDefaultSlabs(scatterRoot);
-            return;
-        }
+        ClearHolderPsaCards();
+        ClearGroundPsaCards(scatterRoot);
 
         int psaCount = Mathf.Min(DefaultPsaScatterCount, PsaArtLibrary.CabinetSlotCount);
-        var avoid = new List<Vector2>(
-            (occupiedCardPositions != null ? occupiedCardPositions.Count : 0) + DefaultPackScatterCount + 8);
-        if (occupiedCardPositions != null)
-            avoid.AddRange(occupiedCardPositions);
-
+        var packAvoid = new List<Vector2>(DefaultPackScatterCount + 4);
         for (int i = 0; i < scatterRoot.childCount; i++)
         {
             Transform child = scatterRoot.GetChild(i);
@@ -381,10 +373,10 @@ public static class CardScatterUtility
                 continue;
 
             Vector3 worldPos = child.position;
-            avoid.Add(new Vector2(worldPos.x, worldPos.z));
+            packAvoid.Add(new Vector2(worldPos.x, worldPos.z));
         }
 
-        var psaPositions = GeneratePackScatterPositions(psaCount, avoid);
+        var psaPositions = GeneratePsaScatterPositions(psaCount, packAvoid);
         HashSet<int> backFacingIndices = PickBackFacingIndices(psaCount);
 
         for (int i = 0; i < psaCount; i++)
@@ -403,7 +395,6 @@ public static class CardScatterUtility
 
             card.SetGroundShowsBack(backFacingIndices.Contains(i));
             card.transform.SetParent(scatterRoot, true);
-            CardGroundStack.ApplyStackHeight(card, placeOnTop: false);
         }
     }
 
@@ -589,11 +580,52 @@ public static class CardScatterUtility
         for (int i = 0; i < scatterRoot.childCount; i++)
         {
             WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
-            if (card != null && card.UsesPsaSlab)
+            if (card != null && card.UsesPsaSlab && card.GetComponentInParent<PsaCabinetSlot>() == null)
                 count++;
         }
 
         return count;
+    }
+
+    static void ClearHolderPsaCards()
+    {
+        PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            slot.ClearOccupant();
+            if (card == null)
+                continue;
+
+            if (Application.isPlaying)
+                Object.Destroy(card.gameObject);
+            else
+                Object.DestroyImmediate(card.gameObject);
+        }
+    }
+
+    static void ClearGroundPsaCards(Transform scatterRoot)
+    {
+        if (scatterRoot == null)
+            return;
+
+        for (int i = scatterRoot.childCount - 1; i >= 0; i--)
+        {
+            WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+            if (card == null || !card.UsesPsaSlab)
+                continue;
+
+            if (Application.isPlaying)
+                Object.Destroy(card.gameObject);
+            else
+                Object.DestroyImmediate(card.gameObject);
+        }
     }
 
     public static int CountScatterCards()
@@ -848,6 +880,52 @@ public static class CardScatterUtility
             if ((i + 1) % PositionsPerYield == 0)
                 yield return null;
         }
+    }
+
+    /// <summary>
+    /// Four PSA slabs across the full floor. Only avoid other PSAs and packs so they do not
+    /// collapse into the leftover pockets between regular cards.
+    /// </summary>
+    static List<Vector2> GeneratePsaScatterPositions(int count, IReadOnlyList<Vector2> avoidPacks)
+    {
+        ScatterRegion region = ScatterRegion.FromScene();
+        float preferred = Mathf.Max(GetPreferredScatterSpacing() * 2.2f, 0.35f);
+        float packAvoidSpacingSq = preferred * preferred;
+        var positions = new List<Vector2>(count);
+        int maxAttempts = Mathf.Max(80, count * 40);
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 candidate = region.RandomXZ();
+            bool found = false;
+            float spacing = preferred;
+            float spacingSq = spacing * spacing;
+
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                if (attempt > 0 && attempt % 20 == 0)
+                {
+                    spacing = Mathf.Max(0.2f, spacing * 0.88f);
+                    spacingSq = spacing * spacing;
+                }
+
+                candidate = region.RandomXZ();
+                if (!IsFarEnough(candidate, positions, spacingSq))
+                    continue;
+                if (!IsFarEnough(candidate, avoidPacks, packAvoidSpacingSq))
+                    continue;
+
+                found = true;
+                break;
+            }
+
+            if (!found)
+                candidate = FindBestPackFallback(region, positions, avoidPacks, packAvoidSpacingSq);
+
+            positions.Add(region.Clamp(candidate));
+        }
+
+        return positions;
     }
 
     /// <summary>

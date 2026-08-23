@@ -99,32 +99,11 @@ public class PsaCabinet : MonoBehaviour
         return null;
     }
 
-    /// <summary>Spawns default variant-1 slabs on empty cabinet slots.</summary>
+    /// <summary>
+    /// Holders stay empty on a new game. Ground scatter creates the four PSA cards (7–10).
+    /// </summary>
     public void SpawnDefaultSlabs(Transform parentRoot)
     {
-        CollectSlots();
-        if (slots == null || slots.Length == 0)
-            return;
-
-        for (int i = 0; i < slots.Length; i++)
-        {
-            PsaCabinetSlot slot = slots[i];
-            if (slot == null || !slot.IsEmpty)
-                continue;
-
-            WorldCard card = CardFactory.CreateWorldPsaCard(
-                slot.GetSpawnPosition(),
-                slot.GetSpawnRotation(),
-                slot.SlotNumber,
-                slot.DefaultVariantIndex,
-                cardName: $"PSA_{slot.SlotNumber}_{slot.DefaultVariantIndex}");
-
-            if (parentRoot != null)
-                card.transform.SetParent(parentRoot, true);
-
-            slot.Occupy(card);
-            CardGroundStack.ApplyStackHeight(card, placeOnTop: false);
-        }
     }
 
 #if UNITY_EDITOR
