@@ -37,6 +37,19 @@ public static class CardScatterUtility
         CardShelfCategories.NormalUncommon,
     };
 
+    /// <summary>
+    /// Types currently allowed on the floor / in default packs.
+    /// Imported catalog types stay out until spawn is enabled here.
+    /// </summary>
+    static readonly HashSet<string> DefaultScatterCategories = new HashSet<string>
+    {
+        CardShelfCategories.FireCommon,
+        CardShelfCategories.FireUncommon,
+        CardShelfCategories.FireRare,
+        CardShelfCategories.GrassUncommon,
+        CardShelfCategories.GrassRare,
+    };
+
     const int CardsPerSpawnFrame = 6;
     const int PositionsPerYield = 12;
     const float GroundFaceDownRatio = 0.2f;
@@ -531,7 +544,7 @@ public static class CardScatterUtility
             }
 
             if (string.IsNullOrWhiteSpace(shelfCategoryId)
-                && IsDemoExcludedGroundCategory(definition.ShelfCategoryId))
+                && !IsLiveGroundCategory(definition.ShelfCategoryId))
             {
                 continue;
             }
@@ -543,10 +556,11 @@ public static class CardScatterUtility
         return definitions;
     }
 
-    static bool IsDemoExcludedGroundCategory(string categoryId)
+    public static bool IsLiveGroundCategory(string categoryId)
     {
         return !string.IsNullOrWhiteSpace(categoryId)
-            && DemoExcludedGroundCategories.Contains(categoryId);
+            && DefaultScatterCategories.Contains(categoryId)
+            && !DemoExcludedGroundCategories.Contains(categoryId);
     }
 
     public static int CountScatterPacks()

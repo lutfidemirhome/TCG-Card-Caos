@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d0dd49612e9649128599303e4c70cba, type: 3}
+  m_Name: rock_uncommon_cragscale_3
+  m_EditorClassIdentifier: 
+  definitionId: rock_uncommon_cragscale_3
+  displayName: Cragscale 3
+  shelfCategoryId: rock_uncommon
+  shelfSlotNumber: 3
+  frontTexture: {fileID: 2800000, guid: 69ac584d65e94694b0b0613b11429917, type: 3}
+  categorySymbol: {fileID: 0}

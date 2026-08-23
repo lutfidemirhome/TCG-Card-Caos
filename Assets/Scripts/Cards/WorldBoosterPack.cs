@@ -1389,7 +1389,19 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     static IReadOnlyList<CardDefinition> BuildDefaultPool()
     {
         CardCatalog.Reload();
-        return CardCatalog.All;
+        IReadOnlyList<CardDefinition> all = CardCatalog.All;
+        var pool = new List<CardDefinition>(all.Count);
+        for (int i = 0; i < all.Count; i++)
+        {
+            CardDefinition definition = all[i];
+            if (definition == null)
+                continue;
+            if (!CardScatterUtility.IsLiveGroundCategory(definition.ShelfCategoryId))
+                continue;
+            pool.Add(definition);
+        }
+
+        return pool;
     }
 
     void AdvanceFlightToward(Vector3 targetWorldPos, Quaternion targetWorldRot)

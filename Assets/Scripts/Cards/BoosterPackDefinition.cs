@@ -24,9 +24,15 @@ public class BoosterPackDefinition : ScriptableObject
             if (definition == null)
                 continue;
 
-            if (!string.IsNullOrWhiteSpace(shelfCategoryId)
-                && definition.ShelfCategoryId != shelfCategoryId)
+            if (!string.IsNullOrWhiteSpace(shelfCategoryId))
+            {
+                if (definition.ShelfCategoryId != shelfCategoryId)
+                    continue;
+            }
+            else if (!CardScatterUtility.IsLiveGroundCategory(definition.ShelfCategoryId))
+            {
                 continue;
+            }
 
             pool.Add(definition);
         }
