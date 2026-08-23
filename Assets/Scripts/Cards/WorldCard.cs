@@ -705,7 +705,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// <summary>Solid collider for nearby cards while another card is flying.</summary>
     public void EnableLandingCollider()
     {
-        if (IsInHand || _rigidbody != null)
+        if (IsInHand || IsPhysicsSimulating)
             return;
 
         _landingSurfaceRequested = true;

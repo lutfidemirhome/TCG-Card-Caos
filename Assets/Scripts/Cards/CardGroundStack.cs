@@ -242,7 +242,7 @@ public static class CardGroundStack
         for (int i = 0; i < GroundCards.Count; i++)
         {
             WorldCard card = GroundCards[i];
-            if (card == null || card.IsInHand || card.HasActivePhysics)
+            if (card == null || card.IsInHand || card.IsPhysicsSimulating)
                 continue;
             if (CellKey(card.transform.position, cellSize) != key)
                 continue;
@@ -374,7 +374,7 @@ public static class CardGroundStack
         for (int i = 0; i < GroundCards.Count; i++)
         {
             WorldCard card = GroundCards[i];
-            if (card == null || card.IsInHand || card.HasActivePhysics)
+            if (card == null || card.IsInHand || card.IsPhysicsSimulating)
                 continue;
 
             Vector3 delta = card.transform.position - worldPos;
@@ -408,7 +408,7 @@ public static class CardGroundStack
                 for (int i = 0; i < bucket.Count; i++)
                 {
                     WorldCard card = bucket[i];
-                    if (card == null || card.IsInHand || card.HasActivePhysics)
+                    if (card == null || card.IsInHand || card.IsPhysicsSimulating)
                         continue;
 
                     Vector3 delta = card.transform.position - worldPos;
@@ -514,6 +514,7 @@ public static class CardGroundStack
             card.SetGroundRestPosition(position);
         }
 
+        CardFactory.LiftAboveFloor(card.transform, card.GetComponent<Rigidbody>());
         InsertIntoSpatialBucket(card);
     }
 
@@ -601,10 +602,16 @@ public static class CardGroundStack
     /// </param>
     static bool ShouldTakeStackedY(float currentY, float stackedY, float maxDownwardShift, float ceilingY)
     {
+        float minY = CardFactory.GroundHeightOffset();
+        // A card that tunneled under the floor (or under the pile) must be allowed to climb back out.
+        // The ceiling guard below used to keep it frozen underground because the pile read as a roof.
+        if (currentY < minY && stackedY >= minY)
+            return true;
+
         // Whoever settles first claims the lowest free layer, and back-to-back throws at one spot settle
         // out of order: the card underneath is regularly the last to freeze. Climbing to its computed
         // layer then drove it straight up into the card already resting on it, and both froze intersecting.
-        if (stackedY > currentY && stackedY > ceilingY - StackStep * 0.5f)
+        if (currentY >= minY && stackedY > currentY && stackedY > ceilingY - StackStep * 0.5f)
             return false;
 
         return maxDownwardShift < 0f || stackedY >= currentY - maxDownwardShift;
@@ -706,7 +713,7 @@ public static class CardGroundStack
         for (int i = CellScratch.Count - 1; i >= 0; i--)
         {
             WorldCard card = CellScratch[i];
-            if (card == null || card.IsInHand || card.HasActivePhysics)
+            if (card == null || card.IsInHand || card.IsPhysicsSimulating)
                 CellScratch.RemoveAt(i);
         }
 
@@ -921,6 +928,8 @@ public static class CardGroundStack
             position.y = stackedY;
             pack.SetGroundRestPosition(position);
         }
+
+        CardFactory.LiftAboveFloor(pack.transform, pack.GetComponent<Rigidbody>());
     }
 
     public static bool OverlapsOnGround(WorldBoosterPack pack, WorldCard card)

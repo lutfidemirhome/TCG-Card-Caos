@@ -62,6 +62,8 @@ public static class CardThrownPhysics
                         LandingColliderRadius);
                 }
 
+                CardFactory.LiftAboveFloor(itemTransform, body);
+
                 bool slowEnough = body.linearVelocity.sqrMagnitude < SlowVelocityThresholdSq;
                 float groundY = CardFactory.GroundHeightOffset();
                 float maxGroundedY = groundY + CardGroundStack.StackStep * 64f + 0.25f;
@@ -102,6 +104,7 @@ public static class CardThrownPhysics
                                 continue;
                             }
 
+                            CardFactory.LiftAboveFloor(itemTransform, body);
                             hasSettled = true;
 
                             // Truly at rest and not inside anything — freeze physics instead of leaving

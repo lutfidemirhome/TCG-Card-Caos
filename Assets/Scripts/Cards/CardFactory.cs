@@ -107,6 +107,39 @@ public static class CardFactory
         return GroundSurfaceY() + halfThickness + 0.002f;
     }
 
+    /// <summary>
+    /// Cards and packs must never rest below this. Physics can tunnel a thin item through the floor
+    /// during fast stacked throws; lift it back before it is frozen kinematic underground.
+    /// </summary>
+    public static bool LiftAboveFloor(Transform item, Rigidbody body)
+    {
+        if (item == null)
+            return false;
+
+        float minY = GroundHeightOffset();
+        Vector3 position = item.position;
+        if (position.y >= minY)
+            return false;
+
+        position.y = minY;
+        item.position = position;
+        if (body != null)
+        {
+            body.position = position;
+            if (!body.isKinematic)
+            {
+                Vector3 velocity = body.linearVelocity;
+                if (velocity.y < 0f)
+                {
+                    velocity.y = 0f;
+                    body.linearVelocity = velocity;
+                }
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>Top of the walkable floor mesh/collider (not furniture shelves).</summary>
     public static float GroundSurfaceY()
     {

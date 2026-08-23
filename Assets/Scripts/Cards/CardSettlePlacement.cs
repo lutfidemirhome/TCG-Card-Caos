@@ -23,6 +23,8 @@ public static class CardSettlePlacement
         if (card == null)
             return true;
 
+        CardFactory.LiftAboveFloor(card.transform, body);
+
         if (BelongsToStack(card.transform))
         {
             LevelOntoStackPlane(card.transform, body);
@@ -38,6 +40,8 @@ public static class CardSettlePlacement
     {
         if (pack == null)
             return true;
+
+        CardFactory.LiftAboveFloor(pack.transform, body);
 
         if (BelongsToStack(pack.transform))
         {
