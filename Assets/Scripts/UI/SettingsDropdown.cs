@@ -191,7 +191,6 @@ public class SettingsDropdown : MonoBehaviour
             textRect.offsetMax = new Vector2(-12f, -2f);
             var tmp = textGo.AddComponent<TextMeshProUGUI>();
             tmp.text = _options[i];
-            tmp.alignment = TextAlignmentOptions.Left;
             tmp.raycastTarget = false;
             if (headerLabel != null)
             {
@@ -199,12 +198,13 @@ public class SettingsDropdown : MonoBehaviour
                 tmp.fontSharedMaterial = headerLabel.fontSharedMaterial;
                 tmp.fontSize = headerLabel.fontSize;
                 tmp.color = headerLabel.color;
+                tmp.alignment = headerLabel.alignment;
             }
             else
             {
                 tmp.fontSize = 26f;
-                tmp.color = Color.white;
-                UiMenuFont.ApplyControl(tmp);
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.color = Color.black;
             }
         }
     }

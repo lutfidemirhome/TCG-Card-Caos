@@ -5,8 +5,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Settings overlay for main menu and pause. Author under MainMenuCanvas / InGamePauseCanvas
-/// (TCG Card Caos → UI → Add Settings Panel). Runtime only builds if the panel is missing.
+/// Settings overlay for main menu and pause. MenuScene Hierarchy is the source of truth:
+/// color, alignment, font, and RectTransforms stay as authored. Runtime only writes the
+/// current value strings. A panel is built in code only when one is missing from the scene.
 /// </summary>
 public class SettingsPanelView : MonoBehaviour
 {
@@ -347,11 +348,6 @@ public class SettingsPanelView : MonoBehaviour
         ApplyControlAt("Panel/Content/Row_Language/Dropdown/Value");
         ApplyControlAt("Panel/Content/Row_Resolution/Dropdown/Value");
         ApplyControlAt("Panel/Content/Row_Quality/Dropdown/Value");
-        ApplyControlAt("Panel/Content/Row_Fov/ValueBox/Value");
-        ApplyControlAt("Panel/Content/Row_Sensitivity/ValueBox/Value");
-        ApplyControlAt("Panel/Content/Row_Master/ValueBox/Value");
-        ApplyControlAt("Panel/Content/Row_Music/ValueBox/Value");
-        ApplyControlAt("Panel/Content/Row_Sfx/ValueBox/Value");
         HideValueBoxImages();
     }
 
@@ -582,11 +578,11 @@ public class SettingsPanelView : MonoBehaviour
         labelRect.offsetMin = new Vector2(16f, 4f);
         labelRect.offsetMax = new Vector2(-40f, -4f);
         var label = labelGo.AddComponent<TextMeshProUGUI>();
-        label.alignment = TextAlignmentOptions.Left;
         label.fontSize = 26f;
-        label.color = Color.white;
         label.raycastTarget = false;
         UiMenuFont.ApplyControl(label);
+        label.alignment = TextAlignmentOptions.Center;
+        label.color = Color.black;
 
         var listGo = new GameObject(name + "List", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(Mask));
         listGo.transform.SetParent(_listOverlay, false);
@@ -680,9 +676,9 @@ public class SettingsPanelView : MonoBehaviour
         valueLabel = valueTextGo.AddComponent<TextMeshProUGUI>();
         valueLabel.alignment = TextAlignmentOptions.Center;
         valueLabel.fontSize = 24f;
-        valueLabel.color = Color.white;
         valueLabel.raycastTarget = false;
-        UiMenuFont.ApplyControl(valueLabel);
+        UiMenuFont.Apply(valueLabel);
+        valueLabel.color = Color.white;
 
         var sliderGo = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
         sliderGo.transform.SetParent(row, false);

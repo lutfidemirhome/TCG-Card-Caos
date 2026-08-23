@@ -102,7 +102,9 @@ public static class UiMenuFont
         if (text == null || material == null)
             return;
 
+        Color authored = text.color;
         text.fontSharedMaterial = material;
+        text.color = authored;
     }
 
     public static void ApplyToHierarchy(Transform root)
