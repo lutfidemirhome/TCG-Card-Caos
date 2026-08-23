@@ -1,12 +1,13 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// One save row on the Load Game list. Art lives on the child Images; this only fills text/thumb.
 /// </summary>
-public class LoadGameSlotView : MonoBehaviour
+public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
 {
     [SerializeField] Button selectButton;
     [SerializeField] RawImage thumbnail;
@@ -22,6 +23,15 @@ public class LoadGameSlotView : MonoBehaviour
     public Button SelectButton => selectButton;
     public string BoundSlotId => _boundSlotId;
     public bool IsEmpty => _isEmpty;
+    public Action<LoadGameSlotView> RightClicked;
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData == null || eventData.button != PointerEventData.InputButton.Right)
+            return;
+
+        RightClicked?.Invoke(this);
+    }
 
     public void ClearBinding()
     {

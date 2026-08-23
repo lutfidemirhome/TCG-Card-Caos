@@ -452,6 +452,20 @@ MonoBehaviour:
     - ""
     - ""
     - ""
+  - key: save.delete_confirm
+    values:
+    - Are you sure you want to delete this save game?
+    - "Bu kay\u0131tl\u0131 oyunu silmek istedi\u011Fine emin misin?"
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
   - key: save.saving
     values:
     - Saving

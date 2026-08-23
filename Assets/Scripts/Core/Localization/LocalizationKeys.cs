@@ -34,6 +34,7 @@ public static class LocalizationKeys
     public const string SaveGameNotAvailable = "save.not_available";
     public const string SaveGameDeleteHint = "save.delete";
     public const string SaveGameOverwriteConfirm = "save.overwrite_confirm";
+    public const string SaveGameDeleteConfirm = "save.delete_confirm";
     public const string SaveGameSaving = "save.saving";
     public const string SaveGameSaved = "save.saved";
 

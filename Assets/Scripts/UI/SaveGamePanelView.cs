@@ -25,7 +25,15 @@ public class SaveGamePanelView : MonoBehaviour
     [SerializeField] RectTransform savingSpinner;
     [SerializeField] TMP_Text savingLabel;
 
-    string _pendingOverwriteSlotId;
+    enum ConfirmMode
+    {
+        None,
+        Overwrite,
+        Delete
+    }
+
+    string _pendingSlotId;
+    ConfirmMode _confirmMode;
     bool _savedThisOpen;
     float _savingShownAt = -1f;
     Coroutine _savingHintRoutine;
@@ -219,6 +227,7 @@ public class SaveGamePanelView : MonoBehaviour
             LoadGameSlotView captured = slot;
             slot.SelectButton.onClick.RemoveAllListeners();
             slot.SelectButton.onClick.AddListener(() => OnSlotClicked(captured));
+            slot.RightClicked = OnSlotRightClicked;
         }
     }
 
@@ -245,7 +254,6 @@ public class SaveGamePanelView : MonoBehaviour
     public void Hide()
     {
         HideConfirm();
-        _pendingOverwriteSlotId = null;
         HideSavingHint();
 
         if (root != null)
@@ -364,31 +372,76 @@ public class SaveGamePanelView : MonoBehaviour
         if (string.IsNullOrEmpty(slot.BoundSlotId))
             return;
 
-        _pendingOverwriteSlotId = slot.BoundSlotId;
+        ShowConfirm(ConfirmMode.Overwrite, slot.BoundSlotId);
+    }
+
+    void OnSlotRightClicked(LoadGameSlotView slot)
+    {
+        if (slot == null || slot.IsEmpty || string.IsNullOrEmpty(slot.BoundSlotId))
+            return;
+
+        ShowConfirm(ConfirmMode.Delete, slot.BoundSlotId);
+    }
+
+    void ShowConfirm(ConfirmMode mode, string slotId)
+    {
+        _confirmMode = mode;
+        _pendingSlotId = slotId;
+        SetConfirmMessage(mode == ConfirmMode.Delete
+            ? LocalizationKeys.SaveGameDeleteConfirm
+            : LocalizationKeys.SaveGameOverwriteConfirm);
+
         if (confirmView != null)
             confirmView.Show();
     }
 
+    void SetConfirmMessage(string key)
+    {
+        Transform confirmRoot = transform.Find(ConfirmRootName);
+        if (confirmRoot == null)
+            confirmRoot = transform.Find("Panel_LoadConfirm");
+
+        Transform message = confirmRoot != null ? confirmRoot.Find("Band/Message") : null;
+        if (message == null)
+            return;
+
+        LocalizedText localized = message.GetComponent<LocalizedText>();
+        if (localized == null)
+            localized = message.gameObject.AddComponent<LocalizedText>();
+        localized.SetKey(key);
+    }
+
     void OnConfirmYes()
     {
-        string slotId = _pendingOverwriteSlotId;
+        string slotId = _pendingSlotId;
+        ConfirmMode mode = _confirmMode;
         HideConfirm();
-        _pendingOverwriteSlotId = null;
-        if (!string.IsNullOrEmpty(slotId))
+        if (string.IsNullOrEmpty(slotId))
+            return;
+
+        if (mode == ConfirmMode.Delete)
         {
-            ShowSavingHint();
-            GameSaveStore.SaveManual(slotId);
+            GameSaveStore.DeleteSaveSlot(slotId);
+            RefreshSlotList();
+            Canvas.ForceUpdateCanvases();
+            if (scrollRect != null && scrollRect.content != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
+            return;
         }
+
+        ShowSavingHint();
+        GameSaveStore.SaveManual(slotId);
     }
 
     void OnConfirmNo()
     {
         HideConfirm();
-        _pendingOverwriteSlotId = null;
     }
 
     void HideConfirm()
     {
+        _pendingSlotId = null;
+        _confirmMode = ConfirmMode.None;
         if (confirmView != null)
             confirmView.Hide();
     }
