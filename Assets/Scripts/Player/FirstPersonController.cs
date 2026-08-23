@@ -64,6 +64,18 @@ public class FirstPersonController : MonoBehaviour
     {
         if (lockCursorOnStart)
             SetCursorLocked(true);
+
+        ApplySettingsFov(GameSettings.Fov);
+    }
+
+    public void ApplySettingsFov(float fov)
+    {
+        if (cameraTransform == null)
+            return;
+
+        Camera camera = cameraTransform.GetComponent<Camera>();
+        if (camera != null)
+            camera.fieldOfView = Mathf.Clamp(fov, GameSettings.MinFov, GameSettings.MaxFov);
     }
 
     void Update()
@@ -98,8 +110,16 @@ public class FirstPersonController : MonoBehaviour
         if (!_cursorLocked || cameraTransform == null)
             return;
 
-        float mouseX = Input.GetAxisRaw("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
+        float lookSpeed = GameSettings.LookSensitivity;
+        if (lookSpeed <= 0.01f)
+            lookSpeed = mouseSensitivity;
+
+        float mouseX = Input.GetAxisRaw("Mouse X") * lookSpeed;
+        float mouseY = Input.GetAxisRaw("Mouse Y") * lookSpeed;
+        if (GameSettings.InvertX)
+            mouseX = -mouseX;
+        if (GameSettings.InvertY)
+            mouseY = -mouseY;
 
         transform.Rotate(Vector3.up, mouseX, Space.World);
 

@@ -40,6 +40,9 @@ public class MainMenuView : MonoBehaviour
     [Header("Load Game")]
     [SerializeField] LoadGamePanelView loadGamePanel;
 
+    [Header("Settings")]
+    [SerializeField] SettingsPanelView settingsPanel;
+
     [Header("Links")]
     [SerializeField] string feedbackUrl = "";
     [SerializeField] string discordUrl = "";
@@ -54,6 +57,12 @@ public class MainMenuView : MonoBehaviour
 
         EnsureEventSystem();
         EnsureLogoReference();
+        if (loadGamePanel == null)
+            loadGamePanel = GetComponentInChildren<LoadGamePanelView>(true);
+        if (settingsPanel == null)
+            settingsPanel = SettingsPanelView.Ensure(transform);
+        if (settingsPanel != null)
+            settingsPanel.Hide();
         ApplyMenuLayout();
         WireButtons();
         ApplyVersionLabel();
@@ -69,9 +78,6 @@ public class MainMenuView : MonoBehaviour
         Transform logo = transform.Find("Logo");
         if (logo != null)
             logoRect = logo.GetComponent<RectTransform>();
-
-        if (loadGamePanel == null)
-            loadGamePanel = GetComponentInChildren<LoadGamePanelView>(true);
     }
 
     void ApplyMenuLayout()
@@ -166,14 +172,26 @@ public class MainMenuView : MonoBehaviour
 
     void OnLoadGameClicked()
     {
+        if (settingsPanel != null)
+            settingsPanel.Hide();
+
         if (loadGamePanel != null)
             loadGamePanel.Show();
         else
             Debug.Log("[MainMenu] Load Game panel is missing. Run TCG Card Caos → UI → Add Load Game Panel.");
     }
 
-    static void OnSettingsClicked() =>
-        Debug.Log("[MainMenu] Settings is not implemented yet.");
+    void OnSettingsClicked()
+    {
+        if (loadGamePanel != null)
+            loadGamePanel.Hide();
+
+        if (settingsPanel == null)
+            settingsPanel = SettingsPanelView.Ensure(transform);
+
+        if (settingsPanel != null)
+            settingsPanel.Show();
+    }
 
     static void OnQuitClicked()
     {

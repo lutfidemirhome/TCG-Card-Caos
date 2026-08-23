@@ -860,7 +860,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         }
 
         SetHolderOutlineActive(true);
-        return InteractPrompt.Format("Place PSA Card");
+        return InteractPrompt.Format(Localization.Get(LocalizationKeys.PromptPlacePsa));
     }
 
     public void Interact(GameObject interactor)

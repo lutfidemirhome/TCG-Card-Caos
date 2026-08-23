@@ -236,11 +236,11 @@ MonoBehaviour:
     - Noch keine Spielstande
     - Todavia no hay partidas
     - Ainda nao ha jogos salvos
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
+    - "\u8FD8\u6CA1\u6709\u5B58\u6863"
+    - "\u9084\u6C92\u6709\u5B58\u6A94"
+    - "\u30BB\u30FC\u30D6\u304C\u3042\u308A\u307E\u305B\u3093"
+    - "\uC800\uC7A5\uB41C \uAC8C\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4"
+    - "\u041F\u043E\u043A\u0430 \u043D\u0435\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0439"
   - key: load.confirm_message
     values:
     - Are you sure you want to load this game?
@@ -419,11 +419,11 @@ MonoBehaviour:
     - Leerer Slot
     - Ranura vacia
     - Slot vazio
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
+    - "\u7A7A\u69FD"
+    - "\u7A7A\u69FD"
+    - "\u7A7A\u306E\u30B9\u30ED\u30C3\u30C8"
+    - "\uBE48 \uC2AC\uB86F"
+    - "\u041F\u0443\u0441\u0442\u043E\u0439 \u0441\u043B\u043E\u0442"
   - key: save.not_available
     values:
     - N/A
@@ -447,39 +447,40 @@ MonoBehaviour:
     - Loschen
     - Eliminar
     - Excluir
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
+    - "\u5220\u9664"
+    - "\u522A\u9664"
+    - "\u524A\u9664"
+    - "\uC0AD\uC81C"
+    - "\u0423\u0434\u0430\u043B\u0438\u0442\u044C"
   - key: save.overwrite_confirm
     values:
     - Are you sure you want to overwrite this save?
     - "Bu kayd\u0131n \xFCzerine yazmak istedi\u011Fine emin misin?"
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
+    - "Voulez-vous vraiment \xE9craser cette sauvegarde ?"
+    - Sei sicuro di voler sovrascrivere questo salvataggio?
+    - "M\xF6chtest du diesen Spielstand wirklich \xFCberschreiben?"
+    - "\xBFSeguro que quieres sobrescribir esta partida?"
+    - Tem a certeza de que quer substituir este jogo?
+    - "\u786E\u5B9A\u8981\u8986\u76D6\u6B64\u5B58\u6863\u5417\uFF1F"
+    - "\u78BA\u5B9A\u8981\u8986\u84CB\u6B64\u5B58\u6A94\u55CE\uFF1F"
+    - "\u3053\u306E\u30BB\u30FC\u30D6\u3092\u4E0A\u66F8\u304D\u3057\u307E\u3059\u304B\uFF1F"
+    - "\uC774 \uC800\uC7A5\uC744 \uB36E\uC5B4\uC4F0\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?"
+    - "\u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u044D\u0442\u043E
+      \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435?"
   - key: save.delete_confirm
     values:
     - Are you sure you want to delete this save game?
     - "Bu kay\u0131tl\u0131 oyunu silmek istedi\u011Fine emin misin?"
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
+    - "Voulez-vous vraiment supprimer cette sauvegarde ?"
+    - Sei sicuro di voler eliminare questo salvataggio?
+    - "M\xF6chtest du diesen Spielstand wirklich l\xF6schen?"
+    - "\xBFSeguro que quieres borrar esta partida?"
+    - Tem a certeza de que quer apagar este jogo?
+    - "\u786E\u5B9A\u8981\u5220\u9664\u6B64\u5B58\u6863\u5417\uFF1F"
+    - "\u78BA\u5B9A\u8981\u522A\u9664\u6B64\u5B58\u6A94\u55CE\uFF1F"
+    - "\u3053\u306E\u30BB\u30FC\u30D6\u3092\u524A\u9664\u3057\u307E\u3059\u304B\uFF1F"
+    - "\uC774 \uC800\uC7A5\uC744 \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?"
+    - "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u044D\u0442\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435?"
   - key: save.saving
     values:
     - Saving
@@ -489,11 +490,11 @@ MonoBehaviour:
     - Speichern
     - Guardando
     - Salvando
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
+    - "\u4FDD\u5B58\u4E2D"
+    - "\u5132\u5B58\u4E2D"
+    - "\u30BB\u30FC\u30D6\u4E2D"
+    - "\uC800\uC7A5 \uC911"
+    - "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435"
   - key: save.saved
     values:
     - Saved
@@ -503,8 +504,400 @@ MonoBehaviour:
     - Gespeichert
     - Guardado
     - Salvo
-    - ""
-    - ""
-    - ""
-    - ""
-    - ""
+    - "\u5DF2\u4FDD\u5B58"
+    - "\u5DF2\u5132\u5B58"
+    - "\u30BB\u30FC\u30D6\u3057\u307E\u3057\u305F"
+    - "\uC800\uC7A5\uB428"
+    - "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E"
+  - key: save.auto_name
+    values:
+    - Auto Save {0}
+    - "Oto Kay\u0131t {0}"
+    - Sauvegarde auto {0}
+    - Salvataggio auto {0}
+    - Auto-Speichern {0}
+    - Autoguardado {0}
+    - Salvamento auto {0}
+    - "\u81EA\u52A8\u5B58\u6863 {0}"
+    - "\u81EA\u52D5\u5B58\u6A94 {0}"
+    - "\u30AA\u30FC\u30C8\u30BB\u30FC\u30D6 {0}"
+    - "\uC790\uB3D9 \uC800\uC7A5 {0}"
+    - "\u0410\u0432\u0442\u043E\u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 {0}"
+  - key: save.manual_name
+    values:
+    - Save {0}
+    - "Kay\u0131t {0}"
+    - Sauvegarde {0}
+    - Salvataggio {0}
+    - Spielstand {0}
+    - Partida {0}
+    - Jogo {0}
+    - "\u5B58\u6863 {0}"
+    - "\u5B58\u6A94 {0}"
+    - "\u30BB\u30FC\u30D6 {0}"
+    - "\uC800\uC7A5 {0}"
+    - "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 {0}"
+  - key: prompt.press_e
+    values:
+    - Press [E] or Click To {0}
+    - "[E] veya t\u0131kla: {0}"
+    - Appuie sur [E] ou clique pour {0}
+    - Premi [E] o clicca per {0}
+    - "Dr\xFCcke [E] oder klicke f\xFCr {0}"
+    - Pulsa [E] o haz clic para {0}
+    - Pressione [E] ou clique para {0}
+    - "[E] \u6216\u70B9\u51FB\u4EE5{0}"
+    - "[E] \u6216\u9EDE\u64CA\u4EE5{0}"
+    - "[E] \u307E\u305F\u306F\u30AF\u30EA\u30C3\u30AF\u3067{0}"
+    - "[E] \uB610\uB294 \uD074\uB9AD: {0}"
+    - "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 [E] \u0438\u043B\u0438 \u043A\u043B\u0438\u043A: {0}"
+  - key: prompt.press_f
+    values:
+    - Press [F] or Right Click To {0}
+    - "[F] veya sa\u011F t\u0131kla: {0}"
+    - Appuie sur [F] ou clic droit pour {0}
+    - Premi [F] o tasto destro per {0}
+    - "Dr\xFCcke [F] oder Rechtsklick f\xFCr {0}"
+    - Pulsa [F] o clic derecho para {0}
+    - Pressione [F] ou clique direito para {0}
+    - "[F] \u6216\u53F3\u952E\u4EE5{0}"
+    - "[F] \u6216\u53F3\u9375\u4EE5{0}"
+    - "[F] \u307E\u305F\u306F\u53F3\u30AF\u30EA\u30C3\u30AF\u3067{0}"
+    - "[F] \uB610\uB294 \uC6B0\uD074\uB9AD: {0}"
+    - "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 [F] \u0438\u043B\u0438 \u041F\u041A\u041C: {0}"
+  - key: prompt.pick_up
+    values:
+    - Pick Up {0}
+    - "{0} Al"
+    - Ramasser {0}
+    - Raccogli {0}
+    - "{0} aufheben"
+    - Recoger {0}
+    - Pegar {0}
+    - "\u62FE\u53D6{0}"
+    - "\u62FE\u53D6{0}"
+    - "{0}\u3092\u62FE\u3046"
+    - "{0} \uC8FC\uC6B0\uAE30"
+    - "\u041F\u043E\u0434\u043D\u044F\u0442\u044C {0}"
+  - key: prompt.place_card
+    values:
+    - Place Card
+    - Kart Koy
+    - Placer la carte
+    - Piazza carta
+    - Karte ablegen
+    - Colocar carta
+    - Colocar carta
+    - "\u653E\u7F6E\u5361\u724C"
+    - "\u653E\u7F6E\u5361\u724C"
+    - "\u30AB\u30FC\u30C9\u3092\u7F6E\u304F"
+    - "\uCE74\uB4DC \uBC30\uCE58"
+    - "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u044C \u043A\u0430\u0440\u0442\u0443"
+  - key: prompt.place_psa
+    values:
+    - Place PSA Card
+    - PSA Kart Koy
+    - Placer la carte PSA
+    - Piazza carta PSA
+    - PSA-Karte ablegen
+    - Colocar carta PSA
+    - Colocar carta PSA
+    - "\u653E\u7F6E PSA \u5361"
+    - "\u653E\u7F6E PSA \u5361"
+    - "PSA\u30AB\u30FC\u30C9\u3092\u7F6E\u304F"
+    - "PSA \uCE74\uB4DC \uBC30\uCE58"
+    - "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u044C PSA"
+  - key: prompt.open_pack
+    values:
+    - Open Pack
+    - Paketi A\u00E7
+    - Ouvrir le pack
+    - Apri pacchetto
+    - Pack \xF6ffnen
+    - Abrir sobre
+    - Abrir pacote
+    - "\u6253\u5F00\u5361\u5305"
+    - "\u958B\u555F\u5361\u5305"
+    - "\u30D1\u30C3\u30AF\u3092\u958B\u3051\u308B"
+    - "\uD329 \uC5F4\uAE30"
+    - "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043D\u0430\u0431\u043E\u0440"
+  - key: prompt.collect_cards
+    values:
+    - Collect Cards
+    - Kartlar\u0131 Topla
+    - Ramasser les cartes
+    - Raccogli le carte
+    - Karten einsammeln
+    - Recoger cartas
+    - Recolher cartas
+    - "\u6536\u96C6\u5361\u724C"
+    - "\u6536\u96C6\u5361\u724C"
+    - "\u30AB\u30FC\u30C9\u3092\u53D6\u308B"
+    - "\uCE74\uB4DC \uC218\uC9D1"
+    - "\u0421\u043E\u0431\u0440\u0430\u0442\u044C \u043A\u0430\u0440\u0442\u044B"
+  - key: prompt.hand_full
+    values:
+    - Hand Full ({0}/{1})
+    - "El Dolu ({0}/{1})"
+    - Main pleine ({0}/{1})
+    - Mano piena ({0}/{1})
+    - Hand voll ({0}/{1})
+    - Mano llena ({0}/{1})
+    - Mao cheia ({0}/{1})
+    - "\u624B\u724C\u5DF2\u6EE1 ({0}/{1})"
+    - "\u624B\u724C\u5DF2\u6EFF ({0}/{1})"
+    - "\u624B\u304C\u4E00\u676F ({0}/{1})"
+    - "\uC190\uC774 \uAC00\uB4DD \uCC2C ({0}/{1})"
+    - "\u0420\u0443\u043A\u0430 \u043F\u043E\u043B\u043D\u0430 ({0}/{1})"
+  - key: prompt.hand_full_short
+    values:
+    - Hand Full
+    - El Dolu
+    - Main pleine
+    - Mano piena
+    - Hand voll
+    - Mano llena
+    - Mao cheia
+    - "\u624B\u724C\u5DF2\u6EE1"
+    - "\u624B\u724C\u5DF2\u6EFF"
+    - "\u624B\u304C\u4E00\u676F"
+    - "\uC190\uC774 \uAC00\uB4DD \uCC2C"
+    - "\u0420\u0443\u043A\u0430 \u043F\u043E\u043B\u043D\u0430"
+  - key: prompt.need_hand_slots
+    values:
+    - Need {0} free hand slots to open pack
+    - "Paketi a\u00E7mak i\u00E7in {0} bo\u015F el yeri laz\u0131m"
+    - Il faut {0} emplacements libres pour ouvrir le pack
+    - Servono {0} slot liberi per aprire il pacchetto
+    - Du brauchst {0} freie Handpl\xE4tze zum \xD6ffnen
+    - Necesitas {0} huecos libres para abrir el sobre
+    - Precisa de {0} espacos livres para abrir o pacote
+    - "\u5F00\u5305\u9700\u8981 {0} \u4E2A\u7A7A\u4F4D"
+    - "\u958B\u5305\u9700\u8981 {0} \u500B\u7A7A\u4F4D"
+    - "\u30D1\u30C3\u30AF\u3092\u958B\u304F\u306B\u306F\u7A7A\u304D{0}\u304C\u5FC5\u8981"
+    - "\uD329\uC744 \uC5F4\uB824\uBA74 \uBE48 \uC190\uCE78 {0}\uAC1C \uD544\uC694"
+    - "\u041D\u0443\u0436\u043D\u043E {0} \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u044B\u0445 \u0441\u043B\u043E\u0442\u043E\u0432"
+  - key: settings.save
+    values:
+    - Save
+    - Kaydet
+    - Enregistrer
+    - Salva
+    - Speichern
+    - Guardar
+    - Salvar
+    - "\u4FDD\u5B58"
+    - "\u5132\u5B58"
+    - "\u4FDD\u5B58"
+    - "\uC800\uC7A5"
+    - "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C"
+  - key: settings.back
+    values:
+    - ESC  Back
+    - ESC  Geri
+    - ESC  Retour
+    - ESC  Indietro
+    - ESC  Zuruck
+    - ESC  Atras
+    - ESC  Voltar
+    - "ESC  \u8FD4\u56DE"
+    - "ESC  \u8FD4\u56DE"
+    - "ESC  \u623B\u308B"
+    - "ESC  \uB4A4\uB85C"
+    - "ESC  \u041D\u0430\u0437\u0430\u0434"
+  - key: settings.language
+    values:
+    - Language
+    - Dil
+    - Langue
+    - Lingua
+    - Sprache
+    - Idioma
+    - Idioma
+    - "\u8BED\u8A00"
+    - "\u8A9E\u8A00"
+    - "\u8A00\u8A9E"
+    - "\uC5B8\uC5B4"
+    - "\u042F\u0437\u044B\u043A"
+  - key: settings.resolution
+    values:
+    - Resolution
+    - "\xC7\xF6z\xFCn\xFCrl\xFCk"
+    - Resolution
+    - Risoluzione
+    - Auflosung
+    - Resolucion
+    - Resolucao
+    - "\u5206\u8FA8\u7387"
+    - "\u89E3\u6790\u5EA6"
+    - "\u89E3\u50CF\u5EA6"
+    - "\uD574\uC0C1\uB3C4"
+    - "\u0420\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u0435"
+  - key: settings.fullscreen
+    values:
+    - Full Screen
+    - Tam Ekran
+    - Plein ecran
+    - Schermo intero
+    - Vollbild
+    - Pantalla completa
+    - Tela cheia
+    - "\u5168\u5C4F"
+    - "\u5168\u87A2\u5E55"
+    - "\u30D5\u30EB\u30B9\u30AF\u30EA\u30FC\u30F3"
+    - "\uC804\uCCB4 \uD654\uBA74"
+    - "\u041F\u043E\u043B\u043D\u044B\u0439 \u044D\u043A\u0440\u0430\u043D"
+  - key: settings.quality
+    values:
+    - Graphics Quality
+    - Grafik Kalitesi
+    - Qualite graphique
+    - Qualita grafica
+    - Grafikqualitat
+    - Calidad grafica
+    - Qualidade grafica
+    - "\u753B\u8D28"
+    - "\u756B\u8CEA"
+    - "\u753B\u8CEA"
+    - "\uADF8\uB798\uD53D \uD488\uC9C8"
+    - "\u041A\u0430\u0447\u0435\u0441\u0442\u0432\u043E \u0433\u0440\u0430\u0444\u0438\u043A\u0438"
+  - key: settings.fov
+    values:
+    - Field of View
+    - "G\xF6r\xFC\u015F A\xE7\u0131s\u0131"
+    - Champ de vision
+    - Campo visivo
+    - Sichtfeld
+    - Campo de vision
+    - Campo de visao
+    - "\u89C6\u91CE"
+    - "\u8996\u91CE"
+    - "\u8996\u91CE"
+    - "\uC2DC\uC57C"
+    - "\u041E\u0431\u0437\u043E\u0440"
+  - key: settings.sensitivity
+    values:
+    - Mouse Sensitivity
+    - Fare Hassasiyeti
+    - Sensibilite souris
+    - Sensibilita mouse
+    - Mausempfindlichkeit
+    - Sensibilidad del raton
+    - Sensibilidade do mouse
+    - "\u9F20\u6807\u7075\u654F\u5EA6"
+    - "\u6ED1\u9F20\u9748\u654F\u5EA6"
+    - "\u30DE\u30A6\u30B9\u611F\u5EA6"
+    - "\uB9C8\uC6B0\uC2A4 \uAC10\uB3C4"
+    - "\u0427\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u043C\u044B\u0448\u0438"
+  - key: settings.invert_y
+    values:
+    - Invert Y Axis
+    - "Y Eksenini Ters \xC7evir"
+    - Inverser l'axe Y
+    - Inverti asse Y
+    - Y-Achse umkehren
+    - Invertir eje Y
+    - Inverter eixo Y
+    - "\u53CD\u8F6C Y \u8F74"
+    - "\u53CD\u8F49 Y \u8EF8"
+    - "Y\u8EF8\u3092\u53CD\u8EE2"
+    - "Y\uCD95 \uBC18\uC804"
+    - "\u0418\u043D\u0432\u0435\u0440\u0442 \u043E\u0441\u0438 Y"
+  - key: settings.invert_x
+    values:
+    - Invert X Axis
+    - "X Eksenini Ters \xC7evir"
+    - Inverser l'axe X
+    - Inverti asse X
+    - X-Achse umkehren
+    - Invertir eje X
+    - Inverter eixo X
+    - "\u53CD\u8F6C X \u8F74"
+    - "\u53CD\u8F49 X \u8EF8"
+    - "X\u8EF8\u3092\u53CD\u8EE2"
+    - "X\uCD95 \uBC18\uC804"
+    - "\u0418\u043D\u0432\u0435\u0440\u0442 \u043E\u0441\u0438 X"
+  - key: settings.master
+    values:
+    - Master Volume
+    - Ana Ses
+    - Volume principal
+    - Volume principale
+    - Hauptlautstarke
+    - Volumen principal
+    - Volume principal
+    - "\u4E3B\u97F3\u91CF"
+    - "\u4E3B\u97F3\u91CF"
+    - "\u30DE\u30B9\u30BF\u30FC\u97F3\u91CF"
+    - "\uC804\uCCB4 \uC74C\uB7C9"
+    - "\u041E\u0431\u0449\u0430\u044F \u0433\u0440\u043E\u043C\u043A\u043E\u0441\u0442\u044C"
+  - key: settings.music
+    values:
+    - Music
+    - "M\xFCzik"
+    - Musique
+    - Musica
+    - Musik
+    - Musica
+    - Musica
+    - "\u97F3\u4E50"
+    - "\u97F3\u6A02"
+    - "\u97F3\u697D"
+    - "\uC74C\uC545"
+    - "\u041C\u0443\u0437\u044B\u043A\u0430"
+  - key: settings.sfx
+    values:
+    - Sound Effects
+    - Ses Efektleri
+    - Effets sonores
+    - Effetti sonori
+    - Soundeffekte
+    - Efectos de sonido
+    - Efeitos sonoros
+    - "\u97F3\u6548"
+    - "\u97F3\u6548"
+    - "\u52B9\u679C\u97F3"
+    - "\uD6A8\uACFC\uC74C"
+    - "\u042D\u0444\u0444\u0435\u043A\u0442\u044B"
+  - key: settings.quality_low
+    values:
+    - Low
+    - "D\xDC\u015E\xDCK"
+    - Bas
+    - Bassa
+    - Niedrig
+    - Baja
+    - Baixa
+    - "\u4F4E"
+    - "\u4F4E"
+    - "\u4F4E"
+    - "\uB0AE\uC74C"
+    - "\u041D\u0438\u0437\u043A\u043E"
+  - key: settings.quality_medium
+    values:
+    - Medium
+    - ORTA
+    - Moyen
+    - Media
+    - Mittel
+    - Media
+    - Media
+    - "\u4E2D"
+    - "\u4E2D"
+    - "\u4E2D"
+    - "\uC911"
+    - "\u0421\u0440\u0435\u0434\u043D\u0435"
+  - key: settings.quality_high
+    values:
+    - High
+    - "Y\xDCKSEK"
+    - Eleve
+    - Alta
+    - Hoch
+    - Alta
+    - Alta
+    - "\u9AD8"
+    - "\u9AD8"
+    - "\u9AD8"
+    - "\uB192\uC74C"
+    - "\u0412\u044B\u0441\u043E\u043A\u043E"

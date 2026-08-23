@@ -67,11 +67,29 @@ public class SaveGamePanelView : MonoBehaviour
     void OnEnable()
     {
         GameSaveEvents.SaveCompleted += OnSaveCompleted;
+        Localization.LanguageChanged += OnLanguageChanged;
     }
 
     void OnDisable()
     {
         GameSaveEvents.SaveCompleted -= OnSaveCompleted;
+        Localization.LanguageChanged -= OnLanguageChanged;
+    }
+
+    void OnLanguageChanged()
+    {
+        if (!IsOpen)
+            return;
+
+        RefreshSlotList();
+        ApplyEmptyClickLock();
+        if (savingHint == null || !savingHint.activeSelf || savingLabel == null)
+            return;
+
+        bool saving = savingSpinner != null && savingSpinner.gameObject.activeSelf;
+        savingLabel.text = Localization.Get(saving
+            ? LocalizationKeys.SaveGameSaving
+            : LocalizationKeys.SaveGameSaved);
     }
 
     void EnsureReferences()

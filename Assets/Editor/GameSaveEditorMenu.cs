@@ -1,4 +1,7 @@
+using System.IO;
 using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -66,6 +69,49 @@ public static class GameSaveEditorMenu
         Debug.Log("[Save] Steam Demo checklist\n" + message);
     }
 
+    [MenuItem("TCG Card Caos/Save/Wipe Local Saves")]
+    public static void WipeLocalSavesMenu()
+    {
+        int removed = WipeLocalSaveFolders();
+        EditorUtility.DisplayDialog(
+            "Save",
+            removed > 0
+                ? "Local save folders were deleted. Next play/build starts with no saves."
+                : "No local save folders were found.",
+            "OK");
+    }
+
+    public static int WipeLocalSaveFolders()
+    {
+        string parent = Application.persistentDataPath;
+        string[] folders =
+        {
+            Path.Combine(parent, GameBuildVariant.FullFolderName),
+            Path.Combine(parent, GameBuildVariant.DemoFolderName)
+        };
+
+        int removed = 0;
+        for (int i = 0; i < folders.Length; i++)
+        {
+            string folder = folders[i];
+            if (!Directory.Exists(folder))
+                continue;
+
+            try
+            {
+                Directory.Delete(folder, true);
+                removed++;
+                Debug.Log("[Save] Wiped " + folder);
+            }
+            catch (IOException exception)
+            {
+                Debug.LogWarning("[Save] Could not wipe " + folder + ": " + exception.Message);
+            }
+        }
+
+        return removed;
+    }
+
     [MenuItem("TCG Card Caos/Save/List Slots")]
     public static void ListSlots()
     {
@@ -87,5 +133,15 @@ public static class GameSaveEditorMenu
                 + " cards=" + slot.cardsPlaced + "/" + slot.totalCards
                 + " shelves=" + slot.shelvesCompleted + "/" + slot.totalShelves);
         }
+    }
+}
+
+class WipeSavesOnBuild : IPreprocessBuildWithReport
+{
+    public int callbackOrder => 0;
+
+    public void OnPreprocessBuild(BuildReport report)
+    {
+        GameSaveEditorMenu.WipeLocalSaveFolders();
     }
 }

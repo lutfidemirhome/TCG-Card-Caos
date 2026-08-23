@@ -19,6 +19,11 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
 
     string _boundSlotId;
     bool _isEmpty;
+    SaveSlotMetadata _boundMetadata;
+    Texture _boundThumbnail;
+    bool _boundAsSaveRow;
+    bool _boundAsEmpty;
+    int _placeholderIndex;
 
     public Button SelectButton => selectButton;
     public string BoundSlotId => _boundSlotId;
@@ -33,10 +38,22 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
         RightClicked?.Invoke(this);
     }
 
+    void OnEnable()
+    {
+        Localization.LanguageChanged += RefreshBoundText;
+    }
+
+    void OnDisable()
+    {
+        Localization.LanguageChanged -= RefreshBoundText;
+    }
+
     public void ClearBinding()
     {
         _boundSlotId = null;
         _isEmpty = true;
+        _boundMetadata = null;
+        _boundAsEmpty = false;
         BindPlaceholder(1);
     }
 
@@ -44,7 +61,11 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
     {
         _boundSlotId = slotId;
         _isEmpty = true;
-        string na = "N / A";
+        _boundMetadata = null;
+        _boundAsSaveRow = false;
+        _boundAsEmpty = true;
+        _boundThumbnail = emptyThumbnail;
+        string na = Localization.Get(LocalizationKeys.SaveGameNotAvailable);
         Bind(
             saveName: Localization.Get(LocalizationKeys.SaveGameEmptySlot),
             dateText: na,
@@ -58,8 +79,12 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
     public void BindPlaceholder(int autoSaveIndex)
     {
         _boundSlotId = null;
+        _boundMetadata = null;
+        _boundAsEmpty = false;
+        _boundAsSaveRow = false;
+        _placeholderIndex = autoSaveIndex;
         Bind(
-            saveName: "Auto Save " + autoSaveIndex,
+            saveName: Localization.Format(LocalizationKeys.SaveGameAutoName, autoSaveIndex),
             dateText: "—",
             playTimeText: "00:00",
             cardsPlaced: 0,
@@ -79,6 +104,10 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
 
         _isEmpty = false;
         _boundSlotId = metadata.slotId;
+        _boundMetadata = metadata;
+        _boundThumbnail = thumbnailTexture;
+        _boundAsSaveRow = false;
+        _boundAsEmpty = false;
         Bind(
             saveName: FormatSaveName(metadata),
             dateText: FormatDate(metadata),
@@ -99,6 +128,10 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
 
         _isEmpty = false;
         _boundSlotId = metadata.slotId;
+        _boundMetadata = metadata;
+        _boundThumbnail = thumbnailTexture;
+        _boundAsSaveRow = true;
+        _boundAsEmpty = false;
         Bind(
             saveName: FormatSaveName(metadata),
             dateText: FormatDateLong(metadata),
@@ -159,13 +192,34 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
         thumbnail.color = Color.white;
     }
 
+    void RefreshBoundText()
+    {
+        if (_boundAsEmpty)
+        {
+            BindEmpty(_boundSlotId, _boundThumbnail);
+            return;
+        }
+
+        if (_boundMetadata != null)
+        {
+            if (_boundAsSaveRow)
+                BindSaveRow(_boundMetadata, _boundThumbnail);
+            else
+                Bind(_boundMetadata, _boundThumbnail);
+            return;
+        }
+
+        if (_placeholderIndex > 0)
+            BindPlaceholder(_placeholderIndex);
+    }
+
     static string FormatSaveName(SaveSlotMetadata metadata)
     {
         int displayIndex = metadata.slotIndex + 1;
         if (metadata.slotType == SaveSlotType.Auto)
-            return "Auto Save " + displayIndex;
+            return Localization.Format(LocalizationKeys.SaveGameAutoName, displayIndex);
 
-        return "Save " + displayIndex;
+        return Localization.Format(LocalizationKeys.SaveGameManualName, displayIndex);
     }
 
     static string FormatDate(SaveSlotMetadata metadata)

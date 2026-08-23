@@ -16,6 +16,7 @@ public class InGamePauseView : MonoBehaviour
     [SerializeField] Button quitButton;
     [SerializeField] LoadGamePanelView loadGamePanel;
     [SerializeField] SaveGamePanelView saveGamePanel;
+    [SerializeField] SettingsPanelView settingsPanel;
 
     public bool IsOpen => root != null && root.activeSelf;
 
@@ -34,6 +35,11 @@ public class InGamePauseView : MonoBehaviour
 
         if (saveGamePanel == null && loadGamePanel != null)
             saveGamePanel = SaveGamePanelView.CreateFromLoadPanel(loadGamePanel, transform);
+
+        if (settingsPanel == null)
+            settingsPanel = GetComponentInChildren<SettingsPanelView>(true);
+        if (settingsPanel == null)
+            settingsPanel = SettingsPanelView.Ensure(transform);
 
         Wire(resumeButton, Resume);
         Wire(saveButton, OnSaveGame);
@@ -65,6 +71,12 @@ public class InGamePauseView : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (settingsPanel != null && settingsPanel.IsOpen)
+            {
+                settingsPanel.Cancel();
+                return;
+            }
+
             if (saveGamePanel != null && saveGamePanel.IsOpen)
             {
                 saveGamePanel.Hide();
@@ -91,7 +103,8 @@ public class InGamePauseView : MonoBehaviour
     bool PointerOverOverlay()
     {
         return (loadGamePanel != null && loadGamePanel.IsOpen)
-            || (saveGamePanel != null && saveGamePanel.IsOpen);
+            || (saveGamePanel != null && saveGamePanel.IsOpen)
+            || (settingsPanel != null && settingsPanel.IsOpen);
     }
 
     void TryClickPauseButton()
@@ -153,6 +166,8 @@ public class InGamePauseView : MonoBehaviour
             loadGamePanel.Hide();
         if (saveGamePanel != null)
             saveGamePanel.Hide();
+        if (settingsPanel != null)
+            settingsPanel.Hide();
 
         if (root != null)
             root.SetActive(false);
@@ -172,6 +187,8 @@ public class InGamePauseView : MonoBehaviour
     {
         if (loadGamePanel != null)
             loadGamePanel.Hide();
+        if (settingsPanel != null)
+            settingsPanel.Hide();
 
         if (saveGamePanel != null)
             saveGamePanel.Show();
@@ -183,6 +200,8 @@ public class InGamePauseView : MonoBehaviour
     {
         if (saveGamePanel != null)
             saveGamePanel.Hide();
+        if (settingsPanel != null)
+            settingsPanel.Hide();
 
         if (loadGamePanel != null)
             loadGamePanel.Show();
@@ -190,9 +209,18 @@ public class InGamePauseView : MonoBehaviour
             Debug.Log("[Pause] Load Game panel is missing. Run TCG Card Caos → UI → Add In-Game Pause Menu.");
     }
 
-    static void OnSettings()
+    void OnSettings()
     {
-        Debug.Log("[Pause] Settings is not implemented yet.");
+        if (loadGamePanel != null)
+            loadGamePanel.Hide();
+        if (saveGamePanel != null)
+            saveGamePanel.Hide();
+
+        if (settingsPanel == null)
+            settingsPanel = SettingsPanelView.Ensure(transform);
+
+        if (settingsPanel != null)
+            settingsPanel.Show();
     }
 
     void OnQuit()

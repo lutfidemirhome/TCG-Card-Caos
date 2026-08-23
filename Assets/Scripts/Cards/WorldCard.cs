@@ -28,7 +28,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     const float ShelfPlacementFlashOnSeconds = 0.12f;
     const float ShelfPlacementFlashOffSeconds = 0.1f;
 
-    [SerializeField] string cardLabel = "Pick Up";
+    [SerializeField] string cardLabel = "Card";
     [SerializeField] CardDefinition definition;
     [SerializeField] int paletteIndex;
     [Tooltip("0 = normal kart. 7–10 = PSA dolap slot numarası.")]
@@ -193,7 +193,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         psaVariantIndex = 0;
 
         if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
-            cardLabel = "Pick Up " + definition.DisplayName;
+            cardLabel = definition.DisplayName;
     }
 
     /// <summary>PSA slab kartı — normal kart oyun mantığı, 3D holder görseli.</summary>
@@ -203,7 +203,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         paletteIndex = 0;
         psaSlotNumber = PsaArtLibrary.ClampCabinetSlotNumber(slotNumber);
         psaVariantIndex = Mathf.Max(1, variantIndex);
-        cardLabel = $"Pick Up PSA {psaSlotNumber}-{psaVariantIndex}";
+        cardLabel = "PSA " + psaSlotNumber + "-" + psaVariantIndex;
         _psaController = new PsaCardVisualController(this);
         _psaController.Build(psaSlotNumber, psaVariantIndex);
     }
@@ -347,13 +347,22 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return string.Empty;
 
         PlayerCardHand hand = PlayerCardHand.Instance;
-        if (hand != null && hand.IsFull)
-            return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
+        if (hand != null && (hand.IsFull || hand.AvailableSlots <= 0))
+            return Localization.Format(
+                LocalizationKeys.PromptHandFull,
+                CardDimensions.MaxHandSize,
+                CardDimensions.MaxHandSize);
 
-        if (hand != null && hand.AvailableSlots <= 0)
-            return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
+        return InteractPrompt.Format(Localization.Format(LocalizationKeys.PromptPickUp, ResolvePickupName()));
+    }
 
-        return InteractPrompt.Format(cardLabel);
+    string ResolvePickupName()
+    {
+        if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
+            return definition.DisplayName;
+        if (psaSlotNumber > 0)
+            return "PSA " + psaSlotNumber + "-" + psaVariantIndex;
+        return string.IsNullOrWhiteSpace(cardLabel) ? "Card" : cardLabel;
     }
 
     public void Interact(GameObject interactor)

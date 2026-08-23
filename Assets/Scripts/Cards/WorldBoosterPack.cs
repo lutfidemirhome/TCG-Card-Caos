@@ -1004,17 +1004,20 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand == null)
-            return InteractPrompt.Format("Pick Up " + PackDisplayName);
+            return InteractPrompt.Format(Localization.Format(LocalizationKeys.PromptPickUp, PackDisplayName));
 
         if (!hand.CanPickUpPack)
         {
             if (hand.AvailableSlots <= 0)
-                return "Hand Full (" + CardDimensions.MaxHandSize + "/" + CardDimensions.MaxHandSize + ")";
+                return Localization.Format(
+                    LocalizationKeys.PromptHandFull,
+                    CardDimensions.MaxHandSize,
+                    CardDimensions.MaxHandSize);
 
-            return "Hand Full";
+            return Localization.Get(LocalizationKeys.PromptHandFullShort);
         }
 
-        return InteractPrompt.Format("Pick Up " + PackDisplayName);
+        return InteractPrompt.Format(Localization.Format(LocalizationKeys.PromptPickUp, PackDisplayName));
     }
 
     public void Interact(GameObject interactor)

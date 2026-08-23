@@ -711,7 +711,9 @@ public class PlayerCardHand : MonoBehaviour
 
     public string GetRevealCollectPromptText()
     {
-        return _awaitingRevealCollect ? PackActionPrompt.Format("Collect Cards") : string.Empty;
+        return _awaitingRevealCollect
+            ? PackActionPrompt.Format(Localization.Get(LocalizationKeys.PromptCollectCards))
+            : string.Empty;
     }
 
     public void AddRevealedCard(WorldCard card, float duration, float arcHeight)
@@ -781,12 +783,10 @@ public class PlayerCardHand : MonoBehaviour
 
         if (!IsHandInputLocked
             && AvailableSlotsAfterOpeningSelectedPack >= CardDimensions.CardsPerBoosterPack)
-            return PackActionPrompt.Format("Open Pack");
+            return PackActionPrompt.Format(Localization.Get(LocalizationKeys.PromptOpenPack));
 
         int slotsNeeded = CardDimensions.CardsPerBoosterPack - CardDimensions.HandSlotsPerBoosterPack;
-        return "Need "
-            + slotsNeeded
-            + " free hand slots to open pack";
+        return Localization.Format(LocalizationKeys.PromptNeedHandSlots, slotsNeeded);
     }
 
     public bool IsSelectedPackOpenBlocked()

@@ -39,6 +39,29 @@ public static class Localization
         return _table != null ? _table.Get(key, _currentLanguage) : key;
     }
 
+    public static void ReloadTable()
+    {
+        _table = null;
+        _initialized = false;
+        EnsureInitialized();
+    }
+
+    public static string Format(string key, params object[] args)
+    {
+        string value = Get(key);
+        if (args == null || args.Length == 0)
+            return value;
+
+        try
+        {
+            return string.Format(value, args);
+        }
+        catch (FormatException)
+        {
+            return value;
+        }
+    }
+
     public static void SetLanguage(GameLanguage language)
     {
         EnsureInitialized();

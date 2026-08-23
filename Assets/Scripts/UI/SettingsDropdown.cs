@@ -1,0 +1,184 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// Always expands downward from the header. Avoids Unity Dropdown flipping the list.
+/// </summary>
+public class SettingsDropdown : MonoBehaviour
+{
+    const float OptionHeight = 40f;
+    const float MaxListHeight = 260f;
+
+    [SerializeField] Button headerButton;
+    [SerializeField] TMP_Text headerLabel;
+    [SerializeField] RectTransform listRoot;
+    [SerializeField] RectTransform content;
+
+    string[] _options = Array.Empty<string>();
+    int _selected;
+    Action<int> _changed;
+    Action<SettingsDropdown> _opened;
+
+    public bool IsOpen => listRoot != null && listRoot.gameObject.activeSelf;
+    public int SelectedIndex => _selected;
+
+    public void Bind(
+        Button header,
+        TMP_Text label,
+        RectTransform list,
+        RectTransform listContent,
+        Action<SettingsDropdown> opened)
+    {
+        headerButton = header;
+        headerLabel = label;
+        listRoot = list;
+        content = listContent;
+        _opened = opened;
+
+        if (headerButton != null)
+        {
+            headerButton.onClick.RemoveListener(Toggle);
+            headerButton.onClick.AddListener(Toggle);
+        }
+
+        Close();
+    }
+
+    public void SetOptions(string[] options, int selected, Action<int> changed)
+    {
+        _options = options ?? Array.Empty<string>();
+        _changed = changed;
+        _selected = Mathf.Clamp(selected, 0, Mathf.Max(0, _options.Length - 1));
+        RebuildOptions();
+        RefreshHeader();
+        Close();
+    }
+
+    public void SetSelected(int index, bool notify)
+    {
+        if (_options.Length == 0)
+            return;
+
+        _selected = Mathf.Clamp(index, 0, _options.Length - 1);
+        RefreshHeader();
+        if (notify)
+            _changed?.Invoke(_selected);
+    }
+
+    public void Toggle()
+    {
+        if (IsOpen)
+        {
+            Close();
+            return;
+        }
+
+        Open();
+    }
+
+    public void Open()
+    {
+        if (listRoot == null)
+            return;
+
+        _opened?.Invoke(this);
+        PlaceListBelowHeader();
+        listRoot.gameObject.SetActive(true);
+        listRoot.SetAsLastSibling();
+    }
+
+    public void Close()
+    {
+        if (listRoot != null)
+            listRoot.gameObject.SetActive(false);
+    }
+
+    void PlaceListBelowHeader()
+    {
+        if (headerButton == null || listRoot == null)
+            return;
+
+        RectTransform header = headerButton.transform as RectTransform;
+        RectTransform parent = listRoot.parent as RectTransform;
+        if (header == null || parent == null)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+
+        Vector3[] corners = new Vector3[4];
+        header.GetWorldCorners(corners);
+        Vector3 bottomCenter = (corners[0] + corners[3]) * 0.5f;
+        Vector3 local = parent.InverseTransformPoint(bottomCenter);
+
+        float width = header.rect.width;
+        float height = Mathf.Min(MaxListHeight, 8f + OptionHeight * Mathf.Max(1, _options.Length));
+
+        listRoot.localScale = Vector3.one;
+        listRoot.localRotation = Quaternion.identity;
+        listRoot.pivot = new Vector2(0.5f, 1f);
+        listRoot.anchorMin = new Vector2(0.5f, 0.5f);
+        listRoot.anchorMax = new Vector2(0.5f, 0.5f);
+        listRoot.sizeDelta = new Vector2(width, height);
+        listRoot.anchoredPosition = new Vector2(local.x, local.y - 2f);
+    }
+
+    void RebuildOptions()
+    {
+        if (content == null)
+            return;
+
+        for (int i = content.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = content.GetChild(i).gameObject;
+            if (Application.isPlaying)
+                Destroy(child);
+            else
+                DestroyImmediate(child);
+        }
+
+        for (int i = 0; i < _options.Length; i++)
+        {
+            int index = i;
+            var optionGo = new GameObject("Option_" + i, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            optionGo.transform.SetParent(content, false);
+            optionGo.GetComponent<LayoutElement>().preferredHeight = OptionHeight;
+            optionGo.GetComponent<LayoutElement>().minHeight = OptionHeight;
+
+            var image = optionGo.GetComponent<Image>();
+            image.color = new Color(0.78f, 0.8f, 0.84f, 1f);
+
+            var button = optionGo.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() =>
+            {
+                SetSelected(index, notify: true);
+                Close();
+            });
+
+            var textGo = new GameObject("Label", typeof(RectTransform));
+            textGo.transform.SetParent(optionGo.transform, false);
+            var textRect = (RectTransform)textGo.transform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(12f, 2f);
+            textRect.offsetMax = new Vector2(-12f, -2f);
+            var tmp = textGo.AddComponent<TextMeshProUGUI>();
+            tmp.text = _options[i];
+            tmp.fontSize = 26f;
+            tmp.alignment = TextAlignmentOptions.Left;
+            tmp.color = Color.black;
+            tmp.raycastTarget = false;
+            UiMenuFont.ApplyControl(tmp);
+        }
+    }
+
+    void RefreshHeader()
+    {
+        if (headerLabel == null)
+            return;
+
+        headerLabel.text = _options.Length == 0 ? string.Empty : _options[_selected];
+    }
+}

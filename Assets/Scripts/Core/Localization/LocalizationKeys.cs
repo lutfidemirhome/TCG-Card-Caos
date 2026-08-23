@@ -38,6 +38,8 @@ public static class LocalizationKeys
     public const string SaveGameDeleteConfirm = "save.delete_confirm";
     public const string SaveGameSaving = "save.saving";
     public const string SaveGameSaved = "save.saved";
+    public const string SaveGameAutoName = "save.auto_name";
+    public const string SaveGameManualName = "save.manual_name";
 
     // In-game pause
     public const string PauseBack = "pause.back";
@@ -46,4 +48,34 @@ public static class LocalizationKeys
 
     // Loading overlay
     public const string UiLoading = "ui.loading";
+
+    // World interaction prompts
+    public const string PromptPressE = "prompt.press_e";
+    public const string PromptPressF = "prompt.press_f";
+    public const string PromptPickUp = "prompt.pick_up";
+    public const string PromptPlaceCard = "prompt.place_card";
+    public const string PromptPlacePsa = "prompt.place_psa";
+    public const string PromptOpenPack = "prompt.open_pack";
+    public const string PromptCollectCards = "prompt.collect_cards";
+    public const string PromptHandFull = "prompt.hand_full";
+    public const string PromptHandFullShort = "prompt.hand_full_short";
+    public const string PromptNeedHandSlots = "prompt.need_hand_slots";
+
+    // Settings
+    public const string SettingsSave = "settings.save";
+    public const string SettingsBack = "settings.back";
+    public const string SettingsLanguage = "settings.language";
+    public const string SettingsResolution = "settings.resolution";
+    public const string SettingsFullscreen = "settings.fullscreen";
+    public const string SettingsQuality = "settings.quality";
+    public const string SettingsFov = "settings.fov";
+    public const string SettingsSensitivity = "settings.sensitivity";
+    public const string SettingsInvertY = "settings.invert_y";
+    public const string SettingsInvertX = "settings.invert_x";
+    public const string SettingsMaster = "settings.master";
+    public const string SettingsMusic = "settings.music";
+    public const string SettingsSfx = "settings.sfx";
+    public const string SettingsQualityLow = "settings.quality_low";
+    public const string SettingsQualityMedium = "settings.quality_medium";
+    public const string SettingsQualityHigh = "settings.quality_high";
 }

@@ -41,6 +41,22 @@ public class LoadGamePanelView : MonoBehaviour
             confirmView.Hide();
     }
 
+    void OnEnable()
+    {
+        Localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    void OnDisable()
+    {
+        Localization.LanguageChanged -= OnLanguageChanged;
+    }
+
+    void OnLanguageChanged()
+    {
+        if (IsOpen)
+            RefreshSlotList();
+    }
+
     void EnsureConfirmView()
     {
         if (confirmView == null)
@@ -48,6 +64,18 @@ public class LoadGamePanelView : MonoBehaviour
 
         if (confirmView == null)
             Debug.LogWarning("[LoadGamePanelView] " + MissingConfirmHint);
+    }
+
+    void EnsureTitle()
+    {
+        Transform title = transform.Find("Title");
+        if (title == null)
+            return;
+
+        LocalizedText localized = title.GetComponent<LocalizedText>();
+        if (localized == null)
+            localized = title.gameObject.AddComponent<LocalizedText>();
+        localized.SetKey(LocalizationKeys.LoadGameTitle);
     }
 
     void EnsureCancelLabel()
@@ -139,6 +167,7 @@ public class LoadGamePanelView : MonoBehaviour
 
         transform.SetAsLastSibling();
         EnsureCancelLabel();
+        EnsureTitle();
         HideConfirm();
         RefreshSlotList();
         RefreshScroll();

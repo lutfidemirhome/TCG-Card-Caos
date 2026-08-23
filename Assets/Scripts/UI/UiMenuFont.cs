@@ -8,8 +8,11 @@ using UnityEngine;
 public static class UiMenuFont
 {
     const string PrimaryName = "Baloo2-ExtraBold SDF";
+    const string OutlineThinName = "Baloo2-ExtraBold SDF - Outline Thin";
+    const string OutlineThinPath = "Assets/TextMesh Pro/Fonts/Materials/Baloo2-ExtraBold SDF - Outline Thin.mat";
 
     static TMP_FontAsset _font;
+    static Material _outlineThin;
 
     public static TMP_FontAsset Font
     {
@@ -53,16 +56,53 @@ public static class UiMenuFont
                && font.name.IndexOf("Baloo", System.StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
+    public static Material OutlineThin
+    {
+        get
+        {
+            if (_outlineThin != null)
+                return _outlineThin;
+
+#if UNITY_EDITOR
+            _outlineThin = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(OutlineThinPath);
+            if (_outlineThin != null)
+                return _outlineThin;
+#endif
+
+            Material[] loaded = Resources.FindObjectsOfTypeAll<Material>();
+            for (int i = 0; i < loaded.Length; i++)
+            {
+                Material candidate = loaded[i];
+                if (candidate != null && candidate.name == OutlineThinName)
+                {
+                    _outlineThin = candidate;
+                    return _outlineThin;
+                }
+            }
+
+            return null;
+        }
+    }
+
     public static void Apply(TMP_Text text)
     {
         TMP_FontAsset font = Font;
-        if (text == null || font == null || text.font == font)
+        if (text == null || font == null)
             return;
 
-        if (IsPrimary(text.font))
+        if (text.font != font && !IsPrimary(text.font))
+            text.font = font;
+    }
+
+    /// <summary>Right-side control values: Baloo + Outline Thin preset. Does not set outlineWidth.</summary>
+    public static void ApplyControl(TMP_Text text)
+    {
+        Apply(text);
+        Material material = OutlineThin;
+        if (text == null || material == null)
             return;
 
-        text.font = font;
+        text.fontSharedMaterial = material;
     }
 
     public static void ApplyToHierarchy(Transform root)
