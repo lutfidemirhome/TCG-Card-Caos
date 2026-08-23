@@ -32,6 +32,27 @@ public class PsaCabinet : MonoBehaviour
         return count;
     }
 
+    public int CountCorrectlyPlacedCards()
+    {
+        CollectSlots();
+        int count = 0;
+        if (slots == null)
+            return 0;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot == null || slot.IsEmpty || !PsaArtLibrary.IsCabinetSlotNumber(slot.SlotNumber))
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card != null && !card.IsInHand && slot.IsCorrectPlacement(card))
+                count++;
+        }
+
+        return count;
+    }
+
     public bool IsComplete()
     {
         CollectSlots();

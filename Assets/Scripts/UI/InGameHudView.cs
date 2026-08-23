@@ -44,13 +44,14 @@ public class InGameHudView : MonoBehaviour
     {
         GameSaveWorldCollector.CountProgress(
             out int cardsPlaced,
-            out int shelvesPlaced,
+            out _,
+            out int shelvesCompleted,
             out _,
             out _,
-            out _);
+            out int totalCards);
 
-        SetCounter(shelvesValueText, shelvesPlaced, maxShelves);
-        SetCounter(cardsValueText, cardsPlaced, maxPlacedCards);
+        SetCounter(shelvesValueText, shelvesCompleted, maxShelves);
+        SetCounter(cardsValueText, cardsPlaced, totalCards);
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         int held = hand != null ? hand.OccupiedHandSlots : 0;

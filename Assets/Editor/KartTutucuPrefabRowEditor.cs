@@ -138,7 +138,14 @@ public static class KartTutucuPrefabRowEditor
         float spacing = CalculateLocalSpacing(holder7, rootTransform);
         EnsureHolderSlots(rootTransform, holder7, counter, spacing);
         counter.SetAsLastSibling();
+        EnsurePsaCabinetComponent(root);
         return true;
+    }
+
+    static void EnsurePsaCabinetComponent(GameObject root)
+    {
+        if (root.GetComponent<PsaCabinet>() == null)
+            root.AddComponent<PsaCabinet>();
     }
 
     static Transform WrapExistingHolder(GameObject root, Transform counter)

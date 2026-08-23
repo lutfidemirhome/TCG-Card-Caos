@@ -57,7 +57,7 @@ public class LoadGameSlotView : MonoBehaviour
             cardsPlaced: metadata.cardsPlaced,
             cardsCapacity: Mathf.Max(metadata.totalCards, metadata.cardsPlaced),
             shelvesPlaced: metadata.shelvesCompleted,
-            shelvesCapacity: Mathf.Max(metadata.totalShelves, metadata.shelvesCompleted),
+            shelvesCapacity: Mathf.Max(GameHudLimits.MaxShelves, metadata.shelvesCompleted),
             thumbnailTexture: thumbnailTexture);
     }
 
