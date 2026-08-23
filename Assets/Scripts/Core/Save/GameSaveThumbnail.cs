@@ -1,4 +1,5 @@
 using System.Collections;
+using System.IO;
 using UnityEngine;
 
 /// <summary>
@@ -6,6 +7,36 @@ using UnityEngine;
 /// </summary>
 public static class GameSaveThumbnail
 {
+    public static Texture2D TryLoad(string slotId)
+    {
+        if (string.IsNullOrEmpty(slotId))
+            return null;
+
+        string path = SaveFileIO.GetThumbnailPath(slotId);
+        if (!File.Exists(path))
+            return null;
+
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            if (bytes == null || bytes.Length == 0)
+                return null;
+
+            var texture = new Texture2D(2, 2, TextureFormat.RGB24, false);
+            if (!texture.LoadImage(bytes))
+            {
+                Object.Destroy(texture);
+                return null;
+            }
+
+            return texture;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static IEnumerator CaptureRoutine(string slotId, GameSaveSettings settings)
     {
         if (string.IsNullOrEmpty(slotId) || settings == null)

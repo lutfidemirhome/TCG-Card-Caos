@@ -8,7 +8,7 @@ public class GameSaveSettings : ScriptableObject
     public const int AutosaveSlotCount = 3;
 
     [SerializeField] float periodicAutosaveSeconds = 60f;
-    [SerializeField] int maxManualSlots = 8;
+    [SerializeField] int maxManualSlots = 30;
     [SerializeField] int thumbnailWidth = 256;
     [SerializeField] int thumbnailHeight = 144;
     [SerializeField] bool debugLogs;

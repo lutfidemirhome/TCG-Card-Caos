@@ -17,14 +17,32 @@ public class LoadGameSlotView : MonoBehaviour
     [SerializeField] TMP_Text shelvesValueText;
 
     string _boundSlotId;
+    bool _isEmpty;
 
     public Button SelectButton => selectButton;
     public string BoundSlotId => _boundSlotId;
+    public bool IsEmpty => _isEmpty;
 
     public void ClearBinding()
     {
         _boundSlotId = null;
+        _isEmpty = true;
         BindPlaceholder(1);
+    }
+
+    public void BindEmpty(string slotId, Texture emptyThumbnail = null)
+    {
+        _boundSlotId = slotId;
+        _isEmpty = true;
+        string na = "N / A";
+        Bind(
+            saveName: Localization.Get(LocalizationKeys.SaveGameEmptySlot),
+            dateText: na,
+            playTimeText: na,
+            cardsText: na,
+            shelvesText: na,
+            thumbnailTexture: emptyThumbnail,
+            emptyThumbnail: emptyThumbnail == null);
     }
 
     public void BindPlaceholder(int autoSaveIndex)
@@ -49,16 +67,36 @@ public class LoadGameSlotView : MonoBehaviour
             return;
         }
 
+        _isEmpty = false;
         _boundSlotId = metadata.slotId;
         Bind(
             saveName: FormatSaveName(metadata),
             dateText: FormatDate(metadata),
             playTimeText: FormatPlayTime(metadata.playTimeSeconds),
-            cardsPlaced: metadata.cardsPlaced,
-            cardsCapacity: Mathf.Max(metadata.totalCards, metadata.cardsPlaced),
-            shelvesPlaced: metadata.shelvesCompleted,
-            shelvesCapacity: Mathf.Max(GameHudLimits.MaxShelves, metadata.shelvesCompleted),
-            thumbnailTexture: thumbnailTexture);
+            cardsText: metadata.cardsPlaced + " / " + Mathf.Max(metadata.totalCards, metadata.cardsPlaced),
+            shelvesText: metadata.shelvesCompleted + " / " + Mathf.Max(GameHudLimits.MaxShelves, metadata.shelvesCompleted),
+            thumbnailTexture: thumbnailTexture,
+            emptyThumbnail: thumbnailTexture == null && _isEmpty);
+    }
+
+    public void BindSaveRow(SaveSlotMetadata metadata, Texture thumbnailTexture)
+    {
+        if (metadata == null)
+        {
+            ClearBinding();
+            return;
+        }
+
+        _isEmpty = false;
+        _boundSlotId = metadata.slotId;
+        Bind(
+            saveName: FormatSaveName(metadata),
+            dateText: FormatDateLong(metadata),
+            playTimeText: FormatPlayTime(metadata.playTimeSeconds),
+            cardsText: metadata.cardsPlaced + " / " + Mathf.Max(metadata.totalCards, metadata.cardsPlaced),
+            shelvesText: metadata.shelvesCompleted + " / " + Mathf.Max(GameHudLimits.MaxShelves, metadata.shelvesCompleted),
+            thumbnailTexture: thumbnailTexture,
+            emptyThumbnail: false);
     }
 
     public void Bind(
@@ -71,14 +109,44 @@ public class LoadGameSlotView : MonoBehaviour
         int shelvesCapacity,
         Texture thumbnailTexture)
     {
+        Bind(
+            saveName,
+            dateText,
+            playTimeText,
+            cardsPlaced + " / " + cardsCapacity,
+            shelvesPlaced + " / " + shelvesCapacity,
+            thumbnailTexture,
+            emptyThumbnail: false);
+    }
+
+    void Bind(
+        string saveName,
+        string dateText,
+        string playTimeText,
+        string cardsText,
+        string shelvesText,
+        Texture thumbnailTexture,
+        bool emptyThumbnail)
+    {
         SetText(saveNameText, saveName);
         SetText(dateValueText, dateText);
         SetText(playTimeValueText, playTimeText);
-        SetText(cardsValueText, cardsPlaced + " / " + cardsCapacity);
-        SetText(shelvesValueText, shelvesPlaced + " / " + shelvesCapacity);
+        SetText(cardsValueText, cardsText);
+        SetText(shelvesValueText, shelvesText);
 
-        if (thumbnail != null)
-            thumbnail.color = Color.white;
+        if (thumbnail == null)
+            return;
+
+        if (emptyThumbnail)
+        {
+            thumbnail.texture = thumbnailTexture;
+            thumbnail.color = new Color(0.32f, 0.38f, 0.46f, 1f);
+            return;
+        }
+
+        if (thumbnailTexture != null)
+            thumbnail.texture = thumbnailTexture;
+        thumbnail.color = Color.white;
     }
 
     static string FormatSaveName(SaveSlotMetadata metadata)
@@ -100,6 +168,19 @@ public class LoadGameSlotView : MonoBehaviour
         catch (Exception)
         {
             return "—";
+        }
+    }
+
+    static string FormatDateLong(SaveSlotMetadata metadata)
+    {
+        try
+        {
+            DateTimeOffset local = metadata.TimestampUtc.ToLocalTime();
+            return local.ToString("MMM d, yyyy, h:mm:ss tt");
+        }
+        catch (Exception)
+        {
+            return Localization.Get(LocalizationKeys.SaveGameNotAvailable);
         }
     }
 

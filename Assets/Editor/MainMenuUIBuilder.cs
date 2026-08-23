@@ -1738,6 +1738,16 @@ public static class MainMenuUIBuilder
         table.EditorEnsureKey(LocalizationKeys.PauseBack, "Back", "Geri");
         table.EditorEnsureKey(LocalizationKeys.PauseResume, "Resume", "Devam");
         table.EditorEnsureKey(LocalizationKeys.PauseSave, "Save Game", "Oyunu Kaydet");
+        table.EditorEnsureKey(LocalizationKeys.SaveGameTitle, "Save Game", "Oyunu Kaydet");
+        table.EditorEnsureKey(LocalizationKeys.SaveGameEmptySlot, "Empty Slot", "Boş Slot");
+        table.EditorEnsureKey(LocalizationKeys.SaveGameNotAvailable, "N/A", "N/A");
+        table.EditorEnsureKey(LocalizationKeys.SaveGameDeleteHint, "Delete", "Sil");
+        table.EditorEnsureKey(
+            LocalizationKeys.SaveGameOverwriteConfirm,
+            "Are you sure you want to overwrite this save?",
+            "Bu kaydın üzerine yazmak istediğine emin misin?");
+        table.EditorEnsureKey(LocalizationKeys.SaveGameSaving, "Saving", "Kaydediliyor");
+        table.EditorEnsureKey(LocalizationKeys.SaveGameSaved, "Saved", "Kaydedildi");
         table.EditorEnsureKey(LocalizationKeys.UiLoading, "Loading", "Yükleniyor");
 
         EditorUtility.SetDirty(table);

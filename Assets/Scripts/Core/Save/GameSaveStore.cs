@@ -13,6 +13,8 @@ public static class GameSaveStore
 
     public static void LoadSaveSlot(string slotId) => GameSaveManager.LoadSaveSlot(slotId);
 
+    public static int ManualSlotCount => GameSaveSettings.LoadOrDefault().MaxManualSlots;
+
     public static void SaveManual(string slotId = null)
     {
         GameSaveManager.EnsureExists().SaveManual(slotId);

@@ -375,13 +375,17 @@ public sealed class GameSaveManager : MonoBehaviour
     {
         if (kind == SaveRequestKind.Manual)
         {
-            slotType = SaveSlotType.Manual;
             if (!string.IsNullOrEmpty(manualSlotId))
             {
                 slotId = manualSlotId;
                 slotIndex = ParseIndex(manualSlotId);
+                slotType = manualSlotId.StartsWith("autosave_", StringComparison.Ordinal)
+                    ? SaveSlotType.Auto
+                    : SaveSlotType.Manual;
                 return;
             }
+
+            slotType = SaveSlotType.Manual;
 
             slotIndex = NextManualIndex();
             slotId = SaveFileIO.ManualSlotId(slotIndex);

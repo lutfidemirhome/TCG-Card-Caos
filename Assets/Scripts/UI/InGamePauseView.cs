@@ -15,6 +15,7 @@ public class InGamePauseView : MonoBehaviour
     [SerializeField] Button settingsButton;
     [SerializeField] Button quitButton;
     [SerializeField] LoadGamePanelView loadGamePanel;
+    [SerializeField] SaveGamePanelView saveGamePanel;
 
     public bool IsOpen => root != null && root.activeSelf;
 
@@ -28,6 +29,12 @@ public class InGamePauseView : MonoBehaviour
         if (loadGamePanel == null)
             loadGamePanel = GetComponentInChildren<LoadGamePanelView>(true);
 
+        if (saveGamePanel == null)
+            saveGamePanel = GetComponentInChildren<SaveGamePanelView>(true);
+
+        if (saveGamePanel == null && loadGamePanel != null)
+            saveGamePanel = SaveGamePanelView.CreateFromLoadPanel(loadGamePanel, transform);
+
         Wire(resumeButton, Resume);
         Wire(saveButton, OnSaveGame);
         Wire(loadButton, OnLoadGame);
@@ -36,6 +43,8 @@ public class InGamePauseView : MonoBehaviour
 
         if (loadGamePanel != null)
             loadGamePanel.Hide();
+        if (saveGamePanel != null)
+            saveGamePanel.Hide();
 
         Hide();
     }
@@ -56,6 +65,12 @@ public class InGamePauseView : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (saveGamePanel != null && saveGamePanel.IsOpen)
+            {
+                saveGamePanel.Hide();
+                return;
+            }
+
             if (loadGamePanel != null && loadGamePanel.IsOpen)
             {
                 loadGamePanel.Hide();
@@ -69,13 +84,14 @@ public class InGamePauseView : MonoBehaviour
             return;
         }
 
-        if (IsOpen && Input.GetMouseButtonDown(0) && !PointerOverLoadGame())
+        if (IsOpen && Input.GetMouseButtonDown(0) && !PointerOverOverlay())
             TryClickPauseButton();
     }
 
-    bool PointerOverLoadGame()
+    bool PointerOverOverlay()
     {
-        return loadGamePanel != null && loadGamePanel.IsOpen;
+        return (loadGamePanel != null && loadGamePanel.IsOpen)
+            || (saveGamePanel != null && saveGamePanel.IsOpen);
     }
 
     void TryClickPauseButton()
@@ -135,6 +151,8 @@ public class InGamePauseView : MonoBehaviour
     {
         if (loadGamePanel != null)
             loadGamePanel.Hide();
+        if (saveGamePanel != null)
+            saveGamePanel.Hide();
 
         if (root != null)
             root.SetActive(false);
@@ -152,11 +170,20 @@ public class InGamePauseView : MonoBehaviour
 
     void OnSaveGame()
     {
-        GameSaveStore.SaveManual();
+        if (loadGamePanel != null)
+            loadGamePanel.Hide();
+
+        if (saveGamePanel != null)
+            saveGamePanel.Show();
+        else
+            Debug.Log("[Pause] Save Game panel is missing.");
     }
 
     void OnLoadGame()
     {
+        if (saveGamePanel != null)
+            saveGamePanel.Hide();
+
         if (loadGamePanel != null)
             loadGamePanel.Show();
         else

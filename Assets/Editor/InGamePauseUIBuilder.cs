@@ -172,6 +172,19 @@ public static class InGamePauseUIBuilder
         serialized.FindProperty("settingsButton").objectReferenceValue = settings;
         serialized.FindProperty("quitButton").objectReferenceValue = quit;
         serialized.FindProperty("loadGamePanel").objectReferenceValue = loadPanel;
+
+        SaveGamePanelView savePanel = null;
+        if (loadPanel != null)
+        {
+            savePanel = SaveGamePanelView.CreateFromLoadPanel(loadPanel, canvas);
+            if (savePanel != null)
+            {
+                savePanel.transform.SetAsLastSibling();
+                savePanel.gameObject.SetActive(false);
+            }
+        }
+
+        serialized.FindProperty("saveGamePanel").objectReferenceValue = savePanel;
         serialized.ApplyModifiedPropertiesWithoutUndo();
 
         root.gameObject.SetActive(false);

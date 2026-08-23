@@ -28,6 +28,15 @@ public static class LocalizationKeys
     public const string LoadGameConfirmYes = "load.confirm_yes";
     public const string LoadGameConfirmNo = "load.confirm_no";
 
+    // Save Game screen
+    public const string SaveGameTitle = "save.title";
+    public const string SaveGameEmptySlot = "save.empty_slot";
+    public const string SaveGameNotAvailable = "save.not_available";
+    public const string SaveGameDeleteHint = "save.delete";
+    public const string SaveGameOverwriteConfirm = "save.overwrite_confirm";
+    public const string SaveGameSaving = "save.saving";
+    public const string SaveGameSaved = "save.saved";
+
     // In-game pause
     public const string PauseBack = "pause.back";
     public const string PauseResume = "pause.resume";
