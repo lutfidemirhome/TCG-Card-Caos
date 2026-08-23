@@ -1337,10 +1337,11 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     }
 
     /// <summary>
-    /// Lays the pack flat on the floor (yaw-only root) while keeping the landed front/back face.
-    /// Face is sampled before flattening so tumble pitch does not skew the result.
+    /// Lays a thrown pack flat on the floor while keeping the landed front/back face.
+    /// The pack body is thick enough to sleep standing on an edge; cards cannot, so packs
+    /// need this extra flatten. Face is sampled before rewriting rotation.
     /// </summary>
-    void FlattenAndSnapToGround()
+    public void FlattenOntoFloor()
     {
         EnsureVisual();
         ApplyPackBodyCollider();
@@ -1348,9 +1349,20 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _groundShowsBack = ReadGroundShowsBackFromLandedProxy(_cardRef, transform);
         Vector3 heading = ReadGroundSettleHeading(_cardRef, transform, _groundShowsBack);
 
-        transform.rotation = Quaternion.LookRotation(heading, Vector3.up);
-        ApplyWorldVisualOrientation(alignPackModelToGround: true);
+        Quaternion level = Quaternion.LookRotation(heading, Vector3.up);
+        // Physics visual stays on the root while the rigidbody is alive: back-up is +Y, front-up is −Y.
+        if (!_groundShowsBack)
+            level *= Quaternion.Euler(0f, 0f, 180f);
 
+        transform.rotation = level;
+        if (_rigidbody != null)
+        {
+            _rigidbody.rotation = level;
+            if (!_rigidbody.isKinematic)
+                _rigidbody.angularVelocity = Vector3.zero;
+        }
+
+        ApplyWorldVisualOrientation(alignPackModelToGround: false);
         ApplyPackModelShadowSettings();
         CardGroundStack.ApplyStackHeight(this, placeOnTop: true);
 

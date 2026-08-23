@@ -17,6 +17,12 @@ public static class CardSettlePlacement
     /// </summary>
     const float MaxDownwardSnap = 0.0035f;
 
+    /// <summary>
+    /// A standing pack's centre sits about half a card-height above the floor. Stay under shelf
+    /// plinths (~32 cm) so a pack that actually landed on furniture keeps the pose physics found.
+    /// </summary>
+    const float MaxFloorStandingHeight = 0.28f;
+
     /// <summary>Returns false when the item was resting inside something and needs to settle again.</summary>
     public static bool TrySettle(WorldCard card, BoxCollider collider, Rigidbody body, int attempt)
     {
@@ -43,7 +49,11 @@ public static class CardSettlePlacement
 
         CardFactory.LiftAboveFloor(pack.transform, body);
 
-        if (BelongsToStack(pack.transform))
+        if (!BelongsToStack(pack.transform) && IsFloorRest(pack.transform))
+        {
+            pack.FlattenOntoFloor();
+        }
+        else if (BelongsToStack(pack.transform))
         {
             LevelOntoStackPlane(pack.transform, body);
             if (attempt == 0)
@@ -51,6 +61,17 @@ public static class CardSettlePlacement
         }
 
         return Accept(CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body), body);
+    }
+
+    static bool IsFloorRest(Transform itemTransform)
+    {
+        if (itemTransform == null)
+            return false;
+
+        if (itemTransform.GetComponentInParent<CardShelfSlot>() != null)
+            return false;
+
+        return itemTransform.position.y <= CardFactory.GroundHeightOffset() + MaxFloorStandingHeight;
     }
 
     /// <summary>
