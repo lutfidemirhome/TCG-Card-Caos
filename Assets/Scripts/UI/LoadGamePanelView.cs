@@ -18,6 +18,7 @@ public class LoadGamePanelView : MonoBehaviour
     [SerializeField] ScrollRect scrollRect;
     [SerializeField] LoadGameSlotView[] slots;
     [SerializeField] LoadGameConfirmView confirmView;
+    [SerializeField] GameObject emptyHint;
 
     string _pendingSlotId;
 
@@ -184,6 +185,7 @@ public class LoadGamePanelView : MonoBehaviour
         if (slots == null || slots.Length == 0)
             EnsureSlotsArray();
 
+        RefreshEmptyHint(saveCount);
         WireSlotClicks();
         if (slots == null || slots.Length == 0)
             return;
@@ -214,6 +216,46 @@ public class LoadGamePanelView : MonoBehaviour
             slots[i].ClearBinding();
             slots[i].gameObject.SetActive(false);
         }
+    }
+
+    void RefreshEmptyHint(int saveCount)
+    {
+        EnsureEmptyHint();
+        if (emptyHint != null)
+            emptyHint.SetActive(saveCount <= 0);
+    }
+
+    void EnsureEmptyHint()
+    {
+        if (emptyHint != null)
+            return;
+
+        Transform existing = transform.Find("EmptyHint");
+        if (existing != null)
+        {
+            emptyHint = existing.gameObject;
+            return;
+        }
+
+        var hintGo = new GameObject("EmptyHint", typeof(RectTransform));
+        hintGo.transform.SetParent(transform, false);
+        var hintRect = (RectTransform)hintGo.transform;
+        hintRect.anchorMin = new Vector2(0.5f, 0.5f);
+        hintRect.anchorMax = new Vector2(0.5f, 0.5f);
+        hintRect.pivot = new Vector2(0.5f, 0.5f);
+        hintRect.anchoredPosition = new Vector2(0f, 20f);
+        hintRect.sizeDelta = new Vector2(900f, 80f);
+
+        var tmp = hintGo.AddComponent<TextMeshProUGUI>();
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontSize = 36f;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+        UiMenuFont.Apply(tmp);
+
+        var localized = hintGo.AddComponent<LocalizedText>();
+        localized.SetKey(LocalizationKeys.LoadGameEmpty);
+        emptyHint = hintGo;
     }
 
     void OnSlotClicked(LoadGameSlotView slot)

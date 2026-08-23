@@ -227,6 +227,20 @@ MonoBehaviour:
     - "\u30AD\u30E3\u30F3\u30BB\u30EB"
     - "\uCDE8\uC18C"
     - "\u041E\u0442\u043C\u0435\u043D\u0430"
+  - key: load.empty
+    values:
+    - No saved games yet
+    - "Hen\xFCz kay\u0131tl\u0131 oyun yok"
+    - Aucune partie sauvegardee
+    - Nessuna partita salvata
+    - Noch keine Spielstande
+    - Todavia no hay partidas
+    - Ainda nao ha jogos salvos
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
   - key: load.confirm_message
     values:
     - Are you sure you want to load this game?

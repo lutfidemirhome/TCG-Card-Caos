@@ -32,7 +32,8 @@ public static class SaveFileIO
     public static string GetSavePath(string slotId) => Path.Combine(RootFolder, slotId + ".json");
     public static string GetMetaPath(string slotId) => Path.Combine(RootFolder, slotId + ".meta.json");
     public static string GetThumbnailPath(string slotId) => Path.Combine(RootFolder, slotId + ".png");
-    public static string GetBackupPath(string slotId) => Path.Combine(RootFolder, slotId + BackupSuffix);
+    public static string GetBackupPath(string slotId) => GetSavePath(slotId) + BackupSuffix;
+    public static string GetLegacyBackupPath(string slotId) => Path.Combine(RootFolder, slotId + BackupSuffix);
 
     public static string AutosaveSlotId(int index) => "autosave_" + index;
     public static string ManualSlotId(int index) => "manual_" + index;
@@ -106,7 +107,10 @@ public static class SaveFileIO
         if (TryReadValidatedSave(GetSavePath(slotId), out data, out error))
             return true;
 
-        return TryReadValidatedSave(GetBackupPath(slotId), out data, out error);
+        if (TryReadValidatedSave(GetBackupPath(slotId), out data, out error))
+            return true;
+
+        return TryReadValidatedSave(GetLegacyBackupPath(slotId), out data, out error);
     }
 
     static bool TryReadValidatedSave(string path, out GameSaveData data, out string error)
@@ -333,6 +337,7 @@ public static class SaveFileIO
         TryDelete(GetMetaPath(slotId));
         TryDelete(GetThumbnailPath(slotId));
         TryDelete(GetBackupPath(slotId));
+        TryDelete(GetLegacyBackupPath(slotId));
     }
 
     static void TryDelete(string path)

@@ -45,6 +45,27 @@ public static class GameSaveEditorMenu
         EditorUtility.RevealInFinder(SaveFileIO.RootFolder);
     }
 
+    [MenuItem("TCG Card Caos/Save/Steam Demo Checklist")]
+    public static void ShowSteamDemoChecklist()
+    {
+        SaveFileIO.CacheRootOnMainThread();
+        string message =
+            "Demo'yu sonra komple yapacaksın. O gün senin işlerin:\n\n"
+            + "1. Steamworks'te ayrı Demo App ID al. Full ile aynı ID kullanma.\n"
+            + "2. Sadece demo build'de Player Settings → Scripting Define Symbols'a TCG_DEMO yaz. Full build'e yazma.\n"
+            + "3. İstersen Steam Cloud Auto-Cloud bağla.\n"
+            + "   Demo klasör: .../TCGCardChaos_Demo/\n"
+            + "   Full klasör: .../TCGCardChaos/\n"
+            + "   Dosyalar: *.json, *.meta.json, *.png, manifest.json\n"
+            + "4. Steamworks SDK (overlay, achievement) save'den ayrı. Save için şart değil.\n"
+            + "5. İstersen demo product name: TCG Card Caos Demo\n\n"
+            + "Şu an variant: " + GameBuildVariant.Current
+            + "\nKayıt klasörü: " + SaveFileIO.RootFolder;
+
+        EditorUtility.DisplayDialog("Steam Demo — senin işlerin", message, "Tamam");
+        Debug.Log("[Save] Steam Demo checklist\n" + message);
+    }
+
     [MenuItem("TCG Card Caos/Save/List Slots")]
     public static void ListSlots()
     {

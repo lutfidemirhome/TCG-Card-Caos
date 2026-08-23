@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// </summary>
 public class SaveGamePanelView : MonoBehaviour
 {
-    const int EmptySlotRows = 30;
+    int EmptySlotRows => GameSaveStore.ManualSlotCount;
     const string ConfirmRootName = "Panel_SaveConfirm";
     const float SpinnerSpeed = 220f;
     const float MinSavingHintSeconds = 1.25f;
@@ -170,6 +170,10 @@ public class SaveGamePanelView : MonoBehaviour
 
         ApplyDeleteHint();
         EnsureSavingHint();
+
+        Transform leftoverEmpty = transform.Find("EmptyHint");
+        if (leftoverEmpty != null)
+            leftoverEmpty.gameObject.SetActive(false);
 
         Transform confirmRoot = transform.Find(ConfirmRootName);
         if (confirmRoot == null)
@@ -613,7 +617,7 @@ public class SaveGamePanelView : MonoBehaviour
         if (confirm != null)
             confirm.name = ConfirmRootName;
 
-        SaveSlotListLayout.EnsureRows(clone.transform, EmptySlotRows + GameSaveSettings.AutosaveSlotCount);
+        SaveSlotListLayout.EnsureRows(clone.transform, GameSaveStore.ManualSlotCount + GameSaveSettings.AutosaveSlotCount);
         EnsureDressingSlots(clone.transform);
 
         var saveView = clone.GetComponent<SaveGamePanelView>();
