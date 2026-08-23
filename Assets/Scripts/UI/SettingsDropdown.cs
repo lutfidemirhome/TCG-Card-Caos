@@ -48,12 +48,43 @@ public class SettingsDropdown : MonoBehaviour
 
     public void SetOptions(string[] options, int selected, Action<int> changed)
     {
-        _options = options ?? Array.Empty<string>();
+        string[] next = options ?? Array.Empty<string>();
         _changed = changed;
-        _selected = Mathf.Clamp(selected, 0, Mathf.Max(0, _options.Length - 1));
-        RebuildOptions();
+        _selected = Mathf.Clamp(selected, 0, Mathf.Max(0, next.Length - 1));
+
+        bool same = AreSameOptions(_options, next);
+        _options = next;
+        if (!same)
+            RebuildOptions();
+
         RefreshHeader();
         Close();
+    }
+
+    /// <summary>
+    /// Updates existing option text (e.g. after a language change) without destroying the list.
+    /// Destroy+recreate in the same frame left stale children and placeholder rows.
+    /// </summary>
+    public void RefreshLabels(string[] options)
+    {
+        if (options == null || options.Length != _options.Length)
+        {
+            SetOptions(options, _selected, _changed);
+            return;
+        }
+
+        _options = options;
+        RefreshHeader();
+        if (content == null)
+            return;
+
+        int count = Mathf.Min(content.childCount, _options.Length);
+        for (int i = 0; i < count; i++)
+        {
+            TMP_Text label = content.GetChild(i).GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+                label.text = _options[i];
+        }
     }
 
     public void SetSelected(int index, bool notify)
@@ -130,13 +161,7 @@ public class SettingsDropdown : MonoBehaviour
             return;
 
         for (int i = content.childCount - 1; i >= 0; i--)
-        {
-            GameObject child = content.GetChild(i).gameObject;
-            if (Application.isPlaying)
-                Destroy(child);
-            else
-                DestroyImmediate(child);
-        }
+            DestroyImmediate(content.GetChild(i).gameObject);
 
         for (int i = 0; i < _options.Length; i++)
         {
@@ -190,5 +215,21 @@ public class SettingsDropdown : MonoBehaviour
             return;
 
         headerLabel.text = _options.Length == 0 ? string.Empty : _options[_selected];
+    }
+
+    static bool AreSameOptions(string[] current, string[] next)
+    {
+        if (current == next)
+            return true;
+        if (current == null || next == null || current.Length != next.Length)
+            return false;
+
+        for (int i = 0; i < current.Length; i++)
+        {
+            if (current[i] != next[i])
+                return false;
+        }
+
+        return true;
     }
 }

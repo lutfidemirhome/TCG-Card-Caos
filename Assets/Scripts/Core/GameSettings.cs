@@ -128,15 +128,41 @@ public static class GameSettings
     static void Apply(Snapshot snapshot, bool persist)
     {
         Localization.SetLanguage(snapshot.language);
-        QualitySettings.SetQualityLevel(ToQualityLevel(snapshot.quality), applyExpensiveChanges: true);
-        Screen.fullScreen = snapshot.fullscreen;
-        Screen.SetResolution(snapshot.width, snapshot.height, snapshot.fullscreen);
+        ApplyQualityIfNeeded(snapshot.quality);
+        ApplyDisplayIfNeeded(snapshot);
         AudioListener.volume = snapshot.masterVolume;
         GameAudioSettings.SetMusicVolume(snapshot.musicVolume);
         GameAudioSettings.SetSfxVolume(snapshot.sfxVolume);
         ApplyCameraFov(snapshot.fov);
         if (persist)
             WritePrefs(snapshot);
+    }
+
+    /// <summary>
+    /// Language / audio / look saves must not reload quality. <c>applyExpensiveChanges</c> rebuilds
+    /// shaders and mipmaps and is what made UI art look like placeholders and distant cards blur.
+    /// </summary>
+    static void ApplyQualityIfNeeded(QualityTier quality)
+    {
+        int level = ToQualityLevel(quality);
+        if (QualitySettings.GetQualityLevel() == level)
+            return;
+
+        QualitySettings.SetQualityLevel(level, applyExpensiveChanges: true);
+    }
+
+    /// <summary>
+    /// <see cref="Screen.SetResolution"/> on an unchanged mode still tears down the swapchain and
+    /// rebuilds every canvas — that is what broke Settings after a language-only Save.
+    /// </summary>
+    static void ApplyDisplayIfNeeded(Snapshot snapshot)
+    {
+        bool sizeChanged = Screen.width != snapshot.width || Screen.height != snapshot.height;
+        bool fullscreenChanged = Screen.fullScreen != snapshot.fullscreen;
+        if (!sizeChanged && !fullscreenChanged)
+            return;
+
+        Screen.SetResolution(snapshot.width, snapshot.height, snapshot.fullscreen);
     }
 
     static void EnsureLoaded()

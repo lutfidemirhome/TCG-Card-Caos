@@ -135,7 +135,7 @@ public static class CardArtSetup
         Texture2D backWorldTexture = CopyTextureWithMaxSize(
             CardArtLibrary.BackTextureAssetPath,
             ResourcesCardsFolder + "/card_back_world.png",
-            CardTextureSettings.WorldMaxSize);
+            CardTextureSettings.DetailMaxSize);
         Texture2D frontDetailTexture = CopyTextureWithMaxSize(
             CardArtLibrary.FrontTextureAssetPath,
             ResourcesCardsFolder + "/card_front_detail.png",

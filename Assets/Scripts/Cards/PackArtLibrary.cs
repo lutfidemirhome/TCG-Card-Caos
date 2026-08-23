@@ -420,6 +420,7 @@ public static class PackArtLibrary
         };
 
         CopyAlbedoTexture(source, material);
+        SharpenPackAlbedo(material);
         material.SetColor("_BaseColor", Color.white);
         material.SetColor("_Color", Color.white);
 
@@ -448,6 +449,17 @@ public static class PackArtLibrary
             destination.SetTexture("_BaseMap", source.GetTexture("_MainTex"));
         else if (source.HasProperty("_MainTex") && destination.HasProperty("_MainTex"))
             destination.SetTexture("_MainTex", source.GetTexture("_MainTex"));
+    }
+
+    static void SharpenPackAlbedo(Material material)
+    {
+        if (material == null)
+            return;
+
+        if (material.HasProperty("_BaseMap"))
+            CardArtLibrary.SharpenGroundItemTexture(material.GetTexture("_BaseMap"));
+        if (material.HasProperty("_MainTex"))
+            CardArtLibrary.SharpenGroundItemTexture(material.GetTexture("_MainTex"));
     }
 
     public static void ConfigurePackHandMaterial(Material material)

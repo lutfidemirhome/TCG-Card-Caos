@@ -77,8 +77,16 @@ public class SettingsPanelView : MonoBehaviour
 
     void OnLanguageChanged()
     {
-        if (IsOpen)
-            BindQualityOptions();
+        if (!IsOpen)
+            return;
+
+        // Labels only — do not rebuild dropdowns or touch resolution / quality.
+        _qualityDropdown?.RefreshLabels(new[]
+        {
+            Localization.Get(LocalizationKeys.SettingsQualityLow),
+            Localization.Get(LocalizationKeys.SettingsQualityMedium),
+            Localization.Get(LocalizationKeys.SettingsQualityHigh)
+        });
     }
 
     public static SettingsPanelView Ensure(Transform parent)
@@ -143,7 +151,7 @@ public class SettingsPanelView : MonoBehaviour
     {
         if (transform.Find("Panel") == null)
             Build();
-        else
+        else if (!_wired)
             BindExisting();
 
         _saved = GameSettings.Current;

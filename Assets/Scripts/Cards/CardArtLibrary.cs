@@ -189,6 +189,7 @@ public static class CardArtLibrary
                     name = "CardBackWorldMeshRuntime"
                 };
                 ApplyBackTextureUFlip(_runtimeMeshBackWorldMaterial);
+                ApplySharperGroundBackTexture(_runtimeMeshBackWorldMaterial);
                 ConfigureGroundWorldMaterial(_runtimeMeshBackWorldMaterial);
             }
 
@@ -224,6 +225,7 @@ public static class CardArtLibrary
                 enableInstancing = true,
             };
             ApplyInstancedGroundBackTextureTransform(_instancedGroundBackMaterial);
+            ApplySharperGroundBackTexture(_instancedGroundBackMaterial);
             ConfigureGroundWorldMaterial(_instancedGroundBackMaterial);
         }
 
@@ -302,10 +304,49 @@ public static class CardArtLibrary
         if (material == null || texture == null)
             return;
 
+        SharpenGroundItemTexture(texture);
         if (material.HasProperty("_BaseMap"))
             material.SetTexture("_BaseMap", texture);
         if (material.HasProperty("_MainTex"))
             material.SetTexture("_MainTex", texture);
+    }
+
+    /// <summary>
+    /// Ground cards and packs sit almost edge-on to the camera. Default aniso=1 then picks a
+    /// blurry mip a few metres out.
+    /// </summary>
+    public static void SharpenGroundItemTexture(Texture texture)
+    {
+        if (texture == null)
+            return;
+
+        if (texture.anisoLevel < 8)
+            texture.anisoLevel = 8;
+        texture.mipMapBias = -0.75f;
+    }
+
+    /// <summary>
+    /// Shared world back is baked at 512px; unique fronts stay at 2048. Use the 1024 detail
+    /// back on the floor so face-down cards match the sharpened fronts.
+    /// </summary>
+    static void ApplySharperGroundBackTexture(Material material)
+    {
+        if (material == null || _sharedBackDetailTemplate == null)
+            return;
+
+        Texture detail = _sharedBackDetailTemplate.HasProperty("_BaseMap")
+            ? _sharedBackDetailTemplate.GetTexture("_BaseMap")
+            : null;
+        if (detail == null && _sharedBackDetailTemplate.HasProperty("_MainTex"))
+            detail = _sharedBackDetailTemplate.GetTexture("_MainTex");
+        if (detail == null)
+            return;
+
+        SharpenGroundItemTexture(detail);
+        if (material.HasProperty("_BaseMap"))
+            material.SetTexture("_BaseMap", detail);
+        if (material.HasProperty("_MainTex"))
+            material.SetTexture("_MainTex", detail);
     }
 
     public static Material[] GetCardMaterials(int paletteIndex, CardTextureQuality quality = CardTextureQuality.Detail)
@@ -423,6 +464,11 @@ public static class CardArtLibrary
         ForceOpaqueSurface(material);
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
+
+        if (material.HasProperty("_BaseMap"))
+            SharpenGroundItemTexture(material.GetTexture("_BaseMap"));
+        if (material.HasProperty("_MainTex"))
+            SharpenGroundItemTexture(material.GetTexture("_MainTex"));
 
         material.renderQueue = 2501;
     }
