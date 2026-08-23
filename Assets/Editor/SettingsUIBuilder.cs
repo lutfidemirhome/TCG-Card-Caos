@@ -19,16 +19,13 @@ public static class SettingsUIBuilder
 
     static SettingsUIBuilder()
     {
-        EditorApplication.delayCall += EnsureInOpenScenes;
+        EditorApplication.delayCall += EnsureMissingPanelOnly;
     }
 
-    static void EnsureInOpenScenes()
+    static void EnsureMissingPanelOnly()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             return;
-
-        EnsureArtFolder();
-        GameObject created = null;
 
         for (int i = 0; i < SceneManager.sceneCount; i++)
         {
@@ -36,19 +33,15 @@ public static class SettingsUIBuilder
             if (!scene.isLoaded)
                 continue;
 
-            GameObject panel = EnsureInLoadedScene(scene);
-            if (panel != null)
-                created = panel;
+            if (scene.path != MenuScenePath && scene.name != "MenuScene")
+                continue;
+
+            Transform canvas = FindInSceneTransform(scene, MenuCanvasName);
+            if (canvas == null || canvas.Find(PanelName) != null)
+                return;
+
+            EnsureOnCanvas(canvas, typeof(MainMenuView), scene);
         }
-
-        if (created == null)
-            return;
-
-        Selection.activeGameObject = created;
-        EditorGUIUtility.PingObject(created);
-        Debug.Log(
-            "[SettingsUIBuilder] Hierarchy → MainMenuCanvas / Panel_Settings "
-            + "(göz kapalı). Açıp düzenle, sonra Cmd+S.");
     }
 
     [MenuItem("TCG Card Caos/UI/Add Settings Panel")]
@@ -120,10 +113,7 @@ public static class SettingsUIBuilder
 
             if (existing.Find("Panel") != null && !NeedsRebuild(existing))
             {
-                view.ApplyControlTextMaterials();
-                view.FillPreviewValues();
                 AssignHost(canvas, viewType, view);
-                EditorSceneManager.MarkSceneDirty(scene);
                 return null;
             }
         }

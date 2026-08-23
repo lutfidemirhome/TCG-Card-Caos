@@ -166,11 +166,21 @@ public class SettingsDropdown : MonoBehaviour
             textRect.offsetMax = new Vector2(-12f, -2f);
             var tmp = textGo.AddComponent<TextMeshProUGUI>();
             tmp.text = _options[i];
-            tmp.fontSize = 26f;
             tmp.alignment = TextAlignmentOptions.Left;
-            tmp.color = Color.black;
             tmp.raycastTarget = false;
-            UiMenuFont.ApplyControl(tmp);
+            if (headerLabel != null)
+            {
+                tmp.font = headerLabel.font;
+                tmp.fontSharedMaterial = headerLabel.fontSharedMaterial;
+                tmp.fontSize = headerLabel.fontSize;
+                tmp.color = headerLabel.color;
+            }
+            else
+            {
+                tmp.fontSize = 26f;
+                tmp.color = Color.white;
+                UiMenuFont.ApplyControl(tmp);
+            }
         }
     }
 

@@ -259,7 +259,6 @@ public class SettingsPanelView : MonoBehaviour
         _musicSlider = CreateSliderRow(content, "Music", LocalizationKeys.SettingsMusic, 0f, 100f, whole: true, out _musicValue, value => _draft.musicVolume = value / 100f);
         _sfxSlider = CreateSliderRow(content, "Sfx", LocalizationKeys.SettingsSfx, 0f, 100f, whole: true, out _sfxValue, value => _draft.sfxVolume = value / 100f);
         _wired = true;
-        ApplyControlTextMaterials();
         FillPreviewValues();
     }
 
@@ -304,7 +303,6 @@ public class SettingsPanelView : MonoBehaviour
         }
 
         _wired = true;
-        ApplyControlTextMaterials();
     }
 
     public void FillPreviewValues()
@@ -322,6 +320,20 @@ public class SettingsPanelView : MonoBehaviour
         RefreshControls();
     }
 
+    public void HideValueBoxImages()
+    {
+        Image[] images = GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            if (images[i] == null || images[i].gameObject.name != "ValueBox")
+                continue;
+
+            images[i].sprite = null;
+            images[i].color = Color.clear;
+            images[i].enabled = false;
+        }
+    }
+
     public void ApplyControlTextMaterials()
     {
         ApplyControlAt("Panel/Content/Row_Language/Dropdown/Value");
@@ -332,6 +344,7 @@ public class SettingsPanelView : MonoBehaviour
         ApplyControlAt("Panel/Content/Row_Master/ValueBox/Value");
         ApplyControlAt("Panel/Content/Row_Music/ValueBox/Value");
         ApplyControlAt("Panel/Content/Row_Sfx/ValueBox/Value");
+        HideValueBoxImages();
     }
 
     void ApplyControlAt(string path)
@@ -563,7 +576,7 @@ public class SettingsPanelView : MonoBehaviour
         var label = labelGo.AddComponent<TextMeshProUGUI>();
         label.alignment = TextAlignmentOptions.Left;
         label.fontSize = 26f;
-        label.color = Color.black;
+        label.color = Color.white;
         label.raycastTarget = false;
         UiMenuFont.ApplyControl(label);
 
@@ -644,7 +657,7 @@ public class SettingsPanelView : MonoBehaviour
         RectTransform row = CreateRow(parent, name);
         CreateRowLabel(row, labelKey);
 
-        var valueGo = new GameObject("ValueBox", typeof(RectTransform), typeof(Image));
+        var valueGo = new GameObject("ValueBox", typeof(RectTransform));
         valueGo.transform.SetParent(row, false);
         var valueRect = (RectTransform)valueGo.transform;
         valueRect.anchorMin = new Vector2(1f, 0.5f);
@@ -652,7 +665,6 @@ public class SettingsPanelView : MonoBehaviour
         valueRect.pivot = new Vector2(1f, 0.5f);
         valueRect.anchoredPosition = new Vector2(-286f, 0f);
         valueRect.sizeDelta = new Vector2(56f, 40f);
-        SettingsArt.Apply(valueGo.GetComponent<Image>(), SettingsArt.ValueBox, ControlColor);
 
         var valueTextGo = new GameObject("Value", typeof(RectTransform));
         valueTextGo.transform.SetParent(valueGo.transform, false);
@@ -660,7 +672,7 @@ public class SettingsPanelView : MonoBehaviour
         valueLabel = valueTextGo.AddComponent<TextMeshProUGUI>();
         valueLabel.alignment = TextAlignmentOptions.Center;
         valueLabel.fontSize = 24f;
-        valueLabel.color = Color.black;
+        valueLabel.color = Color.white;
         valueLabel.raycastTarget = false;
         UiMenuFont.ApplyControl(valueLabel);
 
