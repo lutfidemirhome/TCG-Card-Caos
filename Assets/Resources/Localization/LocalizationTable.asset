@@ -610,7 +610,7 @@ MonoBehaviour:
   - key: prompt.open_pack
     values:
     - Open Pack
-    - Paketi A\u00E7
+    - "Paketi Aç"
     - Ouvrir le pack
     - Apri pacchetto
     - Pack \xF6ffnen

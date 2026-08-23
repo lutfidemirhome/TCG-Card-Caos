@@ -44,11 +44,11 @@ public class LocalizationTable : ScriptableObject
 
         int index = (int)language;
         if (index >= 0 && index < entry.values.Length && !string.IsNullOrEmpty(entry.values[index]))
-            return entry.values[index];
+            return DecodeEscapes(entry.values[index]);
 
         int english = (int)GameLanguage.English;
         if (english < entry.values.Length && !string.IsNullOrEmpty(entry.values[english]))
-            return entry.values[english];
+            return DecodeEscapes(entry.values[english]);
 
         return key;
     }
@@ -79,6 +79,80 @@ public class LocalizationTable : ScriptableObject
     }
 
     void OnEnable() => _lookup = null;
+
+    /// <summary>
+    /// Unity YAML keeps unquoted \u00E7 / \xE7 as literal text. Decode so "Aç" shows as Aç.
+    /// </summary>
+    static string DecodeEscapes(string value)
+    {
+        if (string.IsNullOrEmpty(value) || value.IndexOf('\\') < 0)
+            return value;
+
+        var builder = new System.Text.StringBuilder(value.Length);
+        for (int i = 0; i < value.Length; i++)
+        {
+            if (value[i] != '\\' || i + 1 >= value.Length)
+            {
+                builder.Append(value[i]);
+                continue;
+            }
+
+            char code = value[i + 1];
+            if (code == 'u' && i + 5 < value.Length && TryParseHex(value, i + 2, 4, out int unit))
+            {
+                builder.Append((char)unit);
+                i += 5;
+                continue;
+            }
+
+            if (code == 'x' && i + 3 < value.Length && TryParseHex(value, i + 2, 2, out int latin))
+            {
+                builder.Append((char)latin);
+                i += 3;
+                continue;
+            }
+
+            if (code == 'n')
+            {
+                builder.Append('\n');
+                i++;
+                continue;
+            }
+
+            builder.Append(value[i]);
+        }
+
+        return builder.ToString();
+    }
+
+    static bool TryParseHex(string value, int start, int length, out int result)
+    {
+        result = 0;
+        if (start + length > value.Length)
+            return false;
+
+        for (int i = 0; i < length; i++)
+        {
+            int digit = HexValue(value[start + i]);
+            if (digit < 0)
+                return false;
+
+            result = (result << 4) | digit;
+        }
+
+        return true;
+    }
+
+    static int HexValue(char c)
+    {
+        if (c >= '0' && c <= '9')
+            return c - '0';
+        if (c >= 'a' && c <= 'f')
+            return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F')
+            return c - 'A' + 10;
+        return -1;
+    }
 
 #if UNITY_EDITOR
     /// <summary>Adds the key if missing and resizes value arrays to the current language count.</summary>
