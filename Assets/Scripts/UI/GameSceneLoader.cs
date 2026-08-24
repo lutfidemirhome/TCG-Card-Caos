@@ -146,6 +146,7 @@ public class GameSceneLoader : MonoBehaviour
 
         WelcomePopupView.CaptureFromLoadedMenu();
         DemoCompleteView.CaptureFromLoadedMenu();
+        TutorialHintView.CaptureFromLoadedMenu();
 
         ThreadPriority previousPriority = Application.backgroundLoadingPriority;
         Application.backgroundLoadingPriority = ThreadPriority.Low;

@@ -89,4 +89,8 @@ public static class LocalizationKeys
     public const string DemoCompleteTitle = "demo_complete.title";
     public const string DemoCompleteBody = "demo_complete.body";
     public const string DemoCompleteWishlist = "demo_complete.wishlist";
+
+    // In-game tutorial hints (inline <sprite name="W"> tags)
+    public const string TutorialMove = "tutorial.move";
+    public const string TutorialPickup = "tutorial.pickup";
 }

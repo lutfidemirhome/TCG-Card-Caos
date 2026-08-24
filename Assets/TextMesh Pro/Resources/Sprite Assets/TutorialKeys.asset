@@ -1,0 +1,297 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2103686
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: TextMeshPro/Sprite
+  m_Shader: {fileID: 4800000, guid: cf81c85f95fe47e1a27f6ae460cf182c, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - UNITY_UI_CLIP_RECT
+  m_InvalidKeywords: []
+  m_LightmapFlags: 5
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: b7c4e91a2d3f4a6b8c0e1f2a3b4c5d6e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _ColorMask: 15
+    - _CullMode: 0
+    - _Stencil: 0
+    - _StencilComp: 8
+    - _StencilOp: 0
+    - _StencilReadMask: 255
+    - _StencilWriteMask: 255
+    - _UseUIAlphaClip: 0
+    m_Colors:
+    - _ClipRect: {r: -32767, g: -32767, b: 32767, a: 32767}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84a92b25f83d49b9bc132d206b370281, type: 3}
+  m_Name: TutorialKeys
+  m_EditorClassIdentifier: 
+  hashCode: 1782384680
+  material: {fileID: 2103686}
+  materialHashCode: 0
+  m_Version: 1.1.0
+  m_FaceInfo:
+    m_FaceIndex: 0
+    m_FamilyName: 
+    m_StyleName: 
+    m_PointSize: 36
+    m_Scale: 1
+    m_UnitsPerEM: 0
+    m_LineHeight: 36
+    m_AscentLine: 30
+    m_CapLine: 30
+    m_MeanLine: 18
+    m_Baseline: 0
+    m_DescentLine: -6
+    m_SuperscriptOffset: 30
+    m_SuperscriptSize: 0.5
+    m_SubscriptOffset: -6
+    m_SubscriptSize: 0.5
+    m_UnderlineOffset: -3
+    m_UnderlineThickness: 1
+    m_StrikethroughOffset: 12
+    m_StrikethroughThickness: 1
+    m_TabWidth: 36
+  spriteSheet: {fileID: 2800000, guid: b7c4e91a2d3f4a6b8c0e1f2a3b4c5d6e, type: 3}
+  m_SpriteCharacterTable:
+  - m_ElementType: 2
+    m_Unicode: 57344
+    m_GlyphIndex: 0
+    m_Scale: 1
+    m_Name: W
+    m_HashCode: 87
+  - m_ElementType: 2
+    m_Unicode: 57345
+    m_GlyphIndex: 1
+    m_Scale: 1
+    m_Name: A
+    m_HashCode: 65
+  - m_ElementType: 2
+    m_Unicode: 57346
+    m_GlyphIndex: 2
+    m_Scale: 1
+    m_Name: S
+    m_HashCode: 83
+  - m_ElementType: 2
+    m_Unicode: 57347
+    m_GlyphIndex: 3
+    m_Scale: 1
+    m_Name: D
+    m_HashCode: 68
+  - m_ElementType: 2
+    m_Unicode: 57348
+    m_GlyphIndex: 4
+    m_Scale: 1
+    m_Name: E
+    m_HashCode: 69
+  - m_ElementType: 2
+    m_Unicode: 57349
+    m_GlyphIndex: 5
+    m_Scale: 1
+    m_Name: MouseLeft
+    m_HashCode: -1477293638
+  m_SpriteGlyphTable:
+  - m_Index: 0
+    m_Metrics:
+      m_Width: 36
+      m_Height: 36
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 30
+      m_HorizontalAdvance: 38
+    m_GlyphRect:
+      m_X: 0
+      m_Y: 0
+      m_Width: 75
+      m_Height: 75
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
+  - m_Index: 1
+    m_Metrics:
+      m_Width: 36
+      m_Height: 36
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 30
+      m_HorizontalAdvance: 38
+    m_GlyphRect:
+      m_X: 75
+      m_Y: 0
+      m_Width: 75
+      m_Height: 75
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
+  - m_Index: 2
+    m_Metrics:
+      m_Width: 36
+      m_Height: 36
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 30
+      m_HorizontalAdvance: 38
+    m_GlyphRect:
+      m_X: 150
+      m_Y: 0
+      m_Width: 75
+      m_Height: 75
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
+  - m_Index: 3
+    m_Metrics:
+      m_Width: 36
+      m_Height: 36
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 30
+      m_HorizontalAdvance: 38
+    m_GlyphRect:
+      m_X: 225
+      m_Y: 0
+      m_Width: 75
+      m_Height: 75
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
+  - m_Index: 4
+    m_Metrics:
+      m_Width: 36
+      m_Height: 36
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 30
+      m_HorizontalAdvance: 38
+    m_GlyphRect:
+      m_X: 300
+      m_Y: 0
+      m_Width: 75
+      m_Height: 75
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
+  - m_Index: 5
+    m_Metrics:
+      m_Width: 26
+      m_Height: 36
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 30
+      m_HorizontalAdvance: 28
+    m_GlyphRect:
+      m_X: 375
+      m_Y: 0
+      m_Width: 44
+      m_Height: 60
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
+  spriteInfoList:
+  - id: 0
+    x: 0
+    y: 0
+    width: 75
+    height: 75
+    xOffset: 0
+    yOffset: 30
+    xAdvance: 38
+    scale: 1
+    name: W
+    hashCode: 87
+    unicode: 57344
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 1
+    x: 75
+    y: 0
+    width: 75
+    height: 75
+    xOffset: 0
+    yOffset: 30
+    xAdvance: 38
+    scale: 1
+    name: A
+    hashCode: 65
+    unicode: 57345
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 2
+    x: 150
+    y: 0
+    width: 75
+    height: 75
+    xOffset: 0
+    yOffset: 30
+    xAdvance: 38
+    scale: 1
+    name: S
+    hashCode: 83
+    unicode: 57346
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 3
+    x: 225
+    y: 0
+    width: 75
+    height: 75
+    xOffset: 0
+    yOffset: 30
+    xAdvance: 38
+    scale: 1
+    name: D
+    hashCode: 68
+    unicode: 57347
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 4
+    x: 300
+    y: 0
+    width: 75
+    height: 75
+    xOffset: 0
+    yOffset: 30
+    xAdvance: 38
+    scale: 1
+    name: E
+    hashCode: 69
+    unicode: 57348
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 5
+    x: 375
+    y: 0
+    width: 44
+    height: 60
+    xOffset: 0
+    yOffset: 30
+    xAdvance: 28
+    scale: 1
+    name: MouseLeft
+    hashCode: -1477293638
+    unicode: 57349
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  fallbackSpriteAssets: []
