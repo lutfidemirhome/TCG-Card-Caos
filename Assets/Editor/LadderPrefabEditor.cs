@@ -32,6 +32,7 @@ public static class LadderPrefabEditor
         PrefabUtility.UnpackPrefabInstance(visual, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         ResetLocalTransforms(visual.transform);
         ApplyMaterialAndColliders(visual, material);
+        LadderClimb.EnsureOn(root.transform);
 
         EnsureFolder("Assets/Prefabs/Props");
         GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);

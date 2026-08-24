@@ -34,6 +34,8 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] bool lockCursorOnStart = true;
 
     CharacterController _controller;
+    LadderClimb _activeLadder;
+    float _ignoreLadderUntil;
     float _pitch;
     float _verticalVelocity;
     bool _cursorLocked;
@@ -202,6 +204,14 @@ public class FirstPersonController : MonoBehaviour
         if (TryStandUp())
             return;
 
+        if (_activeLadder != null || FindNearbyLadder() != null)
+        {
+            _activeLadder = null;
+            _ignoreLadderUntil = Time.time + 0.4f;
+            _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            return;
+        }
+
         if (!_controller.isGrounded)
             return;
 
@@ -236,6 +246,9 @@ public class FirstPersonController : MonoBehaviour
         if (input.sqrMagnitude > 1f)
             input.Normalize();
 
+        if (TryMoveOnLadder(input.x, input.z, movementLocked))
+            return;
+
         float speed = Mathf.Lerp(walkSpeed, crouchSpeed, _crouchBlend);
         Vector3 move = (transform.right * input.x + transform.forward * input.z) * speed;
 
@@ -246,6 +259,112 @@ public class FirstPersonController : MonoBehaviour
         move.y = _verticalVelocity;
 
         _controller.Move(move * Time.deltaTime);
+    }
+
+    bool TryMoveOnLadder(float inputX, float inputZ, bool movementLocked)
+    {
+        if (Time.time < _ignoreLadderUntil)
+        {
+            _activeLadder = null;
+            return false;
+        }
+
+        _activeLadder = FindNearbyLadder();
+        if (_activeLadder == null)
+            return false;
+
+        bool onDeck = _controller.isGrounded && _activeLadder.IsStandingOnDeck(transform.position);
+        bool wantsDown = inputZ < -0.1f;
+        bool wantsUp = inputZ > 0.1f;
+
+        if (onDeck && !wantsDown)
+        {
+            _activeLadder = null;
+            return false;
+        }
+
+        if (movementLocked)
+        {
+            _verticalVelocity = 0f;
+            return true;
+        }
+
+        if (IsCrouching)
+            _crouchToggled = false;
+
+        bool nearTop = _activeLadder.IsNearTop(transform.position, _controller.height);
+        bool nearBottom = _activeLadder.IsNearBottom(transform.position);
+
+        if (nearBottom && _controller.isGrounded && !wantsUp)
+        {
+            _activeLadder = null;
+            return false;
+        }
+
+        if (onDeck && wantsDown)
+            DropIntoLadderShaft();
+
+        if (nearTop && !wantsDown)
+            return MoveOffLadderTop(inputX, inputZ);
+
+        Vector3 up = _activeLadder.ClimbAxis;
+        Vector3 motion = up * (inputZ * _activeLadder.ClimbSpeed);
+        Vector3 right = Vector3.Cross(up, transform.forward);
+        if (right.sqrMagnitude < 0.01f)
+            right = Vector3.Cross(up, transform.right);
+        motion += right.normalized * (inputX * 0.85f);
+
+        if (nearBottom && wantsDown)
+        {
+            Vector3 leave = transform.right * inputX + transform.forward * inputZ;
+            leave.y = 0f;
+            if (leave.sqrMagnitude > 0.01f)
+                motion += leave.normalized * walkSpeed;
+        }
+
+        _verticalVelocity = 0f;
+        _controller.Move(motion * Time.deltaTime);
+        return true;
+    }
+
+    LadderClimb FindNearbyLadder()
+    {
+        Vector3 feet = transform.position + Vector3.up * 0.12f;
+        Vector3 chest = transform.position + Vector3.up * (_controller.height * 0.4f);
+        return LadderClimb.FindAround(chest, 0.4f)
+            ?? LadderClimb.FindAround(feet, 0.55f)
+            ?? LadderClimb.FindAround(feet + Vector3.down * 0.35f, 0.5f);
+    }
+
+    void DropIntoLadderShaft()
+    {
+        if (_activeLadder == null || !_activeLadder.IsOverShaft(transform.position))
+            return;
+
+        _controller.enabled = false;
+        transform.position += Vector3.down * 0.14f;
+        _controller.enabled = true;
+    }
+
+    bool MoveOffLadderTop(float inputX, float inputZ)
+    {
+        float previousStep = _controller.stepOffset;
+        _controller.stepOffset = Mathf.Max(previousStep, 0.6f);
+
+        Vector3 walk = (transform.right * inputX + transform.forward * inputZ) * walkSpeed;
+        if (walk.sqrMagnitude > 0.01f)
+            walk.y = 1.4f;
+        else
+            walk.y = 0f;
+
+        _verticalVelocity = 0f;
+        _controller.Move(walk * Time.deltaTime);
+        _controller.stepOffset = previousStep;
+
+        if (_controller.isGrounded)
+            _activeLadder = null;
+
+        return true;
     }
 
     void SetCursorLocked(bool locked)
