@@ -263,6 +263,8 @@ public static class FirstPersonSceneSetup
         controller.height = 1.8f;
         controller.radius = 0.3f;
         controller.center = new Vector3(0f, 0.9f, 0f);
+        controller.stepOffset = 0.4f;
+        controller.slopeLimit = 50f;
 
         player.AddComponent<FirstPersonController>();
         player.AddComponent<PlayerCardHand>();

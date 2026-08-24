@@ -2,12 +2,13 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Ladder FBX is authored lying on Z with a far pivot. Bake it upright, 2.5m,
-/// feet on the origin so a scene drop is visible.
+/// Stairs FBX is already Y-up. Bake it to 2.5 m with feet at the origin.
+/// Do not stand this mesh on end — that bake is only for the old vertical ladder.
 /// </summary>
 public class LadderMeshPostprocessor : AssetPostprocessor
 {
-    const string AssetPath = "Assets/Art/Props/Ladder/Ladder.fbx";
+    const string StairsPath = "Assets/Art/Props/Ladder/Stairs.fbx";
+    const string LegacyLadderPath = "Assets/Art/Props/Ladder/Ladder.fbx";
     const float TargetHeight = 2.5f;
 
     [InitializeOnLoadMethod]
@@ -17,27 +18,39 @@ public class LadderMeshPostprocessor : AssetPostprocessor
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
-            if (SessionState.GetBool("LadderMeshBakedV2", false))
+            if (SessionState.GetBool("LadderMeshBakedStairsV2", false))
                 return;
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(AssetPath) == null)
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(StairsPath) == null)
                 return;
-            SessionState.SetBool("LadderMeshBakedV2", true);
-            AssetDatabase.ImportAsset(AssetPath, ImportAssetOptions.ForceUpdate);
+            SessionState.SetBool("LadderMeshBakedStairsV2", true);
+            AssetDatabase.ImportAsset(StairsPath, ImportAssetOptions.ForceUpdate);
         };
     }
 
     void OnPostprocessModel(GameObject root)
     {
-        if (assetPath.Replace('\\', '/') != AssetPath)
+        string path = assetPath.Replace('\\', '/');
+        if (path == StairsPath)
+        {
+            ResetLocalTransforms(root.transform);
+            BakeMeshes(root, BakeStaircase);
             return;
+        }
 
-        ResetLocalTransforms(root.transform);
+        if (path == LegacyLadderPath)
+        {
+            ResetLocalTransforms(root.transform);
+            BakeMeshes(root, BakeUpright);
+        }
+    }
 
+    static void BakeMeshes(GameObject root, System.Action<Mesh> bake)
+    {
         MeshFilter[] filters = root.GetComponentsInChildren<MeshFilter>(true);
         for (int i = 0; i < filters.Length; i++)
         {
             if (filters[i].sharedMesh != null)
-                BakeUpright(filters[i].sharedMesh);
+                bake(filters[i].sharedMesh);
         }
     }
 
@@ -48,6 +61,23 @@ public class LadderMeshPostprocessor : AssetPostprocessor
         transform.localScale = Vector3.one;
         for (int i = 0; i < transform.childCount; i++)
             ResetLocalTransforms(transform.GetChild(i));
+    }
+
+    static void BakeStaircase(Mesh mesh)
+    {
+        Vector3[] vertices = mesh.vertices;
+        if (vertices == null || vertices.Length == 0)
+            return;
+
+        Bounds bounds = BoundsOf(vertices);
+        float height = bounds.size.y;
+        float scale = height > 0.0001f ? TargetHeight / height : 1f;
+        Vector3 shift = new Vector3(-bounds.center.x, -bounds.min.y, -bounds.min.z);
+        for (int i = 0; i < vertices.Length; i++)
+            vertices[i] = (vertices[i] + shift) * scale;
+
+        mesh.vertices = vertices;
+        mesh.RecalculateBounds();
     }
 
     static void BakeUpright(Mesh mesh)
