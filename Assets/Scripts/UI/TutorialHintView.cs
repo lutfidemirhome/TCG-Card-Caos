@@ -19,7 +19,8 @@ public class TutorialHintView : MonoBehaviour
     {
         Move = 0,
         Pickup = 1,
-        Done = 2,
+        Drop = 2,
+        Done = 3,
     }
 
     [SerializeField] GameObject root;
@@ -143,6 +144,12 @@ public class TutorialHintView : MonoBehaviour
         }
 
         if (_step == Step.Pickup && HasPickupInput())
+        {
+            AdvanceTo(Step.Drop);
+            return;
+        }
+
+        if (_step == Step.Drop && HasDropInput())
             AdvanceTo(Step.Done);
     }
 
@@ -296,6 +303,8 @@ public class TutorialHintView : MonoBehaviour
                 return LocalizationKeys.TutorialMove;
             case Step.Pickup:
                 return LocalizationKeys.TutorialPickup;
+            case Step.Drop:
+                return LocalizationKeys.TutorialDrop;
             default:
                 return null;
         }
@@ -340,6 +349,11 @@ public class TutorialHintView : MonoBehaviour
     static bool HasPickupInput()
     {
         return Input.GetKeyDown(KeyCode.E) || Input.GetMouseButtonDown(0);
+    }
+
+    static bool HasDropInput()
+    {
+        return Input.GetKeyDown(KeyCode.Q);
     }
 
     static void DiscardCarried()

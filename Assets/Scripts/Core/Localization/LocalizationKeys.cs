@@ -93,4 +93,5 @@ public static class LocalizationKeys
     // In-game tutorial hints (inline <sprite name="W"> tags)
     public const string TutorialMove = "tutorial.move";
     public const string TutorialPickup = "tutorial.pickup";
+    public const string TutorialDrop = "tutorial.drop";
 }
