@@ -188,13 +188,18 @@ public static class CardArtSetup
         {
             importer.maxTextureSize = maxTextureSize;
             importer.mipmapEnabled = true;
+            importer.textureCompression = TextureImporterCompression.Compressed;
 
             TextureImporterPlatformSettings platformSettings = importer.GetDefaultPlatformTextureSettings();
             platformSettings.maxTextureSize = maxTextureSize;
+            platformSettings.textureCompression = TextureImporterCompression.Compressed;
+            platformSettings.crunchedCompression = false;
             importer.SetPlatformTextureSettings(platformSettings);
 
             var standaloneSettings = importer.GetPlatformTextureSettings("Standalone");
             standaloneSettings.maxTextureSize = maxTextureSize;
+            standaloneSettings.textureCompression = TextureImporterCompression.Compressed;
+            standaloneSettings.crunchedCompression = false;
             standaloneSettings.overridden = true;
             importer.SetPlatformTextureSettings(standaloneSettings);
 

@@ -76,9 +76,8 @@ public static class GameSaveThumbnail
         }
         catch (System.Exception exception)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[Save] Thumbnail capture failed: " + exception.Message);
-#endif
+            if (Debug.isDebugBuild)
+                Debug.LogWarning("[Save] Thumbnail capture failed: " + exception.Message);
         }
         finally
         {
