@@ -11,22 +11,6 @@ public class LadderMeshPostprocessor : AssetPostprocessor
     const string LegacyLadderPath = "Assets/Art/Props/Ladder/Ladder.fbx";
     const float TargetHeight = 2.5f;
 
-    [InitializeOnLoadMethod]
-    static void ReimportAfterCompile()
-    {
-        EditorApplication.delayCall += () =>
-        {
-            if (EditorApplication.isPlayingOrWillChangePlaymode)
-                return;
-            if (SessionState.GetBool("LadderMeshBakedStairsV2", false))
-                return;
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(StairsPath) == null)
-                return;
-            SessionState.SetBool("LadderMeshBakedStairsV2", true);
-            AssetDatabase.ImportAsset(StairsPath, ImportAssetOptions.ForceUpdate);
-        };
-    }
-
     void OnPostprocessModel(GameObject root)
     {
         string path = assetPath.Replace('\\', '/');
