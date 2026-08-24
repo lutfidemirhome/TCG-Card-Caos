@@ -21,7 +21,8 @@ public class TutorialHintView : MonoBehaviour
         Pickup = 1,
         Drop = 2,
         Scroll = 3,
-        Done = 4,
+        Arrange = 4,
+        Done = 5,
     }
 
     [SerializeField] GameObject root;
@@ -163,6 +164,12 @@ public class TutorialHintView : MonoBehaviour
         }
 
         if (_step == Step.Scroll && HasScrollInput())
+        {
+            AdvanceTo(Step.Arrange);
+            return;
+        }
+
+        if (_step == Step.Arrange && HasArrangedMatchingRow())
             AdvanceTo(Step.Done);
     }
 
@@ -326,6 +333,8 @@ public class TutorialHintView : MonoBehaviour
                 return LocalizationKeys.TutorialDrop;
             case Step.Scroll:
                 return LocalizationKeys.TutorialScroll;
+            case Step.Arrange:
+                return LocalizationKeys.TutorialArrange;
             default:
                 return null;
         }
@@ -396,6 +405,31 @@ public class TutorialHintView : MonoBehaviour
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         return hand != null && hand.Count >= 2;
+    }
+
+    static bool HasArrangedMatchingRow()
+    {
+        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < shelves.Length; i++)
+        {
+            CardShelf shelf = shelves[i];
+            if (shelf != null && shelf.HasCompletedSeriesRow())
+                return true;
+        }
+
+        PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < cabinets.Length; i++)
+        {
+            PsaCabinet cabinet = cabinets[i];
+            if (cabinet != null && cabinet.IsComplete())
+                return true;
+        }
+
+        return false;
     }
 
     static void DiscardCarried()

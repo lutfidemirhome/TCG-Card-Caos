@@ -95,4 +95,5 @@ public static class LocalizationKeys
     public const string TutorialPickup = "tutorial.pickup";
     public const string TutorialDrop = "tutorial.drop";
     public const string TutorialScroll = "tutorial.scroll";
+    public const string TutorialArrange = "tutorial.arrange";
 }

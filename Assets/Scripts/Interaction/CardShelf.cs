@@ -350,6 +350,75 @@ public class CardShelf : MonoBehaviour, IInteractable
         return true;
     }
 
+    /// <summary>
+    /// One row is full of correctly placed cards from the same series (3 on rare, 5 on uncommon,
+    /// 10 on common). Does not require filling the whole cabinet.
+    /// </summary>
+    public bool HasCompletedSeriesRow()
+    {
+        RefreshSlotCache();
+        int needed = SlotsPerRow;
+        if (needed <= 0 || _slots.Count == 0)
+            return false;
+
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot start = _slots[i];
+            if (start == null)
+                continue;
+
+            int row = start.RowIndex;
+            bool seen = false;
+            for (int previous = 0; previous < i; previous++)
+            {
+                if (_slots[previous] != null && _slots[previous].RowIndex == row)
+                {
+                    seen = true;
+                    break;
+                }
+            }
+
+            if (seen)
+                continue;
+
+            if (IsSeriesRowComplete(row, needed))
+                return true;
+        }
+
+        return false;
+    }
+
+    bool IsSeriesRowComplete(int rowIndex, int needed)
+    {
+        int correct = 0;
+        string seriesId = null;
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || slot.RowIndex != rowIndex)
+                continue;
+
+            if (slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card == null || card.IsInHand || !IsCorrectPlacement(card, slot))
+                return false;
+
+            if (!CardShelfSeries.TryGetSeriesId(card.Definition, out string cardSeries))
+                return false;
+
+            if (seriesId == null)
+                seriesId = cardSeries;
+            else if (!string.Equals(seriesId, cardSeries, System.StringComparison.Ordinal))
+                return false;
+
+            correct++;
+        }
+
+        return seriesId != null && correct >= needed;
+    }
+
     public float SurfacePadding => surfacePadding;
 
     public bool TryRestoreCard(WorldCard card, int rowIndex, int columnIndex)
