@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public static class GameScenes
 {
+    public const string Boot = "BootScene";
     public const string MainMenu = "MenuScene";
     public const string Game = "MainScene";
 

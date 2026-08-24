@@ -48,6 +48,7 @@ public static class LocalizationKeys
 
     // Loading overlay
     public const string UiLoading = "ui.loading";
+    public const string UiLoadingDisclaimer = "ui.loading.disclaimer";
 
     // World interaction prompts
     public const string PromptPressE = "prompt.press_e";

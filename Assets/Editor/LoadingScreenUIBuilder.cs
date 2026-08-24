@@ -166,6 +166,26 @@ public static class LoadingScreenUIBuilder
         yellowImage.color = Color.white;
         yellowImage.raycastTarget = false;
 
+        RectTransform disclaimerRect = CreateUIObject("Disclaimer", panel);
+        SetCenter(disclaimerRect, new Vector2(0f, -102f), new Vector2(1720f, 118f));
+        disclaimerRect.pivot = new Vector2(0.5f, 1f);
+        var disclaimer = disclaimerRect.gameObject.AddComponent<TextMeshProUGUI>();
+        disclaimer.fontSize = 26f;
+        disclaimer.enableAutoSizing = false;
+        disclaimer.alignment = TextAlignmentOptions.Center;
+        disclaimer.overflowMode = TextOverflowModes.Overflow;
+        disclaimer.textWrappingMode = TextWrappingModes.Normal;
+        disclaimer.color = Color.white;
+        disclaimer.raycastTarget = false;
+        disclaimer.text = "This game is a work of fiction.\nAll locations, cards, and packs in the game are entirely imaginary\nand have no connection to any real places or works.";
+        TMP_FontAsset disclaimerFont = FindPreferredFont();
+        if (disclaimerFont != null)
+        {
+            disclaimer.font = disclaimerFont;
+            disclaimer.fontSharedMaterial = disclaimerFont.material;
+        }
+        disclaimerRect.gameObject.SetActive(false);
+
         RectTransform labelRect = CreateUIObject("Label", panel);
         SetBottom(labelRect, 96f, new Vector2(480f, 52f));
         var label = labelRect.gameObject.AddComponent<TextMeshProUGUI>();
@@ -237,6 +257,13 @@ public static class LoadingScreenUIBuilder
         if (spinner is RectTransform spinnerRect)
             SetBottom(spinnerRect, 188f, new Vector2(80f, 80f));
 
+        Transform disclaimer = panel.Find("Disclaimer");
+        if (disclaimer is RectTransform disclaimerRect)
+        {
+            SetCenter(disclaimerRect, new Vector2(0f, -102f), new Vector2(1720f, 118f));
+            disclaimerRect.pivot = new Vector2(0.5f, 1f);
+        }
+
         Transform label = panel.Find("Label");
         if (label is RectTransform labelRect)
             SetBottom(labelRect, 96f, new Vector2(480f, 52f));
@@ -251,7 +278,9 @@ public static class LoadingScreenUIBuilder
         Transform panel = canvas.Find("Panel_Loading");
         Transform yellow = canvas.Find("Panel_Loading/Spinner/SpinnerYellow");
         Transform label = canvas.Find("Panel_Loading/Label");
+        Transform disclaimer = canvas.Find("Panel_Loading/Disclaimer");
         TMP_Text labelText = label != null ? label.GetComponent<TMP_Text>() : null;
+        TMP_Text disclaimerText = disclaimer != null ? disclaimer.GetComponent<TMP_Text>() : null;
         if (labelText != null)
         {
             labelText.text = "Loading";
@@ -262,6 +291,7 @@ public static class LoadingScreenUIBuilder
         serialized.FindProperty("root").objectReferenceValue = panel != null ? panel.gameObject : null;
         serialized.FindProperty("spinnerYellow").objectReferenceValue = yellow as RectTransform;
         serialized.FindProperty("label").objectReferenceValue = labelText;
+        serialized.FindProperty("disclaimer").objectReferenceValue = disclaimerText;
         serialized.FindProperty("editorPreview").boolValue = true;
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }

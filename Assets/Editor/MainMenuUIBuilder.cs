@@ -1749,6 +1749,10 @@ public static class MainMenuUIBuilder
         table.EditorEnsureKey(LocalizationKeys.SaveGameSaving, "Saving", "Kaydediliyor");
         table.EditorEnsureKey(LocalizationKeys.SaveGameSaved, "Saved", "Kaydedildi");
         table.EditorEnsureKey(LocalizationKeys.UiLoading, "Loading", "Yükleniyor");
+        table.EditorEnsureKey(
+            LocalizationKeys.UiLoadingDisclaimer,
+            "This game is a work of fiction.\nAll locations, cards, and packs in the game are entirely imaginary\nand have no connection to any real places or works.",
+            "Bu oyun tamamen kurgusal bir eserdir.\nOyunda yer alan tüm mekanlar, kartlar, paketler tamamen hayal ürünüdür\nve gerçek yerler veya eserlerle hiçbir bağlantısı yoktur.");
 
         EditorUtility.SetDirty(table);
         AssetDatabase.SaveAssets();
