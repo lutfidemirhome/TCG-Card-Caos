@@ -12,6 +12,7 @@ public static class CardShelfCategories
     public const string FireCommon = "fire_common";
     public const string FireUncommon = "fire_uncommon";
     public const string FireRare = "fire_rare";
+    public const string FireElite = "fire_elite";
 
     public const string GrassCommon = "grass_common";
     public const string GrassUncommon = "grass_uncommon";
@@ -21,6 +22,7 @@ public static class CardShelfCategories
     public const string WaterCommon = "water_common";
     public const string WaterUncommon = "water_uncommon";
     public const string WaterRare = "water_rare";
+    public const string WaterElite = "water_elite";
 
     public const string FlyingCommon = "flying_common";
     public const string FlyingUncommon = "flying_uncommon";
@@ -29,6 +31,7 @@ public static class CardShelfCategories
     public const string GhostCommon = "ghost_common";
     public const string GhostUncommon = "ghost_uncommon";
     public const string GhostRare = "ghost_rare";
+    public const string GhostElite = "ghost_elite";
 
     public const string IceCommon = "ice_common";
     public const string IceUncommon = "ice_uncommon";
@@ -67,6 +70,7 @@ public static class CardShelfCategories
     public const string PsychicCommon = "psychic_common";
     public const string PsychicUncommon = "psychic_uncommon";
     public const string PsychicRare = "psychic_rare";
+    public const string PsychicElite = "psychic_elite";
 
     public const string DragonCommon = "dragon_common";
     public const string DragonUncommon = "dragon_uncommon";
@@ -76,6 +80,7 @@ public static class CardShelfCategories
     public const string LightningCommon = "lightning_common";
     public const string LightningUncommon = "lightning_uncommon";
     public const string LightningRare = "lightning_rare";
+    public const string LightningElite = "lightning_elite";
 
     public const string BugCommon = "bug_common";
     public const string BugUncommon = "bug_uncommon";
