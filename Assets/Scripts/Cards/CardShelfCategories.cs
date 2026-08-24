@@ -16,6 +16,7 @@ public static class CardShelfCategories
     public const string GrassCommon = "grass_common";
     public const string GrassUncommon = "grass_uncommon";
     public const string GrassRare = "grass_rare";
+    public const string GrassEpic = "grass_epic";
 
     public const string WaterCommon = "water_common";
     public const string WaterUncommon = "water_uncommon";
@@ -40,6 +41,7 @@ public static class CardShelfCategories
     public const string DarknessCommon = "darkness_common";
     public const string DarknessUncommon = "darkness_uncommon";
     public const string DarknessRare = "darkness_rare";
+    public const string DarknessEpic = "darkness_epic";
 
     public const string GroundCommon = "ground_common";
     public const string GroundUncommon = "ground_uncommon";
@@ -60,6 +62,7 @@ public static class CardShelfCategories
     public const string FightingCommon = "fighting_common";
     public const string FightingUncommon = "fighting_uncommon";
     public const string FightingRare = "fighting_rare";
+    public const string FightingEpic = "fighting_epic";
 
     public const string PsychicCommon = "psychic_common";
     public const string PsychicUncommon = "psychic_uncommon";
@@ -68,6 +71,7 @@ public static class CardShelfCategories
     public const string DragonCommon = "dragon_common";
     public const string DragonUncommon = "dragon_uncommon";
     public const string DragonRare = "dragon_rare";
+    public const string DragonEpic = "dragon_epic";
 
     public const string LightningCommon = "lightning_common";
     public const string LightningUncommon = "lightning_uncommon";
@@ -76,6 +80,7 @@ public static class CardShelfCategories
     public const string BugCommon = "bug_common";
     public const string BugUncommon = "bug_uncommon";
     public const string BugRare = "bug_rare";
+    public const string BugEpic = "bug_epic";
 
     public const string TrainerAlly = "trainer_ally";
     public const string TrainerEquip = "trainer_equip";
@@ -110,7 +115,7 @@ public static class CardShelfCategories
         if (string.IsNullOrWhiteSpace(categoryId))
             return DefaultSlotsPerRow;
 
-        if (categoryId.EndsWith("_uncommon"))
+        if (categoryId.EndsWith("_uncommon") || categoryId.EndsWith("_epic"))
             return 5;
 
         if (categoryId.EndsWith("_rare"))
