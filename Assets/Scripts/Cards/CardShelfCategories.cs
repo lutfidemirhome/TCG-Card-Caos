@@ -107,6 +107,8 @@ public static class CardShelfCategories
     public const string TrainerGear = "trainer_gear";
     public const string TrainerZone = "trainer_zone";
 
+    public const string AllEnergy = "all_energy";
+
     public const int MinSlotNumber = 1;
     public const int MaxSlotNumber = 10;
     public const int DefaultSlotsPerRow = 10;
