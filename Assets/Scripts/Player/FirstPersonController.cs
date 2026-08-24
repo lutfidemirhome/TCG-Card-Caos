@@ -63,7 +63,11 @@ public class FirstPersonController : MonoBehaviour
     void Start()
     {
         if (lockCursorOnStart)
-            SetCursorLocked(true);
+        {
+            _cursorLocked = true;
+            if (!GamePause.IsPaused)
+                SetCursorLocked(true);
+        }
 
         ApplySettingsFov(GameSettings.Fov);
     }

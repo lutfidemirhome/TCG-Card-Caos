@@ -45,12 +45,23 @@ public class LocalizedText : MonoBehaviour
         if (_text == null || string.IsNullOrEmpty(key))
             return;
 
-        string value = Localization.Get(key);
+        ApplyValue(Localization.Get(key));
+    }
+
+    void ApplyValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return;
+
         // Unity YAML sometimes stores literal "\n" instead of line breaks; keep lists itemized.
         value = value.Replace("\\n", "\n").Replace("\r\n", "\n");
         _text.text = uppercase
             ? GameLanguages.ToUpper(value, Localization.CurrentLanguage)
             : value;
+
+        FitTextToBounds fit = GetComponent<FitTextToBounds>();
+        if (fit != null)
+            fit.ApplyFit();
     }
 
 #if UNITY_EDITOR
@@ -65,14 +76,7 @@ public class LocalizedText : MonoBehaviour
         if (_text == null || string.IsNullOrEmpty(key))
             return;
 
-        string value = Localization.Get(key);
-        if (string.IsNullOrEmpty(value))
-            return;
-
-        value = value.Replace("\\n", "\n").Replace("\r\n", "\n");
-        _text.text = uppercase
-            ? GameLanguages.ToUpper(value, Localization.CurrentLanguage)
-            : value;
+        ApplyValue(Localization.Get(key));
     }
 #endif
 }

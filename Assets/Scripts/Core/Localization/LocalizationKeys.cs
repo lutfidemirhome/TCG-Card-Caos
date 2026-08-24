@@ -78,4 +78,9 @@ public static class LocalizationKeys
     public const string SettingsQualityLow = "settings.quality_low";
     public const string SettingsQualityMedium = "settings.quality_medium";
     public const string SettingsQualityHigh = "settings.quality_high";
+
+    // First-launch welcome popup
+    public const string WelcomeTitle = "welcome.title";
+    public const string WelcomeBody = "welcome.body";
+    public const string WelcomeStart = "welcome.start";
 }

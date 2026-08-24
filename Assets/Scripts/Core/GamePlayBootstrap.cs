@@ -21,6 +21,7 @@ static class GamePlayBootstrap
     public static void PrepareForSceneReload()
     {
         _bootstrappedSceneHandle = -1;
+        WelcomePopupView.ResetSession();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -53,6 +54,13 @@ static class GamePlayBootstrap
             return;
 
         _bootstrappedSceneHandle = scene.handle;
+
+        if (WelcomePopupView.ShouldBlockGameplay())
+        {
+            GamePause.SetPaused(true);
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
 
         CardInstancedRenderManager.BeginBulkGroundLoad();
         FloorTextureSharpener.Apply();

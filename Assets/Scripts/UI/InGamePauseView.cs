@@ -148,8 +148,13 @@ public class InGamePauseView : MonoBehaviour
 
     public void Show()
     {
+        WelcomePopupView.CoverForPause();
+
         if (root != null)
+        {
             root.SetActive(true);
+            root.transform.SetAsLastSibling();
+        }
         else
             gameObject.SetActive(true);
 
@@ -178,6 +183,13 @@ public class InGamePauseView : MonoBehaviour
     void Resume()
     {
         Hide();
+
+        if (WelcomePopupView.IsWaitingForStart)
+        {
+            WelcomePopupView.RestoreAfterPause();
+            return;
+        }
+
         GamePause.SetPaused(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;

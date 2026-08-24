@@ -144,6 +144,9 @@ public class GameSceneLoader : MonoBehaviour
         GamePlayBootstrap.PrepareForSceneReload();
         CardInstancedRenderManager.ResetGameplayReady();
 
+        if (_pendingLoadMode == GameLoadMode.NewGame)
+            WelcomePopupView.CaptureFromLoadedMenu();
+
         ThreadPriority previousPriority = Application.backgroundLoadingPriority;
         Application.backgroundLoadingPriority = ThreadPriority.Low;
 
