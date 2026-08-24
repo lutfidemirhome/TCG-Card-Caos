@@ -77,6 +77,11 @@ public static class CardShelfCategories
     public const string BugUncommon = "bug_uncommon";
     public const string BugRare = "bug_rare";
 
+    public const string TrainerAlly = "trainer_ally";
+    public const string TrainerEquip = "trainer_equip";
+    public const string TrainerGear = "trainer_gear";
+    public const string TrainerZone = "trainer_zone";
+
     public const int MinSlotNumber = 1;
     public const int MaxSlotNumber = 10;
     public const int DefaultSlotsPerRow = 10;
