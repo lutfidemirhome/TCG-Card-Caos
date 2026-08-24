@@ -132,6 +132,10 @@ public class CardShelfSlot : MonoBehaviour
         CardGroundQuery.UntrackShelfCard(card);
         card?.SetPlayerAimFocus(false);
         RefreshPreviewVisibility();
+
+        CardShelf shelf = GetComponentInParent<CardShelf>();
+        if (shelf != null)
+            CabinetSignCompleteOverlay.Refresh(shelf);
     }
 
     public void RefreshOccupancy()

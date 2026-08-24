@@ -156,6 +156,20 @@ public class CardInstancedRenderManager : MonoBehaviour
             slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
             card.RefreshShelfVisualAfterLoad();
         }
+
+        RefreshAllShelfCompleteSigns();
+    }
+
+    static void RefreshAllShelfCompleteSigns()
+    {
+        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < shelves.Length; i++)
+        {
+            if (shelves[i] != null)
+                CabinetSignCompleteOverlay.Refresh(shelves[i]);
+        }
     }
 
     static void RefreshAllPsaCabinetCardVisuals()

@@ -48,6 +48,11 @@ public class CardShelf : MonoBehaviour, IInteractable
         RefreshSlotCache();
     }
 
+    void Start()
+    {
+        CabinetSignCompleteOverlay.Refresh(this);
+    }
+
     void OnDestroy()
     {
         DestroyPlacementOutline();
@@ -597,6 +602,7 @@ public class CardShelf : MonoBehaviour, IInteractable
                 GameSaveSignals.MarkDirty();
                 if (IsComplete())
                     GameSaveSignals.NotifyMilestone();
+                CabinetSignCompleteOverlay.Refresh(this);
             });
     }
 

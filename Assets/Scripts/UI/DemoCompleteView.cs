@@ -65,7 +65,6 @@ public class DemoCompleteView : MonoBehaviour
         _carriedRoot = Object.Instantiate(panel.gameObject);
         _carriedRoot.name = PanelName;
         _carriedRoot.SetActive(false);
-        LocalizedText.FreezeAuthoredCopy(_carriedRoot);
         Object.DontDestroyOnLoad(_carriedRoot);
 
         if (src != null)
@@ -190,6 +189,7 @@ public class DemoCompleteView : MonoBehaviour
             return;
 
         root.SetActive(true);
+        LocalizedText.ApplyAll(root);
         _open = true;
         _shownThisSession = true;
         IsBlockingGameplay = true;

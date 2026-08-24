@@ -37,11 +37,16 @@ public class LocalizedText : MonoBehaviour
         Apply();
     }
 
+    public void Refresh()
+    {
+        Apply();
+    }
+
     /// <summary>
-    /// MenuScene overlays are authored in Hierarchy. Disable LocalizedText on a captured clone
-    /// so runtime does not replace the TMP the author saved.
+    /// Writes the current language into every LocalizedText under <paramref name="root"/>.
+    /// Re-enables components that were left disabled on the authored MenuScene copy.
     /// </summary>
-    public static void FreezeAuthoredCopy(GameObject root)
+    public static void ApplyAll(GameObject root)
     {
         if (root == null)
             return;
@@ -49,8 +54,12 @@ public class LocalizedText : MonoBehaviour
         LocalizedText[] labels = root.GetComponentsInChildren<LocalizedText>(true);
         for (int i = 0; i < labels.Length; i++)
         {
-            if (labels[i] != null)
-                labels[i].enabled = false;
+            LocalizedText label = labels[i];
+            if (label == null)
+                continue;
+
+            label.enabled = true;
+            label.Refresh();
         }
     }
 
