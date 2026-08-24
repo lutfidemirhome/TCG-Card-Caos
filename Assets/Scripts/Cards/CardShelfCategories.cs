@@ -39,6 +39,7 @@ public static class CardShelfCategories
     public const string IceUncommon = "ice_uncommon";
     public const string IceRare = "ice_rare";
     public const string IceMythicGold = "ice_mythic_gold";
+    public const string IcePrismElite = "ice_prism_elite";
 
     public const string SteelCommon = "steel_common";
     public const string SteelUncommon = "steel_uncommon";
@@ -49,6 +50,7 @@ public static class CardShelfCategories
     public const string DarknessUncommon = "darkness_uncommon";
     public const string DarknessRare = "darkness_rare";
     public const string DarknessEpic = "darkness_epic";
+    public const string DarknessPrismElite = "darkness_prism_elite";
 
     public const string GroundCommon = "ground_common";
     public const string GroundUncommon = "ground_uncommon";
@@ -74,11 +76,13 @@ public static class CardShelfCategories
     public const string FightingUncommon = "fighting_uncommon";
     public const string FightingRare = "fighting_rare";
     public const string FightingEpic = "fighting_epic";
+    public const string FightingPrismElite = "fighting_prism_elite";
 
     public const string PsychicCommon = "psychic_common";
     public const string PsychicUncommon = "psychic_uncommon";
     public const string PsychicRare = "psychic_rare";
     public const string PsychicElite = "psychic_elite";
+    public const string PsychicPrismElite = "psychic_prism_elite";
 
     public const string DragonCommon = "dragon_common";
     public const string DragonUncommon = "dragon_uncommon";
@@ -90,6 +94,7 @@ public static class CardShelfCategories
     public const string LightningUncommon = "lightning_uncommon";
     public const string LightningRare = "lightning_rare";
     public const string LightningElite = "lightning_elite";
+    public const string LightningPrismElite = "lightning_prism_elite";
 
     public const string BugCommon = "bug_common";
     public const string BugUncommon = "bug_uncommon";
@@ -130,7 +135,7 @@ public static class CardShelfCategories
         if (string.IsNullOrWhiteSpace(categoryId))
             return DefaultSlotsPerRow;
 
-        if (categoryId.EndsWith("_uncommon") || categoryId.EndsWith("_epic"))
+        if (categoryId.EndsWith("_uncommon") || categoryId.EndsWith("_epic") || categoryId.EndsWith("_prism_elite"))
             return 5;
 
         if (categoryId.EndsWith("_rare") || categoryId.EndsWith("_mythic_gold") || categoryId.EndsWith("_master_art"))
