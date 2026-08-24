@@ -13,6 +13,7 @@ public static class CardShelfCategories
     public const string FireUncommon = "fire_uncommon";
     public const string FireRare = "fire_rare";
     public const string FireElite = "fire_elite";
+    public const string FireMythicGold = "fire_mythic_gold";
 
     public const string GrassCommon = "grass_common";
     public const string GrassUncommon = "grass_uncommon";
@@ -27,6 +28,7 @@ public static class CardShelfCategories
     public const string FlyingCommon = "flying_common";
     public const string FlyingUncommon = "flying_uncommon";
     public const string FlyingRare = "flying_rare";
+    public const string FlyingMythicGold = "flying_mythic_gold";
 
     public const string GhostCommon = "ghost_common";
     public const string GhostUncommon = "ghost_uncommon";
@@ -36,6 +38,7 @@ public static class CardShelfCategories
     public const string IceCommon = "ice_common";
     public const string IceUncommon = "ice_uncommon";
     public const string IceRare = "ice_rare";
+    public const string IceMythicGold = "ice_mythic_gold";
 
     public const string SteelCommon = "steel_common";
     public const string SteelUncommon = "steel_uncommon";
@@ -53,6 +56,7 @@ public static class CardShelfCategories
     public const string RockCommon = "rock_common";
     public const string RockUncommon = "rock_uncommon";
     public const string RockRare = "rock_rare";
+    public const string RockMythicGold = "rock_mythic_gold";
 
     public const string PoisonCommon = "poison_common";
     public const string PoisonUncommon = "poison_uncommon";
@@ -61,6 +65,7 @@ public static class CardShelfCategories
     public const string FairyCommon = "fairy_common";
     public const string FairyUncommon = "fairy_uncommon";
     public const string FairyRare = "fairy_rare";
+    public const string FairyMythicGold = "fairy_mythic_gold";
 
     public const string FightingCommon = "fighting_common";
     public const string FightingUncommon = "fighting_uncommon";
@@ -123,7 +128,7 @@ public static class CardShelfCategories
         if (categoryId.EndsWith("_uncommon") || categoryId.EndsWith("_epic"))
             return 5;
 
-        if (categoryId.EndsWith("_rare"))
+        if (categoryId.EndsWith("_rare") || categoryId.EndsWith("_mythic_gold"))
             return 3;
 
         return DefaultSlotsPerRow;
