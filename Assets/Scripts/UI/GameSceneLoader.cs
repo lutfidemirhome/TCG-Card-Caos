@@ -147,6 +147,8 @@ public class GameSceneLoader : MonoBehaviour
         if (_pendingLoadMode == GameLoadMode.NewGame)
             WelcomePopupView.CaptureFromLoadedMenu();
 
+        DemoCompleteView.CaptureFromLoadedMenu();
+
         ThreadPriority previousPriority = Application.backgroundLoadingPriority;
         Application.backgroundLoadingPriority = ThreadPriority.Low;
 

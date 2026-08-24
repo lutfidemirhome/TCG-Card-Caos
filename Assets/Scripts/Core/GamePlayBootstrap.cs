@@ -22,6 +22,7 @@ static class GamePlayBootstrap
     {
         _bootstrappedSceneHandle = -1;
         WelcomePopupView.ResetSession();
+        DemoCompleteView.ResetSession();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

@@ -149,6 +149,7 @@ public class InGamePauseView : MonoBehaviour
     public void Show()
     {
         WelcomePopupView.CoverForPause();
+        DemoCompleteView.CoverForPause();
 
         if (root != null)
         {
@@ -187,6 +188,12 @@ public class InGamePauseView : MonoBehaviour
         if (WelcomePopupView.IsWaitingForStart)
         {
             WelcomePopupView.RestoreAfterPause();
+            return;
+        }
+
+        if (DemoCompleteView.IsBlockingGameplay)
+        {
+            DemoCompleteView.RestoreAfterPause();
             return;
         }
 

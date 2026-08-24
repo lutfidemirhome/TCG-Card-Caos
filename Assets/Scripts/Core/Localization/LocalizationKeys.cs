@@ -83,4 +83,9 @@ public static class LocalizationKeys
     public const string WelcomeTitle = "welcome.title";
     public const string WelcomeBody = "welcome.body";
     public const string WelcomeStart = "welcome.start";
+
+    // Demo complete popup
+    public const string DemoCompleteTitle = "demo_complete.title";
+    public const string DemoCompleteBody = "demo_complete.body";
+    public const string DemoCompleteWishlist = "demo_complete.wishlist";
 }
