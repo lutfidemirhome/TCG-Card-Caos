@@ -124,6 +124,18 @@ MonoBehaviour:
     m_Scale: 1
     m_Name: MouseLeft
     m_HashCode: -1477293638
+  - m_ElementType: 2
+    m_Unicode: 57351
+    m_GlyphIndex: 7
+    m_Scale: 1
+    m_Name: MouseWheelUp
+    m_HashCode: 1843229079
+  - m_ElementType: 2
+    m_Unicode: 57352
+    m_GlyphIndex: 8
+    m_Scale: 1
+    m_Name: MouseWheelDown
+    m_HashCode: 1527332864
   m_SpriteGlyphTable:
   - m_Index: 0
     m_Metrics:
@@ -230,6 +242,36 @@ MonoBehaviour:
     m_Scale: 1
     m_AtlasIndex: 0
     sprite: {fileID: 0}
+  - m_Index: 7
+    m_Metrics:
+      m_Width: 40
+      m_Height: 54
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 45
+      m_HorizontalAdvance: 44
+    m_GlyphRect:
+      m_X: 494
+      m_Y: 0
+      m_Width: 44
+      m_Height: 60
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
+  - m_Index: 8
+    m_Metrics:
+      m_Width: 40
+      m_Height: 54
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 45
+      m_HorizontalAdvance: 44
+    m_GlyphRect:
+      m_X: 538
+      m_Y: 0
+      m_Width: 44
+      m_Height: 60
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
   spriteInfoList:
   - id: 0
     x: 0
@@ -327,6 +369,34 @@ MonoBehaviour:
     name: MouseLeft
     hashCode: -1477293638
     unicode: 57349
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 7
+    x: 494
+    y: 0
+    width: 44
+    height: 60
+    xOffset: 0
+    yOffset: 45
+    xAdvance: 44
+    scale: 1
+    name: MouseWheelUp
+    hashCode: 1843229079
+    unicode: 57351
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 8
+    x: 538
+    y: 0
+    width: 44
+    height: 60
+    xOffset: 0
+    yOffset: 45
+    xAdvance: 44
+    scale: 1
+    name: MouseWheelDown
+    hashCode: 1527332864
+    unicode: 57352
     pivot: {x: 0.5, y: 0.5}
     sprite: {fileID: 0}
   fallbackSpriteAssets: []

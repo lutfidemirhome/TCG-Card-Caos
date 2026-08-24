@@ -20,7 +20,8 @@ public class TutorialHintView : MonoBehaviour
         Move = 0,
         Pickup = 1,
         Drop = 2,
-        Done = 3,
+        Scroll = 3,
+        Done = 4,
     }
 
     [SerializeField] GameObject root;
@@ -128,6 +129,12 @@ public class TutorialHintView : MonoBehaviour
             return;
         }
 
+        if (_step == Step.Drop && IsPackFlowBlockingDropHint())
+        {
+            Hide();
+            return;
+        }
+
         Show();
         RefreshLayoutIfNeeded();
 
@@ -150,6 +157,12 @@ public class TutorialHintView : MonoBehaviour
         }
 
         if (_step == Step.Drop && HasDropInput())
+        {
+            AdvanceTo(Step.Scroll);
+            return;
+        }
+
+        if (_step == Step.Scroll && HasScrollInput())
             AdvanceTo(Step.Done);
     }
 
@@ -273,6 +286,12 @@ public class TutorialHintView : MonoBehaviour
             return;
         }
 
+        if (_step == Step.Drop && IsPackFlowBlockingDropHint())
+        {
+            Hide();
+            return;
+        }
+
         ApplyStepCopy();
         if (_fitter != null)
             _fitter.Relayout();
@@ -305,6 +324,8 @@ public class TutorialHintView : MonoBehaviour
                 return LocalizationKeys.TutorialPickup;
             case Step.Drop:
                 return LocalizationKeys.TutorialDrop;
+            case Step.Scroll:
+                return LocalizationKeys.TutorialScroll;
             default:
                 return null;
         }
@@ -354,6 +375,27 @@ public class TutorialHintView : MonoBehaviour
     static bool HasDropInput()
     {
         return Input.GetKeyDown(KeyCode.Q);
+    }
+
+    static bool IsPackFlowBlockingDropHint()
+    {
+        PlayerCardHand hand = PlayerCardHand.Instance;
+        if (hand == null)
+            return false;
+
+        return hand.HasHeldPack
+               || hand.IsOpeningPack
+               || hand.IsAwaitingRevealCollect
+               || hand.IsPackOpenMovementLocked;
+    }
+
+    static bool HasScrollInput()
+    {
+        if (Mathf.Approximately(Input.mouseScrollDelta.y, 0f))
+            return false;
+
+        PlayerCardHand hand = PlayerCardHand.Instance;
+        return hand != null && hand.Count >= 2;
     }
 
     static void DiscardCarried()

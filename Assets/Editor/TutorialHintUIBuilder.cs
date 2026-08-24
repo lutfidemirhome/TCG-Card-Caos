@@ -255,6 +255,8 @@ public static class TutorialHintUIBuilder
             "e_icon.png",
             "q_icon.png",
             "mouse_left_click_icon.png",
+            "mouse_wheel_up.png",
+            "mouse_wheel_down.png",
         };
         for (int i = 0; i < names.Length; i++)
         {
