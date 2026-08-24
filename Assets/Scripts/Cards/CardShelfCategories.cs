@@ -43,6 +43,7 @@ public static class CardShelfCategories
     public const string SteelCommon = "steel_common";
     public const string SteelUncommon = "steel_uncommon";
     public const string SteelRare = "steel_rare";
+    public const string SteelMasterArt = "steel_master_art";
 
     public const string DarknessCommon = "darkness_common";
     public const string DarknessUncommon = "darkness_uncommon";
@@ -52,6 +53,7 @@ public static class CardShelfCategories
     public const string GroundCommon = "ground_common";
     public const string GroundUncommon = "ground_uncommon";
     public const string GroundRare = "ground_rare";
+    public const string GroundMasterArt = "ground_master_art";
 
     public const string RockCommon = "rock_common";
     public const string RockUncommon = "rock_uncommon";
@@ -61,6 +63,7 @@ public static class CardShelfCategories
     public const string PoisonCommon = "poison_common";
     public const string PoisonUncommon = "poison_uncommon";
     public const string PoisonRare = "poison_rare";
+    public const string PoisonMasterArt = "poison_master_art";
 
     public const string FairyCommon = "fairy_common";
     public const string FairyUncommon = "fairy_uncommon";
@@ -81,6 +84,7 @@ public static class CardShelfCategories
     public const string DragonUncommon = "dragon_uncommon";
     public const string DragonRare = "dragon_rare";
     public const string DragonEpic = "dragon_epic";
+    public const string DragonMasterArt = "dragon_master_art";
 
     public const string LightningCommon = "lightning_common";
     public const string LightningUncommon = "lightning_uncommon";
@@ -91,6 +95,7 @@ public static class CardShelfCategories
     public const string BugUncommon = "bug_uncommon";
     public const string BugRare = "bug_rare";
     public const string BugEpic = "bug_epic";
+    public const string BugMasterArt = "bug_master_art";
 
     public const string TrainerAlly = "trainer_ally";
     public const string TrainerEquip = "trainer_equip";
@@ -128,7 +133,7 @@ public static class CardShelfCategories
         if (categoryId.EndsWith("_uncommon") || categoryId.EndsWith("_epic"))
             return 5;
 
-        if (categoryId.EndsWith("_rare") || categoryId.EndsWith("_mythic_gold"))
+        if (categoryId.EndsWith("_rare") || categoryId.EndsWith("_mythic_gold") || categoryId.EndsWith("_master_art"))
             return 3;
 
         return DefaultSlotsPerRow;
