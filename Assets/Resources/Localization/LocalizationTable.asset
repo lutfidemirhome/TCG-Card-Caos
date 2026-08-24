@@ -1069,3 +1069,17 @@ MonoBehaviour:
     - "\u540C\u3058\u898B\u51FA\u3057\u306E\u6B8B\u308A\u306E\u30AB\u30FC\u30C9\u3092\u898B\u3064\u3051\u3001\u540C\u3058\u68DA\u306B\u4E26\u3079\u3066\u304F\u3060\u3055\u3044\u3002"
     - "\uAC19\uC740 \uD45C\uC9C0\uC5D0 \uC18D\uD558\uB294 \uB098\uBA38\uC9C0 \uCE74\uB4DC\uB97C \uCC3E\uC544 \uAC19\uC740 \uC120\uBC18\uC5D0 \uC815\uB9AC\uD558\uC138\uC694."
     - "\u041D\u0430\u0439\u0434\u0438 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u043A\u0430\u0440\u0442\u044B \u0441 \u0442\u0435\u043C \u0436\u0435 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u043E\u043C \u0438 \u0440\u0430\u0441\u0441\u0442\u0430\u0432\u044C \u0438\u0445 \u043D\u0430 \u043E\u0434\u043D\u043E\u0439 \u043F\u043E\u043B\u043A\u0435."
+  - key: tutorial.crouch
+    values:
+    - "Press the <sprite name=\"Shift\"> key to crouch."
+    - "E\u011Filmek i\u00E7in <sprite name=\"Shift\"> tu\u015Funa bas\u0131n."
+    - "Appuyez sur la touche <sprite name=\"Shift\"> pour vous accroupir."
+    - "Premi il tasto <sprite name=\"Shift\"> per accovacciarti."
+    - "Dr\u00FCcke die Taste <sprite name=\"Shift\">, um dich zu ducken."
+    - "Pulsa la tecla <sprite name=\"Shift\"> para agacharte."
+    - "Pressione a tecla <sprite name=\"Shift\"> para agachar."
+    - "\u6309 <sprite name=\"Shift\"> \u952E\u8E6D\u4E0B\u3002"
+    - "\u6309 <sprite name=\"Shift\"> \u9375\u8E79\u4E0B\u3002"
+    - "\u3057\u3083\u304C\u3080\u306B\u306F <sprite name=\"Shift\"> \u30AD\u30FC\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+    - "\uC219\uC774\uB824\uBA74 <sprite name=\"Shift\"> \uD0A4\uB97C \uB204\uB974\uC138\uC694."
+    - "\u041D\u0430\u0436\u043C\u0438 \u043A\u043B\u0430\u0432\u0438\u0448\u0443 <sprite name=\"Shift\">, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u0438\u0441\u0435\u0441\u0442\u044C."

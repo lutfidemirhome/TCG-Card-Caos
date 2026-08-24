@@ -136,6 +136,12 @@ MonoBehaviour:
     m_Scale: 1
     m_Name: MouseWheelDown
     m_HashCode: 1527332864
+  - m_ElementType: 2
+    m_Unicode: 57353
+    m_GlyphIndex: 9
+    m_Scale: 1
+    m_Name: Shift
+    m_HashCode: 99897088
   m_SpriteGlyphTable:
   - m_Index: 0
     m_Metrics:
@@ -272,6 +278,21 @@ MonoBehaviour:
     m_Scale: 1
     m_AtlasIndex: 0
     sprite: {fileID: 0}
+  - m_Index: 9
+    m_Metrics:
+      m_Width: 50
+      m_Height: 36
+      m_HorizontalBearingX: 0
+      m_HorizontalBearingY: 30
+      m_HorizontalAdvance: 52
+    m_GlyphRect:
+      m_X: 582
+      m_Y: 0
+      m_Width: 109
+      m_Height: 78
+    m_Scale: 1
+    m_AtlasIndex: 0
+    sprite: {fileID: 0}
   spriteInfoList:
   - id: 0
     x: 0
@@ -397,6 +418,20 @@ MonoBehaviour:
     name: MouseWheelDown
     hashCode: 1527332864
     unicode: 57352
+    pivot: {x: 0.5, y: 0.5}
+    sprite: {fileID: 0}
+  - id: 9
+    x: 582
+    y: 0
+    width: 109
+    height: 78
+    xOffset: 0
+    yOffset: 30
+    xAdvance: 52
+    scale: 1
+    name: Shift
+    hashCode: 99897088
+    unicode: 57353
     pivot: {x: 0.5, y: 0.5}
     sprite: {fileID: 0}
   fallbackSpriteAssets: []
