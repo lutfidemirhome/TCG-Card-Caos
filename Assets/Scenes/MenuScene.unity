@@ -26132,18 +26132,17 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Her \u015Fey gayet d\xFCzenliydi... ta ki Pofi ad\u0131nda bir k\xF6pek
-    ortaya \xE7\u0131kana kadar.\n\nBir g\xFCn d\u0131\u015Far\u0131daki bir kediyi
-    kovalayan Pofi, onun pe\u015Finden a\xE7\u0131k kap\u0131dan i\xE7eri dald\u0131.
-    Kedi dolaplar\u0131n aras\u0131na ka\xE7\u0131nca Pofi de pe\u015Finden ko\u015Ftu
-    ve birka\xE7 dakika i\xE7inde b\xFCt\xFCn koleksiyon birbirine girdi.\n\nDolaplar
-    devrildi ve binlerce kart her yere sa\xE7\u0131ld\u0131. Dolaplar\u0131 tekrar
-    yerlerine koymay\u0131 ba\u015Fard\u0131k ama kartlar ba\u015Fka mesele...\n\nHer
-    birinin incelenip ait oldu\u011Fu do\u011Fru yere tek tek yerle\u015Ftirilmesi
-    gerekiyor. Bunun i\xE7in de bolca sab\u0131r ve iyi bir d\xFCzenleme g\xF6z\xFC
-    laz\u0131m.\n\n\u0130\u015Fte burada sana ihtiyac\u0131m\u0131z var.\n\nT\xFCm
-    kartlar\u0131 do\u011Fru yerlerine yerle\u015Ftir ve bu kaosu yeniden d\xFCzene
-    sok!!"
+  m_text: "Her \u015Fey gayet d\xFCzenliydi... ta ki bir k\xF6pek ortaya \xE7\u0131kana
+    kadar.\n\nBir g\xFCn d\u0131\u015Far\u0131daki bir kediyi kovalayan k\xF6pek,
+    onun pe\u015Finden a\xE7\u0131k kap\u0131dan i\xE7eri dald\u0131. Kedi dolaplar\u0131n
+    aras\u0131na ka\xE7\u0131nca K\xF6pek de pe\u015Finden ko\u015Ftu ve birka\xE7
+    dakika i\xE7inde b\xFCt\xFCn koleksiyon birbirine girdi.\n\nDolaplar devrildi
+    ve binlerce kart her yere sa\xE7\u0131ld\u0131. Dolaplar\u0131 tekrar yerlerine
+    koymay\u0131 ba\u015Fard\u0131k ama kartlar ba\u015Fka mesele...\n\nHer birinin
+    incelenip ait oldu\u011Fu do\u011Fru yere tek tek yerle\u015Ftirilmesi gerekiyor.
+    Bunun i\xE7in de bolca sab\u0131r ve \xF6zen laz\u0131m.\n\n\u0130\u015Fte burada
+    sana ihtiyac\u0131m\u0131z var.\n\nT\xFCm kartlar\u0131 do\u011Fru yerlerine
+    yerle\u015Ftir ve bu kaosu yeniden d\xFCzene sok!!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 19133410948514086983d0026b2d8795, type: 2}
   m_sharedMaterial: {fileID: 1109455171129820241, guid: 19133410948514086983d0026b2d8795, type: 2}
@@ -26230,7 +26229,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1900002150}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5ac43310ecf10405889989cdba644467, type: 3}
   m_Name: 

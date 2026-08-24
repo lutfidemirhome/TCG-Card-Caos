@@ -65,6 +65,7 @@ public class DemoCompleteView : MonoBehaviour
         _carriedRoot = Object.Instantiate(panel.gameObject);
         _carriedRoot.name = PanelName;
         _carriedRoot.SetActive(false);
+        LocalizedText.FreezeAuthoredCopy(_carriedRoot);
         Object.DontDestroyOnLoad(_carriedRoot);
 
         if (src != null)

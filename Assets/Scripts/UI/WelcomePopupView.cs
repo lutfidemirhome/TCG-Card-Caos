@@ -63,6 +63,7 @@ public class WelcomePopupView : MonoBehaviour
         _carriedRoot = Object.Instantiate(panel.gameObject);
         _carriedRoot.name = PanelName;
         _carriedRoot.SetActive(false);
+        LocalizedText.FreezeAuthoredCopy(_carriedRoot);
         Object.DontDestroyOnLoad(_carriedRoot);
 
         if (src != null)
@@ -162,6 +163,7 @@ public class WelcomePopupView : MonoBehaviour
         startButton = root.transform.Find("Button_Start")?.GetComponent<Button>();
         _wired = false;
         _carriedRoot = null;
+        LocalizedText.FreezeAuthoredCopy(root);
 
         if (sceneCopy != null && sceneCopy != root)
             Destroy(sceneCopy);
@@ -172,6 +174,8 @@ public class WelcomePopupView : MonoBehaviour
         BindExisting();
         if (root == null)
             return;
+
+        LocalizedText.FreezeAuthoredCopy(root);
 
         root.SetActive(true);
         _open = true;

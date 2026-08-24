@@ -37,6 +37,23 @@ public class LocalizedText : MonoBehaviour
         Apply();
     }
 
+    /// <summary>
+    /// MenuScene overlays are authored in Hierarchy. Disable LocalizedText on a captured clone
+    /// so runtime does not replace the TMP the author saved.
+    /// </summary>
+    public static void FreezeAuthoredCopy(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        LocalizedText[] labels = root.GetComponentsInChildren<LocalizedText>(true);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            if (labels[i] != null)
+                labels[i].enabled = false;
+        }
+    }
+
     void Apply()
     {
         if (_text == null)
@@ -67,7 +84,7 @@ public class LocalizedText : MonoBehaviour
 #if UNITY_EDITOR
     void OnValidate()
     {
-        if (Application.isPlaying)
+        if (Application.isPlaying || !isActiveAndEnabled)
             return;
 
         if (_text == null)
