@@ -13353,6 +13353,7 @@ MonoBehaviour:
   root: {fileID: 920000010}
   spinnerYellow: {fileID: 920000061}
   label: {fileID: 920000072}
+  disclaimer: {fileID: 0}
   editorPreview: 1
 --- !u!1 &920000010
 GameObject:
@@ -27409,7 +27410,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u0130STEKL\u0130STES\u0130NE EKLE"
+  m_text: "\u0130STEK L\u0130STES\u0130NE EKLE"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 19133410948514086983d0026b2d8795, type: 2}
   m_sharedMaterial: {fileID: 1109455171129820241, guid: 19133410948514086983d0026b2d8795, type: 2}
@@ -27496,7 +27497,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1900004170}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5ac43310ecf10405889989cdba644467, type: 3}
   m_Name: 

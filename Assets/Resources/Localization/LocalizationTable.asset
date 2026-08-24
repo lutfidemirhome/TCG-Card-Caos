@@ -988,7 +988,7 @@ MonoBehaviour:
   - key: demo_complete.wishlist
     values:
     - "ADD TO WISHLIST"
-    - "\u0130STEKL\u0130STES\u0130NE EKLE"
+    - "\u0130STEK L\u0130STES\u0130NE EKLE"
     - "AJOUTER \u00C0 LA LISTE D'ENVIES"
     - "AGGIUNGI ALLA LISTA DEI DESIDERI"
     - "AUF DIE WUNSCHLISTE"
