@@ -28,6 +28,7 @@ public static class GameSaveRestore
         }
 
         CardScatterUtility.ClearTestCards();
+        PhysicsLevelLayout.SuspendAuthoredItemsForSaveRestore();
         yield return null;
 
         PersistentIdRegistry.RebuildWorldLookups();

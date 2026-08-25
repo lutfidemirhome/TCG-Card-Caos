@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 /// A card lying in the world. Press E to pick up into the right hand.
 /// Static world cards render through <see cref="CardInstancedRenderManager"/>; visuals/outlines spawn lazily.
 /// </summary>
+[SelectionBase]
 public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 {
     enum HandState
@@ -742,6 +743,37 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             boxCollider.isTrigger = true;
 
         ApplyWorldColliderState();
+    }
+
+    /// <summary>
+    /// Editor level-builder: shows the real card mesh and a solid BoxCollider so Grabbit can drop it.
+    /// Does not change artwork, UVs, or gameplay data.
+    /// </summary>
+    public void PrepareEditorPhysicsPlacement()
+    {
+        EnsureCardVisual();
+        ApplySolidEditorCollider();
+        if (_collider is BoxCollider boxCollider)
+            CardCollisionUtility.ApplyAuthoringWorldSize(boxCollider);
+    }
+
+    public void ApplySolidEditorCollider()
+    {
+        if (_collider == null)
+            _collider = GetComponent<Collider>();
+
+        ApplyFlatWorldCollider();
+        if (_collider is BoxCollider boxCollider)
+            boxCollider.isTrigger = false;
+
+        _worldColliderRequested = true;
+        _landingSurfaceRequested = false;
+        ApplyWorldColliderState();
+    }
+
+    public void StripEditorRigidbody()
+    {
+        RemovePhysics();
     }
 
     void ApplyFlatWorldCollider()

@@ -8,6 +8,7 @@ using UnityEngine.Rendering;
 /// Physics/orientation follow an invisible <see cref="PackCardRef"/> child that mirrors
 /// <see cref="WorldCard"/>; the imported 3D pack mesh is cosmetic only.
 /// </summary>
+[SelectionBase]
 public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighlight
 {
     public enum PackState
@@ -191,6 +192,27 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _collider = gameObject.AddComponent<BoxCollider>();
             PackFactory.ApplyFlatPackCollider(_collider);
         }
+    }
+
+    public void PrepareEditorPhysicsPlacement()
+    {
+        EnsureVisual();
+        if (_collider == null)
+            _collider = GetComponent<BoxCollider>();
+        if (_collider == null)
+            return;
+
+        PackFactory.ApplyFlatPackCollider(_collider);
+        CardCollisionUtility.ApplyAuthoringWorldSize(_collider);
+        _collider.isTrigger = false;
+        _collider.enabled = true;
+    }
+
+    public void StripEditorRigidbody()
+    {
+        Rigidbody body = GetComponent<Rigidbody>();
+        if (body != null)
+            DestroyImmediate(body);
     }
 
     void EnsureVisual()

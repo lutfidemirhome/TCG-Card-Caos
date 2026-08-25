@@ -79,6 +79,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   RichParagraph:
     m_Name: label
     m_Normal:
@@ -146,6 +147,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   RichCenter:
     m_Name: label
     m_Normal:
@@ -213,6 +215,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   RichTitle:
     m_Name: label
     m_Normal:
@@ -280,6 +283,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   BigButton:
     m_Name: button
     m_Normal:
@@ -299,7 +303,7 @@ MonoBehaviour:
     m_Focused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
+      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
     m_OnNormal:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
@@ -313,11 +317,11 @@ MonoBehaviour:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
       - {fileID: 1411127090212124673, guid: 0000000000000000d000000000000000, type: 0}
-      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
+      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
     m_OnFocused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
+      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
     m_Border:
       m_Left: 6
       m_Right: 6
@@ -351,6 +355,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   RegularButton:
     m_Name: button
     m_Normal:
@@ -370,7 +375,7 @@ MonoBehaviour:
     m_Focused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
+      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
     m_OnNormal:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
@@ -384,11 +389,11 @@ MonoBehaviour:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
       - {fileID: 1411127090212124673, guid: 0000000000000000d000000000000000, type: 0}
-      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
+      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
     m_OnFocused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
+      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
     m_Border:
       m_Left: 6
       m_Right: 6
@@ -422,6 +427,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   NumberMarginStyle:
     m_Name: textfield
     m_Normal:
@@ -491,6 +497,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   ToggleMarginStyle:
     m_Name: toggle
     m_Normal:
@@ -564,6 +571,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   MarginStyle:
     m_Name: 
     m_Normal:
@@ -631,6 +639,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   FontMarginStyleBig:
     m_Name: 
     m_Normal:
@@ -698,6 +707,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   EnumMarginStyle:
     m_Name: 
     m_Normal:
@@ -765,6 +775,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   LabelMarginStyle:
     m_Name: label
     m_Normal:
@@ -832,6 +843,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   TabStyle:
     m_Name: window
     m_Normal:
@@ -901,6 +913,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 1
+    m_IsSDF: 0
   ErrorStyle:
     m_Name: textarea
     m_Normal:
@@ -970,6 +983,7 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   LayerStyle:
     m_Name: 
     m_Normal:
@@ -1037,29 +1051,30 @@ MonoBehaviour:
     m_FixedHeight: 0
     m_StretchWidth: 1
     m_StretchHeight: 0
+    m_IsSDF: 0
   ShowStartupWindow: 0
   LastVersion: 0.0
   LimitationRange:
-    position: {x: 55.97266, y: -18.20076, z: 5.7097964}
-    size: {x: 24.677177, y: 4.053261, z: 8.692105}
+    position: {x: 5.5504966, y: 0.0907435, z: -5.802337}
+    size: {x: 2.781622, y: 2.681487, z: 2.7623758}
     GrowToSelection: 1
   DidConfigureLimitationRangeAtLeastOnce: 1
   UseAdvancedOption: 0
   UseHotKeyInPlayMode: 0
   OnlyStartOnSceneViewFocus: 0
-  ColliderGenerationMode: 1
+  ColliderGenerationMode: 0
   Speed: 1
   LayersToIgnore: 0
   ForceLayer: 0
   LayerToSwitchTo: 0
-  UseDynamicNonConvexColliders: 1
+  UseDynamicNonConvexColliders: 0
   ColliderBakingMode: 1
   MaxMeshCollidersCreated: 6
   ColliderResolution: 300000
-  velocityIterations: 10
-  solverIterations: 10
+  velocityIterations: 8
+  solverIterations: 16
   useLowQualityConvexCollidersOnSelection: 1
-  UseLimitationZone: 0
+  UseLimitationZone: 1
   Constraints: 0
   JungleLogo: {fileID: 2800000, guid: 1e021604d3033604dbbdf0af3615fbe5, type: 3}
   GetStartedArrow: {fileID: 2800000, guid: 6f19a967e55eb7a4db62b3cd08e30764, type: 3}
@@ -1087,7 +1102,7 @@ MonoBehaviour:
   useNormalFactor: 0
   MaxNormalSpeedFactor: 0.7
   debugCollisionDirection: 0
-  MaxPhysXIterationPerUpdate: 1
+  MaxPhysXIterationPerUpdate: 4
   LimitBoundSize: 1
   maxBoundAxisLength: 8.236176
   TagLimitation: 0
@@ -1099,23 +1114,23 @@ MonoBehaviour:
   StaticObjectsLayer: 0
   AlignStrength: 1
   ExtraDragForRotationMode: 100
-  GravityStrength: {x: -1.4227866e-10, y: -9.777315, z: -0.0000011655469}
-  LimitBodyVelocityInGravityMode: 0
+  GravityStrength: {x: -1.419728e-10, y: -9.756296, z: -0.0000011630412}
+  LimitBodyVelocityInGravityMode: 1
   SetGravityInDirectionOfMouse: 0
   PausePositionReajustment: 1
   ControlRotation: 1
-  MaxVelocity: 10
-  CollisionMaxVelocity: 1
-  MaxAngularVelocity: 10
-  MaxDepenetrationVelocity: 10
+  MaxVelocity: 6
+  CollisionMaxVelocity: 2
+  MaxAngularVelocity: 12
+  MaxDepenetrationVelocity: 1
   UseBoundDependantValues: 0
   CollisionMinBoundFactor: 0.3
   CollisionMaxBoundFactor: 1
   BoundVolumeForMinSpeed: 0.001
   BoundVolumeForMaxSpeed: 1
   DistanceForTeleportation: 5
-  AngularDrag: 10
-  Drag: 0
+  AngularDrag: 0.8
+  Drag: 0.25
   useCentroidRelativeTransform: 0
   resetCentroidRelativeTransformOnMouseUp: 1
   PullToOriginalRotationFactor: 1

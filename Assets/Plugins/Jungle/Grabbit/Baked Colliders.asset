@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 431810fdf3b94d799fec56c40b3d0f62, type: 3}
+  m_Name: Baked Colliders
+  m_EditorClassIdentifier: 
+  colliderMeshes:
+    defaultKey: {fileID: 0}
+    keys:
+    - {fileID: 4300000, guid: 0518c204e31ce439bafda0101313a516, type: 2}
+    - {fileID: 3660652376195365350, guid: e415b9434f8be4b8d89528e4864cedc3, type: 3}
+    - {fileID: 5688604932466114416, guid: e415b9434f8be4b8d89528e4864cedc3, type: 3}
+    - {fileID: -1421535732831175372, guid: bc4a9336d998b48029bc13830e84d020, type: 3}
+    values:
+    - maxMeshCount: 6
+      Meshes: []
+      resolution: 300000
+    - maxMeshCount: 6
+      Meshes: []
+      resolution: 300000
+    - maxMeshCount: 6
+      Meshes: []
+      resolution: 300000
+    - maxMeshCount: 6
+      Meshes: []
+      resolution: 300000

@@ -95,20 +95,30 @@ public class CardInstancedRenderManager : MonoBehaviour
                     GameSaveManager.NotifySaveRestored();
                 else
                 {
-                    yield return SpawnNewWorldRoutine();
+                    PhysicsLevelLayout.RestoreAuthoredItemsAfterFailedLoad();
+                    if (PhysicsLevelLayout.HasAuthoredPlayableItems())
+                        PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
+                    else
+                        yield return SpawnNewWorldRoutine();
                     GameSaveManager.NotifyNewGameWorldReady();
                 }
             }
             else
             {
                 Debug.LogWarning("[Save] Continue/Load requested but no valid slot was found. Starting a new scatter.");
-                yield return SpawnNewWorldRoutine();
+                if (PhysicsLevelLayout.HasAuthoredPlayableItems())
+                    PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
+                else
+                    yield return SpawnNewWorldRoutine();
                 GameSaveManager.NotifyNewGameWorldReady();
             }
         }
         else
         {
-            yield return SpawnNewWorldRoutine();
+            if (PhysicsLevelLayout.HasAuthoredPlayableItems())
+                PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
+            else
+                yield return SpawnNewWorldRoutine();
             GameSaveManager.NotifyNewGameWorldReady();
         }
 
@@ -206,14 +216,27 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     IEnumerator RegisterAllGroundCardsRoutine()
     {
-        Transform scatterRoot = GameObject.Find(CardScatterUtility.ScatterRootName)?.transform;
-        if (scatterRoot == null)
-            yield break;
-
         int processed = 0;
-        for (int i = 0; i < scatterRoot.childCount; i++)
+        Transform scatterRoot = GameObject.Find(CardScatterUtility.ScatterRootName)?.transform;
+        if (scatterRoot != null)
         {
-            WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+            for (int i = 0; i < scatterRoot.childCount; i++)
+            {
+                WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
+                if (card == null || card.IsInHand)
+                    continue;
+
+                card.RegisterForInstancedGround();
+                processed++;
+                if (processed % CardsRegisteredPerFrame == 0)
+                    yield return null;
+            }
+        }
+
+        WorldCard[] authored = PhysicsLevelLayout.CollectAuthoredWorldCards();
+        for (int i = 0; i < authored.Length; i++)
+        {
+            WorldCard card = authored[i];
             if (card == null || card.IsInHand)
                 continue;
 

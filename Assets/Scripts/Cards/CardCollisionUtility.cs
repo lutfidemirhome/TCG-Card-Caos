@@ -159,6 +159,35 @@ public static class CardCollisionUtility
         ApplyToCollider(collider);
     }
 
+    /// <summary>
+    /// Editor Grabbit Fall only. Visual mesh stays at <see cref="CardDimensions.Thickness"/> (~4 mm);
+    /// the physical box is slightly thicker so PhysX can generate contacts against a floor BoxCollider.
+    /// Bake restores <see cref="ApplyFlatWorldSize"/>.
+    /// </summary>
+    public static void ApplyAuthoringWorldSize(BoxCollider collider)
+    {
+        if (collider == null)
+            return;
+
+        ApplyToCollider(collider);
+        Vector3 size = collider.size;
+        float minAxis = Mathf.Min(size.x, size.y, size.z);
+        if (minAxis >= AuthoringColliderThickness)
+            return;
+
+        if (size.y <= size.x && size.y <= size.z)
+            size.y = AuthoringColliderThickness;
+        else if (size.x <= size.z)
+            size.x = AuthoringColliderThickness;
+        else
+            size.z = AuthoringColliderThickness;
+
+        collider.size = size;
+    }
+
+    /// <summary>~10 mm in card-local space (~13 mm at ground scale). Still a thin card, not a block.</summary>
+    public const float AuthoringColliderThickness = 0.01f;
+
     public static void ApplyUprightShelfSize(BoxCollider collider)
     {
         if (collider == null)

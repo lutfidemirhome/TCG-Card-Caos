@@ -150,6 +150,19 @@ public static class CardScatterUtility
         CardGroundStack.RebuildAll();
     }
 
+    public static List<CardDefinition> AllocateLiveGroundCards(int count)
+    {
+        List<CardDefinition> definitions = BuildScatterDefinitions(null);
+        if (definitions.Count == 0 || count <= 0)
+            return new List<CardDefinition>();
+
+        Shuffle(definitions);
+        if (count <= definitions.Count)
+            return definitions.GetRange(0, count);
+
+        return BuildScatterAssignments(count, definitions, out _);
+    }
+
     static List<CardDefinition> BuildScatterAssignments(
         int count,
         IReadOnlyList<CardDefinition> definitions,
