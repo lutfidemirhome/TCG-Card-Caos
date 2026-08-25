@@ -32,6 +32,24 @@ public static class GameProgressCounter
         }
     }
 
+    static int _lockedTotalCards = -1;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        _lockedTotalCards = -1;
+    }
+
+    public static void LockTotalFromWorld()
+    {
+        _lockedTotalCards = CountOwnedCardsLive();
+    }
+
+    public static void ClearLockedTotal()
+    {
+        _lockedTotalCards = -1;
+    }
+
     public static Snapshot Capture()
     {
         int cardsPlaced = 0;
@@ -39,7 +57,7 @@ public static class GameProgressCounter
         int cabinetsCompleted = 0;
         int totalShelves = GameHudLimits.MaxShelves;
         int totalCabinets = GameHudLimits.MaxShelves;
-        int totalCards = CountOwnedCards();
+        int totalCards = _lockedTotalCards > 0 ? _lockedTotalCards : CountOwnedCardsLive();
 
         var countedPsaRoots = new HashSet<Transform>();
 
@@ -85,7 +103,7 @@ public static class GameProgressCounter
             totalCabinets);
     }
 
-    static int CountOwnedCards()
+    static int CountOwnedCardsLive()
     {
         int total = 0;
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
@@ -103,7 +121,7 @@ public static class GameProgressCounter
         for (int i = 0; i < packs.Length; i++)
         {
             WorldBoosterPack pack = packs[i];
-            if (pack == null || pack.State == WorldBoosterPack.PackState.Opening)
+            if (pack == null)
                 continue;
 
             IReadOnlyList<CardDefinition> contents = pack.PeekPreRolledContents();

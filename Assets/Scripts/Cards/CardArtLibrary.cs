@@ -465,6 +465,11 @@ public static class CardArtLibrary
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 1f);
 
+        // One-sided instanced quads vanish when a card is slightly tilted. Two-sided draw keeps
+        // the remaining GPU-instanced cards visible from both faces.
+        if (material.HasProperty("_Cull"))
+            material.SetFloat("_Cull", (float)CullMode.Off);
+
         if (material.HasProperty("_BaseMap"))
             SharpenGroundItemTexture(material.GetTexture("_BaseMap"));
         if (material.HasProperty("_MainTex"))

@@ -22,6 +22,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     [SerializeField] BoosterPackDefinition packDefinition;
     [Tooltip("Optional imported pack model prefab. Parented on PackCardRef (invisible card proxy).")]
     [SerializeField] GameObject visualPrefab;
+    [SerializeField] int packVariantIndex = 1;
 
     const string CardRefChildName = "PackCardRef";
     const string CardProxyMeshChildName = "CardProxyMesh";
@@ -40,7 +41,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     bool _interactionHighlighted;
     bool _handSelected;
     bool _groundShowsBack;
-    int _packVariantIndex = 1;
     List<CardDefinition> _preRolledContents;
     float _packModelGroundOffsetYFaceUp;
     float _packModelGroundOffsetYFaceDown;
@@ -48,6 +48,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Vector3 _packModelCenterOffset;
     Vector3 _visualBaseScale = Vector3.one;
     int _packNativeThicknessAxis;
+    bool _hasPackNativeThicknessAxis;
     Vector3 _packOutlineSize;
     Vector3 _packOutlineCenterLocal;
     bool _hasPackOutlineBounds;
@@ -90,8 +91,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
     public int GroundStackLayer => _groundStackLayer;
     public BoosterPackDefinition Definition => packDefinition;
-    public int PackVariantIndex => _packVariantIndex;
-    public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(_packVariantIndex);
+    public int PackVariantIndex => packVariantIndex;
+    public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(packVariantIndex);
     public bool GroundShowsBack => _groundShowsBack;
     public Transform PackVisualRoot => _packModel;
     internal BoxCollider PhysCollider => _collider;
@@ -105,7 +106,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             CardDimensions.Thickness * scale * 6f,
             CardDimensions.Height * scale);
         Vector3 center = transform.position;
-        center.y = CardGroundStack.GetDrawWorldY(this) + size.y * 0.2f;
         return new Bounds(center, size);
     }
 
@@ -149,6 +149,49 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     }
 
     /// <summary>
+    /// Play-mode hook for Grabbit-authored packs: keep the scene pose, show the model, track for aim.
+    /// </summary>
+    public void RegisterForAuthoredGround()
+    {
+        if (IsInHand)
+            return;
+
+        ResolvePackVariantFromScene();
+        EnsureVisual();
+        CaptureExistingVisualLayout();
+        ApplyPackBodyCollider();
+        LiftMeshAboveFloor();
+        EnsureContentsPreRolled();
+        CardGroundStack.TrackPack(this);
+        SetGroundModelVisible(true);
+    }
+
+    void ResolvePackVariantFromScene()
+    {
+        int fromName = InferVariantIndexFromObjectName();
+        if (fromName > 0)
+            packVariantIndex = fromName;
+
+        packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
+    }
+
+    int InferVariantIndexFromObjectName()
+    {
+        string objectName = gameObject.name;
+        int separator = objectName.LastIndexOf('_');
+        if (separator < 0 || separator >= objectName.Length - 1)
+            return 0;
+
+        if (!int.TryParse(objectName.Substring(separator + 1), out int index))
+            return 0;
+
+        if (index < 1 || index > PackArtLibrary.PackVariantCount)
+            return 0;
+
+        return index;
+    }
+
+    /// <summary>
     /// Moves the pack and drags its physics body along — see <see cref="WorldCard.SetGroundRestPosition"/>
     /// for why the transform alone is not enough with Auto Sync Transforms off.
     /// </summary>
@@ -175,7 +218,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         IReadOnlyList<CardDefinition> preRolledContents = null)
     {
         packDefinition = definition;
-        _packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
+        this.packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
         _preRolledContents = preRolledContents != null && preRolledContents.Count > 0
             ? new List<CardDefinition>(preRolledContents)
             : null;
@@ -188,6 +231,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     void Awake()
     {
         CardLayers.ApplyToGameObject(gameObject);
+        ResolvePackVariantFromScene();
         _collider = GetComponent<BoxCollider>();
         if (_collider == null)
         {
@@ -199,15 +243,57 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public void PrepareEditorPhysicsPlacement()
     {
         EnsureVisual();
+        CaptureExistingVisualLayout();
         if (_collider == null)
             _collider = GetComponent<BoxCollider>();
         if (_collider == null)
             return;
 
-        PackFactory.ApplyFlatPackCollider(_collider);
+        ApplyPackBodyCollider();
         CardCollisionUtility.ApplyAuthoringWorldSize(_collider);
         _collider.isTrigger = false;
         _collider.enabled = true;
+    }
+
+    /// <summary>
+    /// Grabbit rests a card-thin collider on the floor while the 3D pack mesh is thicker,
+    /// so the model hangs under the shop floor. Lift until the mesh underside clears it.
+    /// </summary>
+    public void LiftMeshAboveFloor()
+    {
+        EnsureVisual();
+        if (_packModel == null)
+            return;
+
+        CachePackRenderers();
+        if (_packRenderers == null || _packRenderers.Length == 0)
+            return;
+
+        float lowest = float.PositiveInfinity;
+        bool any = false;
+        for (int i = 0; i < _packRenderers.Length; i++)
+        {
+            Renderer renderer = _packRenderers[i];
+            if (renderer == null || !renderer.enabled)
+                continue;
+
+            lowest = Mathf.Min(lowest, renderer.bounds.min.y);
+            any = true;
+        }
+
+        if (!any || float.IsInfinity(lowest))
+            return;
+
+        float floorY = CardFactory.GroundSurfaceY();
+        const float skin = 0.003f;
+        if (lowest >= floorY - 0.0005f)
+            return;
+
+        Vector3 position = transform.position;
+        position.y += floorY + skin - lowest;
+        transform.position = position;
+        if (_rigidbody != null)
+            _rigidbody.position = position;
     }
 
     public void StripEditorRigidbody()
@@ -356,7 +442,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _packModel = instance.transform;
             _visualBaseScale = Vector3.one;
 
-            PackArtLibrary.ApplyPackMaterials(_packModel, _packVariantIndex);
+            PackArtLibrary.ApplyPackMaterials(_packModel, packVariantIndex);
             StripVisualColliders(_packModel);
             ApplyPackModelShadowSettings();
             return;
@@ -367,11 +453,43 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     void ConfigurePackModelFromExisting()
     {
-        _visualBaseScale = Vector3.one;
-
-        PackArtLibrary.ApplyPackMaterials(_packModel, _packVariantIndex);
+        PackArtLibrary.ApplyPackMaterials(_packModel, packVariantIndex);
         StripVisualColliders(_packModel);
         ApplyPackModelShadowSettings();
+        CaptureExistingVisualLayout();
+    }
+
+    /// <summary>
+    /// Grabbit / scene packs already have a fitted mesh scale. Runtime fields start at
+    /// (1,1,1); hover outline used to write that back onto the model and shrink it.
+    /// </summary>
+    void CaptureExistingVisualLayout()
+    {
+        if (_packModel == null)
+            return;
+
+        Vector3 existingScale = _packModel.localScale;
+        if (existingScale.sqrMagnitude > 0.000001f)
+            _visualBaseScale = existingScale;
+
+        _packModelCenterOffset = _packModel.localPosition;
+        CapturePackBodyThicknessFromCurrentPose();
+        if (_cardRef != null
+            && TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
+        {
+            GetFootprintAxes(max - min, out int thicknessAxis, out _, out _);
+            _packNativeThicknessAxis = thicknessAxis;
+            _hasPackNativeThicknessAxis = true;
+        }
+    }
+
+    void CapturePackBodyThicknessFromCurrentPose()
+    {
+        if (_packModel == null)
+            return;
+
+        if (TryMeasureRendererBoundsInLocalSpace(transform, _packModel, out Vector3 min, out Vector3 max))
+            _packBodyThickness = Mathf.Max(CardDimensions.Thickness, max.y - min.y);
     }
 
     void ApplyWorldVisualOrientation(bool alignPackModelToGround = true)
@@ -475,14 +593,33 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (!UsesHandThinPackProfile())
             return _visualBaseScale;
 
-        float worldMultiplier = PackVisualSettings.GetThicknessFitMultiplierOrDefault();
+        EnsurePackThicknessAxis();
         float handMultiplier = PackVisualSettings.GetHeldThicknessFitMultiplierOrDefault();
-        if (Mathf.Approximately(worldMultiplier, 0f))
+        float worldRatio = _packBodyThickness > CardDimensions.Thickness
+            ? _packBodyThickness / CardDimensions.Thickness
+            : PackVisualSettings.GetThicknessFitMultiplierOrDefault();
+        if (worldRatio <= 0.0001f)
             return _visualBaseScale;
 
         Vector3 scale = _visualBaseScale;
-        scale[_packNativeThicknessAxis] *= handMultiplier / worldMultiplier;
+        scale[_packNativeThicknessAxis] *= handMultiplier / worldRatio;
         return scale;
+    }
+
+    void EnsurePackThicknessAxis()
+    {
+        if (_hasPackNativeThicknessAxis)
+            return;
+
+        if (_cardRef == null || _packModel == null)
+            return;
+
+        if (!TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
+            return;
+
+        GetFootprintAxes(max - min, out int thicknessAxis, out _, out _);
+        _packNativeThicknessAxis = thicknessAxis;
+        _hasPackNativeThicknessAxis = true;
     }
 
     /// <summary>
@@ -508,6 +645,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         Vector3 cardSize = GetCardMeshSizeInCardRefLocalSpace();
         GetFootprintAxes(nativeSize, out int nativeThickness, out _, out _);
         _packNativeThicknessAxis = nativeThickness;
+        _hasPackNativeThicknessAxis = true;
         _visualBaseScale = ComputeCardFootprintScale(nativeSize, cardSize);
 
         _packModel.localScale = _visualBaseScale;
@@ -534,7 +672,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_cardRef == null || _packModel == null)
             return;
 
-        ApplyPackModelProbePose();
         if (!TryMeasureMeshBoundsInLocalSpace(_cardRef, _packModel, out Vector3 min, out Vector3 max))
             return;
 
@@ -908,7 +1045,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             if (useHandMaterials)
                 EnsureLiveHandMaterials(renderer);
             else
-                PackArtLibrary.ApplyPackMaterials(renderer, _packVariantIndex, forHand: false);
+                PackArtLibrary.ApplyPackMaterials(renderer, packVariantIndex, forHand: false);
         }
 
         ApplyPackRendererVisibility();
@@ -923,7 +1060,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_liveHandMaterialsByRenderer.ContainsKey(rendererId))
             return;
 
-        Material[] instances = PackArtLibrary.CreatePackHandMaterialInstances(renderer, _packVariantIndex);
+        Material[] instances = PackArtLibrary.CreatePackHandMaterialInstances(renderer, packVariantIndex);
         if (instances != null)
             _liveHandMaterialsByRenderer[rendererId] = instances;
     }
@@ -1399,36 +1536,55 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         }
     }
 
+    static List<CardDefinition> _cachedDefaultPool;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetPackContentCache()
+    {
+        _cachedDefaultPool = null;
+    }
+
     public IReadOnlyList<CardDefinition> RollContents(int count)
     {
-        if (_preRolledContents != null && _preRolledContents.Count > 0)
-        {
-            int take = Mathf.Min(count, _preRolledContents.Count);
-            return _preRolledContents.GetRange(0, take);
-        }
+        EnsureContentsPreRolled(count);
+        if (_preRolledContents == null || _preRolledContents.Count == 0)
+            return new List<CardDefinition>();
+
+        int take = Mathf.Min(count, _preRolledContents.Count);
+        return _preRolledContents.GetRange(0, take);
+    }
+
+    public void EnsureContentsPreRolled(int count = CardDimensions.CardsPerBoosterPack)
+    {
+        if (_preRolledContents != null && _preRolledContents.Count >= count)
+            return;
 
         var results = new List<CardDefinition>(count);
         IReadOnlyList<CardDefinition> pool = packDefinition != null
             ? packDefinition.BuildCardPool()
-            : BuildDefaultPool();
+            : GetDefaultPool();
 
         if (pool.Count == 0)
         {
             Debug.LogWarning("WorldBoosterPack: No card definitions available for pack contents.");
-            return results;
+            _preRolledContents = results;
+            return;
         }
 
         for (int i = 0; i < count; i++)
             results.Add(pool[Random.Range(0, pool.Count)]);
 
-        return results;
+        _preRolledContents = results;
     }
 
-    static IReadOnlyList<CardDefinition> BuildDefaultPool()
+    static IReadOnlyList<CardDefinition> GetDefaultPool()
     {
-        CardCatalog.Reload();
+        if (_cachedDefaultPool != null)
+            return _cachedDefaultPool;
+
+        CardCatalog.EnsureLoaded();
         IReadOnlyList<CardDefinition> all = CardCatalog.All;
-        var pool = new List<CardDefinition>(all.Count);
+        _cachedDefaultPool = new List<CardDefinition>(all.Count);
         for (int i = 0; i < all.Count; i++)
         {
             CardDefinition definition = all[i];
@@ -1436,10 +1592,10 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
                 continue;
             if (!CardScatterUtility.IsLiveGroundCategory(definition.ShelfCategoryId))
                 continue;
-            pool.Add(definition);
+            _cachedDefaultPool.Add(definition);
         }
 
-        return pool;
+        return _cachedDefaultPool;
     }
 
     void AdvanceFlightToward(Vector3 targetWorldPos, Quaternion targetWorldRot)

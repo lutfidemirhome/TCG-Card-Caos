@@ -65,10 +65,18 @@ public static class CardCatalog
         return Mathf.Clamp(slotNumber, CardShelfCategories.MinSlotNumber, CardShelfCategories.MaxSlotNumber);
     }
 
+    public static void EnsureLoaded()
+    {
+        if (_loaded)
+            return;
+
+        LoadFromResources();
+    }
+
     public static void Reload()
     {
         _loaded = false;
-        EnsureLoaded();
+        LoadFromResources();
     }
 
     public static bool TryGetById(string definitionId, out CardDefinition definition)
@@ -92,7 +100,7 @@ public static class CardCatalog
         return ByCategorySlot.TryGetValue(new CategorySlotKey(categoryId, slotNumber), out definition);
     }
 
-    static void EnsureLoaded()
+    static void LoadFromResources()
     {
         if (_loaded)
             return;

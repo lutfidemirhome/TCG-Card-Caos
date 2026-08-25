@@ -28,6 +28,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     const int ShelfPlacementFlashPulses = 2;
     const float ShelfPlacementFlashOnSeconds = 0.12f;
     const float ShelfPlacementFlashOffSeconds = 0.1f;
+    /// <summary>
+    /// Instanced ground draw is a one-sided quad. Only clearly face-up roots are safe;
+    /// tilted / face-down cards keep a two-sided mesh so they stay visible.
+    /// </summary>
+    const float InstancedFaceUpMinY = 0.72f;
 
     [SerializeField] string cardLabel = "Card";
     [SerializeField] CardDefinition definition;
@@ -48,6 +53,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     ShelfPlacementStatus _shelfPlacementStatus = ShelfPlacementStatus.None;
     Coroutine _shelfPlacementFlashRoutine;
     HandState _handState = HandState.World;
+    bool _authoredPhysicsItem;
     float _packRevealFlipT;
     Transform _handAnchor;
     bool _interactionHighlighted;
@@ -113,7 +119,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         && !_scaleTransitionActive
         && _rigidbody == null
         && _cardVisual == null
-        && !IsGroundFaceDown
+        && !_interactionHighlighted
+        && !_authoredPhysicsItem
+        && !groundShowsBack
+        && transform.up.y >= InstancedFaceUpMinY
         && GetComponentInParent<CardShelfSlot>() == null;
 
     public bool CanUseInstancedBackRendering =>
@@ -123,17 +132,25 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         && !_scaleTransitionActive
         && _rigidbody == null
         && _cardVisual == null
-        && IsGroundFaceDown
+        && !_interactionHighlighted
+        && !_authoredPhysicsItem
+        && groundShowsBack
+        && transform.up.y >= InstancedFaceUpMinY
         && GetComponentInParent<CardShelfSlot>() == null;
 
     public bool IsGroundFaceDown
     {
         get
         {
+            // PSA card-ref uses WorldVisualRotation, so visual.forward points down while the
+            // slab is face-up. Hover/refresh then applied a 180° flip and showed the back.
+            if (UsesPsaSlab)
+                return groundShowsBack || transform.up.y < 0f;
+
             if (_cardVisual != null)
                 return _cardVisual.forward.y < 0f;
 
-            return groundShowsBack;
+            return groundShowsBack || transform.up.y < 0f;
         }
     }
 
@@ -167,14 +184,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             _rigidbody.position = position;
     }
 
-    /// <summary>World center for ground-card aim tests — always matches instanced draw Y.</summary>
+    /// <summary>World center for ground-card aim tests — matches the visible card.</summary>
     public Vector3 GetGroundQueryCenter()
     {
-        Vector3 center = transform.position;
-        if (GetComponentInParent<CardShelfSlot>() == null)
-            center.y = CardGroundStack.GetDrawWorldY(this);
-
-        return center;
+        return transform.position;
     }
 
     public void SetGroundShowsBack(bool showsBack)
@@ -227,12 +240,27 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     void Awake()
     {
         _collider = GetComponent<Collider>();
+        _authoredPhysicsItem = GetComponent<PhysicsLevelItem>() != null
+            || GetComponentInParent<PhysicsLevelLayout>() != null
+            || !IsUnderScatterRoot(transform);
 
         Transform existingVisual = transform.Find("CardVisual");
         if (existingVisual != null)
             _cardVisual = existingVisual;
 
         SetWorldColliderEnabled(false);
+    }
+
+    static bool IsUnderScatterRoot(Transform t)
+    {
+        while (t != null)
+        {
+            if (t.name == CardScatterUtility.ScatterRootName)
+                return true;
+            t = t.parent;
+        }
+
+        return false;
     }
 
     void OnEnable()
@@ -295,7 +323,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             visualRotation *= Quaternion.Euler(180f, 0f, 0f);
 
         Vector3 position = transform.position;
-        position.y = CardGroundStack.GetDrawWorldY(this);
+        if (GroundStackLayer == 0)
+            position.y += CardGroundStack.GetUniqueDepthBias(this);
         return Matrix4x4.TRS(position, visualRotation, scale);
     }
 
@@ -306,9 +335,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             CardDimensions.Width * scale,
             CardDimensions.Thickness * scale * 4f,
             CardDimensions.Height * scale);
-        Vector3 center = transform.position;
-        center.y = CardGroundStack.GetDrawWorldY(this);
-        return new Bounds(center, size);
+        return new Bounds(transform.position, size);
     }
 
     public void SetWorldColliderEnabled(bool enabled)
@@ -1211,40 +1238,22 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         }
     }
 
-    /// <summary>Lightweight ground setup: no mesh, GPU instanced draw, collider off until player is near.</summary>
+    /// <summary>
+    /// Ground setup for play. Scene-authored Grabbit cards keep their mesh and world pose.
+    /// Only leftover runtime scatter cards that are clearly face-up may GPU-instance.
+    /// </summary>
     public void RegisterForInstancedGround()
     {
         if (IsInHand)
             return;
 
         CardInstancedRenderManager.EnsureExists();
-
-        if (UsesPsaSlab)
-        {
-            ReleaseInteractionOutline();
-            ReleaseHandSelectionOutline();
-            SetWorldColliderEnabled(false);
-            RefreshRenderMode();
-            CardGroundStack.Track(this);
-            return;
-        }
-
-        if (groundShowsBack)
-        {
-            EnsureCardVisual();
-            ApplyWorldVisualOrientation();
-            ReleaseInteractionOutline();
-            ReleaseShelfStatusOutline();
-            SetWorldColliderEnabled(false);
-            CardGroundStack.Track(this);
-            return;
-        }
-
-        ReleaseCardVisual();
         ReleaseInteractionOutline();
+        ReleaseHandSelectionOutline();
         ReleaseShelfStatusOutline();
         SetWorldColliderEnabled(false);
-        CardInstancedRenderManager.Instance?.Register(this);
+        RefreshRenderMode();
+        CardGroundStack.Track(this);
     }
 
     void TryRegisterInstancedRendering()

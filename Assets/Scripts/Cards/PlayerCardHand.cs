@@ -80,7 +80,7 @@ public class PlayerCardHand : MonoBehaviour
     public static PlayerCardHand Instance { get; private set; }
     public bool IsFull => OccupiedHandSlots >= CardDimensions.MaxHandSize;
     public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots();
-    public int AvailableSlots => CardDimensions.MaxHandSize - OccupiedHandSlots;
+    public int AvailableSlots => Mathf.Max(0, CardDimensions.MaxHandSize - OccupiedHandSlots);
     public int SelectedIndex => _selectedIndex;
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
     public bool HasHeldPack => CountOccupiedPackSlots() > 0;
@@ -428,7 +428,7 @@ public class PlayerCardHand : MonoBehaviour
         if (card == null || card.IsInHand || card.IsFlyingToShelf || IsHandInputLocked)
             return false;
 
-        if (IsFull)
+        if (OccupiedHandSlots >= CardDimensions.MaxHandSize)
             return false;
 
         EnsureHandAnchor();
@@ -499,8 +499,20 @@ public class PlayerCardHand : MonoBehaviour
             return;
         }
 
-        if (!_cards.Contains(card))
-            _cards.Add(card);
+        if (_cards.Contains(card))
+        {
+            if (!HasHandFanEntry(card))
+                AddHandFanEntry(new HandFanEntry { Card = card });
+            _selectedIndex = GetFanIndexForCard(card);
+            ClampSelectionIndex();
+            ApplyFanLayout();
+            return;
+        }
+
+        if (OccupiedHandSlots >= CardDimensions.MaxHandSize)
+            return;
+
+        _cards.Add(card);
 
         if (!HasHandFanEntry(card))
             AddHandFanEntry(new HandFanEntry { Card = card });
@@ -719,6 +731,9 @@ public class PlayerCardHand : MonoBehaviour
     public void AddRevealedCard(WorldCard card, float duration, float arcHeight)
     {
         if (card == null)
+            return;
+
+        if (OccupiedHandSlots >= CardDimensions.MaxHandSize && !_cards.Contains(card))
             return;
 
         EnsureHandAnchor();
@@ -983,7 +998,10 @@ public class PlayerCardHand : MonoBehaviour
             }
 
             bool isPackSelected = packSelected && pack == selectedPack;
-            HandCardPose packPose = HandFanLayout.GetPose(fanIndex, fanCount, layout, isPackSelected);
+            HandFanLayoutSettings packLayout = layout;
+            if (isPackSelected)
+                packLayout.SelectedForwardMargin += PackVisualSettings.GetHeldForwardExtraOrDefault();
+            HandCardPose packPose = HandFanLayout.GetPose(fanIndex, fanCount, packLayout, isPackSelected);
             pack.ApplyHeldPose(packPose.LocalPosition, packPose.LocalRotation, packPose.Scale);
             pack.SetHandSelected(isPackSelected);
             pack.transform.SetSiblingIndex(fanIndex);
@@ -1013,7 +1031,8 @@ public class PlayerCardHand : MonoBehaviour
         int heldCount = 0;
         for (int i = 0; i < _cards.Count; i++)
         {
-            if (_cards[i].IsHeld)
+            WorldCard card = _cards[i];
+            if (card != null && card.IsInHand)
                 heldCount++;
         }
 
@@ -1078,6 +1097,9 @@ public class PlayerCardHand : MonoBehaviour
     public bool RestoreHeldCard(WorldCard card)
     {
         if (card == null)
+            return false;
+
+        if (!_cards.Contains(card) && OccupiedHandSlots >= CardDimensions.MaxHandSize)
             return false;
 
         EnsureHandAnchor();

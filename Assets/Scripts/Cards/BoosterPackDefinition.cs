@@ -14,7 +14,7 @@ public class BoosterPackDefinition : ScriptableObject
 
     public IReadOnlyList<CardDefinition> BuildCardPool()
     {
-        CardCatalog.Reload();
+        CardCatalog.EnsureLoaded();
         var pool = new List<CardDefinition>(CardCatalog.Count);
 
         IReadOnlyList<CardDefinition> all = CardCatalog.All;

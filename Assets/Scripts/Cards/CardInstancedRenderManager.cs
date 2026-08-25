@@ -39,6 +39,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     public static void ResetGameplayReady()
     {
         IsGameplayReady = false;
+        GameProgressCounter.ClearLockedTotal();
     }
 
     public static void BeginBulkGroundLoad()
@@ -59,25 +60,12 @@ public class CardInstancedRenderManager : MonoBehaviour
         yield return null;
 
         CardArtLibrary.EnsureLoaded();
+        CardCatalog.EnsureLoaded();
         GameSaveManager.EnsureExists();
 
         GameLoadMode loadMode = GameSceneLoader.PendingLoadMode;
         string pendingSlotId = GameSceneLoader.PendingSlotId;
         bool restoreFromSave = loadMode == GameLoadMode.Continue || loadMode == GameLoadMode.LoadSlot;
-
-#if UNITY_EDITOR
-        // Editor-only convenience. Player builds always honor New Game / Continue from the menu.
-        if (!restoreFromSave && !GameSceneLoader.StartedViaMenuLoader)
-        {
-            SaveSlotMetadata latest = GameSaveManager.GetLatestValidSave();
-            if (latest != null)
-            {
-                pendingSlotId = latest.slotId;
-                restoreFromSave = true;
-                Debug.Log("[Save] Editor/direct play: restoring latest " + latest.slotId + ".");
-            }
-        }
-#endif
 
         if (restoreFromSave)
         {
@@ -96,29 +84,20 @@ public class CardInstancedRenderManager : MonoBehaviour
                 else
                 {
                     PhysicsLevelLayout.RestoreAuthoredItemsAfterFailedLoad();
-                    if (PhysicsLevelLayout.HasAuthoredPlayableItems())
-                        PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
-                    else
-                        yield return SpawnNewWorldRoutine();
+                    yield return StartAuthoredLevelRoutine();
                     GameSaveManager.NotifyNewGameWorldReady();
                 }
             }
             else
             {
-                Debug.LogWarning("[Save] Continue/Load requested but no valid slot was found. Starting a new scatter.");
-                if (PhysicsLevelLayout.HasAuthoredPlayableItems())
-                    PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
-                else
-                    yield return SpawnNewWorldRoutine();
+                Debug.LogWarning("[Save] Continue/Load requested but no valid slot was found. Using the scene level.");
+                yield return StartAuthoredLevelRoutine();
                 GameSaveManager.NotifyNewGameWorldReady();
             }
         }
         else
         {
-            if (PhysicsLevelLayout.HasAuthoredPlayableItems())
-                PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
-            else
-                yield return SpawnNewWorldRoutine();
+            yield return StartAuthoredLevelRoutine();
             GameSaveManager.NotifyNewGameWorldReady();
         }
 
@@ -131,16 +110,17 @@ public class CardInstancedRenderManager : MonoBehaviour
         RefreshAllPsaCabinetCardVisuals();
         yield return null;
 
+        WorldCard[] authoredCards = PhysicsLevelLayout.CollectAuthoredWorldCards();
+        WorldBoosterPack[] authoredPacks = PhysicsLevelLayout.CollectAuthoredWorldPacks();
         Debug.Log(
-            "TCG Card Caos: Play mode card setup complete ("
-            + (CardScatterUtility.CountScatterCards() - CardScatterUtility.CountScatterPsaCards())
-            + " ground cards + "
-            + CardScatterUtility.CountScatterPacks()
-            + " packs + "
-            + CardScatterUtility.CountScatterPsaCards()
-            + " PSA cards).");
+            "TCG Card Caos: Play mode setup complete ("
+            + authoredCards.Length
+            + " authored cards + "
+            + authoredPacks.Length
+            + " authored packs).");
 
         IsGameplayReady = true;
+        GameProgressCounter.LockTotalFromWorld();
         _playModeSetupRoutine = null;
     }
 
@@ -201,46 +181,42 @@ public class CardInstancedRenderManager : MonoBehaviour
         }
     }
 
-    IEnumerator SpawnNewWorldRoutine()
+    IEnumerator StartAuthoredLevelRoutine()
     {
-        int runtimeTarget = CardScatterUtility.ConsumeRuntimePlayScatterCount();
-        if (runtimeTarget > 0)
-        {
-            yield return CardScatterUtility.SpawnScatteredCardsAsync(runtimeTarget);
-            yield break;
-        }
-
+        // Leftover ScatteredCards from the old random spawn must not mix with the Grabbit scene.
         CardScatterUtility.ClearTestCards();
-        yield return CardScatterUtility.SpawnScatteredCardsAsync(CardScatterUtility.FullScatterCount);
+        PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
+        yield break;
     }
 
     IEnumerator RegisterAllGroundCardsRoutine()
     {
         int processed = 0;
-        Transform scatterRoot = GameObject.Find(CardScatterUtility.ScatterRootName)?.transform;
-        if (scatterRoot != null)
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < cards.Length; i++)
         {
-            for (int i = 0; i < scatterRoot.childCount; i++)
-            {
-                WorldCard card = scatterRoot.GetChild(i).GetComponent<WorldCard>();
-                if (card == null || card.IsInHand)
-                    continue;
-
-                card.RegisterForInstancedGround();
-                processed++;
-                if (processed % CardsRegisteredPerFrame == 0)
-                    yield return null;
-            }
-        }
-
-        WorldCard[] authored = PhysicsLevelLayout.CollectAuthoredWorldCards();
-        for (int i = 0; i < authored.Length; i++)
-        {
-            WorldCard card = authored[i];
+            WorldCard card = cards[i];
             if (card == null || card.IsInHand)
                 continue;
 
             card.RegisterForInstancedGround();
+            processed++;
+            if (processed % CardsRegisteredPerFrame == 0)
+                yield return null;
+        }
+
+        WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < packs.Length; i++)
+        {
+            WorldBoosterPack pack = packs[i];
+            if (pack == null || pack.IsInHand)
+                continue;
+
+            pack.RegisterForAuthoredGround();
             processed++;
             if (processed % CardsRegisteredPerFrame == 0)
                 yield return null;
@@ -496,6 +472,9 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     bool ShouldRenderPack(WorldBoosterPack pack)
     {
+        if (pack.GetComponent<PhysicsLevelItem>() != null)
+            return true;
+
         Bounds bounds = pack.GetCullBounds();
         if (!GeometryUtility.TestPlanesAABB(_frustumPlanes, bounds))
             return false;

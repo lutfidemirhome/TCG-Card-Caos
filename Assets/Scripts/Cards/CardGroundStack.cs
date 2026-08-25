@@ -303,9 +303,8 @@ public static class CardGroundStack
                 continue;
 
             card.SetGroundStackLayer(layer);
-            Vector3 position = card.transform.position;
-            position.y = GetDrawWorldY(card);
-            card.SetGroundRestPosition(position);
+            // Never rewrite world Y. The scene Grabbit pose is the shared first-play level;
+            // flattening to GroundHeightOffset() buried authored cards in the floor.
         }
     }
 
@@ -929,7 +928,10 @@ public static class CardGroundStack
             return;
         }
 
-        // Scatter / ground spawn: keep packs on the floor (layer 0), never float on card piles.
+        if (pack.GetComponent<PhysicsLevelItem>() != null)
+            return;
+
+        // Runtime scatter only: keep packs on the floor (layer 0), never float on card piles.
         pack.SetGroundStackLayer(0);
         Vector3 position = pack.transform.position;
         position.y = GetDrawWorldY(pack);

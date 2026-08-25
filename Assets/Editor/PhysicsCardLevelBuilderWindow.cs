@@ -605,6 +605,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                 Undo.RecordObject(pack, undoName);
             pack.StripEditorRigidbody();
             pack.PrepareEditorPhysicsPlacement();
+            pack.LiftMeshAboveFloor();
         }
 
         if (!string.IsNullOrEmpty(undoName))

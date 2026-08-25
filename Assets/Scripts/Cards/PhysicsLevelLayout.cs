@@ -154,6 +154,28 @@ public class PhysicsLevelLayout : MonoBehaviour
         return cards.ToArray();
     }
 
+    public static WorldBoosterPack[] CollectAuthoredWorldPacks()
+    {
+        if (_authoredSuspended)
+            return System.Array.Empty<WorldBoosterPack>();
+
+        PhysicsLevelItem[] items = Object.FindObjectsByType<PhysicsLevelItem>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        var packs = new List<WorldBoosterPack>(items.Length);
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (items[i] == null)
+                continue;
+
+            WorldBoosterPack pack = items[i].GetComponent<WorldBoosterPack>();
+            if (pack != null && !pack.IsInHand)
+                packs.Add(pack);
+        }
+
+        return packs.ToArray();
+    }
+
     public static string FormatBatchName(int index)
     {
         return BatchPrefix + index.ToString("000");

@@ -20,6 +20,7 @@ public static class GameAssetPrewarm
             return;
 
         CardArtLibrary.EnsureLoaded();
+        CardCatalog.EnsureLoaded();
         _started = true;
         _complete = true;
     }
@@ -43,7 +44,7 @@ public static class GameAssetPrewarm
     static IEnumerator PrewarmRoutine()
     {
         yield return null;
-        CardCatalog.Reload();
+        CardCatalog.EnsureLoaded();
         yield return null;
         CardArtLibrary.EnsureLoaded();
         _complete = true;
