@@ -328,6 +328,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUI.BeginDisabledGroup(folder == null || folder.childCount == 0);
         if (GUILayout.Button("Grabbit Fall"))
             ScheduleDrop(layout, layout.MainVolume, folder);
+        if (GUILayout.Button("Re-drop Packs"))
+            ScheduleDropPacks(folder);
         if (GUILayout.Button("Bake"))
             BakeFolder(folder, "Bake Mix Batch");
         EditorGUI.EndDisabledGroup();
@@ -702,6 +704,26 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     {
         var items = new List<PhysicsLevelItem>(CollectValidSelectedItems());
         EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift);
+    }
+
+    void ScheduleDropPacks(Transform folder)
+    {
+        var items = new List<PhysicsLevelItem>();
+        if (folder != null)
+        {
+            for (int i = 0; i < folder.childCount; i++)
+            {
+                Transform child = folder.GetChild(i);
+                if (child == null || child.GetComponent<WorldBoosterPack>() == null)
+                    continue;
+
+                PhysicsLevelItem item = child.GetComponent<PhysicsLevelItem>();
+                if (item != null)
+                    items.Add(item);
+            }
+        }
+
+        EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift: true);
     }
 
     void DropWithGrabbit(PhysicsLevelLayout layout, PhysicsCardSpawnVolume volume, Transform folder)
