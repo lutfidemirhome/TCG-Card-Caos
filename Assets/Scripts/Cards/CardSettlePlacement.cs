@@ -29,21 +29,8 @@ public static class CardSettlePlacement
         if (card == null)
             return true;
 
-        CardFactory.LiftAboveFloor(card.transform, body);
-
-        if (BelongsToStack(card.transform))
-        {
-            LevelOntoStackPlane(card.transform, body);
-            if (attempt == 0)
-                CardGroundStack.ApplyStackHeight(card, placeOnTop: true, maxDownwardShift: MaxDownwardSnap);
-        }
-
-        bool buried = CardCollisionUtility.ResolveRestingPenetration(card.transform, collider, card, body);
-        bool overlappingFlight = CardCollisionUtility.OverlapsOtherItem(card.transform, collider, card, body);
-        if (overlappingFlight && attempt > 0)
-            CardCollisionUtility.UnstickThrownSpawnOverlap(card.transform, collider, card, body);
-
-        return Accept(buried || overlappingFlight, body);
+        SeatOnPile(card.transform, body, collider, card, null);
+        return true;
     }
 
     /// <summary>Returns false when the item was resting inside something and needs to settle again.</summary>
@@ -57,20 +44,53 @@ public static class CardSettlePlacement
         if (!BelongsToStack(pack.transform) && IsFloorRest(pack.transform))
         {
             pack.FlattenOntoFloor();
+            CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body);
+            return true;
         }
-        else if (BelongsToStack(pack.transform))
+
+        SeatOnPile(pack.transform, body, collider, null, pack);
+        return true;
+    }
+
+    static void SeatOnPile(
+        Transform itemTransform,
+        Rigidbody body,
+        BoxCollider collider,
+        WorldCard card,
+        WorldBoosterPack pack)
+    {
+        CardFactory.LiftAboveFloor(itemTransform, body);
+
+        if (BelongsToStack(itemTransform))
         {
-            LevelOntoStackPlane(pack.transform, body);
-            if (attempt == 0)
+            LevelOntoStackPlane(itemTransform, body);
+            if (card != null)
+                CardGroundStack.ApplyStackHeight(card, placeOnTop: true, maxDownwardShift: MaxDownwardSnap);
+            else if (pack != null)
                 CardGroundStack.ApplyStackHeight(pack, placeOnTop: true, maxDownwardShift: MaxDownwardSnap);
         }
 
-        bool buried = CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body);
-        bool overlappingFlight = CardCollisionUtility.OverlapsOtherItem(pack.transform, collider, null, body);
-        if (overlappingFlight && attempt > 0)
-            CardCollisionUtility.UnstickThrownSpawnOverlap(pack.transform, collider, null, body);
+        CardCollisionUtility.ResolveRestingPenetration(itemTransform, collider, card, body);
 
-        return Accept(buried || overlappingFlight, body);
+        // Resting on a 4–5 card pile always reports a hair of PhysX overlap (contact offset vs
+        // stack gap). Rejecting that used to WakeUp the body 4–5 times — the heartbeat jitter.
+        // Lift one layer once if still intersecting, then freeze.
+        if (CardCollisionUtility.OverlapsOtherItem(itemTransform, collider, card, body))
+        {
+            Vector3 position = itemTransform.position;
+            position.y += CardGroundStack.StackStep;
+            if (card != null)
+                card.SetGroundRestPosition(position);
+            else if (pack != null)
+                pack.SetGroundRestPosition(position);
+            else
+                itemTransform.position = position;
+
+            if (body != null)
+                body.position = itemTransform.position;
+
+            CardCollisionUtility.ResolveRestingPenetration(itemTransform, collider, card, body);
+        }
     }
 
     static bool IsFloorRest(Transform itemTransform)
@@ -118,18 +138,5 @@ public static class CardSettlePlacement
         body.rotation = level;
         if (!body.isKinematic)
             body.angularVelocity = Vector3.zero;
-    }
-
-    static bool Accept(bool wasBuried, Rigidbody body)
-    {
-        if (!wasBuried)
-            return true;
-
-        // It came to rest inside geometry or another settled card. Let it drop the last bit and settle
-        // again rather than freezing it half-buried where nothing can push it back out.
-        if (body != null && !body.isKinematic)
-            body.WakeUp();
-
-        return false;
     }
 }
