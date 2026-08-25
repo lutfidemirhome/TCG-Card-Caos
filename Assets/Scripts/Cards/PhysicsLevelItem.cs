@@ -38,7 +38,7 @@ public class PhysicsLevelItem : MonoBehaviour
 #if UNITY_EDITOR
     void OnEnable()
     {
-        if (Application.isPlaying)
+        if (Application.isPlaying || baked)
             return;
 
         WorldCard card = GetComponent<WorldCard>();

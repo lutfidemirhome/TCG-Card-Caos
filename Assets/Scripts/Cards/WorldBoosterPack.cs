@@ -249,10 +249,34 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_collider == null)
             return;
 
-        ApplyPackBodyCollider();
-        CardCollisionUtility.ApplyAuthoringWorldSize(_collider);
+        ApplyPackAuthoringCollider();
         _collider.isTrigger = false;
         _collider.enabled = true;
+    }
+
+    /// <summary>
+    /// Grabbit must collide with the 3D pack mesh, not a card-thin box. The thin authoring
+    /// collider stood packs on edge and left the mesh floating above the green gizmo.
+    /// Does not move or rotate the pack — baked Mix 1 poses stay put.
+    /// </summary>
+    void ApplyPackAuthoringCollider()
+    {
+        if (_packModel != null
+            && TryMeasureRendererBoundsInLocalSpace(transform, _packModel, out Vector3 min, out Vector3 max))
+        {
+            Vector3 size = max - min;
+            const float minSize = 0.012f;
+            size.x = Mathf.Max(size.x, minSize);
+            size.y = Mathf.Max(size.y, minSize);
+            size.z = Mathf.Max(size.z, minSize);
+            _collider.center = (min + max) * 0.5f;
+            _collider.size = size;
+            CardCollisionUtility.ApplyToCollider(_collider);
+            _packBodyThickness = Mathf.Max(CardDimensions.Thickness, size.y);
+            return;
+        }
+
+        ApplyPackBodyCollider();
     }
 
     /// <summary>

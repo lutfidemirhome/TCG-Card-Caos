@@ -376,7 +376,9 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         layout.HeightBias = EditorGUILayout.FloatField("Height Bias", layout.HeightBias);
         layout.MinSpawnSpacing = EditorGUILayout.FloatField("Min Spawn Spacing", layout.MinSpawnSpacing);
         EditorGUILayout.HelpBox(
-            "After Generate: Grabbit Fall Current → hold Left Shift in the Scene view until piles settle → release to freeze → Bake. "
+            "Rotation Randomness is yaw + a small tilt (cards ~22°, packs ~12°). It no longer spins items onto their edge. "
+            + "After Spawn: Grabbit Fall → hold Left Shift in the Scene view until piles settle → Bake → save. "
+            + "Already-baked Mix 1 is not moved. "
             + "Limitation Zone is sized to the spawn volume so older batches stay kinematic. "
             + "Fall uses a primitive floor collider so thin cards cannot tunnel through the MeshCollider floor.",
             MessageType.None);
@@ -506,7 +508,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             if (item.IsPsa)
             {
                 WorldCard card = CardFactory.CreateWorldPsaCard(
-                    NextSpawnPose(layout, layout.MainVolume, occupied, out rotation),
+                    NextSpawnPose(layout, layout.MainVolume, occupied, out rotation, pack: false),
                     rotation,
                     item.PsaSlot,
                     item.PsaVariant,
@@ -519,7 +521,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                 continue;
 
             WorldCard regular = CardFactory.CreateWorldCard(
-                NextSpawnPose(layout, layout.MainVolume, occupied, out rotation),
+                NextSpawnPose(layout, layout.MainVolume, occupied, out rotation, pack: false),
                 rotation,
                 item.Definition,
                 paletteIndex: 0,
@@ -538,7 +540,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 
             int variantIndex = ((mixIndex - 1) * packsPerBatch + i) % PackArtLibrary.PackVariantCount + 1;
             WorldBoosterPack pack = PackFactory.CreateWorldPack(
-                NextSpawnPose(layout, layout.MainVolume, occupied, out rotation),
+                NextSpawnPose(layout, layout.MainVolume, occupied, out rotation, pack: true),
                 rotation,
                 packDefinition,
                 packName: "BoosterPack_M" + mixIndex + "_" + (i + 1),
@@ -569,7 +571,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         for (int i = 0; i < regulars.Count; i++)
         {
             WorldCard card = CardFactory.CreateWorldCard(
-                NextSpawnPose(layout, volume, occupied, out Quaternion rotation),
+                NextSpawnPose(layout, volume, occupied, out Quaternion rotation, pack: false),
                 rotation,
                 regulars[i],
                 paletteIndex: 0,
@@ -581,7 +583,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         {
             int slot = PsaArtLibrary.CabinetSlotNumbers[i % PsaArtLibrary.CabinetSlotCount];
             WorldCard card = CardFactory.CreateWorldPsaCard(
-                NextSpawnPose(layout, volume, occupied, out Quaternion rotation),
+                NextSpawnPose(layout, volume, occupied, out Quaternion rotation, pack: false),
                 rotation,
                 slot,
                 variantIndex: 1,
@@ -604,7 +606,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 
             int variantIndex = (Mathf.Max(0, batchIndex - 1) * packCount + i) % PackArtLibrary.PackVariantCount + 1;
             WorldBoosterPack pack = PackFactory.CreateWorldPack(
-                NextSpawnPose(layout, volume, occupied, out Quaternion rotation),
+                NextSpawnPose(layout, volume, occupied, out Quaternion rotation, pack: true),
                 rotation,
                 packDefinition,
                 packName: "BoosterPack_" + variantIndex,
@@ -618,7 +620,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         PhysicsLevelLayout layout,
         PhysicsCardSpawnVolume volume,
         List<Vector3> occupied,
-        out Quaternion rotation)
+        out Quaternion rotation,
+        bool pack)
     {
         Vector3 point = volume.GetRandomPoint(layout.SpawnPadding);
         point.y += Random.Range(0f, layout.HeightBias);
@@ -647,12 +650,25 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             point.y = minSpawnY;
 
         occupied.Add(point);
-        float spin = 360f * layout.RotationRandomness;
-        rotation = Quaternion.Euler(
-            Random.Range(0f, spin),
-            Random.Range(0f, spin),
-            Random.Range(0f, spin));
+        rotation = ScatterRotation(layout.RotationRandomness, pack);
         return point;
+    }
+
+    /// <summary>
+    /// Face-up or face-down with yaw, plus a small tilt. Full 360° on every axis stood thin
+    /// cards on edge and left every pack upright. Mix 1 is already baked; this only affects new spawns.
+    /// </summary>
+    static Quaternion ScatterRotation(float randomness, bool pack)
+    {
+        float amount = Mathf.Clamp01(randomness);
+        float yaw = Random.Range(0f, 360f);
+        float maxTilt = pack
+            ? Mathf.Lerp(3f, 12f, amount)
+            : Mathf.Lerp(5f, 22f, amount);
+        float pitch = Random.Range(-maxTilt, maxTilt);
+        float roll = Random.Range(-maxTilt, maxTilt);
+        bool faceDown = Random.value < 0.5f;
+        return Quaternion.Euler(faceDown ? 180f + pitch : pitch, yaw, roll);
     }
 
     void FinishCard(WorldCard card, Transform parent, PhysicsLevelItem.AreaKind area, int batchIndex)
@@ -818,6 +834,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             return;
 
         StripGrabbitRuntime(item.gameObject);
+        bool alreadyBaked = item.Baked;
 
         WorldCard card = item.GetComponent<WorldCard>();
         if (card != null)
@@ -825,7 +842,10 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             if (!string.IsNullOrEmpty(undoName))
                 Undo.RecordObject(card, undoName);
             card.StripEditorRigidbody();
-            card.PrepareEditorPhysicsPlacement();
+            if (alreadyBaked)
+                card.ApplySolidEditorCollider();
+            else
+                card.PrepareEditorPhysicsPlacement();
         }
 
         WorldBoosterPack pack = item.GetComponent<WorldBoosterPack>();
@@ -834,8 +854,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             if (!string.IsNullOrEmpty(undoName))
                 Undo.RecordObject(pack, undoName);
             pack.StripEditorRigidbody();
-            pack.PrepareEditorPhysicsPlacement();
-            pack.LiftMeshAboveFloor();
+            if (!alreadyBaked)
+                pack.PrepareEditorPhysicsPlacement();
         }
 
         if (!string.IsNullOrEmpty(undoName))
