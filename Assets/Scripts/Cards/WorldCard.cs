@@ -45,7 +45,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Collider _collider;
     PsaCardVisualController _psaController;
     Rigidbody _rigidbody;
-    Transform _cardVisual;
+    [SerializeField] Transform _cardVisual;
     bool _handSelected;
     GameObject _outlineObject;
     GameObject _handSelectionOutlineObject;
@@ -781,10 +781,33 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// </summary>
     public void PrepareEditorPhysicsPlacement()
     {
-        EnsureCardVisual();
+        RefreshAuthoredVisual();
         ApplySolidEditorCollider();
         if (_collider is BoxCollider boxCollider)
             CardCollisionUtility.ApplyAuthoringWorldSize(boxCollider);
+    }
+
+    /// <summary>
+    /// Rebinds CardVisual, restores the card mesh, and rebuilds URP materials.
+    /// Use after Grabbit/bake when a card turns magenta (missing shader).
+    /// </summary>
+    public void RefreshAuthoredVisual()
+    {
+        CardArtLibrary.EnsureLoaded();
+        CardArtLibrary.InvalidateFrontMaterials(definition, paletteIndex);
+
+        if (UsesPsaSlab)
+        {
+            EnsureCardVisual();
+            return;
+        }
+
+        BindExistingCardVisual();
+        EnsureCardVisual();
+        RestoreCardVisualMeshAndRenderer();
+        ApplyCardVisualTextureQuality();
+        if (_cardVisual != null && !_cardVisual.gameObject.activeSelf)
+            _cardVisual.gameObject.SetActive(true);
     }
 
     public void ApplySolidEditorCollider()
@@ -1278,6 +1301,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
+        BindExistingCardVisual();
         if (_cardVisual != null)
             return;
 
@@ -1299,6 +1323,53 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         ApplyCardVisualTextureQuality();
     }
 
+    void BindExistingCardVisual()
+    {
+        if (_cardVisual == null)
+        {
+            Transform found = transform.Find("CardVisual");
+            if (found != null)
+                _cardVisual = found;
+        }
+
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = transform.GetChild(i);
+            if (child == null || !child.name.StartsWith("CardVisual"))
+                continue;
+
+            if (_cardVisual == null)
+                _cardVisual = child;
+            else if (child != _cardVisual)
+            {
+                if (Application.isPlaying)
+                    Destroy(child.gameObject);
+                else
+                    DestroyImmediate(child.gameObject);
+            }
+        }
+    }
+
+    void RestoreCardVisualMeshAndRenderer()
+    {
+        if (_cardVisual == null)
+            return;
+
+        MeshFilter meshFilter = _cardVisual.GetComponent<MeshFilter>();
+        if (meshFilter == null)
+            meshFilter = _cardVisual.gameObject.AddComponent<MeshFilter>();
+        if (CardArtLibrary.CardMesh != null)
+            meshFilter.sharedMesh = CardArtLibrary.CardMesh;
+
+        MeshRenderer meshRenderer = _cardVisual.GetComponent<MeshRenderer>();
+        if (meshRenderer == null)
+            meshRenderer = _cardVisual.gameObject.AddComponent<MeshRenderer>();
+
+        meshRenderer.enabled = true;
+        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        meshRenderer.receiveShadows = false;
+    }
+
     void ApplyCardVisualTextureQuality()
     {
         if (_cardVisual == null)
@@ -1313,9 +1384,19 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             ? CardArtLibrary.GetCardMaterials(definition, CardTextureQuality.Detail)
             : CardArtLibrary.GetCardMaterials(paletteIndex, CardTextureQuality.Detail);
 
+        Texture2D frontTexture = UsesDefinitionFrontArt ? definition.FrontTexture : null;
         for (int i = 0; i < materials.Length; i++)
+        {
             CardArtLibrary.ConfigureHandDetailMaterial(materials[i]);
+            if (CardArtLibrary.IsBrokenMaterial(materials[i]))
+            {
+                materials[i] = CardArtLibrary.CreateFallbackLitMaterial(
+                    i == 0 ? frontTexture : null,
+                    i == 0 ? "CardFrontFallback" : "CardBackFallback");
+            }
+        }
 
+        meshRenderer.enabled = true;
         meshRenderer.sharedMaterials = materials;
     }
 

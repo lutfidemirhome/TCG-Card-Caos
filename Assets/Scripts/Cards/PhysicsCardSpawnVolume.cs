@@ -57,11 +57,12 @@ public class PhysicsCardSpawnVolume : MonoBehaviour
     {
         EnsureSetup();
         float pad = Mathf.Clamp01(padding);
-        float half = 0.5f - pad * 0.45f;
-        Vector3 local = new Vector3(
-            Random.Range(-half, half),
-            Random.Range(-half, half),
-            Random.Range(-half, half));
+        float shrink = 1f - pad * 0.9f;
+        Vector3 half = _box.size * 0.5f * shrink;
+        Vector3 local = _box.center + new Vector3(
+            Random.Range(-half.x, half.x),
+            Random.Range(-half.y, half.y),
+            Random.Range(-half.z, half.z));
         return transform.TransformPoint(local);
     }
 

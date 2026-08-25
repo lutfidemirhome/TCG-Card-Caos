@@ -182,12 +182,11 @@ public static class CardArtLibrary
 
         if (quality == CardTextureQuality.World)
         {
-            if (_runtimeMeshBackWorldMaterial == null)
+            if (_runtimeMeshBackWorldMaterial == null || IsBrokenMaterial(_runtimeMeshBackWorldMaterial))
             {
-                _runtimeMeshBackWorldMaterial = new Material(_sharedBackWorldTemplate)
-                {
-                    name = "CardBackWorldMeshRuntime"
-                };
+                _runtimeMeshBackWorldMaterial = CreateMaterialFromTemplate(
+                    _sharedBackWorldTemplate,
+                    "CardBackWorldMeshRuntime");
                 ApplyBackTextureUFlip(_runtimeMeshBackWorldMaterial);
                 ApplySharperGroundBackTexture(_runtimeMeshBackWorldMaterial);
                 ConfigureGroundWorldMaterial(_runtimeMeshBackWorldMaterial);
@@ -196,12 +195,11 @@ public static class CardArtLibrary
             return _runtimeMeshBackWorldMaterial;
         }
 
-        if (_runtimeMeshBackDetailMaterial == null)
+        if (_runtimeMeshBackDetailMaterial == null || IsBrokenMaterial(_runtimeMeshBackDetailMaterial))
         {
-            _runtimeMeshBackDetailMaterial = new Material(_sharedBackDetailTemplate)
-            {
-                name = "CardBackDetailMeshRuntime"
-            };
+            _runtimeMeshBackDetailMaterial = CreateMaterialFromTemplate(
+                _sharedBackDetailTemplate,
+                "CardBackDetailMeshRuntime");
             ApplyBackTextureUFlip(_runtimeMeshBackDetailMaterial);
             ConfigureHandDetailMaterial(_runtimeMeshBackDetailMaterial);
         }
@@ -232,6 +230,46 @@ public static class CardArtLibrary
         return _instancedGroundBackMaterial;
     }
 
+    public static bool IsBrokenMaterial(Material material)
+    {
+        if (material == null || material.shader == null)
+            return true;
+
+        string shaderName = material.shader.name;
+        return string.IsNullOrEmpty(shaderName)
+            || shaderName.IndexOf("InternalError") >= 0
+            || !material.shader.isSupported;
+    }
+
+    public static void InvalidateFrontMaterials(CardDefinition definition, int paletteIndex)
+    {
+        if (definition != null && !string.IsNullOrEmpty(definition.DefinitionId))
+        {
+            FrontDetailMaterialsByDefinition.Remove(definition.DefinitionId + ":" + (int)CardTextureQuality.Detail);
+            FrontWorldMaterialsByDefinition.Remove(definition.DefinitionId + ":" + (int)CardTextureQuality.World);
+        }
+
+        FrontDetailMaterialsByPalette.Remove(paletteIndex);
+        FrontWorldMaterialsByPalette.Remove(paletteIndex);
+    }
+
+    public static Material CreateFallbackLitMaterial(Texture2D texture, string materialName)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
+            shader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (shader == null)
+            shader = Shader.Find("Sprites/Default");
+
+        var material = new Material(shader)
+        {
+            name = string.IsNullOrEmpty(materialName) ? "CardFallbackLit" : materialName
+        };
+        ApplyFrontTexture(material, texture);
+        ConfigureHandDetailMaterial(material);
+        return material;
+    }
+
     public static Material GetFrontMaterial(int paletteIndex, CardTextureQuality quality = CardTextureQuality.Detail)
     {
         EnsureLoaded();
@@ -244,9 +282,15 @@ public static class CardArtLibrary
             ? _sharedFrontWorldTemplate
             : _sharedFrontDetailTemplate;
 
-        if (!cache.TryGetValue(paletteIndex, out Material frontMaterial))
+        if (cache.TryGetValue(paletteIndex, out Material frontMaterial) && IsBrokenMaterial(frontMaterial))
         {
-            frontMaterial = new Material(template);
+            cache.Remove(paletteIndex);
+            frontMaterial = null;
+        }
+
+        if (frontMaterial == null)
+        {
+            frontMaterial = CreateMaterialFromTemplate(template, "CardFrontPalette_" + paletteIndex);
             if (quality == CardTextureQuality.World)
             {
                 frontMaterial.enableInstancing = true;
@@ -279,9 +323,15 @@ public static class CardArtLibrary
             : _sharedFrontDetailTemplate;
 
         string cacheKey = definition.DefinitionId + ":" + (int)quality;
-        if (!cache.TryGetValue(cacheKey, out Material frontMaterial))
+        if (cache.TryGetValue(cacheKey, out Material frontMaterial) && IsBrokenMaterial(frontMaterial))
         {
-            frontMaterial = new Material(template);
+            cache.Remove(cacheKey);
+            frontMaterial = null;
+        }
+
+        if (frontMaterial == null)
+        {
+            frontMaterial = CreateMaterialFromTemplate(template, "CardFront_" + definition.DefinitionId);
             ApplyFrontTexture(frontMaterial, definition.FrontTexture);
             if (quality == CardTextureQuality.World)
             {
@@ -297,6 +347,19 @@ public static class CardArtLibrary
         }
 
         return frontMaterial;
+    }
+
+    static Material CreateMaterialFromTemplate(Material template, string materialName)
+    {
+        Material material;
+        if (template != null && !IsBrokenMaterial(template))
+            material = new Material(template);
+        else
+            material = CreateFallbackLitMaterial(null, materialName);
+
+        if (!string.IsNullOrEmpty(materialName))
+            material.name = materialName;
+        return material;
     }
 
     static void ApplyFrontTexture(Material material, Texture2D texture)
