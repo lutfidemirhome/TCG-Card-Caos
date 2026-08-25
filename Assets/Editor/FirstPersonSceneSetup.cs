@@ -3,7 +3,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /// <summary>
-/// Card-shop scene bootstrap: floor, walls, player, light, and the current card scatter.
+/// Card-shop scene bootstrap: floor, walls, player, light. Cards come from Physics Level Builder + Grabbit.
 /// Menu: TCG Card Caos → Create Empty Card Shop Scene
 /// </summary>
 public static class FirstPersonSceneSetup
@@ -68,8 +68,6 @@ public static class FirstPersonSceneSetup
 
         CardInstancedRenderManager.EnsureExists();
         EnsureCardArtReady();
-        CardScatterUtility.ClearTestCards();
-        CardScatterUtility.SpawnScatteredCards(CardScatterUtility.FullScatterCount);
 
         Selection.activeGameObject = player;
         FinishEmptyShopScene(newScene);
@@ -87,12 +85,6 @@ public static class FirstPersonSceneSetup
 
         CardInstancedRenderManager.EnsureExists();
         EnsureCardArtReady();
-
-        if (CardScatterUtility.SceneNeedsScatterRefresh())
-        {
-            CardScatterUtility.ClearTestCards();
-            CardScatterUtility.SpawnScatteredCards(CardScatterUtility.FullScatterCount);
-        }
 
         Selection.activeGameObject = player;
         FinishEmptyShopScene(scene);
@@ -146,11 +138,7 @@ public static class FirstPersonSceneSetup
         Debug.Log(
             "TCG Card Caos: Card shop ready at "
             + ScenePath
-            + " with walk settings + "
-            + CardScatterUtility.GroundScatterCount
-            + " ground cards + "
-            + CardScatterUtility.DefaultPackScatterCount
-            + " packs. Press Play to test.");
+            + ". Place cards with Card Physics Level Builder + Grabbit, then press Play.");
     }
 
     static void DestroyNamedRoots(params string[] names)

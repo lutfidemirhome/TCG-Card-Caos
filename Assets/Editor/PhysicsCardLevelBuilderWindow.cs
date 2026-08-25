@@ -143,7 +143,17 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         if (GUILayout.Button("Generate Demo Cards", GUILayout.Height(24)))
             GenerateDemo(layout);
         if (GUILayout.Button("Delete Demo Cards", GUILayout.Height(24)))
-            DeleteArea(layout.DemoCardsRoot, "Delete Demo Cards");
+        {
+            bool confirmed = layout.DemoCardsRoot == null
+                || layout.DemoCardsRoot.childCount == 0
+                || EditorUtility.DisplayDialog(
+                    "Delete Demo",
+                    "Sahneye kaydettiğin demo kartları silinecek. Devam edilsin mi?",
+                    "Sil",
+                    "İptal");
+            if (confirmed)
+                DeleteArea(layout.DemoCardsRoot, "Delete Demo Cards");
+        }
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.BeginHorizontal();
@@ -162,6 +172,12 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     {
         EditorGUILayout.LabelField("Main Level Batches", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical("box");
+
+        EditorGUILayout.HelpBox(
+            "Demo gibi: Create Main Batch → Grabbit Fall Current → Shift ile düşür → Bake Current Batch → sahneyi kaydet. "
+            + "Generate Demo / Delete Demo dokunma; kaydettiğin demo silinir. "
+            + "Packs Per Batch 5 yaparsan her partide 5 farklı pack kategorisi gelir.",
+            MessageType.Info);
 
         layout.MainVolume = ObjectFieldVolume("Main Spawn Volume", layout.MainVolume);
         layout.MainBatchSize = EditorGUILayout.IntField("Batch Size", layout.MainBatchSize);
@@ -266,6 +282,16 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         {
             EditorUtility.DisplayDialog("Demo", "Demo spawn volume / Demo_Cards folder missing.", "OK");
             return;
+        }
+
+        if (layout.DemoCardsRoot.childCount > 0)
+        {
+            if (!EditorUtility.DisplayDialog(
+                    "Replace Demo",
+                    "Sahneye kaydettiğin demo kartları silinip yeniden spawn olur. Grabbit pozları kaybolur. Devam edilsin mi?",
+                    "Yeniden oluştur",
+                    "İptal"))
+                return;
         }
 
         Undo.SetCurrentGroupName("Generate Demo Cards");
@@ -373,12 +399,13 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             for (int c = 0; c < CardDimensions.CardsPerBoosterPack && start + c < packPool.Count; c++)
                 contents.Add(packPool[start + c]);
 
+            int variantIndex = (Mathf.Max(0, batchIndex - 1) * packCount + i) % PackArtLibrary.PackVariantCount + 1;
             WorldBoosterPack pack = PackFactory.CreateWorldPack(
                 NextSpawnPose(layout, volume, occupied, out Quaternion rotation),
                 rotation,
                 packDefinition,
-                packName: "BoosterPack_" + (i + 1),
-                packVariantIndex: (i % 5) + 1,
+                packName: "BoosterPack_" + variantIndex,
+                packVariantIndex: variantIndex,
                 preRolledContents: contents);
             FinishPack(pack, parent, area, batchIndex);
         }

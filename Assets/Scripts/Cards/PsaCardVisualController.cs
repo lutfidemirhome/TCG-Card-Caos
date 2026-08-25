@@ -115,21 +115,26 @@ public sealed class PsaCardVisualController
         CardOutlineSettings.Palette palette = CardOutlineSettings.GetPaletteOrDefaults();
         bool inHand = _owner.IsInHand;
 
+        // Ground hover is yellow. Black is only the held selection outline.
         if (!inHand && interactionHighlighted)
         {
-            _modelOutline.OutlineColor = palette.cardHover;
-            _modelOutline.enabled = true;
+            ShowOutline(palette.cardHover);
             return;
         }
 
         if (inHand && handSelected)
         {
-            _modelOutline.OutlineColor = palette.handSelection;
-            _modelOutline.enabled = true;
+            ShowOutline(palette.handSelection);
             return;
         }
 
         _modelOutline.enabled = false;
+    }
+
+    void ShowOutline(Color color)
+    {
+        _modelOutline.OutlineColor = color;
+        _modelOutline.enabled = true;
     }
 
     public void DisableOutline()
@@ -363,8 +368,12 @@ public sealed class PsaCardVisualController
         if (_modelOutline == null)
             _modelOutline = _psaModel.GetComponent<Outline>();
         if (_modelOutline == null)
+        {
             _modelOutline = _psaModel.gameObject.AddComponent<Outline>();
+            _modelOutline.enabled = false;
+        }
 
+        _modelOutline.hideFlags |= HideFlags.DontSave;
         _modelOutline.OutlineMode = Outline.Mode.OutlineAll;
         _modelOutline.OutlineWidth = PackVisualSettings.GetQuickOutlineWidthOrDefault();
     }

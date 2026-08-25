@@ -37,6 +37,7 @@ public class Outline : MonoBehaviour {
     set {
       outlineColor = value;
       needsUpdate = true;
+      ApplyMaterialPropertiesIfReady();
     }
   }
 
@@ -45,6 +46,7 @@ public class Outline : MonoBehaviour {
     set {
       outlineWidth = value;
       needsUpdate = true;
+      ApplyMaterialPropertiesIfReady();
     }
   }
 
@@ -100,6 +102,8 @@ public class Outline : MonoBehaviour {
   }
 
   void OnEnable() {
+    ApplyMaterialPropertiesIfReady();
+
     foreach (var renderer in renderers) {
 
       // Append outline shaders
@@ -267,6 +271,14 @@ public class Outline : MonoBehaviour {
     // Append combined submesh
     mesh.subMeshCount++;
     mesh.SetTriangles(mesh.triangles, mesh.subMeshCount - 1);
+  }
+
+  void ApplyMaterialPropertiesIfReady() {
+    if (outlineFillMaterial == null || outlineMaskMaterial == null)
+      return;
+
+    needsUpdate = false;
+    UpdateMaterialProperties();
   }
 
   void UpdateMaterialProperties() {
