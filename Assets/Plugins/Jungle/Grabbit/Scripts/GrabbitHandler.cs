@@ -221,6 +221,29 @@ namespace Grabbit
         }
 
 
+        /// <summary>
+        /// Card visuals live on a child mesh; the BoxCollider is on the card/pack root.
+        /// Grabbit was registering the child, which has nothing to collide with in Use Existing Only.
+        /// </summary>
+        public static GameObject FindColliderRoot(GameObject go)
+        {
+            if (!go)
+                return go;
+
+            if (go.GetComponent<Collider>())
+                return go;
+
+            Transform current = go.transform.parent;
+            while (current != null)
+            {
+                if (current.GetComponent<Collider>())
+                    return current.gameObject;
+                current = current.parent;
+            }
+
+            return go;
+        }
+
         public void ConfigureSelectionMode(GrabbitSettings settings,
             ColliderMeshContainer colliderMeshContainer = null)
         {

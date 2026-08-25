@@ -572,6 +572,7 @@ namespace Grabbit
                 var root = PrefabUtility.IsPartOfAnyPrefab(mr)
                     ? PrefabUtility.GetOutermostPrefabInstanceRoot(mr)
                     : mr.gameObject;
+                root = GrabbitHandler.FindColliderRoot(root);
 
                 if (!root || handlers.ContainsKey(root))
                     continue;
@@ -598,6 +599,13 @@ namespace Grabbit
 
         private void RegisterHandler(GameObject go)
         {
+            go = GrabbitHandler.FindColliderRoot(go);
+            if (!go || handlers.ContainsKey(go))
+                return;
+
+            if (go.GetComponent<Collider>() == null)
+                return;
+
             if ((settings.LayersToIgnore & (1 << go.layer)) > 0)
             {
                 return;
@@ -1259,8 +1267,12 @@ namespace Grabbit
                 settings.CurrentMode = GrabbitMode.PLACE;
 
             newlyAdded.Clear();
-            foreach (var o in Selection.gameObjects)
+            foreach (var selected in Selection.gameObjects)
             {
+                var o = GrabbitHandler.FindColliderRoot(selected);
+                if (!o)
+                    continue;
+
                 if (IsObjectSelectionPrevented(o) > 0)
                 {
                     if (!selectionLimitedObjects.Contains(o))
@@ -1269,6 +1281,9 @@ namespace Grabbit
                 }
 
                 if (!o.scene.IsValid())
+                    continue;
+
+                if (o.GetComponent<Collider>() == null)
                     continue;
 
                 var handler = o.GetComponent<GrabbitHandler>();
