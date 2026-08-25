@@ -17,19 +17,13 @@ public static class CardSettlePlacement
     /// </summary>
     const float MaxDownwardSnap = 0.0035f;
 
-    /// <summary>
-    /// A standing pack's centre sits about half a card-height above the floor. Stay under shelf
-    /// plinths (~32 cm) so a pack that actually landed on furniture keeps the pose physics found.
-    /// </summary>
-    const float MaxFloorStandingHeight = 0.28f;
-
     /// <summary>Returns false when the item was resting inside something and needs to settle again.</summary>
     public static bool TrySettle(WorldCard card, BoxCollider collider, Rigidbody body, int attempt)
     {
         if (card == null)
             return true;
 
-        SeatOnPile(card.transform, body, collider, card, null);
+        SeatOnPile(card.transform, body, collider, card);
         return true;
     }
 
@@ -39,16 +33,21 @@ public static class CardSettlePlacement
         if (pack == null)
             return true;
 
-        CardFactory.LiftAboveFloor(pack.transform, body);
+        // Packs are thick enough for PhysX to sleep standing on an edge. Always lay them
+        // flat like authored floor packs — cards cannot stand, so they do not need this.
+        pack.FlattenOntoFloor();
+        CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body);
 
-        if (!BelongsToStack(pack.transform) && IsFloorRest(pack.transform))
+        if (CardCollisionUtility.OverlapsOtherItem(pack.transform, collider, null, body))
         {
-            pack.FlattenOntoFloor();
+            Vector3 position = pack.transform.position;
+            position.y += CardGroundStack.StackStep;
+            pack.SetGroundRestPosition(position);
+            if (body != null)
+                body.position = pack.transform.position;
             CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body);
-            return true;
         }
 
-        SeatOnPile(pack.transform, body, collider, null, pack);
         return true;
     }
 
@@ -56,8 +55,7 @@ public static class CardSettlePlacement
         Transform itemTransform,
         Rigidbody body,
         BoxCollider collider,
-        WorldCard card,
-        WorldBoosterPack pack)
+        WorldCard card)
     {
         CardFactory.LiftAboveFloor(itemTransform, body);
 
@@ -66,8 +64,6 @@ public static class CardSettlePlacement
             LevelOntoStackPlane(itemTransform, body);
             if (card != null)
                 CardGroundStack.ApplyStackHeight(card, placeOnTop: true, maxDownwardShift: MaxDownwardSnap);
-            else if (pack != null)
-                CardGroundStack.ApplyStackHeight(pack, placeOnTop: true, maxDownwardShift: MaxDownwardSnap);
         }
 
         CardCollisionUtility.ResolveRestingPenetration(itemTransform, collider, card, body);
@@ -81,8 +77,6 @@ public static class CardSettlePlacement
             position.y += CardGroundStack.StackStep;
             if (card != null)
                 card.SetGroundRestPosition(position);
-            else if (pack != null)
-                pack.SetGroundRestPosition(position);
             else
                 itemTransform.position = position;
 
@@ -91,17 +85,6 @@ public static class CardSettlePlacement
 
             CardCollisionUtility.ResolveRestingPenetration(itemTransform, collider, card, body);
         }
-    }
-
-    static bool IsFloorRest(Transform itemTransform)
-    {
-        if (itemTransform == null)
-            return false;
-
-        if (itemTransform.GetComponentInParent<CardShelfSlot>() != null)
-            return false;
-
-        return itemTransform.position.y <= CardFactory.GroundHeightOffset() + MaxFloorStandingHeight;
     }
 
     /// <summary>

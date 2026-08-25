@@ -69,6 +69,10 @@ public class PhysicsLevelLayout : MonoBehaviour
 
     public int DemoConfiguredTotal => demoRegularCount + demoPsaCount + demoPackCount;
 
+    /// <summary>HUD / save denominator: floor cards + PSA + unopened pack contents.</summary>
+    public int DemoOwnedCardTotal =>
+        DemoRegularCount + DemoPsaCount + DemoPackCount * CardDimensions.CardsPerBoosterPack;
+
     public void BindHierarchy(
         PhysicsCardSpawnVolume demo,
         PhysicsCardSpawnVolume main,

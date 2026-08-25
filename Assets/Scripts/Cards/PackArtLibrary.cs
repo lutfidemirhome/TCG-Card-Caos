@@ -87,7 +87,11 @@ public static class PackArtLibrary
 
         Material[] materials = renderer.sharedMaterials;
         for (int i = 0; i < materials.Length; i++)
+        {
             materials[i] = template;
+            if (materials[i] != null)
+                materials[i].enableInstancing = false;
+        }
 
         renderer.sharedMaterials = materials;
     }
@@ -490,6 +494,7 @@ public static class PackArtLibrary
             material.SetFloat("_ReceiveShadowsOff", 1f);
         material.EnableKeyword("_RECEIVE_SHADOWS_OFF");
         material.SetShaderPassEnabled("ShadowCaster", false);
+        material.enableInstancing = false;
 
         if (material.HasProperty("_ShadowColorLightAtten"))
             material.SetFloat("_ShadowColorLightAtten", 0f);

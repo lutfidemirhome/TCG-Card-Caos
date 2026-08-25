@@ -177,12 +177,17 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     int InferVariantIndexFromObjectName()
     {
+        const string prefix = "BoosterPack_";
         string objectName = gameObject.name;
-        int separator = objectName.LastIndexOf('_');
-        if (separator < 0 || separator >= objectName.Length - 1)
+        if (!objectName.StartsWith(prefix))
             return 0;
 
-        if (!int.TryParse(objectName.Substring(separator + 1), out int index))
+        string suffix = objectName.Substring(prefix.Length);
+        // Mix packs are BoosterPack_M3_9 — the trailing index is spawn order, not art variant.
+        if (suffix.Length == 0 || suffix[0] == 'M')
+            return 0;
+
+        if (!int.TryParse(suffix, out int index))
             return 0;
 
         if (index < 1 || index > PackArtLibrary.PackVariantCount)
@@ -208,7 +213,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return;
 
         _groundShowsBack = showsBack;
-        if (_state == PackState.World && !HasActivePhysics)
+        if (_state == PackState.World && !IsPhysicsSimulating)
             ApplyWorldVisualOrientation(alignPackModelToGround: true);
     }
 
@@ -238,6 +243,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _collider = gameObject.AddComponent<BoxCollider>();
             PackFactory.ApplyFlatPackCollider(_collider);
         }
+
+        if (Application.isPlaying)
+            EnsureVisual();
     }
 
     public void PrepareEditorPhysicsPlacement()
@@ -575,7 +583,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_cardRef == null)
             return;
 
-        bool applyGroundPose = alignPackModelToGround && !HasActivePhysics;
+        bool applyGroundPose = alignPackModelToGround && !IsPhysicsSimulating;
         _cardRef.localPosition = applyGroundPose
             ? Vector3.up * GetPackModelGroundOffsetY()
             : Vector3.zero;
@@ -631,7 +639,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     void ApplyCardRefWorldRotation(bool alignPackModelToGround)
     {
-        _cardRef.localRotation = alignPackModelToGround && !HasActivePhysics
+        _cardRef.localRotation = alignPackModelToGround && !IsPhysicsSimulating
             ? GetPackWorldGroundLocalRotation(_groundShowsBack)
             : GetPackPhysicsWorldLocalRotation();
     }
@@ -1495,6 +1503,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_state != PackState.World || _rigidbody == null)
             yield break;
 
+        ApplyWorldVisualOrientation(alignPackModelToGround: true);
         SetInteractionHighlight(false);
         RefreshPackOutlineState();
     }
@@ -1577,23 +1586,20 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     }
 
     /// <summary>
-    /// Lays a thrown pack flat on the floor while keeping the landed front/back face.
-    /// The pack body is thick enough to sleep standing on an edge; cards cannot, so packs
-    /// need this extra flatten. Face is sampled before rewriting rotation.
+    /// Lays a thrown pack flat on the floor like an authored ground pack, keeping the landed
+    /// front/back face. The pack body is thick enough to sleep standing on an edge; cards cannot,
+    /// so packs need this extra flatten. Face is sampled before rewriting rotation.
     /// </summary>
     public void FlattenOntoFloor()
     {
         EnsureVisual();
-        ApplyPackBodyCollider();
 
         _groundShowsBack = ReadGroundShowsBackFromLandedProxy(_cardRef, transform);
         Vector3 heading = ReadGroundSettleHeading(_cardRef, transform, _groundShowsBack);
 
+        // Yaw-only root, same as authored floor packs. Do not Z-flip the root — front/back is
+        // the proxy's ground rotation (WorldVisualRotation ± 180 X), not a physics-basis trick.
         Quaternion level = Quaternion.LookRotation(heading, Vector3.up);
-        // Physics visual stays on the root while the rigidbody is alive: back-up is +Y, front-up is −Y.
-        if (!_groundShowsBack)
-            level *= Quaternion.Euler(0f, 0f, 180f);
-
         transform.rotation = level;
         if (_rigidbody != null)
         {
@@ -1602,8 +1608,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
                 _rigidbody.angularVelocity = Vector3.zero;
         }
 
-        ApplyWorldVisualOrientation(alignPackModelToGround: false);
-        ApplyPackModelShadowSettings();
+        ApplySettledGroundVisual();
         CardGroundStack.ApplyStackHeight(this, placeOnTop: true);
 
         if (_collider != null)
@@ -1611,6 +1616,25 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _collider.isTrigger = false;
             _collider.enabled = true;
         }
+    }
+
+    /// <summary>
+    /// Ground visual while the thrown body may still be dynamic for this settle frame.
+    /// </summary>
+    void ApplySettledGroundVisual()
+    {
+        EnsureVisual();
+        if (_cardRef == null)
+            return;
+
+        _cardRef.localPosition = Vector3.up * GetPackModelGroundOffsetY();
+        _cardRef.localScale = CardArtLibrary.WorldVisualScale;
+        SetCardRefMesh(CardArtLibrary.CardMesh);
+        _cardRef.localRotation = GetPackWorldGroundLocalRotation(_groundShowsBack);
+        ApplyPackModelLocalTransform();
+        RefreshCardProxyCenterOnPack();
+        ApplyPackBodyCollider();
+        ApplyPackModelShadowSettings();
     }
 
     static List<CardDefinition> _cachedDefaultPool;

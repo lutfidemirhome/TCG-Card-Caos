@@ -42,7 +42,7 @@ public class InGameHudView : MonoBehaviour
     void Refresh()
     {
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
-        SetCounter(shelvesValueText, progress.shelvesCompleted, maxShelves);
+        SetCounter(shelvesValueText, progress.shelvesCompleted, Mathf.Max(maxShelves, progress.totalShelves));
         SetCounter(cardsValueText, progress.cardsPlaced, progress.totalCards);
 
         PlayerCardHand hand = PlayerCardHand.Instance;

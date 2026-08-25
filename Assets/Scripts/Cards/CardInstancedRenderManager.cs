@@ -13,7 +13,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     public const string PaletteBatchPrefix = "palette:";
 
     const int MaxInstancesPerBatch = 1023;
-    const int CardsRegisteredPerFrame = 32;
+    const int CardsRegisteredPerFrame = 96;
 
     [SerializeField] float drawDistance = 40f;
 
@@ -110,15 +110,6 @@ public class CardInstancedRenderManager : MonoBehaviour
         RefreshAllPsaCabinetCardVisuals();
         yield return null;
 
-        WorldCard[] authoredCards = PhysicsLevelLayout.CollectAuthoredWorldCards();
-        WorldBoosterPack[] authoredPacks = PhysicsLevelLayout.CollectAuthoredWorldPacks();
-        Debug.Log(
-            "TCG Card Caos: Play mode setup complete ("
-            + authoredCards.Length
-            + " authored cards + "
-            + authoredPacks.Length
-            + " authored packs).");
-
         IsGameplayReady = true;
         GameProgressCounter.LockTotalFromWorld();
         _playModeSetupRoutine = null;
@@ -192,20 +183,6 @@ public class CardInstancedRenderManager : MonoBehaviour
     IEnumerator RegisterAllGroundCardsRoutine()
     {
         int processed = 0;
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < cards.Length; i++)
-        {
-            WorldCard card = cards[i];
-            if (card == null || card.IsInHand)
-                continue;
-
-            card.RegisterForInstancedGround();
-            processed++;
-            if (processed % CardsRegisteredPerFrame == 0)
-                yield return null;
-        }
 
         WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(
             FindObjectsInactive.Exclude,
@@ -221,6 +198,33 @@ public class CardInstancedRenderManager : MonoBehaviour
             if (processed % CardsRegisteredPerFrame == 0)
                 yield return null;
         }
+
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int pass = 0; pass < 2; pass++)
+        {
+            bool demoPass = pass == 0;
+            for (int i = 0; i < cards.Length; i++)
+            {
+                WorldCard card = cards[i];
+                if (card == null || card.IsInHand)
+                    continue;
+                if (IsDemoAreaItem(card) != demoPass)
+                    continue;
+
+                card.RegisterForInstancedGround();
+                processed++;
+                if (processed % CardsRegisteredPerFrame == 0)
+                    yield return null;
+            }
+        }
+    }
+
+    static bool IsDemoAreaItem(Component component)
+    {
+        PhysicsLevelItem item = component.GetComponent<PhysicsLevelItem>();
+        return item != null && item.Area == PhysicsLevelItem.AreaKind.Demo;
     }
 
     public static CardInstancedRenderManager EnsureExists()

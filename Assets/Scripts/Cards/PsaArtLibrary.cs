@@ -51,6 +51,11 @@ public static class PsaArtLibrary
 
     public static Texture2D GetSlabTexture(int slotNumber, int variantIndex)
     {
+        return GetSlabTexture(slotNumber, variantIndex, allowFallback: true);
+    }
+
+    public static Texture2D GetSlabTexture(int slotNumber, int variantIndex, bool allowFallback)
+    {
         slotNumber = ClampCabinetSlotNumber(slotNumber);
         variantIndex = Mathf.Max(1, variantIndex);
 
@@ -61,8 +66,8 @@ public static class PsaArtLibrary
             texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, uniqueName);
         if (texture == null)
             texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, SlabTextureFileName);
-        if (texture == null && variantIndex != 1)
-            texture = GetSlabTexture(slotNumber, 1);
+        if (texture == null && allowFallback && variantIndex != 1)
+            texture = GetSlabTexture(slotNumber, 1, allowFallback: false);
         return texture;
     }
 
@@ -102,7 +107,7 @@ public static class PsaArtLibrary
 
     public static bool HasVariant(int slotNumber, int variantIndex)
     {
-        return GetSlabTexture(slotNumber, variantIndex) != null;
+        return GetSlabTexture(slotNumber, variantIndex, allowFallback: false) != null;
     }
 
     public static int CountVariantsInSlot(int slotNumber)

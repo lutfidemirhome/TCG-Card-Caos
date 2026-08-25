@@ -1,10 +1,9 @@
 /// <summary>
 /// Demo HUD capacity targets shown as current / max in the in-game overlay.
-/// Card totals come from the live world (ground + hand + packs + PSA).
-/// Full release may raise MaxShelves from progression instead of this fixed demo cap.
+/// Cards: 235 floor + 4 PSA + 5 packs × 5 cards. Shelves are the six demo cabinets.
 /// </summary>
 public static class GameHudLimits
 {
     public const int MaxShelves = 6;
-    public const int MaxPlacedCards = 300;
+    public const int MaxPlacedCards = 264;
 }
