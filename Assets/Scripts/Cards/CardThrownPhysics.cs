@@ -9,14 +9,15 @@ using UnityEngine;
 /// </summary>
 public static class CardThrownPhysics
 {
-    const float LandingColliderRefreshInterval = 0.03f;
+    const float LandingColliderRefreshInterval = 0.02f;
     const float LandingColliderRadius = 2f;
-    const float LandingLookaheadSeconds = 0.1f;
+    const float LandingLookaheadSeconds = 0.2f;
     const float SlowVelocityThresholdSq = 0.35f;
     const float MaxRecoveryFlightSeconds = 4f;
     const float RestSettleDelay = 0.2f;
     /// <summary>Cap on "settled inside something, drop again" rounds so a wedged item still comes to rest.</summary>
-    const int MaxSettleRejections = 3;
+    const int MaxSettleRejections = 6;
+    static readonly WaitForFixedUpdate WaitFixed = new WaitForFixedUpdate();
 
     /// <param name="onSettled">
     /// Resolves the final resting pose, taking the settle attempt index (0 on the first try). Returning
@@ -60,6 +61,12 @@ public static class CardThrownPhysics
                         landingScopeId,
                         lookahead,
                         LandingColliderRadius);
+                }
+
+                if (collider != null)
+                {
+                    WorldCard thrownCard = itemTransform.GetComponent<WorldCard>();
+                    CardCollisionUtility.ResolveThrownFlightOverlap(itemTransform, collider, thrownCard, body);
                 }
 
                 CardFactory.LiftAboveFloor(itemTransform, body);
@@ -134,7 +141,7 @@ public static class CardThrownPhysics
 
                 restSettleTime = 0f;
                 hasSettled = false;
-                yield return null;
+                yield return WaitFixed;
             }
         }
         finally

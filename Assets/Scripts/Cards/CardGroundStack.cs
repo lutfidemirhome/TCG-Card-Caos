@@ -861,6 +861,34 @@ public static class CardGroundStack
         }
     }
 
+    public static bool IsTrackedPhysicsCard(WorldCard card) =>
+        card != null && PhysicsCardSet.Contains(card);
+
+    public static bool IsTrackedPhysicsPack(WorldBoosterPack pack) =>
+        pack != null && PhysicsPackSet.Contains(pack);
+
+    public static bool IsTrackedPhysicsTransform(Transform itemTransform)
+    {
+        if (itemTransform == null)
+            return false;
+
+        WorldCard card = itemTransform.GetComponent<WorldCard>();
+        if (card != null)
+            return PhysicsCardSet.Contains(card);
+
+        WorldBoosterPack pack = itemTransform.GetComponent<WorldBoosterPack>();
+        return pack != null && PhysicsPackSet.Contains(pack);
+    }
+
+    public static void ForEachPhysicsCard(System.Action<WorldCard> action)
+    {
+        if (action == null)
+            return;
+
+        for (int i = 0; i < PhysicsCards.Count; i++)
+            action(PhysicsCards[i]);
+    }
+
     public static void ForEachPhysicsPack(System.Action<WorldBoosterPack> action)
     {
         if (action == null)

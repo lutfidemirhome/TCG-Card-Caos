@@ -94,6 +94,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(_packVariantIndex);
     public bool GroundShowsBack => _groundShowsBack;
     public Transform PackVisualRoot => _packModel;
+    internal BoxCollider PhysCollider => _collider;
+    internal Rigidbody PhysicsBody => _rigidbody;
 
     public Bounds GetCullBounds()
     {
@@ -1257,6 +1259,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         EnsureRigidbody();
         CardCollisionUtility.LaunchThrownBody(_rigidbody, velocity);
+        if (_collider is BoxCollider thrownBox)
+            CardCollisionUtility.UnstickThrownSpawnOverlap(transform, thrownBox, null, _rigidbody);
 
         CardLayers.ApplyToGameObject(gameObject);
         CardGroundStack.TrackPhysicsPack(this);

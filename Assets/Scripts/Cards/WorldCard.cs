@@ -98,6 +98,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public float GroundRestLift => UsesPsaSlab && _psaController != null ? _psaController.GroundRestLift : 0f;
     internal Transform RootTransform => transform;
     internal Collider PhysCollider => _collider;
+    internal Rigidbody PhysicsBody => _rigidbody;
     public CardDefinition Definition => definition;
     public bool HasShelfRules => definition != null;
     public string ShelfCategoryId => definition != null ? definition.ShelfCategoryId : string.Empty;
@@ -684,6 +685,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         EnsureRigidbody();
         CardCollisionUtility.LaunchThrownBody(_rigidbody, velocity);
+        if (_collider is BoxCollider thrownBox)
+            CardCollisionUtility.UnstickThrownSpawnOverlap(transform, thrownBox, this, _rigidbody);
 
         CardGroundStack.TrackPhysicsCard(this);
         StartCoroutine(MonitorThrownCardRoutine());

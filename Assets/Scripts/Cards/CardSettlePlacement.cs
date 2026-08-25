@@ -38,7 +38,12 @@ public static class CardSettlePlacement
                 CardGroundStack.ApplyStackHeight(card, placeOnTop: true, maxDownwardShift: MaxDownwardSnap);
         }
 
-        return Accept(CardCollisionUtility.ResolveRestingPenetration(card.transform, collider, card, body), body);
+        bool buried = CardCollisionUtility.ResolveRestingPenetration(card.transform, collider, card, body);
+        bool overlappingFlight = CardCollisionUtility.OverlapsOtherItem(card.transform, collider, card, body);
+        if (overlappingFlight && attempt > 0)
+            CardCollisionUtility.UnstickThrownSpawnOverlap(card.transform, collider, card, body);
+
+        return Accept(buried || overlappingFlight, body);
     }
 
     /// <summary>Returns false when the item was resting inside something and needs to settle again.</summary>
@@ -60,7 +65,12 @@ public static class CardSettlePlacement
                 CardGroundStack.ApplyStackHeight(pack, placeOnTop: true, maxDownwardShift: MaxDownwardSnap);
         }
 
-        return Accept(CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body), body);
+        bool buried = CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body);
+        bool overlappingFlight = CardCollisionUtility.OverlapsOtherItem(pack.transform, collider, null, body);
+        if (overlappingFlight && attempt > 0)
+            CardCollisionUtility.UnstickThrownSpawnOverlap(pack.transform, collider, null, body);
+
+        return Accept(buried || overlappingFlight, body);
     }
 
     static bool IsFloorRest(Transform itemTransform)
