@@ -330,6 +330,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             ScheduleDrop(layout, layout.MainVolume, folder);
         if (GUILayout.Button("Re-drop Packs"))
             ScheduleDropPacks(folder);
+        if (GUILayout.Button("Re-drop Upright"))
+            ScheduleDropUpright(folder);
         if (GUILayout.Button("Bake"))
             BakeFolder(folder, "Bake Mix Batch");
         EditorGUI.EndDisabledGroup();
@@ -724,6 +726,66 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
 
         EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift: true);
+    }
+
+    void ScheduleDropUpright(Transform folder)
+    {
+        var items = CollectUprightItems(folder);
+        if (items.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Re-drop Upright",
+                "This mix has no standing cards or packs.",
+                "OK");
+            return;
+        }
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] != null)
+                LayItemFlatKeepingYaw(items[i].transform);
+        }
+
+        EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift: true);
+    }
+
+    static List<PhysicsLevelItem> CollectUprightItems(Transform folder)
+    {
+        var items = new List<PhysicsLevelItem>();
+        if (folder == null)
+            return items;
+
+        for (int i = 0; i < folder.childCount; i++)
+        {
+            Transform child = folder.GetChild(i);
+            if (child == null || !IsStandingOnEdge(child))
+                continue;
+
+            PhysicsLevelItem item = child.GetComponent<PhysicsLevelItem>();
+            if (item != null)
+                items.Add(item);
+        }
+
+        return items;
+    }
+
+    static bool IsStandingOnEdge(Transform t)
+    {
+        return t != null && Mathf.Abs(t.up.y) < 0.62f;
+    }
+
+    static void LayItemFlatKeepingYaw(Transform t)
+    {
+        if (t == null)
+            return;
+
+        Vector3 up = t.up;
+        if (Mathf.Abs(up.y) >= 0.62f)
+            return;
+
+        Vector3 targetUp = up.y >= 0f ? Vector3.up : Vector3.down;
+        Undo.RecordObject(t, "Lay Upright Cards Flat");
+        t.rotation = Quaternion.FromToRotation(up, targetUp) * t.rotation;
     }
 
     void DropWithGrabbit(PhysicsLevelLayout layout, PhysicsCardSpawnVolume volume, Transform folder)

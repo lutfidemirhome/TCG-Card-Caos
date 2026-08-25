@@ -199,8 +199,8 @@ public static class CardCollisionUtility
         collider.size = size;
     }
 
-    /// <summary>~10 mm in card-local space (~13 mm at ground scale). Still a thin card, not a block.</summary>
-    public const float AuthoringColliderThickness = 0.01f;
+    /// <summary>~14 mm in card-local space (~18 mm at ground scale). Still a card, less likely to rest on edge.</summary>
+    public const float AuthoringColliderThickness = 0.014f;
 
     public static void ApplyUprightShelfSize(BoxCollider collider)
     {
