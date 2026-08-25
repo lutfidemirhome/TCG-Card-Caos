@@ -244,6 +244,13 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     {
         EnsureVisual();
         CaptureExistingVisualLayout();
+        if (_cardRef != null)
+        {
+            _cardRef.localPosition = Vector3.zero;
+            ApplyCardRefWorldRotation(alignPackModelToGround: false);
+            ApplyPackModelLocalTransform();
+        }
+
         if (_collider == null)
             _collider = GetComponent<BoxCollider>();
         if (_collider == null)
@@ -261,7 +268,68 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     /// </summary>
     void ApplyPackAuthoringCollider()
     {
+        // Tight mesh box in root space. Centering a thick box on the card-proxy lift left the
+        // collider under the mesh, so Grabbit sat the box on the pile and the pack floated.
+        if (_packModel != null
+            && TryMeasureMeshBoundsInLocalSpace(transform, _packModel, out Vector3 min, out Vector3 max))
+        {
+            Vector3 size = max - min;
+            float maxAxis = Mathf.Max(size.x, Mathf.Max(size.y, size.z));
+            float maxAllowed = Mathf.Max(CardDimensions.Width, CardDimensions.Height) * 2.5f;
+            if (maxAxis > 0.001f && maxAxis <= maxAllowed)
+            {
+                const float minSize = 0.012f;
+                size.x = Mathf.Max(size.x, minSize);
+                size.y = Mathf.Max(size.y, minSize);
+                size.z = Mathf.Max(size.z, minSize);
+                _collider.center = (min + max) * 0.5f;
+                _collider.size = size;
+                CardCollisionUtility.ApplyToCollider(_collider);
+                _packBodyThickness = Mathf.Max(CardDimensions.Thickness, size.y);
+                return;
+            }
+        }
+
         ApplyPackBodyCollider();
+    }
+
+    /// <summary>
+    /// If the visible pack sits above its collider after a fall, lower the root so the mesh
+    /// rests where physics did. Mix 5+ bake only; does not run on already-baked Mix 1–4.
+    /// </summary>
+    public void SnapAuthoredVisualOntoCollider()
+    {
+        if (_collider == null)
+            return;
+
+        CachePackRenderers();
+        if (_packRenderers == null || _packRenderers.Length == 0)
+            return;
+
+        float meshMinY = float.PositiveInfinity;
+        bool any = false;
+        for (int i = 0; i < _packRenderers.Length; i++)
+        {
+            Renderer renderer = _packRenderers[i];
+            if (renderer == null || !renderer.enabled)
+                continue;
+
+            meshMinY = Mathf.Min(meshMinY, renderer.bounds.min.y);
+            any = true;
+        }
+
+        if (!any || float.IsInfinity(meshMinY))
+            return;
+
+        float delta = meshMinY - _collider.bounds.min.y;
+        if (delta < 0.0015f || delta > 0.12f)
+            return;
+
+        Vector3 position = transform.position;
+        position.y -= delta;
+        transform.position = position;
+        if (_rigidbody != null)
+            _rigidbody.position = position;
     }
 
     /// <summary>

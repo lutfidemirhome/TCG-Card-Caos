@@ -939,7 +939,10 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                 Undo.RecordObject(pack, undoName);
             pack.StripEditorRigidbody();
             if (!alreadyBaked)
+            {
                 pack.PrepareEditorPhysicsPlacement();
+                pack.SnapAuthoredVisualOntoCollider();
+            }
         }
 
         if (!string.IsNullOrEmpty(undoName))
