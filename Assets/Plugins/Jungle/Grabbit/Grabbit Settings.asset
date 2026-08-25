@@ -1055,8 +1055,8 @@ MonoBehaviour:
   ShowStartupWindow: 0
   LastVersion: 0.0
   LimitationRange:
-    position: {x: 9.683107, y: 0.10491915, z: -4.7498116}
-    size: {x: 2.8552017, y: 2.7098384, z: 2.868041}
+    position: {x: -2.0306077, y: 0.1188342, z: -3.5287857}
+    size: {x: 12.089275, y: 2.7376685, z: 16.599836}
     GrowToSelection: 1
   DidConfigureLimitationRangeAtLeastOnce: 1
   UseAdvancedOption: 0
@@ -1114,7 +1114,7 @@ MonoBehaviour:
   StaticObjectsLayer: 0
   AlignStrength: 1
   ExtraDragForRotationMode: 100
-  GravityStrength: {x: -1.410055e-10, y: -9.689824, z: -0.0000011551172}
+  GravityStrength: {x: -1.409771e-10, y: -9.687873, z: -0.0000011548846}
   LimitBodyVelocityInGravityMode: 1
   SetGravityInDirectionOfMouse: 0
   PausePositionReajustment: 1
