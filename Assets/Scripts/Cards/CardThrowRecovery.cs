@@ -44,6 +44,9 @@ public static class CardThrowRecovery
         if (itemTransform.GetComponentInParent<CardShelfSlot>() != null)
             return false;
 
+        if (IsRestingOnLadder(itemTransform, itemCollider))
+            return false;
+
         float groundY = CardFactory.GroundHeightOffset();
         if (body != null && body.IsSleeping() && itemTransform.position.y <= groundY + SleepingFloorSkipY)
             return false;
@@ -93,7 +96,9 @@ public static class CardThrowRecovery
         if (elapsed < maxFlightTime)
             return ShelfSettleAdvance.Continue;
 
-        if (!nearGround && itemCollider != null)
+        if (!nearGround
+            && itemCollider != null
+            && !IsRestingOnLadder(itemTransform, itemCollider))
         {
             if (TryRecoverShelfStuckThrow(itemTransform, itemCollider, body)
                 || TryForceDropAboveFloor(itemTransform, itemCollider, body))
@@ -120,6 +125,9 @@ public static class CardThrowRecovery
             return false;
 
         if (itemTransform.GetComponentInParent<CardShelfSlot>() != null)
+            return false;
+
+        if (IsRestingOnLadder(itemTransform, itemCollider))
             return false;
 
         TryQueryShelfOverlaps(itemTransform, itemCollider, out ShelfOverlapResult overlap);
@@ -153,6 +161,9 @@ public static class CardThrowRecovery
             return false;
 
         if (itemTransform.GetComponentInParent<CardShelfSlot>() != null)
+            return false;
+
+        if (IsRestingOnLadder(itemTransform, itemCollider))
             return false;
 
         if (!TryFindFloorPoint(itemTransform.position, out Vector3 floorPoint))
@@ -291,6 +302,51 @@ public static class CardThrowRecovery
         return true;
     }
 
+    static bool IsRestingOnLadder(Transform itemTransform, BoxCollider itemCollider)
+    {
+        if (itemTransform == null || itemCollider == null)
+            return false;
+
+        if (!TryGetOverlapBox(itemTransform, itemCollider, out Vector3 center, out Vector3 halfExtents))
+            return false;
+
+        int overlapCount = Physics.OverlapBoxNonAlloc(
+            center,
+            halfExtents,
+            OverlapBuffer,
+            itemTransform.rotation,
+            ~0,
+            QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < overlapCount; i++)
+        {
+            Collider overlap = OverlapBuffer[i];
+            if (overlap == null || overlap == itemCollider || overlap.isTrigger)
+                continue;
+            if (overlap.transform.IsChildOf(itemTransform))
+                continue;
+            if (IsLadderObject(overlap.gameObject))
+                return true;
+        }
+
+        return false;
+    }
+
+    static bool IsLadderObject(GameObject go)
+    {
+        Transform current = go != null ? go.transform : null;
+        while (current != null)
+        {
+            string objectName = current.name;
+            if (objectName.Equals("Ladder", System.StringComparison.OrdinalIgnoreCase)
+                || objectName.IndexOf("Stair", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            current = current.parent;
+        }
+
+        return false;
+    }
+
     static bool IsShelfOverlapCandidate(Collider overlap, BoxCollider itemCollider, Transform itemTransform)
     {
         if (overlap == null || overlap == itemCollider || overlap.isTrigger)
@@ -322,6 +378,8 @@ public static class CardThrowRecovery
             if (hit.collider == null || hit.collider.isTrigger)
                 continue;
             if (hit.collider.GetComponentInParent<CardShelf>() != null)
+                continue;
+            if (IsLadderObject(hit.collider.gameObject))
                 continue;
             if (hit.collider.GetComponentInParent<WorldCard>() != null)
                 continue;
