@@ -70,6 +70,9 @@ public static class CabinetSignCompleteOverlay
         _tex100 = Resources.Load<Texture2D>(ResourceFolder + "sign_complete_100");
         _tex50 = Resources.Load<Texture2D>(ResourceFolder + "sign_complete_50");
         _tex30 = Resources.Load<Texture2D>(ResourceFolder + "sign_complete_30");
+        CabinetSignSharpener.SharpenTexture(_tex100);
+        CabinetSignSharpener.SharpenTexture(_tex50);
+        CabinetSignSharpener.SharpenTexture(_tex30);
     }
 
     static Transform CreateOverlay(Transform sign, Texture2D texture)
