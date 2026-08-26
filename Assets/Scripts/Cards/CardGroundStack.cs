@@ -182,10 +182,16 @@ public static class CardGroundStack
         yield return null;
         RebuildSpatialBuckets();
 
-        int processed = 0;
+        // Snapshot piles before yielding — Track/InsertIntoSpatialBucket can add keys on later
+        // frames and would invalidate a live Dictionary enumerator.
+        var piles = new List<List<WorldCard>>(SpatialBuckets.Count);
         foreach (KeyValuePair<long, List<WorldCard>> pair in SpatialBuckets)
+            piles.Add(pair.Value);
+
+        int processed = 0;
+        for (int i = 0; i < piles.Count; i++)
         {
-            ApplyPileLayers(pair.Value);
+            ApplyPileLayers(piles[i]);
             processed++;
             if (processed % 24 == 0)
                 yield return null;
