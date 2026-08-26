@@ -348,7 +348,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     void DrawInstancedCards()
     {
-        if (_camera == null)
+        if (_camera == null || _batchKeyByCard.Count == 0)
             return;
 
         EnsureBucketsInitialized();
@@ -459,24 +459,26 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (_camera == null)
             return;
 
-        CardGroundStack.ForEachTrackedPack(pack =>
+        int packCount = CardGroundStack.TrackedPackCount;
+        for (int i = 0; i < packCount; i++)
         {
+            WorldBoosterPack pack = CardGroundStack.TrackedPackAt(i);
             if (pack == null)
-                return;
+                continue;
 
             if (pack.IsInHand || pack.HasActivePhysics || pack.State != WorldBoosterPack.PackState.World)
             {
                 pack.SetGroundModelVisible(true);
-                return;
+                continue;
             }
 
             pack.SetGroundModelVisible(ShouldRenderPack(pack));
-        });
+        }
     }
 
     bool ShouldRenderPack(WorldBoosterPack pack)
     {
-        if (pack.GetComponent<PhysicsLevelItem>() != null)
+        if (pack.IsAuthoredLevelItem)
             return true;
 
         Bounds bounds = pack.GetCullBounds();

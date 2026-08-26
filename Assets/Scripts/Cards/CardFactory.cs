@@ -10,6 +10,13 @@ public static class CardFactory
     static int _cachedFrame = -1;
     static bool _hasCachedSurface;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        _hasCachedSurface = false;
+        _cachedFrame = -1;
+    }
+
     public static WorldCard CreateWorldCard(
         Vector3 position,
         Quaternion rotation,
@@ -143,13 +150,13 @@ public static class CardFactory
     /// <summary>Top of the walkable floor mesh/collider (not furniture shelves).</summary>
     public static float GroundSurfaceY()
     {
-        if (_hasCachedSurface && _cachedFrame == Time.frameCount)
+        if (_hasCachedSurface)
             return _cachedSurfaceY;
 
         float surfaceY = DetectFloorSurfaceY();
         _cachedSurfaceY = surfaceY;
-        _cachedFrame = Time.frameCount;
         _hasCachedSurface = true;
+        _cachedFrame = Time.frameCount;
         return surfaceY;
     }
 

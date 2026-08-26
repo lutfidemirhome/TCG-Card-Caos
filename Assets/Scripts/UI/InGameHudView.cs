@@ -11,6 +11,8 @@ public class InGameHudView : MonoBehaviour
     [SerializeField] TMP_Text cardsValueText;
     [SerializeField] TMP_Text handValueText;
     [SerializeField] int maxShelves = GameHudLimits.MaxShelves;
+    const float RefreshInterval = 0.12f;
+    float _refreshTimer;
 
     void Awake()
     {
@@ -20,6 +22,11 @@ public class InGameHudView : MonoBehaviour
 
     void LateUpdate()
     {
+        _refreshTimer += Time.unscaledDeltaTime;
+        if (_refreshTimer < RefreshInterval)
+            return;
+
+        _refreshTimer = 0f;
         Refresh();
     }
 

@@ -11,11 +11,16 @@ public static class FloorTextureSharpener
 
     public static void Apply()
     {
+        CardLayers.EnsureInitialized();
+        int worldCardLayer = CardLayers.WorldCard;
+
         Renderer[] renderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         for (int i = 0; i < renderers.Length; i++)
         {
             Renderer renderer = renderers[i];
-            if (renderer == null || !LooksLikeFloor(renderer))
+            if (renderer == null || renderer.gameObject.layer == worldCardLayer)
+                continue;
+            if (!LooksLikeFloor(renderer))
                 continue;
 
             Material[] materials = renderer.sharedMaterials;

@@ -786,6 +786,8 @@ public static class CardGroundStack
 
     public static int TrackedPackCount => GroundPacks.Count;
 
+    public static WorldBoosterPack TrackedPackAt(int index) => GroundPacks[index];
+
     public static int PhysicsPackCount => PhysicsPacks.Count;
 
     public static void TrackPack(WorldBoosterPack pack)

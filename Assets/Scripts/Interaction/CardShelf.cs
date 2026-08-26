@@ -60,6 +60,9 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     void LateUpdate()
     {
+        if (_shelfFlights.Count == 0)
+            return;
+
         UpdateShelfFlights();
     }
 

@@ -71,11 +71,13 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     System.Action _onPickupFlightComplete;
     Renderer[] _packRenderers;
     bool _groundModelRenderersVisible = true;
+    bool _authoredLevelItem;
     readonly Dictionary<int, Material[]> _liveHandMaterialsByRenderer = new Dictionary<int, Material[]>();
 
     public PackState State => _state;
     public bool IsInHand => _state == PackState.Held || _state == PackState.Opening;
     public bool IsHeld => _state == PackState.Held;
+    public bool IsAuthoredLevelItem => _authoredLevelItem;
 
     /// <summary>
     /// True once the pack has been thrown, meaning it stands in the tumbled pose the solver left it in
@@ -236,6 +238,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     void Awake()
     {
         CardLayers.ApplyToGameObject(gameObject);
+        _authoredLevelItem = GetComponent<PhysicsLevelItem>() != null
+            || GetComponentInParent<PhysicsLevelLayout>() != null;
         ResolvePackVariantFromScene();
         _collider = GetComponent<BoxCollider>();
         if (_collider == null)
