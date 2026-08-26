@@ -69,7 +69,7 @@ MonoBehaviour:
     m_Font: {fileID: 0}
     m_FontSize: 12
     m_FontStyle: 0
-    m_Alignment: 3
+    m_Alignment: 0
     m_WordWrap: 0
     m_RichText: 1
     m_TextClipping: 1
@@ -137,7 +137,7 @@ MonoBehaviour:
     m_Font: {fileID: 0}
     m_FontSize: 15
     m_FontStyle: 0
-    m_Alignment: 3
+    m_Alignment: 0
     m_WordWrap: 1
     m_RichText: 1
     m_TextClipping: 1
@@ -205,7 +205,7 @@ MonoBehaviour:
     m_Font: {fileID: 0}
     m_FontSize: 20
     m_FontStyle: 0
-    m_Alignment: 3
+    m_Alignment: 0
     m_WordWrap: 0
     m_RichText: 1
     m_TextClipping: 1
@@ -273,7 +273,7 @@ MonoBehaviour:
     m_Font: {fileID: 0}
     m_FontSize: 40
     m_FontStyle: 0
-    m_Alignment: 3
+    m_Alignment: 0
     m_WordWrap: 0
     m_RichText: 1
     m_TextClipping: 1
@@ -303,7 +303,7 @@ MonoBehaviour:
     m_Focused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
+      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
     m_OnNormal:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
@@ -317,11 +317,11 @@ MonoBehaviour:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
       - {fileID: 1411127090212124673, guid: 0000000000000000d000000000000000, type: 0}
-      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
+      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
     m_OnFocused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
+      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
     m_Border:
       m_Left: 6
       m_Right: 6
@@ -375,7 +375,7 @@ MonoBehaviour:
     m_Focused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
+      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
     m_OnNormal:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
@@ -389,11 +389,11 @@ MonoBehaviour:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds:
       - {fileID: 1411127090212124673, guid: 0000000000000000d000000000000000, type: 0}
-      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
+      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
     m_OnFocused:
       m_Background: {fileID: 0}
       m_ScaledBackgrounds: []
-      m_TextColor: {r: 0.93333334, g: 0.93333334, b: 0.93333334, a: 1}
+      m_TextColor: {r: 0.8235294, g: 0.8235294, b: 0.8235294, a: 1}
     m_Border:
       m_Left: 6
       m_Right: 6
@@ -833,7 +833,7 @@ MonoBehaviour:
     m_Font: {fileID: 0}
     m_FontSize: 12
     m_FontStyle: 0
-    m_Alignment: 3
+    m_Alignment: 0
     m_WordWrap: 0
     m_RichText: 1
     m_TextClipping: 1
@@ -1055,8 +1055,8 @@ MonoBehaviour:
   ShowStartupWindow: 0
   LastVersion: 0.0
   LimitationRange:
-    position: {x: 12.496746, y: 2.1952584, z: -2.4933014}
-    size: {x: 4.642086, y: 6.8905168, z: 20.88222}
+    position: {x: -5.086197, y: 0.0708382, z: -9.118301}
+    size: {x: 2.7711678, y: 2.6416764, z: 2.8758774}
     GrowToSelection: 1
   DidConfigureLimitationRangeAtLeastOnce: 1
   UseAdvancedOption: 0
@@ -1114,7 +1114,7 @@ MonoBehaviour:
   StaticObjectsLayer: 0
   AlignStrength: 1
   ExtraDragForRotationMode: 100
-  GravityStrength: {x: -1.4091883e-10, y: -9.683868, z: -0.0000011544072}
+  GravityStrength: {x: -1.4054063e-10, y: -9.657879, z: -0.000001151309}
   LimitBodyVelocityInGravityMode: 1
   SetGravityInDirectionOfMouse: 0
   PausePositionReajustment: 1
