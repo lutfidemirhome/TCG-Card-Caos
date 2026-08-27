@@ -190,6 +190,21 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         return transform.position;
     }
 
+    /// <summary>
+    /// Keeps a thrown PSA slab's visible mesh above the floor without flattening its landed rotation.
+    /// </summary>
+    public void LiftPsaMeshAboveFloor()
+    {
+        if (!UsesPsaSlab || _psaController == null)
+            return;
+        if (IsInHand || IsFlyingToShelf || _psaCabinetPlaced || IsInPsaCabinetSlot())
+            return;
+        if (GetComponentInParent<CardShelfSlot>() != null)
+            return;
+
+        _psaController.LiftMeshAboveFloor();
+    }
+
     public void SetGroundShowsBack(bool showsBack)
     {
         if (groundShowsBack == showsBack)

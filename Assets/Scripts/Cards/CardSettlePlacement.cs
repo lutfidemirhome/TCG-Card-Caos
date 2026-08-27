@@ -85,6 +85,11 @@ public static class CardSettlePlacement
 
             CardCollisionUtility.ResolveRestingPenetration(itemTransform, collider, card, body);
         }
+
+        // PSA holder mesh is larger than a card box. A lean against a wall sleeps the collider on
+        // the floor while the model clips through it. Lift the mesh only — never flatten the pose.
+        if (card != null && card.UsesPsaSlab)
+            card.LiftPsaMeshAboveFloor();
     }
 
     /// <summary>

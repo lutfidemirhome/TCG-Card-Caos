@@ -182,12 +182,73 @@ public sealed class PsaCardVisualController
         if (_cardRef == null || !(_owner.PhysCollider is BoxCollider boxCollider))
             return;
 
-        boxCollider.center = new Vector3(0f, _cardRef.localPosition.y, 0f);
-        boxCollider.size = new Vector3(
-            CardDimensions.Width * FootprintWidthFitMultiplier,
-            Mathf.Max(CardDimensions.Thickness, _bodyThickness),
-            CardDimensions.Height);
+        if (TryMeasureMeshBoundsInLocalSpace(_owner.RootTransform, _psaModel, out Vector3 min, out Vector3 max))
+        {
+            Vector3 size = max - min;
+            boxCollider.center = (min + max) * 0.5f;
+            boxCollider.size = new Vector3(
+                Mathf.Max(size.x, CardDimensions.Width),
+                Mathf.Max(size.y, CardDimensions.Thickness),
+                Mathf.Max(size.z, CardDimensions.Height));
+        }
+        else
+        {
+            boxCollider.center = new Vector3(0f, _cardRef.localPosition.y, 0f);
+            boxCollider.size = new Vector3(
+                CardDimensions.Width * FootprintWidthFitMultiplier,
+                Mathf.Max(CardDimensions.Thickness, _bodyThickness),
+                CardDimensions.Height);
+        }
+
         CardCollisionUtility.ApplyToCollider(boxCollider);
+    }
+
+    /// <summary>
+    /// Raises the root until the visible slab clears the floor. Does not rewrite rotation — a card
+    /// that slept leaning on a wall or standing on an edge keeps that pose.
+    /// </summary>
+    public void LiftMeshAboveFloor()
+    {
+        EnsureVisual();
+        if (_psaModel == null)
+            return;
+
+        Transform root = _owner.RootTransform;
+        Vector3 rootPosition = root.position;
+        Renderer[] renderers = _psaModel.GetComponentsInChildren<Renderer>(true);
+        float lowest = float.PositiveInfinity;
+        bool any = false;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled)
+                continue;
+
+            Bounds bounds = renderer.bounds;
+            if (bounds.size.sqrMagnitude < 0.0001f)
+                continue;
+            if ((bounds.center - rootPosition).sqrMagnitude > 4f)
+                continue;
+
+            lowest = Mathf.Min(lowest, bounds.min.y);
+            any = true;
+        }
+
+        if (!any || float.IsInfinity(lowest))
+            return;
+
+        float floorY = CardFactory.GroundSurfaceY();
+        const float skin = 0.003f;
+        float lift = floorY + skin - lowest;
+        if (lift <= 0.0005f || lift > 0.12f)
+            return;
+
+        Vector3 position = rootPosition;
+        position.y += lift;
+        root.position = position;
+        Rigidbody body = _owner.PhysicsBody;
+        if (body != null)
+            body.position = position;
     }
 
     public void ConvertHandVisualToWorldRoot()
