@@ -29,13 +29,10 @@ public class InteractionBlocker : MonoBehaviour
         if (collider == null)
             return false;
 
-        if (collider.GetComponentInParent<InteractionBlocker>() != null)
+        if (collider.GetComponent<InteractionBlocker>() != null)
             return true;
 
         MeshRenderer renderer = collider.GetComponent<MeshRenderer>();
-        if (renderer == null)
-            renderer = collider.GetComponentInParent<MeshRenderer>();
-
         if (renderer == null)
             return false;
 

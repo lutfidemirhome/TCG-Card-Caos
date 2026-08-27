@@ -708,9 +708,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         IgnorePlayerCollision();
 
         BeginScaleTransition(transform.localScale.x, CardDimensions.GroundCardScale, worldScaleTransitionDuration);
-        RefreshRenderMode();
 
         EnsureRigidbody();
+        RefreshRenderMode();
         CardCollisionUtility.LaunchThrownBody(_rigidbody, velocity);
         if (_collider is BoxCollider thrownBox)
             CardCollisionUtility.UnstickThrownSpawnOverlap(transform, thrownBox, this, _rigidbody);
@@ -876,8 +876,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         if (UsesPsaSlab && _psaController != null)
         {
+            groundShowsBack = false;
             _psaController.ConvertHandVisualToWorldRoot();
-            ApplyWorldVisualOrientation();
             return;
         }
 

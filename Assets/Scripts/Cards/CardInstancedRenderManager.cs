@@ -13,7 +13,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     public const string PaletteBatchPrefix = "palette:";
 
     const int MaxInstancesPerBatch = 1023;
-    const int CardsRegisteredPerFrame = 96;
+    const int CardsRegisteredPerFrame = 256;
 
     [SerializeField] float drawDistance = 40f;
 
