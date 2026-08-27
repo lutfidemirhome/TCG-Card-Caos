@@ -15,6 +15,7 @@ static class CardVisualResources
     static Material _shelfPlacementOutlineMaterial;
     static Material _shelfCorrectOutlineMaterial;
     static Material _shelfIncorrectOutlineMaterial;
+    static Material _shelfRowCompleteFillMaterial;
 
     const int CornerSegments = 12;
 
@@ -72,6 +73,15 @@ static class CardVisualResources
         }
     }
 
+    public static Material ShelfRowCompleteFillMaterial
+    {
+        get
+        {
+            EnsureInitialized();
+            return _shelfRowCompleteFillMaterial;
+        }
+    }
+
     public static Mesh HandSelectionBorderFrameMesh
     {
         get
@@ -90,6 +100,7 @@ static class CardVisualResources
         _shelfPlacementOutlineMaterial = null;
         _shelfCorrectOutlineMaterial = null;
         _shelfIncorrectOutlineMaterial = null;
+        _shelfRowCompleteFillMaterial = null;
     }
 
     public static void ApplyOutlineSettings(CardOutlineSettings settings)
@@ -108,6 +119,7 @@ static class CardVisualResources
         SetMaterialColor(_shelfPlacementOutlineMaterial, palette.shelfPlacement);
         SetMaterialColor(_shelfCorrectOutlineMaterial, palette.shelfCorrect);
         SetMaterialColor(_shelfIncorrectOutlineMaterial, palette.shelfIncorrect);
+        SetMaterialColor(_shelfRowCompleteFillMaterial, GetRowCompleteFillColor());
     }
 
     static void EnsureInitialized()
@@ -117,7 +129,8 @@ static class CardVisualResources
         if (_interactionBorderFrameMesh != null && _handSelectionBorderFrameMesh != null
             && _outlineMaterial != null && _handSelectionOutlineMaterial != null
             && _shelfPlacementOutlineMaterial != null
-            && _shelfCorrectOutlineMaterial != null && _shelfIncorrectOutlineMaterial != null)
+            && _shelfCorrectOutlineMaterial != null && _shelfIncorrectOutlineMaterial != null
+            && _shelfRowCompleteFillMaterial != null)
             return;
 
         _interactionBorderFrameMesh ??= BuildBorderFrameMesh(CardDimensions.InteractionOutlineThickness);
@@ -142,6 +155,17 @@ static class CardVisualResources
             CardOutlineSettings.GetPaletteOrDefaults().shelfIncorrect,
             enableInstancing: true,
             renderQueue: (int)RenderQueue.Geometry + 1);
+        _shelfRowCompleteFillMaterial ??= RuntimeMaterialUtility.CreateTransparentUnlitMaterial(
+            GetRowCompleteFillColor(),
+            enableInstancing: true);
+    }
+
+    static Color GetRowCompleteFillColor()
+    {
+        Color correct = CardOutlineSettings.GetPaletteOrDefaults().shelfCorrect;
+        Color lightGreen = Color.Lerp(correct, Color.white, 0.45f);
+        lightGreen.a = 0.75f;
+        return lightGreen;
     }
 
     static void SetMaterialColor(Material material, Color color)

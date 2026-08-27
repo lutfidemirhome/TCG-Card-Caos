@@ -233,7 +233,7 @@ public static class CardGroundQuery
 
     static void TryAddHit(Ray ray, float maxDistance, WorldCard candidate)
     {
-        if (candidate == null || candidate.IsInHand || candidate.HasActivePhysics)
+        if (candidate == null || candidate.IsInHand || candidate.HasActivePhysics || candidate.IsShelfRowCompleteLocked)
             return;
 
         if (!TryRayHitCard(ray, candidate, maxDistance, out float distance))

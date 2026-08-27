@@ -427,6 +427,22 @@ public class CardShelf : MonoBehaviour, IInteractable
         return seriesId != null && correct >= needed;
     }
 
+    void PlayRowCompleteFeedback(int rowIndex)
+    {
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || slot.RowIndex != rowIndex)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card == null || card.IsInHand)
+                continue;
+
+            card.PlayShelfRowCompleteFeedback();
+        }
+    }
+
     public float SurfacePadding => surfacePadding;
 
     public bool TryRestoreCard(WorldCard card, int rowIndex, int columnIndex)
@@ -600,7 +616,10 @@ public class CardShelf : MonoBehaviour, IInteractable
             () =>
             {
                 RemoveShelfFlight(card);
-                card.NotifyShelfPlacement(isCorrect);
+                if (IsSeriesRowComplete(slot.RowIndex, SlotsPerRow))
+                    PlayRowCompleteFeedback(slot.RowIndex);
+                else
+                    card.NotifyShelfPlacement(isCorrect);
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
                 GameSaveSignals.MarkDirty();
                 if (IsComplete())

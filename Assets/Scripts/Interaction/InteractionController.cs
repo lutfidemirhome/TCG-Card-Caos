@@ -226,7 +226,7 @@ public class InteractionController : MonoBehaviour
 
     void HandleGroundCardTarget(WorldCard worldCard)
     {
-        if (worldCard == null || worldCard.IsInHand)
+        if (worldCard == null || worldCard.IsInHand || worldCard.IsShelfRowCompleteLocked)
         {
             ClearDelayedInspectUiState();
             return;
@@ -418,6 +418,8 @@ public class InteractionController : MonoBehaviour
 
             IInteractable interactable = collider.GetComponentInParent<IInteractable>();
             if (interactable == null || interactable is WorldBoosterPack)
+                continue;
+            if (interactable is WorldCard lockedCard && lockedCard.IsShelfRowCompleteLocked)
                 continue;
 
             if (hits[i].distance < bestOtherDistance)

@@ -35,7 +35,7 @@ public class CardInspectPreview : MonoBehaviour
 
     public void Show(WorldCard card)
     {
-        if (card == null || card.IsInHand)
+        if (card == null || card.IsInHand || card.IsShelfRowCompleteLocked)
         {
             Hide();
             return;

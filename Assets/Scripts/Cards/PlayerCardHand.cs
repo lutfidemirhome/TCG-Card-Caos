@@ -425,7 +425,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool TryPickup(WorldCard card)
     {
-        if (card == null || card.IsInHand || card.IsFlyingToShelf || IsHandInputLocked)
+        if (card == null || card.IsInHand || card.IsFlyingToShelf || card.IsShelfRowCompleteLocked || IsHandInputLocked)
             return false;
 
         if (OccupiedHandSlots >= CardDimensions.MaxHandSize)
