@@ -137,7 +137,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         // Flat packs match scatter/spawn (ground mesh lift). Tilted packs match post-throw settle
         // (physics visual, mesh centred on root) — see CardSettlePlacement.FlatUpDot.
-        bool upright = Mathf.Abs(transform.up.y) >= 0.94f;
+        bool upright = CardSettlePlacement.IsFlatOnFloor(transform);
         ApplyWorldVisualOrientation(alignPackModelToGround: upright);
 
         if (_collider != null)
@@ -1517,7 +1517,14 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_state != PackState.World || _rigidbody == null)
             yield break;
 
-        ApplyWorldVisualOrientation(alignPackModelToGround: true);
+        bool alignToGround = CardSettlePlacement.IsFlatOnFloor(transform);
+        ApplyWorldVisualOrientation(alignPackModelToGround: alignToGround);
+        if (!alignToGround)
+        {
+            LiftMeshAboveFloor();
+            if (boxCollider != null)
+                CardCollisionUtility.ResolveRestingPenetration(transform, boxCollider, null, _rigidbody);
+        }
         SetInteractionHighlight(false);
         RefreshPackOutlineState();
     }
@@ -1747,14 +1754,15 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     }
 
     /// <summary>
-    /// Sizes the collider to the pack body instead of the invisible card proxy, following whichever
-    /// visual pose is applied — the ground pose lifts the mesh onto the card bottom, the physics pose
-    /// keeps it centred on the root. A card-thin box let thrown cards come to rest inside the pack mesh
-    /// and left the pack's lower half below the floor.
+    /// Sizes the collider to the visible pack mesh in root space, like PSA slabs. A card-footprint
+    /// box let a leaning pack sleep against a wall while the model clipped through it.
     /// </summary>
     void ApplyPackBodyCollider()
     {
         if (_cardRef == null || !(_collider is BoxCollider boxCollider))
+            return;
+
+        if (TryFitColliderToPackMesh(boxCollider))
             return;
 
         boxCollider.center = new Vector3(0f, _cardRef.localPosition.y, 0f);
@@ -1763,6 +1771,32 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             Mathf.Max(CardDimensions.Thickness, _packBodyThickness),
             CardDimensions.Height);
         CardCollisionUtility.ApplyToCollider(boxCollider);
+    }
+
+    bool TryFitColliderToPackMesh(BoxCollider boxCollider)
+    {
+        if (_packModel == null)
+            return false;
+
+        if (!TryMeasureMeshBoundsInLocalSpace(transform, _packModel, out Vector3 min, out Vector3 max)
+            && !TryMeasureRendererBoundsInLocalSpace(transform, _packModel, out min, out max))
+            return false;
+
+        Vector3 size = max - min;
+        float maxAxis = Mathf.Max(size.x, Mathf.Max(size.y, size.z));
+        float maxAllowed = Mathf.Max(CardDimensions.Width, CardDimensions.Height) * 2.5f;
+        if (maxAxis <= 0.001f || maxAxis > maxAllowed)
+            return false;
+
+        const float minSize = 0.012f;
+        size.x = Mathf.Max(size.x, minSize);
+        size.y = Mathf.Max(size.y, minSize);
+        size.z = Mathf.Max(size.z, minSize);
+        boxCollider.center = (min + max) * 0.5f;
+        boxCollider.size = size;
+        CardCollisionUtility.ApplyToCollider(boxCollider);
+        _packBodyThickness = Mathf.Max(CardDimensions.Thickness, size.y);
+        return true;
     }
 
     void EnsureRigidbody()

@@ -27,26 +27,43 @@ public static class CardSettlePlacement
         return true;
     }
 
+    /// <summary>True when the item is lying flat enough that stack heights and ground mesh lift apply.</summary>
+    public static bool IsFlatOnFloor(Transform itemTransform) =>
+        itemTransform != null && Mathf.Abs(itemTransform.up.y) >= FlatUpDot;
+
     /// <summary>Returns false when the item was resting inside something and needs to settle again.</summary>
     public static bool TrySettle(WorldBoosterPack pack, BoxCollider collider, Rigidbody body, int attempt)
     {
         if (pack == null)
             return true;
 
-        // Packs are thick enough for PhysX to sleep standing on an edge. Always lay them
-        // flat like authored floor packs — cards cannot stand, so they do not need this.
-        pack.FlattenOntoFloor();
-        CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body);
-
-        if (CardCollisionUtility.OverlapsOtherItem(pack.transform, collider, null, body))
+        Transform itemTransform = pack.transform;
+        if (IsFlatOnFloor(itemTransform))
         {
-            Vector3 position = pack.transform.position;
+            pack.FlattenOntoFloor();
+        }
+        else
+        {
+            // Keep the physics pose — a pack that slept leaning on a wall or standing on an
+            // edge must not be forced flat like an authored floor pack.
+            CardFactory.LiftAboveFloor(itemTransform, body);
+            pack.LiftMeshAboveFloor();
+        }
+
+        CardCollisionUtility.ResolveRestingPenetration(itemTransform, collider, null, body);
+
+        if (CardCollisionUtility.OverlapsOtherItem(itemTransform, collider, null, body))
+        {
+            Vector3 position = itemTransform.position;
             position.y += CardGroundStack.StackStep;
             pack.SetGroundRestPosition(position);
             if (body != null)
                 body.position = pack.transform.position;
-            CardCollisionUtility.ResolveRestingPenetration(pack.transform, collider, null, body);
+            CardCollisionUtility.ResolveRestingPenetration(itemTransform, collider, null, body);
         }
+
+        if (!IsFlatOnFloor(itemTransform))
+            pack.LiftMeshAboveFloor();
 
         return true;
     }
@@ -96,7 +113,7 @@ public static class CardSettlePlacement
     /// An item leaning harder than <see cref="FlatUpDot"/> is standing on an edge or propped against
     /// geometry: flat stack heights say nothing about it, so physics keeps the pose it found.
     /// </summary>
-    static bool BelongsToStack(Transform itemTransform) => Mathf.Abs(itemTransform.up.y) >= FlatUpDot;
+    static bool BelongsToStack(Transform itemTransform) => IsFlatOnFloor(itemTransform);
 
     /// <summary>
     /// Takes the residual lean out of a settled item, keeping its facing and its yaw. Physics rests
