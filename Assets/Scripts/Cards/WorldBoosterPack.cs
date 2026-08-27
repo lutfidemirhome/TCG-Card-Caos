@@ -358,6 +358,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_packRenderers == null || _packRenderers.Length == 0)
             return;
 
+        Vector3 rootPosition = transform.position;
         float lowest = float.PositiveInfinity;
         bool any = false;
         for (int i = 0; i < _packRenderers.Length; i++)
@@ -366,7 +367,15 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             if (renderer == null || !renderer.enabled)
                 continue;
 
-            lowest = Mathf.Min(lowest, renderer.bounds.min.y);
+            Bounds bounds = renderer.bounds;
+            if (bounds.size.sqrMagnitude < 0.0001f)
+                continue;
+            // After MenuScene → MainScene load, renderer bounds can still be at the origin
+            // for a frame. Using those would launch authored packs into the air.
+            if ((bounds.center - rootPosition).sqrMagnitude > 4f)
+                continue;
+
+            lowest = Mathf.Min(lowest, bounds.min.y);
             any = true;
         }
 
@@ -375,11 +384,12 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         float floorY = CardFactory.GroundSurfaceY();
         const float skin = 0.003f;
-        if (lowest >= floorY - 0.0005f)
+        float lift = floorY + skin - lowest;
+        if (lift <= 0.0005f || lift > 0.12f)
             return;
 
-        Vector3 position = transform.position;
-        position.y += floorY + skin - lowest;
+        Vector3 position = rootPosition;
+        position.y += lift;
         transform.position = position;
         if (_rigidbody != null)
             _rigidbody.position = position;

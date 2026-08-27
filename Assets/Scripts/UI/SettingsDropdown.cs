@@ -9,6 +9,8 @@ using UnityEngine.UI;
 public class SettingsDropdown : MonoBehaviour
 {
     const float OptionHeight = 40f;
+    const float OptionSpacing = 2f;
+    const float ListPadding = 8f;
     const float MaxListHeight = 260f;
 
     [SerializeField] Button headerButton;
@@ -20,6 +22,7 @@ public class SettingsDropdown : MonoBehaviour
     int _selected;
     Action<int> _changed;
     Action<SettingsDropdown> _opened;
+    bool _expandToFit;
 
     public bool IsOpen => listRoot != null && listRoot.gameObject.activeSelf;
     public int SelectedIndex => _selected;
@@ -44,6 +47,11 @@ public class SettingsDropdown : MonoBehaviour
         }
 
         Close();
+    }
+
+    public void SetExpandToFit(bool expand)
+    {
+        _expandToFit = expand;
     }
 
     public void SetOptions(string[] options, int selected, Action<int> changed)
@@ -116,6 +124,7 @@ public class SettingsDropdown : MonoBehaviour
 
         _opened?.Invoke(this);
         PlaceListBelowHeader();
+        ApplyScrollMode();
         listRoot.gameObject.SetActive(true);
         listRoot.SetAsLastSibling();
     }
@@ -144,7 +153,10 @@ public class SettingsDropdown : MonoBehaviour
         Vector3 local = parent.InverseTransformPoint(bottomCenter);
 
         float width = header.rect.width;
-        float height = Mathf.Min(MaxListHeight, 8f + OptionHeight * Mathf.Max(1, _options.Length));
+        int count = Mathf.Max(1, _options.Length);
+        float height = ListPadding + OptionHeight * count + OptionSpacing * Mathf.Max(0, count - 1);
+        if (!_expandToFit)
+            height = Mathf.Min(MaxListHeight, height);
 
         listRoot.localScale = Vector3.one;
         listRoot.localRotation = Quaternion.identity;
@@ -153,6 +165,20 @@ public class SettingsDropdown : MonoBehaviour
         listRoot.anchorMax = new Vector2(0.5f, 0.5f);
         listRoot.sizeDelta = new Vector2(width, height);
         listRoot.anchoredPosition = new Vector2(local.x, local.y - 2f);
+    }
+
+    void ApplyScrollMode()
+    {
+        if (listRoot == null)
+            return;
+
+        ScrollRect scroll = listRoot.GetComponent<ScrollRect>();
+        if (scroll == null)
+            return;
+
+        scroll.vertical = !_expandToFit;
+        if (_expandToFit)
+            scroll.verticalNormalizedPosition = 1f;
     }
 
     void RebuildOptions()

@@ -21,6 +21,7 @@ static class GamePlayBootstrap
     public static void PrepareForSceneReload()
     {
         _bootstrappedSceneHandle = -1;
+        CardFactory.InvalidateGroundCache();
         WelcomePopupView.ResetSession();
         DemoCompleteView.ResetSession();
         TutorialHintView.ResetSession();

@@ -104,7 +104,7 @@ public class PhysicsLevelLayout : MonoBehaviour
     public static void SuspendAuthoredItemsForSaveRestore()
     {
         _authoredSuspended = true;
-        SetAuthoredFoldersActive(false);
+        SetAuthoredFoldersActive(false, includeDemo: false);
     }
 
     public static void RestoreAuthoredItemsAfterFailedLoad()
@@ -119,13 +119,13 @@ public class PhysicsLevelLayout : MonoBehaviour
         SetAuthoredFoldersActive(true);
     }
 
-    static void SetAuthoredFoldersActive(bool active)
+    static void SetAuthoredFoldersActive(bool active, bool includeDemo = true)
     {
         PhysicsLevelLayout layout = FindExisting();
         if (layout == null)
             return;
 
-        if (layout.demoCardsRoot != null)
+        if (includeDemo && layout.demoCardsRoot != null)
             layout.demoCardsRoot.gameObject.SetActive(active);
 
         if (layout.mainLevelRoot == null)

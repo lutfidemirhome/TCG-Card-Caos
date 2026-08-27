@@ -126,11 +126,25 @@ public static class GameSaveRestore
 
         string restoreId = AllocateRestoreId(record.id);
 
-        WorldCard card = CreateCard(record);
-        if (card == null)
-            return;
+        WorldCard card;
+        if (PersistentIdRegistry.TryGetCard(restoreId, out WorldCard existing) && existing != null)
+        {
+            bool demoAuthored = IsDemoAuthored(existing);
+            if (demoAuthored && record.location == CardRuntimeLocation.World)
+                return;
 
-        PersistentId.GetOrCreate(card.gameObject).AssignExisting(restoreId);
+            card = existing;
+            if (!demoAuthored)
+                WakeRestoredObject(card.transform);
+        }
+        else
+        {
+            card = CreateCard(record);
+            if (card == null)
+                return;
+
+            PersistentId.GetOrCreate(card.gameObject).AssignExisting(restoreId);
+        }
 
         switch (record.location)
         {
@@ -421,23 +435,63 @@ public static class GameSaveRestore
         return hand.RestoreHeldCard(card);
     }
 
+    static bool IsDemoAuthored(Component component)
+    {
+        if (component == null)
+            return false;
+
+        PhysicsLevelItem item = component.GetComponent<PhysicsLevelItem>();
+        if (item != null && item.Area == PhysicsLevelItem.AreaKind.Demo)
+            return true;
+
+        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
+        Transform demoRoot = layout != null ? layout.DemoCardsRoot : null;
+        return demoRoot != null && component.transform.IsChildOf(demoRoot);
+    }
+
+    static void WakeRestoredObject(Transform transform)
+    {
+        if (transform == null)
+            return;
+
+        transform.SetParent(null, true);
+        if (!transform.gameObject.activeSelf)
+            transform.gameObject.SetActive(true);
+    }
+
     static void RestorePack(PackSaveRecord record, Transform scatterRoot)
     {
         if (record == null)
             return;
 
         string restoreId = AllocateRestoreId(record.id);
-
         List<CardDefinition> contents = ResolvePackContents(record.contents);
-        WorldBoosterPack pack = PackFactory.CreateWorldPack(
-            record.Position,
-            record.Rotation,
-            packDefinition: null,
-            packName: "Booster Pack",
-            packVariantIndex: record.variant,
-            preRolledContents: contents);
 
-        PersistentId.GetOrCreate(pack.gameObject).AssignExisting(restoreId);
+        WorldBoosterPack pack;
+        if (PersistentIdRegistry.TryGetPack(restoreId, out WorldBoosterPack existing) && existing != null)
+        {
+            bool demoAuthored = IsDemoAuthored(existing);
+            if (demoAuthored && !record.held)
+                return;
+
+            pack = existing;
+            if (!demoAuthored)
+            {
+                WakeRestoredObject(pack.transform);
+                pack.Initialize(null, record.variant, contents);
+            }
+        }
+        else
+        {
+            pack = PackFactory.CreateWorldPack(
+                record.Position,
+                record.Rotation,
+                packDefinition: null,
+                packName: "Booster Pack",
+                packVariantIndex: record.variant,
+                preRolledContents: contents);
+            PersistentId.GetOrCreate(pack.gameObject).AssignExisting(restoreId);
+        }
 
         if (record.held && PlayerCardHand.Instance != null && PlayerCardHand.Instance.RestoreHeldPack(pack))
             return;

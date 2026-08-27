@@ -27,8 +27,8 @@ public class MainMenuView : MonoBehaviour
 
     [Header("Version label")]
     [SerializeField] TMP_Text versionText;
-    [Tooltip("Leave empty to show Application.version from Project Settings.")]
-    [SerializeField] string versionOverride = "0.30";
+    [Tooltip("Leave empty to show Application.version from Project Settings → Player → Version.")]
+    [SerializeField] string versionOverride;
     [SerializeField] string versionPrefix = "v";
 
     [Header("Social buttons")]

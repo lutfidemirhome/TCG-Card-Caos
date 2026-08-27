@@ -16322,7 +16322,7 @@ MonoBehaviour:
   feedbackButton: {fileID: 1555063963}
   logoRect: {fileID: 1593164217}
   versionText: {fileID: 1457193696}
-  versionOverride: 0.30
+  versionOverride: 
   versionPrefix: v
   discordButton: {fileID: 12484}
   tiktokButton: {fileID: 1112085783}

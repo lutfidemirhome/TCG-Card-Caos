@@ -257,6 +257,7 @@ public class SettingsPanelView : MonoBehaviour
         Stretch(_listOverlay);
 
         _languageDropdown = CreateDropdownRow(content, "Language", LocalizationKeys.SettingsLanguage, SettingsArt.LanguageDropdown, 264f);
+        _languageDropdown?.SetExpandToFit(true);
         _resolutionDropdown = CreateDropdownRow(content, "Resolution", LocalizationKeys.SettingsResolution, SettingsArt.ResolutionDropdown, 335f);
         _fullscreenToggle = CreateToggleRow(content, "Fullscreen", LocalizationKeys.SettingsFullscreen, value => _draft.fullscreen = value);
         _qualityDropdown = CreateDropdownRow(content, "Quality", LocalizationKeys.SettingsQuality, SettingsArt.QualityDropdown, 240f);
@@ -283,6 +284,7 @@ public class SettingsPanelView : MonoBehaviour
 
         _dropdowns.Clear();
         _languageDropdown = BindDropdown(content, "Language");
+        _languageDropdown?.SetExpandToFit(true);
         _resolutionDropdown = BindDropdown(content, "Resolution");
         _qualityDropdown = BindDropdown(content, "Quality");
         _fullscreenToggle = BindToggle(content, "Fullscreen", value => _draft.fullscreen = value);
