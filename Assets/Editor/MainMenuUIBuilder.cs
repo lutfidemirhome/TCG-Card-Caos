@@ -598,7 +598,7 @@ public static class MainMenuUIBuilder
         SetCornerAnchored(rect, new Vector2(0f, 0f), new Vector2(253f, 161f), new Vector2(240f, 44f));
 
         TMP_Text text = CreateText(rect, font, 26f, TextAlignmentOptions.Center, Color.white);
-        text.text = "v0.30";
+        text.text = "v0.1.0";
         text.raycastTarget = false;
         EnableAutoSize(text, 13f, 26f);
         return text;
