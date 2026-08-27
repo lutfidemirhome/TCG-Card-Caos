@@ -23,6 +23,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     [Tooltip("Optional imported pack model prefab. Parented on PackCardRef (invisible card proxy).")]
     [SerializeField] GameObject visualPrefab;
     [SerializeField] int packVariantIndex = 1;
+    [SerializeField] List<CardDefinition> preRolledContents;
 
     const string CardRefChildName = "PackCardRef";
     const string CardProxyMeshChildName = "CardProxyMesh";
@@ -41,7 +42,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     bool _interactionHighlighted;
     bool _handSelected;
     bool _groundShowsBack;
-    List<CardDefinition> _preRolledContents;
     float _packModelGroundOffsetYFaceUp;
     float _packModelGroundOffsetYFaceDown;
     float _packBodyThickness;
@@ -166,6 +166,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         EnsureContentsPreRolled();
         CardGroundStack.TrackPack(this);
         SetGroundModelVisible(true);
+
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this) && _collider != null)
+            _collider.enabled = false;
     }
 
     void ResolvePackVariantFromScene()
@@ -226,9 +229,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     {
         packDefinition = definition;
         this.packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
-        _preRolledContents = preRolledContents != null && preRolledContents.Count > 0
-            ? new List<CardDefinition>(preRolledContents)
-            : null;
+        if (preRolledContents != null && preRolledContents.Count > 0)
+            this.preRolledContents = new List<CardDefinition>(preRolledContents);
         EnsureVisual();
         RefreshPackModelLayout();
         ApplyWorldVisualOrientation();
@@ -1259,6 +1261,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public string GetPromptText()
     {
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
+            return string.Empty;
+
         if (IsInHand)
             return string.Empty;
 
@@ -1282,6 +1287,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public void Interact(GameObject interactor)
     {
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
+            return;
+
         if (IsInHand)
             return;
 
@@ -1294,6 +1302,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public void SetInteractionHighlight(bool highlighted)
     {
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
+            return;
+
         _interactionHighlighted = highlighted && _state == PackState.World;
         if (_interactionHighlighted && !_hasPackOutlineBounds)
             RefreshPackOutlineBoundsFromLayout();
@@ -1432,7 +1443,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public IReadOnlyList<CardDefinition> PeekPreRolledContents()
     {
-        return _preRolledContents;
+        return preRolledContents;
     }
 
     public void RestoreIntoHand(Transform handAnchor, float targetHandScale)
@@ -1669,16 +1680,16 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public IReadOnlyList<CardDefinition> RollContents(int count)
     {
         EnsureContentsPreRolled(count);
-        if (_preRolledContents == null || _preRolledContents.Count == 0)
+        if (preRolledContents == null || preRolledContents.Count == 0)
             return new List<CardDefinition>();
 
-        int take = Mathf.Min(count, _preRolledContents.Count);
-        return _preRolledContents.GetRange(0, take);
+        int take = Mathf.Min(count, preRolledContents.Count);
+        return preRolledContents.GetRange(0, take);
     }
 
     public void EnsureContentsPreRolled(int count = CardDimensions.CardsPerBoosterPack)
     {
-        if (_preRolledContents != null && _preRolledContents.Count >= count)
+        if (preRolledContents != null && preRolledContents.Count >= count)
             return;
 
         var results = new List<CardDefinition>(count);
@@ -1689,14 +1700,14 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (pool.Count == 0)
         {
             Debug.LogWarning("WorldBoosterPack: No card definitions available for pack contents.");
-            _preRolledContents = results;
+            preRolledContents = results;
             return;
         }
 
         for (int i = 0; i < count; i++)
             results.Add(pool[Random.Range(0, pool.Count)]);
 
-        _preRolledContents = results;
+        preRolledContents = results;
     }
 
     static IReadOnlyList<CardDefinition> GetDefaultPool()

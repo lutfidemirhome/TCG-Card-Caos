@@ -127,6 +127,8 @@ public static class CardGroundStack
                 WorldCard card = GroundCards[i];
                 if (card == null || card.IsInHand || card.GetComponentInParent<CardShelfSlot>() != null)
                     continue;
+                if (PhysicsLevelItem.IsMixStoreDisplayOnly(card))
+                    continue;
 
                 results.Add(card);
             }
@@ -161,6 +163,8 @@ public static class CardGroundStack
                     {
                         WorldCard card = bucket[i];
                         if (card == null || card.IsInHand || card.GetComponentInParent<CardShelfSlot>() != null)
+                            continue;
+                        if (PhysicsLevelItem.IsMixStoreDisplayOnly(card))
                             continue;
                         if (!RayCandidateSeen.Add(card))
                             continue;

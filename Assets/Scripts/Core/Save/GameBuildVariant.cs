@@ -23,6 +23,8 @@ public static class GameBuildVariant
         }
     }
 
+    public static bool IsDemo => Current == Demo;
+
     public static string FolderName => Current == Demo ? DemoFolderName : FullFolderName;
 
     public static bool Matches(string variant)

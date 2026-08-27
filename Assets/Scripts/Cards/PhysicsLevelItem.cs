@@ -23,6 +23,24 @@ public class PhysicsLevelItem : MonoBehaviour
     public int BatchIndex => batchIndex;
     public bool Baked => baked;
 
+    public static bool IsMixStoreItem(Component component)
+    {
+        if (component == null)
+            return false;
+
+        PhysicsLevelItem item = component.GetComponent<PhysicsLevelItem>();
+        return item != null && item.Area == AreaKind.Main;
+    }
+
+    /// <summary>
+    /// Demo build: Mix cards/packs stay visible but are not pickable.
+    /// Full game (no TCG_DEMO) restores Mix interaction.
+    /// </summary>
+    public static bool IsMixStoreDisplayOnly(Component component)
+    {
+        return GameBuildVariant.IsDemo && IsMixStoreItem(component);
+    }
+
     public void Configure(AreaKind areaKind, int batch, bool isBaked)
     {
         area = areaKind;

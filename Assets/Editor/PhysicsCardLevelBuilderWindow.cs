@@ -571,7 +571,15 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         CardArtLibrary.EnsureLoaded();
         var occupied = new List<Vector3>(regularCount + psaCount + packCount);
 
-        List<CardDefinition> regulars = CardScatterUtility.AllocateLiveGroundCards(regularCount);
+        int packedCards = packCount > 0 ? packCount * CardDimensions.CardsPerBoosterPack : 0;
+        List<CardDefinition> uniquePool = CardScatterUtility.AllocateLiveGroundCards(
+            regularCount + packedCards);
+        int regularTake = Mathf.Min(regularCount, uniquePool.Count);
+        List<CardDefinition> regulars = uniquePool.GetRange(0, regularTake);
+        List<CardDefinition> packPool = uniquePool.Count > regularTake
+            ? uniquePool.GetRange(regularTake, uniquePool.Count - regularTake)
+            : new List<CardDefinition>();
+
         for (int i = 0; i < regulars.Count; i++)
         {
             WorldCard card = CardFactory.CreateWorldCard(
@@ -597,9 +605,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 
         if (packCount <= 0)
             return;
-
-        int packedCards = packCount * CardDimensions.CardsPerBoosterPack;
-        List<CardDefinition> packPool = CardScatterUtility.AllocateLiveGroundCards(packedCards);
         BoosterPackDefinition packDefinition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
         for (int i = 0; i < packCount; i++)
         {

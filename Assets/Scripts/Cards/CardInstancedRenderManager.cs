@@ -447,6 +447,10 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (!GeometryUtility.TestPlanesAABB(_frustumPlanes, bounds))
             return false;
 
+        // Mix is scenery in the same scene; distance-culling it would pop cards at the corridor.
+        if (PhysicsLevelItem.IsMixStoreItem(card))
+            return true;
+
         if (_camera == null)
             return true;
 

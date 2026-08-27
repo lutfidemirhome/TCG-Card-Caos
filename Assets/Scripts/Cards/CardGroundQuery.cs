@@ -170,6 +170,8 @@ public static class CardGroundQuery
     {
         if (pack == null || pack.IsInHand || !pack.HasActivePhysics)
             return;
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(pack))
+            return;
 
         float scale = Mathf.Max(pack.transform.lossyScale.x, CardDimensions.GroundCardScale);
         Vector3 halfExtents = new Vector3(
@@ -194,6 +196,8 @@ public static class CardGroundQuery
     {
         if (pack == null || pack.IsInHand || pack.HasActivePhysics)
             return;
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(pack))
+            return;
 
         float scale = Mathf.Max(pack.transform.lossyScale.x, CardDimensions.GroundCardScale);
         float halfThickness = Mathf.Max(
@@ -203,8 +207,12 @@ public static class CardGroundQuery
             CardDimensions.Width * scale * 0.5f,
             halfThickness,
             CardDimensions.Height * scale * 0.5f);
+
+        // Use the authored world pose. GetDrawWorldY snaps to the lower-floor stack plane,
+        // so Mix packs on the mezzanine were hittable through the demo floor and flew into hand.
         Vector3 center = pack.transform.position;
-        center.y = CardGroundStack.GetDrawWorldY(pack);
+        if (pack.TryGetComponent(out BoxCollider boxCollider) && boxCollider.enabled)
+            center = boxCollider.transform.TransformPoint(boxCollider.center);
 
         if (!TryRayIntersectOrientedBox(ray, center, pack.transform.rotation, halfExtents, out float distance))
             return;
@@ -234,6 +242,8 @@ public static class CardGroundQuery
     static void TryAddHit(Ray ray, float maxDistance, WorldCard candidate)
     {
         if (candidate == null || candidate.IsInHand || candidate.HasActivePhysics || candidate.IsShelfRowCompleteLocked)
+            return;
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(candidate))
             return;
 
         if (!TryRayHitCard(ray, candidate, maxDistance, out float distance))

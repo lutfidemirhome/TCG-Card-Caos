@@ -120,17 +120,19 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         || _shelfPlacementFlashRoutine != null
         || _shelfRowCompleteRoutine != null;
 
+    bool IsMixStoreCard => PhysicsLevelItem.IsMixStoreItem(this);
+
     public bool CanUseInstancedRendering =>
         Application.isPlaying
         && !UsesPsaSlab
         && _handState == HandState.World
         && !_scaleTransitionActive
         && _rigidbody == null
-        && _cardVisual == null
+        && (_cardVisual == null || IsMixStoreCard)
         && !_interactionHighlighted
-        && !_authoredPhysicsItem
+        && (!_authoredPhysicsItem || IsMixStoreCard)
         && !groundShowsBack
-        && transform.up.y >= InstancedFaceUpMinY
+        && (transform.up.y >= InstancedFaceUpMinY || IsMixStoreCard)
         && GetComponentInParent<CardShelfSlot>() == null;
 
     public bool CanUseInstancedBackRendering =>
@@ -139,11 +141,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         && _handState == HandState.World
         && !_scaleTransitionActive
         && _rigidbody == null
-        && _cardVisual == null
+        && (_cardVisual == null || IsMixStoreCard)
         && !_interactionHighlighted
-        && !_authoredPhysicsItem
+        && (!_authoredPhysicsItem || IsMixStoreCard)
         && groundShowsBack
-        && transform.up.y >= InstancedFaceUpMinY
+        && (transform.up.y >= InstancedFaceUpMinY || IsMixStoreCard)
         && GetComponentInParent<CardShelfSlot>() == null;
 
     public bool IsGroundFaceDown
@@ -341,6 +343,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public Matrix4x4 GetInstancedDrawMatrix()
     {
         Vector3 scale = transform.lossyScale;
+        if (IsMixStoreCard)
+            scale = Vector3.Scale(scale, CardArtLibrary.WorldVisualScale);
+
         Quaternion visualRotation = transform.rotation * CardArtLibrary.WorldVisualRotation;
         if (IsGroundFaceDown)
             visualRotation *= Quaternion.Euler(180f, 0f, 0f);
@@ -389,12 +394,18 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void SetInteractionHighlight(bool highlighted)
     {
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
+            return;
+
         _interactionHighlighted = highlighted && !IsInHand;
         RefreshRenderMode();
     }
 
     public string GetPromptText()
     {
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
+            return string.Empty;
+
         if (IsInHand || IsFlyingToShelf || IsShelfRowCompleteLocked)
             return string.Empty;
 
@@ -419,6 +430,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void Interact(GameObject interactor)
     {
+        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
+            return;
+
         if (IsInHand || IsFlyingToShelf || IsShelfRowCompleteLocked)
             return;
 
@@ -1245,7 +1259,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         if (CanUseInstancedRendering || CanUseInstancedBackRendering)
         {
-            ReleaseCardVisual();
+            if (IsMixStoreCard)
+                HideAuthoredCardVisual();
+            else
+                ReleaseCardVisual();
 
             if (HasShelfPlacementFeedback)
             {
@@ -1550,6 +1567,20 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         meshRenderer.enabled = true;
         meshRenderer.sharedMaterials = materials;
+    }
+
+    void HideAuthoredCardVisual()
+    {
+        BindExistingCardVisual();
+        if (_cardVisual == null)
+            return;
+
+        MeshRenderer meshRenderer = _cardVisual.GetComponent<MeshRenderer>();
+        if (meshRenderer != null)
+            meshRenderer.enabled = false;
+
+        ReleaseInteractionOutline();
+        ReleaseHandSelectionOutline();
     }
 
     void ReleaseCardVisual()
