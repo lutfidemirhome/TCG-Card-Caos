@@ -486,8 +486,6 @@ public class InteractionController : MonoBehaviour
             psaSlot.ClearAim();
     }
 
-    void ClearActiveShelfAim() => ClearActivePlacementAims();
-
     void ClearShelfAimForNonShelfTarget(IInteractable interactable)
     {
         if (interactable is WorldCard worldCard)

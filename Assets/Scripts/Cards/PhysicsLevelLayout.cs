@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -39,8 +38,6 @@ public class PhysicsLevelLayout : MonoBehaviour
     [SerializeField] PhysicsCardSpawnVolume mainVolume;
     [SerializeField] Transform demoCardsRoot;
     [SerializeField] Transform mainLevelRoot;
-
-    static bool _authoredSuspended;
 
     public int DemoRegularCount { get => demoRegularCount; set => demoRegularCount = Mathf.Max(0, value); }
     public int DemoPsaCount { get => demoPsaCount; set => demoPsaCount = Mathf.Max(0, value); }
@@ -90,32 +87,18 @@ public class PhysicsLevelLayout : MonoBehaviour
         return Object.FindFirstObjectByType<PhysicsLevelLayout>();
     }
 
-    public static bool HasAuthoredPlayableItems()
-    {
-        if (_authoredSuspended)
-            return false;
-
-        PhysicsLevelItem[] items = Object.FindObjectsByType<PhysicsLevelItem>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        return items != null && items.Length > 0;
-    }
-
     public static void SuspendAuthoredItemsForSaveRestore()
     {
-        _authoredSuspended = true;
         SetAuthoredFoldersActive(false, includeDemo: false);
     }
 
     public static void RestoreAuthoredItemsAfterFailedLoad()
     {
-        _authoredSuspended = false;
         SetAuthoredFoldersActive(true);
     }
 
     public static void NotifyNewGameUsingAuthoredLayout()
     {
-        _authoredSuspended = false;
         SetAuthoredFoldersActive(true);
     }
 
@@ -140,50 +123,6 @@ public class PhysicsLevelLayout : MonoBehaviour
         }
     }
 
-    public static WorldCard[] CollectAuthoredWorldCards()
-    {
-        if (_authoredSuspended)
-            return System.Array.Empty<WorldCard>();
-
-        PhysicsLevelItem[] items = Object.FindObjectsByType<PhysicsLevelItem>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        var cards = new List<WorldCard>(items.Length);
-        for (int i = 0; i < items.Length; i++)
-        {
-            if (items[i] == null)
-                continue;
-
-            WorldCard card = items[i].GetComponent<WorldCard>();
-            if (card != null && !card.IsInHand)
-                cards.Add(card);
-        }
-
-        return cards.ToArray();
-    }
-
-    public static WorldBoosterPack[] CollectAuthoredWorldPacks()
-    {
-        if (_authoredSuspended)
-            return System.Array.Empty<WorldBoosterPack>();
-
-        PhysicsLevelItem[] items = Object.FindObjectsByType<PhysicsLevelItem>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        var packs = new List<WorldBoosterPack>(items.Length);
-        for (int i = 0; i < items.Length; i++)
-        {
-            if (items[i] == null)
-                continue;
-
-            WorldBoosterPack pack = items[i].GetComponent<WorldBoosterPack>();
-            if (pack != null && !pack.IsInHand)
-                packs.Add(pack);
-        }
-
-        return packs.ToArray();
-    }
-
     public static string FormatBatchName(int index)
     {
         return BatchPrefix + index.ToString("000");
@@ -195,10 +134,4 @@ public class PhysicsLevelLayout : MonoBehaviour
     }
 
     public static int MixPacksPerBatch => MixPackCount / MixBatchCount;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics()
-    {
-        _authoredSuspended = false;
-    }
 }

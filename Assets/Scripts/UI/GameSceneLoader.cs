@@ -14,18 +14,14 @@ public class GameSceneLoader : MonoBehaviour
     {
         _runner = null;
         _isLoading = false;
-        _startedViaMenuLoader = false;
         _pendingLoadMode = GameLoadMode.NewGame;
         _pendingSlotId = null;
     }
 
     static GameSceneLoader _runner;
     static bool _isLoading;
-    static bool _startedViaMenuLoader;
     static GameLoadMode _pendingLoadMode = GameLoadMode.NewGame;
     static string _pendingSlotId;
-
-    public static bool StartedViaMenuLoader => _startedViaMenuLoader;
 
     public static bool IsLoading => _isLoading;
 
@@ -79,7 +75,6 @@ public class GameSceneLoader : MonoBehaviour
     {
         _pendingLoadMode = GameLoadMode.NewGame;
         _pendingSlotId = null;
-        _startedViaMenuLoader = false;
     }
 
     public static void LoadGame()
@@ -88,7 +83,6 @@ public class GameSceneLoader : MonoBehaviour
             return;
 
         _isLoading = true;
-        _startedViaMenuLoader = true;
 
         LoadingScreenUI loadingScreen = LoadingScreenUI.Ensure();
         if (loadingScreen != null)

@@ -34,7 +34,7 @@ public static class InteractionOcclusion
             if (collider == null || hit.distance > targetDistance - Clearance)
                 continue;
 
-            if (collider.GetComponentInParent<FirstPersonController>() != null)
+            if (collider is CharacterController)
                 continue;
 
             if (IsFloorSlab(collider))
@@ -54,23 +54,7 @@ public static class InteractionOcclusion
 
     static bool IsFloorSlab(Collider collider)
     {
-        if (collider == null)
-            return false;
-
-        if (collider.GetComponentInParent<CardShelf>() != null
-            || collider.GetComponentInParent<PsaCabinetSlot>() != null)
-            return false;
-
-        Transform transform = collider.transform;
-        while (transform != null)
-        {
-            if (NameLooksLikeFloorSlab(transform.name))
-                return true;
-
-            transform = transform.parent;
-        }
-
-        return false;
+        return collider != null && NameLooksLikeFloorSlab(collider.gameObject.name);
     }
 
     static bool NameLooksLikeFloorSlab(string objectName)
@@ -88,18 +72,15 @@ public static class InteractionOcclusion
     {
         float normalY = hit.normal.y;
 
-        // Underside of the mezzanine / ceiling: looking up through the slab.
         if (normalY < -0.15f)
             return true;
 
-        // Top of a higher floor: looking down through it at something below.
         if (normalY > 0.15f)
         {
             Vector3 targetPoint = ray.GetPoint(targetDistance);
             return targetPoint.y < hit.point.y - FloorThroughMargin;
         }
 
-        // Edge-on through the slab thickness.
         return true;
     }
 }
