@@ -46,9 +46,9 @@ public class MainMenuView : MonoBehaviour
     [Header("Links")]
     [SerializeField] string feedbackUrl = "";
     [SerializeField] string discordUrl = "";
-    [SerializeField] string tiktokUrl = "";
-    [SerializeField] string instagramUrl = "";
-    [SerializeField] string youtubeUrl = "";
+    [SerializeField] string tiktokUrl = "https://www.tiktok.com/@odd.forge.games";
+    [SerializeField] string instagramUrl = "https://www.instagram.com/oddforgegames";
+    [SerializeField] string youtubeUrl = "https://www.youtube.com/@oddforgegames";
 
     void Awake()
     {

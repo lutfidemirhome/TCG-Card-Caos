@@ -16332,9 +16332,9 @@ MonoBehaviour:
   settingsPanel: {fileID: 1900002002}
   feedbackUrl: 
   discordUrl: 
-  tiktokUrl: 
-  instagramUrl: 
-  youtubeUrl: 
+  tiktokUrl: https://www.tiktok.com/@odd.forge.games
+  instagramUrl: https://www.instagram.com/oddforgegames
+  youtubeUrl: https://www.youtube.com/@oddforgegames 
 --- !u!114 &1214598457
 MonoBehaviour:
   m_ObjectHideFlags: 0
