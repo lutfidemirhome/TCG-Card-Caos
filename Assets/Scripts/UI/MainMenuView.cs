@@ -44,8 +44,8 @@ public class MainMenuView : MonoBehaviour
     [SerializeField] SettingsPanelView settingsPanel;
 
     [Header("Links")]
-    [SerializeField] string feedbackUrl = "";
-    [SerializeField] string discordUrl = "";
+    [SerializeField] string feedbackUrl = "https://discord.gg/THgcvu3CC";
+    [SerializeField] string discordUrl = "https://discord.gg/pFAN48K66";
     [SerializeField] string tiktokUrl = "https://www.tiktok.com/@odd.forge.games";
     [SerializeField] string instagramUrl = "https://www.instagram.com/oddforgegames";
     [SerializeField] string youtubeUrl = "https://www.youtube.com/@oddforgegames";

@@ -16330,8 +16330,8 @@ MonoBehaviour:
   youtubeButton: {fileID: 862873839}
   loadGamePanel: {fileID: 453349003}
   settingsPanel: {fileID: 1900002002}
-  feedbackUrl: 
-  discordUrl: 
+  feedbackUrl: https://discord.gg/THgcvu3CC
+  discordUrl: https://discord.gg/pFAN48K66 
   tiktokUrl: https://www.tiktok.com/@odd.forge.games
   instagramUrl: https://www.instagram.com/oddforgegames
   youtubeUrl: https://www.youtube.com/@oddforgegames 
