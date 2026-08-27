@@ -44,7 +44,7 @@ public static class SettingsUIBuilder
         }
     }
 
-    [MenuItem("TCG Card Caos/UI/Add Settings Panel")]
+    [MenuItem("TCG Card Chaos/UI/Add Settings Panel")]
     public static void AddSettingsPanel()
     {
         if (!File.Exists(MenuScenePath))

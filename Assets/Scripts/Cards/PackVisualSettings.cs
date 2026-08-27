@@ -4,7 +4,7 @@ using UnityEngine;
 /// Booster pack 3D model tuning. Edit in Project without touching code.
 /// Asset path: Resources/Settings/PackVisualSettings
 /// </summary>
-[CreateAssetMenu(fileName = "PackVisualSettings", menuName = "TCG Card Caos/Pack Visual Settings")]
+[CreateAssetMenu(fileName = "PackVisualSettings", menuName = "TCG Card Chaos/Pack Visual Settings")]
 public class PackVisualSettings : ScriptableObject
 {
     public const string ResourcePath = "Settings/PackVisualSettings";

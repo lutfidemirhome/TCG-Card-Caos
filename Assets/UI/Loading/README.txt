@@ -34,5 +34,5 @@ Drop the three slices here, then they appear on LoadingCanvas in MenuScene.
    Assets/Resources/UI/LoadingScreen.prefab
 
 5. Unity menu
-   TCG Card Caos → UI → Add Loading Screen
+   TCG Card Chaos → UI → Add Loading Screen
    After you drop the three pngs, run this once so they are assigned and the prefab is updated.

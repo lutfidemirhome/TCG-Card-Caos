@@ -21,9 +21,9 @@ Same workflow as the main menu: edit layout in the scene, swap art on Image comp
      confirm_band.png, yes_button.png, no_button.png, ...
 
 3. Unity menu
-   TCG Card Caos → UI → Open Main Menu Scene
-   TCG Card Caos → UI → Add Load Game Confirm Dialog   (adds Panel_LoadConfirm if missing)
-   TCG Card Caos → UI → Add Load Game Panel            (rebuilds full load game overlay)
+   TCG Card Chaos → UI → Open Main Menu Scene
+   TCG Card Chaos → UI → Add Load Game Confirm Dialog   (adds Panel_LoadConfirm if missing)
+   TCG Card Chaos → UI → Add Load Game Panel            (rebuilds full load game overlay)
 
 Enable Panel_LoadConfirm in Hierarchy to preview the confirm band and edit Label materials.
 Leave it inactive before saving; runtime shows it only after a save slot is clicked.

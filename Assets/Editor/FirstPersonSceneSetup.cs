@@ -4,13 +4,13 @@ using UnityEngine;
 
 /// <summary>
 /// Card-shop scene bootstrap: floor, walls, player, light. Cards come from Physics Level Builder + Grabbit.
-/// Menu: TCG Card Caos → Create Empty Card Shop Scene
+/// Menu: TCG Card Chaos → Create Empty Card Shop Scene
 /// </summary>
 public static class FirstPersonSceneSetup
 {
     const string ScenePath = "Assets/Scenes/MainScene.unity";
 
-    [MenuItem("TCG Card Caos/Open Main Scene")]
+    [MenuItem("TCG Card Chaos/Open Main Scene")]
     public static void OpenMainScene()
     {
         if (EditorSceneManager.GetActiveScene().path == ScenePath)
@@ -26,7 +26,7 @@ public static class FirstPersonSceneSetup
     const float FloorScale = 2f;
     const float WallHeight = 3f;
 
-    [MenuItem("TCG Card Caos/Create Empty Card Shop Scene")]
+    [MenuItem("TCG Card Chaos/Create Empty Card Shop Scene")]
     public static void SetupPlayground()
     {
         if (System.IO.File.Exists(ScenePath))
@@ -95,7 +95,7 @@ public static class FirstPersonSceneSetup
         Camera camera = player.GetComponentInChildren<Camera>();
         if (camera == null)
         {
-            Debug.LogError("TCG Card Caos: Player has no camera.");
+            Debug.LogError("TCG Card Chaos: Player has no camera.");
             return;
         }
 
@@ -136,7 +136,7 @@ public static class FirstPersonSceneSetup
         EditorBuildSettings.scenes = buildScenes;
 
         Debug.Log(
-            "TCG Card Caos: Card shop ready at "
+            "TCG Card Chaos: Card shop ready at "
             + ScenePath
             + ". Place cards with Card Physics Level Builder + Grabbit, then press Play.");
     }

@@ -8,11 +8,11 @@ using UnityEngine;
 /// Round-trips the localization table through CSV so translations can be handed to translators or
 /// edited in a spreadsheet. Columns are matched by the culture code in the header row, so reordering
 /// or omitting language columns is safe.
-/// Menu: TCG Card Caos → Localization → Export / Import Translations CSV
+/// Menu: TCG Card Chaos → Localization → Export / Import Translations CSV
 /// </summary>
 public static class LocalizationCsvTool
 {
-    [MenuItem("TCG Card Caos/Localization/Export Translations CSV")]
+    [MenuItem("TCG Card Chaos/Localization/Export Translations CSV")]
     public static void ExportCsv()
     {
         LocalizationTable table = LocalizationEditorUtility.FindTable();
@@ -60,7 +60,7 @@ public static class LocalizationCsvTool
             + "\nOpen it in Sheets/Excel, fill the language columns, then run Import Translations CSV.");
     }
 
-    [MenuItem("TCG Card Caos/Localization/Import Translations CSV")]
+    [MenuItem("TCG Card Chaos/Localization/Import Translations CSV")]
     public static void ImportCsv()
     {
         LocalizationTable table = LocalizationEditorUtility.FindTable();

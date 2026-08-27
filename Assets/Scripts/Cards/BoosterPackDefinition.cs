@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Defines which cards can appear when a booster pack is opened.
 /// </summary>
-[CreateAssetMenu(fileName = "BoosterPackDefinition", menuName = "TCG Card Caos/Booster Pack Definition")]
+[CreateAssetMenu(fileName = "BoosterPackDefinition", menuName = "TCG Card Chaos/Booster Pack Definition")]
 public class BoosterPackDefinition : ScriptableObject
 {
     [Tooltip("When set, only cards from this shelf category can appear. Empty = any catalog card.")]

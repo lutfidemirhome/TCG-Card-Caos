@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "GameSaveSettings", menuName = "TCG Card Caos/Game Save Settings")]
+[CreateAssetMenu(fileName = "GameSaveSettings", menuName = "TCG Card Chaos/Game Save Settings")]
 public class GameSaveSettings : ScriptableObject
 {
     public const string ResourcePath = "GameSaveSettings";

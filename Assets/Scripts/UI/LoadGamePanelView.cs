@@ -11,7 +11,7 @@ public class LoadGamePanelView : MonoBehaviour
 {
     const string MissingConfirmHint =
         "Panel_LoadConfirm not found under Panel_LoadGame. "
-        + "Run: TCG Card Caos → UI → Add Load Game Confirm Dialog";
+        + "Run: TCG Card Chaos → UI → Add Load Game Confirm Dialog";
 
     [SerializeField] GameObject root;
     [SerializeField] Button cancelButton;

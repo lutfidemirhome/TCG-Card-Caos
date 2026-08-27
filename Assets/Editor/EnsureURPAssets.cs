@@ -36,7 +36,7 @@ static class EnsureURPAssets
         GraphicsSettings.defaultRenderPipeline = pipeline;
         QualitySettings.renderPipeline = pipeline;
 
-        Debug.Log("TCG Card Caos: Created missing URP pipeline assets.");
+        Debug.Log("TCG Card Chaos: Created missing URP pipeline assets.");
     }
 
     static void EnsureFolder(string path)

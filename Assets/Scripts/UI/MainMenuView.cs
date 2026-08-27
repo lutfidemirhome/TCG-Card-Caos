@@ -178,7 +178,7 @@ public class MainMenuView : MonoBehaviour
         if (loadGamePanel != null)
             loadGamePanel.Show();
         else
-            Debug.Log("[MainMenu] Load Game panel is missing. Run TCG Card Caos → UI → Add Load Game Panel.");
+            Debug.Log("[MainMenu] Load Game panel is missing. Run TCG Card Chaos → UI → Add Load Game Panel.");
     }
 
     void OnSettingsClicked()

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Builds / refreshes the authored loading overlay in MenuScene and saves the
 /// Resources prefab used when a save is loaded from inside the game.
-/// Menu: TCG Card Caos → UI → Add Loading Screen
+/// Menu: TCG Card Chaos → UI → Add Loading Screen
 /// </summary>
 public static class LoadingScreenUIBuilder
 {
@@ -19,7 +19,7 @@ public static class LoadingScreenUIBuilder
     const string PrefabPath = "Assets/Resources/UI/LoadingScreen.prefab";
     const string CanvasRootName = "LoadingCanvas";
 
-    [MenuItem("TCG Card Caos/UI/Add Loading Screen")]
+    [MenuItem("TCG Card Chaos/UI/Add Loading Screen")]
     public static void AddLoadingScreen()
     {
         if (!File.Exists(MenuScenePath))

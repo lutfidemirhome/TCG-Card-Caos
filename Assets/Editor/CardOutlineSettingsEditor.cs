@@ -33,7 +33,7 @@ public class CardOutlineSettingsEditor : Editor
         AssetDatabase.SaveAssetIfDirty(target);
     }
 
-    [MenuItem("TCG Card Caos/Ensure Card Outline Settings Asset")]
+    [MenuItem("TCG Card Chaos/Ensure Card Outline Settings Asset")]
     public static void EnsureAsset()
     {
         CardOutlineSettings existing = AssetDatabase.LoadAssetAtPath<CardOutlineSettings>(AssetPath);
@@ -44,7 +44,7 @@ public class CardOutlineSettingsEditor : Editor
         {
             Selection.activeObject = existing;
             EditorGUIUtility.PingObject(existing);
-            Debug.Log("TCG Card Caos: Card outline settings already exist at " + AssetPath);
+            Debug.Log("TCG Card Chaos: Card outline settings already exist at " + AssetPath);
             return;
         }
 
@@ -56,7 +56,7 @@ public class CardOutlineSettingsEditor : Editor
         AssetDatabase.SaveAssetIfDirty(settings);
         Selection.activeObject = settings;
         EditorGUIUtility.PingObject(settings);
-        Debug.Log("TCG Card Caos: Created " + AssetPath);
+        Debug.Log("TCG Card Chaos: Created " + AssetPath);
     }
 
     static void EnsureFolder(string path)

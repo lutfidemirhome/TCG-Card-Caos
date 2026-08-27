@@ -46,7 +46,7 @@ public static class KartTutucuPrefabRowEditor
         EditorApplication.Exit(0);
     }
 
-    [MenuItem("TCG Card Caos/PSA/Setup 4 Holders In KartTutucu_1 Prefab")]
+    [MenuItem("TCG Card Chaos/PSA/Setup 4 Holders In KartTutucu_1 Prefab")]
     public static void SetupFourHoldersInPrefabMenu()
     {
         if (SetupFourHoldersInPrefabContents())
@@ -58,7 +58,7 @@ public static class KartTutucuPrefabRowEditor
         }
     }
 
-    [MenuItem("TCG Card Caos/PSA/Sync KartTutucu_1 Labels From Holder 7")]
+    [MenuItem("TCG Card Chaos/PSA/Sync KartTutucu_1 Labels From Holder 7")]
     public static void SyncLabelsFromHolder7Menu()
     {
         GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);

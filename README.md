@@ -1,11 +1,11 @@
-# TCG Card Caos
+# TCG Card Chaos
 
 First-person card shop organization game (Unity 2022.3.41f1).
 
 ## First open (Unity 6)
 
 1. Open this project with **Unity 6 LTS** and confirm upgrade if asked.
-2. Top menu: **TCG Card Caos → Setup First Person Playground**
+2. Top menu: **TCG Card Chaos → Setup First Person Playground**
 3. Press **Play** to test.
 
 ### Controls

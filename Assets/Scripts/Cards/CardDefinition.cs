@@ -3,9 +3,9 @@ using UnityEngine;
 /// <summary>
 /// Authoring asset for one playable card.
 /// Assign shelf category + fixed slot (1–10, left → right on a row).
-/// Create via Assets → Create → TCG Card Caos → Card Definition.
+/// Create via Assets → Create → TCG Card Chaos → Card Definition.
 /// </summary>
-[CreateAssetMenu(fileName = "CardDefinition", menuName = "TCG Card Caos/Card Definition")]
+[CreateAssetMenu(fileName = "CardDefinition", menuName = "TCG Card Chaos/Card Definition")]
 public class CardDefinition : ScriptableObject
 {
     [SerializeField] string definitionId = "normal_common_01";

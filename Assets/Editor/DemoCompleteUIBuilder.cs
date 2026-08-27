@@ -16,7 +16,7 @@ public static class DemoCompleteUIBuilder
     const string MenuCanvasName = "MainMenuCanvas";
     const string PauseCanvasName = "InGamePauseCanvas";
 
-    [MenuItem("TCG Card Caos/UI/Add Demo Complete Popup")]
+    [MenuItem("TCG Card Chaos/UI/Add Demo Complete Popup")]
     public static void AddDemoCompletePopup()
     {
         if (!File.Exists(MenuScenePath))

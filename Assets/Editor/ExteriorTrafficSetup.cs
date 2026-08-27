@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Adds ambient street traffic in front of the supermarket door using AE_New_York cars.
-/// Menu: TCG Card Caos → Add Exterior Traffic
+/// Menu: TCG Card Chaos → Add Exterior Traffic
 /// </summary>
 public static class ExteriorTrafficSetup
 {
@@ -19,7 +19,7 @@ public static class ExteriorTrafficSetup
         "Assets/AE_New_York/Prefabs/Car/Minivan_Builders.prefab",
     };
 
-    [MenuItem("TCG Card Caos/Add Exterior Traffic")]
+    [MenuItem("TCG Card Chaos/Add Exterior Traffic")]
     public static void AddExteriorTraffic()
     {
         if (EditorSceneManager.GetActiveScene().path != ScenePath)

@@ -10,7 +10,7 @@ using UnityEngine.TextCore.LowLevel;
 /// CJK (zh-Hans, zh-Hant, ja, ko). Drop the source fonts into <see cref="FallbackFolder"/> and run
 /// the menu command; each font becomes a Dynamic SDF asset so only the glyphs actually used by the
 /// translations get rasterized.
-/// Menu: TCG Card Caos → UI → Build Font Fallbacks
+/// Menu: TCG Card Chaos → UI → Build Font Fallbacks
 /// </summary>
 public static class MenuFontFallbackBuilder
 {
@@ -33,7 +33,7 @@ public static class MenuFontFallbackBuilder
         ("Korean (ko)", new[] { "kr", "korean" }, "한국어 계속하기 설정"),
     };
 
-    [MenuItem("TCG Card Caos/UI/Build Font Fallbacks")]
+    [MenuItem("TCG Card Chaos/UI/Build Font Fallbacks")]
     public static void BuildFontFallbacks()
     {
         var primary = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PrimaryFontAssetPath);

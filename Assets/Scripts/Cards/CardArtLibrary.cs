@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// Loads the shared trading-card mesh and front/back materials.
-/// Run "TCG Card Caos → Refresh Card Textures From Templates" after editing template PNGs
+/// Run "TCG Card Chaos → Refresh Card Textures From Templates" after editing template PNGs
 /// (or reimport the PNG — copies under Assets/Resources/Cards update automatically).
 /// </summary>
 public static class CardArtLibrary
@@ -472,7 +472,7 @@ public static class CardArtLibrary
         if (!TryLoadRuntimeAssets())
         {
             Debug.LogError(
-                "CardArtLibrary: Missing runtime card assets. In Unity, run TCG Card Caos → Setup Card Art, then respawn cards.");
+                "CardArtLibrary: Missing runtime card assets. In Unity, run TCG Card Chaos → Setup Card Art, then respawn cards.");
         }
     }
 

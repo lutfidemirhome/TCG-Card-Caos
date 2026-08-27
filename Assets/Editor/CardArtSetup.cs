@@ -6,13 +6,13 @@ public static class CardArtSetup
 {
     const string ResourcesCardsFolder = "Assets/Resources/Cards";
 
-    [MenuItem("TCG Card Caos/Setup Card Art")]
+    [MenuItem("TCG Card Chaos/Setup Card Art")]
     public static void SetupCardArtMenu()
     {
         SetupCardArt();
     }
 
-    [MenuItem("TCG Card Caos/Refresh Card Textures From Templates")]
+    [MenuItem("TCG Card Chaos/Refresh Card Textures From Templates")]
     public static void RefreshBakedTexturesMenu()
     {
         RefreshBakedTextures();
@@ -29,7 +29,7 @@ public static class CardArtSetup
         if (frontMaterialTemplate == null || backMaterialTemplate == null)
         {
             Debug.LogError(
-                "TCG Card Caos: Card art setup failed. Ensure CardFront.mat and CardBack.mat exist under Assets/Art/Cards.");
+                "TCG Card Chaos: Card art setup failed. Ensure CardFront.mat and CardBack.mat exist under Assets/Art/Cards.");
             return;
         }
 
@@ -38,10 +38,10 @@ public static class CardArtSetup
 
         try
         {
-            EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking texture LOD assets...", 0.2f);
+            EditorUtility.DisplayProgressBar("TCG Card Chaos", "Baking texture LOD assets...", 0.2f);
             BakeRuntimeTexturesAndMaterials(frontMaterialTemplate, backMaterialTemplate);
 
-            EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking box card mesh...", 0.55f);
+            EditorUtility.DisplayProgressBar("TCG Card Chaos", "Baking box card mesh...", 0.55f);
 
             Mesh instancedMesh = CardMeshBuilder.CreatePrototypeInstancedQuad();
             Vector2[] instancedUvs = instancedMesh.uv;
@@ -50,7 +50,7 @@ public static class CardArtSetup
             Mesh instancedBackMesh = CardMeshBuilder.CreatePrototypeInstancedBackQuad();
             SaveMeshAsset(instancedBackMesh, ResourcesCardsFolder + "/InstancedCardBackMesh.asset");
 
-            EditorUtility.DisplayProgressBar("TCG Card Caos", "Baking detail card mesh...", 0.8f);
+            EditorUtility.DisplayProgressBar("TCG Card Chaos", "Baking detail card mesh...", 0.8f);
 
             Mesh detailMesh = CardMeshBuilder.CreatePrototypeCardMesh();
             detailMesh.name = "TradingCardMesh";
@@ -61,7 +61,7 @@ public static class CardArtSetup
             CardArtLibrary.ResetCache();
 
             Debug.Log(
-                "TCG Card Caos: Card art setup complete (1024×1434 box mesh, no FBX). "
+                "TCG Card Chaos: Card art setup complete (1024×1434 box mesh, no FBX). "
                 + "World textures: "
                 + CardTextureSettings.WorldMaxSize
                 + "px. Detail textures: "
@@ -100,7 +100,7 @@ public static class CardArtSetup
         if (frontMaterialTemplate == null || backMaterialTemplate == null)
         {
             Debug.LogError(
-                "TCG Card Caos: Texture refresh failed. Ensure CardFront.mat and CardBack.mat exist under Assets/Art/Cards.");
+                "TCG Card Chaos: Texture refresh failed. Ensure CardFront.mat and CardBack.mat exist under Assets/Art/Cards.");
             return;
         }
 
@@ -108,13 +108,13 @@ public static class CardArtSetup
 
         try
         {
-            EditorUtility.DisplayProgressBar("TCG Card Caos", "Refreshing card textures...", 0.5f);
+            EditorUtility.DisplayProgressBar("TCG Card Chaos", "Refreshing card textures...", 0.5f);
             BakeRuntimeTexturesAndMaterials(frontMaterialTemplate, backMaterialTemplate);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             CardArtLibrary.ResetCache();
             Debug.Log(
-                "TCG Card Caos: Refreshed runtime card textures from "
+                "TCG Card Chaos: Refreshed runtime card textures from "
                 + CardArtLibrary.FrontTextureAssetPath
                 + " and "
                 + CardArtLibrary.BackTextureAssetPath
@@ -168,7 +168,7 @@ public static class CardArtSetup
     {
         if (AssetDatabase.LoadAssetAtPath<Texture2D>(sourceAssetPath) == null)
         {
-            Debug.LogError("TCG Card Caos: Missing texture at " + sourceAssetPath);
+            Debug.LogError("TCG Card Chaos: Missing texture at " + sourceAssetPath);
             return null;
         }
 
@@ -177,7 +177,7 @@ public static class CardArtSetup
 
         if (!AssetDatabase.CopyAsset(sourceAssetPath, destinationAssetPath))
         {
-            Debug.LogError("TCG Card Caos: Failed to copy texture " + sourceAssetPath);
+            Debug.LogError("TCG Card Chaos: Failed to copy texture " + sourceAssetPath);
             return null;
         }
 

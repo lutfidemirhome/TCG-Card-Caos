@@ -10,7 +10,7 @@ public static class LadderPrefabEditor
     const string NormalPath = "Assets/Art/Props/Ladder/Textures/Staircase_n.png";
     const string PrefabPath = "Assets/Prefabs/Props/Ladder.prefab";
 
-    [MenuItem("TCG Card Caos/Create Ladder Prefab")]
+    [MenuItem("TCG Card Chaos/Create Ladder Prefab")]
     public static void CreateOrUpdatePrefab()
     {
         AssetDatabase.ImportAsset(ModelPath, ImportAssetOptions.ForceUpdate);
@@ -67,7 +67,7 @@ public static class LadderPrefabEditor
         }
 
         AssetDatabase.SaveAssets();
-        Debug.Log("TCG Card Caos: Ladder prefab now uses the stairs model at " + PrefabPath);
+        Debug.Log("TCG Card Chaos: Ladder prefab now uses the stairs model at " + PrefabPath);
     }
 
     static Mesh LoadFirstMesh(string assetPath)

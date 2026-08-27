@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Builds the always-visible in-game HUD in MainScene.
-/// Menu: TCG Card Caos → UI → Add In-Game HUD
+/// Menu: TCG Card Chaos → UI → Add In-Game HUD
 /// </summary>
 public static class InGameHudUIBuilder
 {
@@ -15,7 +15,7 @@ public static class InGameHudUIBuilder
     const string HudArtFolder = "Assets/UI/ingame/Hud";
     const string CanvasRootName = "InGameHudCanvas";
 
-    [MenuItem("TCG Card Caos/UI/Add In-Game HUD")]
+    [MenuItem("TCG Card Chaos/UI/Add In-Game HUD")]
     public static void AddInGameHud()
     {
         if (!File.Exists(GameScenePath))

@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// PSA slab 3D model tuning. Asset path: Resources/Settings/PsaVisualSettings
 /// </summary>
-[CreateAssetMenu(fileName = "PsaVisualSettings", menuName = "TCG Card Caos/PSA Visual Settings")]
+[CreateAssetMenu(fileName = "PsaVisualSettings", menuName = "TCG Card Chaos/PSA Visual Settings")]
 public class PsaVisualSettings : ScriptableObject
 {
     public const string ResourcePath = "Settings/PsaVisualSettings";

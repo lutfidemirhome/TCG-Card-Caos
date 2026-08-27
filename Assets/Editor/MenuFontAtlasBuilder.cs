@@ -7,7 +7,7 @@ using UnityEngine;
 /// Rebuilds the Baloo 2 SDF atlas so Turkish and other Latin-Extended glyphs render in the menu font
 /// instead of falling back to LiberationSans (which looks noticeably thinner next to ExtraBold).
 /// The asset is switched to Dynamic population so any glyph missing at runtime is added on demand.
-/// Menu: TCG Card Caos → UI → Rebuild Menu Font Atlas
+/// Menu: TCG Card Chaos → UI → Rebuild Menu Font Atlas
 /// </summary>
 public static class MenuFontAtlasBuilder
 {
@@ -15,7 +15,7 @@ public static class MenuFontAtlasBuilder
     const string SourceFontPath = "Assets/TextMesh Pro/Fonts/Baloo2-ExtraBold.ttf";
     const int AtlasSize = 1024;
 
-    [MenuItem("TCG Card Caos/UI/Rebuild Menu Font Atlas")]
+    [MenuItem("TCG Card Chaos/UI/Rebuild Menu Font Atlas")]
     public static void RebuildMenuFontAtlas()
     {
         var fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);

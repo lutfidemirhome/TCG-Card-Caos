@@ -19,7 +19,7 @@ public static class LocalizationEditorUtility
         {
             Debug.LogError(
                 "[Localization] No LocalizationTable found. Run "
-                + "TCG Card Caos → UI → Create Or Update Localization Table.");
+                + "TCG Card Chaos → UI → Create Or Update Localization Table.");
             return null;
         }
 

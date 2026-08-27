@@ -19,8 +19,8 @@ Same workflow as the main menu: edit layout in the scene, swap art on Image comp
    Assets/UI/MainMenu/Art/    (logo + button sprites reused)
 
 3. Unity menu
-   TCG Card Caos → UI → Add In-Game Pause Menu
-   TCG Card Caos → UI → Add In-Game HUD
+   TCG Card Chaos → UI → Add In-Game Pause Menu
+   TCG Card Chaos → UI → Add In-Game HUD
 
 ESC opens the panel and pauses the game. ESC again (or Resume) continues.
 Load Game uses the same Load Game overlay as the main menu.

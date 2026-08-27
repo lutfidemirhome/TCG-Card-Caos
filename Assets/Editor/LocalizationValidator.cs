@@ -8,11 +8,11 @@ using UnityEngine;
 /// Cross-checks the three places a key can live: the constants in <see cref="LocalizationKeys"/>,
 /// the rows in the localization table, and the keys wired into scenes and prefabs. Catches typos and
 /// keys that were referenced in UI but never translated.
-/// Menu: TCG Card Caos → Localization → Validate Translations
+/// Menu: TCG Card Chaos → Localization → Validate Translations
 /// </summary>
 public static class LocalizationValidator
 {
-    [MenuItem("TCG Card Caos/Localization/Validate Translations")]
+    [MenuItem("TCG Card Chaos/Localization/Validate Translations")]
     public static void Validate()
     {
         LocalizationTable table = LocalizationEditorUtility.FindTable();

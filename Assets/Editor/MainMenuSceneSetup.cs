@@ -4,14 +4,14 @@ using UnityEngine;
 
 /// <summary>
 /// Creates or opens the main menu scene.
-/// Menu: TCG Card Caos → Create Main Menu Scene
+/// Menu: TCG Card Chaos → Create Main Menu Scene
 /// </summary>
 public static class MainMenuSceneSetup
 {
     const string MenuScenePath = "Assets/Scenes/MenuScene.unity";
     const string GameScenePath = "Assets/Scenes/MainScene.unity";
 
-    [MenuItem("TCG Card Caos/Open Main Menu Scene")]
+    [MenuItem("TCG Card Chaos/Open Main Menu Scene")]
     public static void OpenMenuScene()
     {
         if (!System.IO.File.Exists(MenuScenePath))
@@ -29,7 +29,7 @@ public static class MainMenuSceneSetup
         EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
     }
 
-    [MenuItem("TCG Card Caos/Create Main Menu Scene")]
+    [MenuItem("TCG Card Chaos/Create Main Menu Scene")]
     public static void CreateMenuScene()
     {
         EnsureFolder("Assets/Scenes");
@@ -48,7 +48,7 @@ public static class MainMenuSceneSetup
         Debug.Log("Main menu scene created at " + MenuScenePath);
     }
 
-    [MenuItem("TCG Card Caos/Configure Build Scenes (Menu + Game)")]
+    [MenuItem("TCG Card Chaos/Configure Build Scenes (Menu + Game)")]
     public static void EnsureBuildSettings()
     {
         if (!System.IO.File.Exists(MenuScenePath))

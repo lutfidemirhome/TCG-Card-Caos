@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// One cabinet category (e.g. Normal Common). Assign per shelf prefab — holds the category id and sign material.
 /// </summary>
-[CreateAssetMenu(fileName = "ShelfCategory", menuName = "TCG Card Caos/Shelf Category Definition")]
+[CreateAssetMenu(fileName = "ShelfCategory", menuName = "TCG Card Chaos/Shelf Category Definition")]
 public class CardShelfCategoryDefinition : ScriptableObject
 {
     [SerializeField] string categoryId = CardShelfCategories.NormalCommon;

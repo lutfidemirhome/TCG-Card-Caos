@@ -7,7 +7,7 @@ using UnityEngine;
 
 public static class GameSaveEditorMenu
 {
-    [MenuItem("TCG Card Caos/Save/Autosave Now")]
+    [MenuItem("TCG Card Chaos/Save/Autosave Now")]
     public static void AutosaveNow()
     {
         if (!Application.isPlaying)
@@ -19,7 +19,7 @@ public static class GameSaveEditorMenu
         GameSaveManager.EnsureExists().ForceAutosaveNow();
     }
 
-    [MenuItem("TCG Card Caos/Save/Load Latest")]
+    [MenuItem("TCG Card Chaos/Save/Load Latest")]
     public static void LoadLatest()
     {
         SaveSlotMetadata latest = GameSaveManager.GetLatestValidSave();
@@ -41,27 +41,27 @@ public static class GameSaveEditorMenu
         EditorApplication.isPlaying = true;
     }
 
-    [MenuItem("TCG Card Caos/Save/Open Save Folder")]
+    [MenuItem("TCG Card Chaos/Save/Open Save Folder")]
     public static void OpenSaveFolder()
     {
         SaveFileIO.EnsureRoot();
         EditorUtility.RevealInFinder(SaveFileIO.RootFolder);
     }
 
-    [MenuItem("TCG Card Caos/Save/Steam Demo Checklist")]
+    [MenuItem("TCG Card Chaos/Save/Steam Demo Checklist")]
     public static void ShowSteamDemoChecklist()
     {
         SaveFileIO.CacheRootOnMainThread();
         string message =
-            "Demo'yu sonra komple yapacaksın. O gün senin işlerin:\n\n"
-            + "1. Steamworks'te ayrı Demo App ID al. Full ile aynı ID kullanma.\n"
-            + "2. Sadece demo build'de Player Settings → Scripting Define Symbols'a TCG_DEMO yaz. Full build'e yazma.\n"
+            "Demo App ID: " + SteamFullGameStore.DemoAppId + "\n"
+            + "Full App ID: " + SteamFullGameStore.FullGameAppId + " (wishlist bu sayfaya gider)\n\n"
+            + "1. Demo build'de TCG_DEMO tanımlı olmalı (şu an Standalone'da açık).\n"
+            + "2. Full build alırken TCG_DEMO satırını sil.\n"
             + "3. İstersen Steam Cloud Auto-Cloud bağla.\n"
             + "   Demo klasör: .../TCGCardChaos_Demo/\n"
             + "   Full klasör: .../TCGCardChaos/\n"
-            + "   Dosyalar: *.json, *.meta.json, *.png, manifest.json\n"
-            + "4. Steamworks SDK (overlay, achievement) save'den ayrı. Save için şart değil.\n"
-            + "5. İstersen demo product name: TCG Card Caos Demo\n\n"
+            + "4. Steam'e yüklerken steam_appid.txt'yi depoya koyma; yerelde test içindir.\n"
+            + "5. Overlay/SDK şart değil.\n\n"
             + "Şu an variant: " + GameBuildVariant.Current
             + "\nKayıt klasörü: " + SaveFileIO.RootFolder;
 
@@ -69,7 +69,7 @@ public static class GameSaveEditorMenu
         Debug.Log("[Save] Steam Demo checklist\n" + message);
     }
 
-    [MenuItem("TCG Card Caos/Save/Wipe Local Saves")]
+    [MenuItem("TCG Card Chaos/Save/Wipe Local Saves")]
     public static void WipeLocalSavesMenu()
     {
         int removed = WipeLocalSaveFolders();
@@ -112,7 +112,7 @@ public static class GameSaveEditorMenu
         return removed;
     }
 
-    [MenuItem("TCG Card Caos/Save/List Slots")]
+    [MenuItem("TCG Card Chaos/Save/List Slots")]
     public static void ListSlots()
     {
         var slots = GameSaveStore.GetSaveSlots();
@@ -143,5 +143,27 @@ class WipeSavesOnBuild : IPreprocessBuildWithReport
     public void OnPreprocessBuild(BuildReport report)
     {
         GameSaveEditorMenu.WipeLocalSaveFolders();
+    }
+}
+
+class SteamAppIdOnBuild : IPostprocessBuildWithReport
+{
+    public int callbackOrder => 0;
+
+    public void OnPostprocessBuild(BuildReport report)
+    {
+        string outputPath = report.summary.outputPath;
+        if (string.IsNullOrEmpty(outputPath))
+            return;
+
+        string folder = Path.GetDirectoryName(outputPath);
+        if (string.IsNullOrEmpty(folder))
+            return;
+
+        string appId = SteamFullGameStore.RunningAppId.ToString();
+        File.WriteAllText(Path.Combine(folder, "steam_appid.txt"), appId + "\n");
+        File.WriteAllText(
+            Path.Combine(Directory.GetParent(Application.dataPath).FullName, "steam_appid.txt"),
+            appId + "\n");
     }
 }

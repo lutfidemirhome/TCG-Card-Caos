@@ -54,8 +54,8 @@ public class PsaCabinetSlotEditor : Editor
         EditorGUILayout.Space(4f);
         EditorGUILayout.HelpBox(
             "To add seats 8–10 inside this prefab (one shared table, no extra Counter_attlsv), "
-            + "close Prefab Mode and run:\nTCG Card Caos → PSA → Setup 4 Holders In KartTutucu_1 Prefab\n"
-            + "If labels 8–10 look wrong, run:\nTCG Card Caos → PSA → Sync KartTutucu_1 Labels From Holder 7",
+            + "close Prefab Mode and run:\nTCG Card Chaos → PSA → Setup 4 Holders In KartTutucu_1 Prefab\n"
+            + "If labels 8–10 look wrong, run:\nTCG Card Chaos → PSA → Sync KartTutucu_1 Labels From Holder 7",
             MessageType.Info);
 
         if (labelColorChanged || GUI.changed)
@@ -71,7 +71,7 @@ public class PsaCabinetSlotEditor : Editor
         }
     }
 
-    [MenuItem("TCG Card Caos/PSA/Add Slot Labels To Selected Holders")]
+    [MenuItem("TCG Card Chaos/PSA/Add Slot Labels To Selected Holders")]
     static void AddLabelsToSelection()
     {
         PsaCabinetSlot[] slots = Selection.GetFiltered<PsaCabinetSlot>(SelectionMode.Editable);

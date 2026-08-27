@@ -17,7 +17,7 @@ public static class WelcomePopupUIBuilder
     const string MenuCanvasName = "MainMenuCanvas";
     const string PauseCanvasName = "InGamePauseCanvas";
 
-    [MenuItem("TCG Card Caos/UI/Add Welcome Popup")]
+    [MenuItem("TCG Card Chaos/UI/Add Welcome Popup")]
     public static void AddWelcomePopup()
     {
         if (!File.Exists(MenuScenePath))

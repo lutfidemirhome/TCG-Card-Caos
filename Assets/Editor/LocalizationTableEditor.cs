@@ -39,7 +39,7 @@ public class LocalizationTableEditor : Editor
         EditorGUILayout.Space(4f);
         EditorGUILayout.HelpBox(
             "Empty values fall back to English at runtime, so a missing translation shows English "
-            + "instead of blank text.\n\nBulk editing: TCG Card Caos → Localization → Export/Import "
+            + "instead of blank text.\n\nBulk editing: TCG Card Chaos → Localization → Export/Import "
             + "Translations CSV.",
             MessageType.Info);
 

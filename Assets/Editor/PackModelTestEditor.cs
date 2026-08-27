@@ -7,7 +7,7 @@ public static class PackModelTestEditor
     const string PrefabPath = "Assets/Prefabs/BoosterPackModelTest.prefab";
     const string ModelAssetPath = "Assets/Art/BoosterPack/TradingCard_BoosterPack.fbx";
 
-    [MenuItem("TCG Card Caos/Create Pack Model Test Prefab")]
+    [MenuItem("TCG Card Chaos/Create Pack Model Test Prefab")]
     public static void CreateOrUpdatePrefab()
     {
         CardArtLibrary.EnsureLoaded();
@@ -51,16 +51,16 @@ public static class PackModelTestEditor
         Selection.activeObject = prefabAsset;
         EditorGUIUtility.PingObject(prefabAsset);
 
-        Debug.Log("TCG Card Caos: Created pack model test prefab at " + PrefabPath);
+        Debug.Log("TCG Card Chaos: Created pack model test prefab at " + PrefabPath);
     }
 
-    [MenuItem("GameObject/TCG Card Caos/Pack Model Test", false, 12)]
+    [MenuItem("GameObject/TCG Card Chaos/Pack Model Test", false, 12)]
     public static void PlaceInScene()
     {
         PlaceTestInstance(ResolveEditModeSpawnPosition());
     }
 
-    [MenuItem("TCG Card Caos/Spawn Pack Model Test In Play", false, 11)]
+    [MenuItem("TCG Card Chaos/Spawn Pack Model Test In Play", false, 11)]
     public static void SpawnInPlay()
     {
         if (!Application.isPlaying)
@@ -77,7 +77,7 @@ public static class PackModelTestEditor
         PlaceTestInstance(ResolvePlaySpawnPosition());
     }
 
-    [MenuItem("TCG Card Caos/Spawn Pack Model Test In Play", true)]
+    [MenuItem("TCG Card Chaos/Spawn Pack Model Test In Play", true)]
     public static bool SpawnInPlayValidate()
     {
         return Application.isPlaying;
@@ -99,7 +99,7 @@ public static class PackModelTestEditor
         instance.transform.SetPositionAndRotation(worldPosition, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
         Selection.activeGameObject = instance;
 
-        Debug.Log("TCG Card Caos: Pack model test spawned. Tweak PackVisual, copy values, then stop Play.");
+        Debug.Log("TCG Card Chaos: Pack model test spawned. Tweak PackVisual, copy values, then stop Play.");
     }
 
     static GameObject LoadOrCreatePrefab()
@@ -260,7 +260,7 @@ public sealed class PackModelTestTuningInspector : Editor
         {
             string text = BuildCopyText(tuning.name, rootScale, pos, euler, scale);
             EditorGUIUtility.systemCopyBuffer = text;
-            Debug.Log("TCG Card Caos: Copied pack tuning values to clipboard:\n" + text);
+            Debug.Log("TCG Card Chaos: Copied pack tuning values to clipboard:\n" + text);
         }
     }
 

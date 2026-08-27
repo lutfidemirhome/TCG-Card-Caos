@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 public static class PersistentIdAssigner
 {
-    [MenuItem("TCG Card Caos/Save/Assign Persistent IDs In Open Scenes")]
+    [MenuItem("TCG Card Chaos/Save/Assign Persistent IDs In Open Scenes")]
     public static void AssignInOpenScenes()
     {
         int assigned = 0;

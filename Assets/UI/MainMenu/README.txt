@@ -18,5 +18,5 @@ The menu layout lives in two places:
    Assets/Resources/Localization/LocalizationTable.asset
 
 Unity menu:
-  TCG Card Caos → UI → Open Main Menu Scene
-  TCG Card Caos → UI → Build Main Menu UI
+  TCG Card Chaos → UI → Open Main Menu Scene
+  TCG Card Chaos → UI → Build Main Menu UI

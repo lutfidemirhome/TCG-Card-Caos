@@ -22,6 +22,6 @@ Always-visible gameplay counters (top-left stats + bottom-right hand).
            └── HandValue
 
 3. Unity menu
-   TCG Card Caos → UI → Add In-Game HUD
+   TCG Card Chaos → UI → Add In-Game HUD
 
 After you drop the two png files, run the menu item once so sprites are assigned.

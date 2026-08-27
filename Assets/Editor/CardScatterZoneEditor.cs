@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class CardScatterZoneEditor
 {
-    [MenuItem("GameObject/TCG Card Caos/Card Scatter Zone", false, 11)]
+    [MenuItem("GameObject/TCG Card Chaos/Card Scatter Zone", false, 11)]
     public static void CreateScatterZone()
     {
         var zoneObject = new GameObject("CardScatterZone");

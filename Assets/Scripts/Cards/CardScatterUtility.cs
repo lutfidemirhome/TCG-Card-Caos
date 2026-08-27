@@ -104,7 +104,7 @@ public static class CardScatterUtility
         {
             Debug.LogError(
                 "CardScatterUtility: No CardDefinition assets found. "
-                + "Run TCG Card Caos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
+                + "Run TCG Card Chaos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
             return;
         }
 
@@ -238,7 +238,7 @@ public static class CardScatterUtility
             Debug.LogError(
                 "CardScatterUtility: No CardDefinition assets found"
                 + (string.IsNullOrWhiteSpace(shelfCategoryId) ? "." : " for category '" + shelfCategoryId + "'.")
-                + " Run TCG Card Caos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
+                + " Run TCG Card Chaos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
             return;
         }
 
@@ -309,7 +309,7 @@ public static class CardScatterUtility
             Debug.LogError(
                 "CardScatterUtility: No CardDefinition assets found"
                 + (string.IsNullOrWhiteSpace(shelfCategoryId) ? "." : " for category '" + shelfCategoryId + "'.")
-                + " Run TCG Card Caos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
+                + " Run TCG Card Chaos → Import Cards From Art (or Tools/generate_*_card_definitions.py).");
             yield break;
         }
 

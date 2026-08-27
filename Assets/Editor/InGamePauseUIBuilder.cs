@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Builds the authored in-game pause overlay in MainScene.
-/// Menu: TCG Card Caos → UI → Add In-Game Pause Menu
+/// Menu: TCG Card Chaos → UI → Add In-Game Pause Menu
 /// </summary>
 public static class InGamePauseUIBuilder
 {
@@ -16,7 +16,7 @@ public static class InGamePauseUIBuilder
     const string InGameArtFolder = "Assets/UI/ingame";
     const string MenuArtFolder = "Assets/UI/MainMenu/Art";
 
-    [MenuItem("TCG Card Caos/UI/Add In-Game Pause Menu")]
+    [MenuItem("TCG Card Chaos/UI/Add In-Game Pause Menu")]
     public static void AddInGamePauseMenu()
     {
         if (!File.Exists(GameScenePath))

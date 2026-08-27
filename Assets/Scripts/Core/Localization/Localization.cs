@@ -98,7 +98,7 @@ public static class Localization
         {
             Debug.LogWarning(
                 "Localization: no table at Resources/" + LocalizationTable.ResourcePath
-                + ". Run TCG Card Caos → UI → Build Main Menu UI to create it.");
+                + ". Run TCG Card Chaos → UI → Build Main Menu UI to create it.");
         }
 
         _currentLanguage = PlayerPrefs.HasKey(LanguagePrefsKey)

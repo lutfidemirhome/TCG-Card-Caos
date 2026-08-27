@@ -20,7 +20,7 @@ public static class TutorialHintUIBuilder
     const string PanelSpritePath = KeysFolder + "/panel_tutorial.png";
     const string SpriteAssetPath = "Assets/TextMesh Pro/Resources/Sprite Assets/TutorialKeys.asset";
 
-    [MenuItem("TCG Card Caos/UI/Add Tutorial Hint")]
+    [MenuItem("TCG Card Chaos/UI/Add Tutorial Hint")]
     public static void AddTutorialHint()
     {
         if (!File.Exists(MenuScenePath))

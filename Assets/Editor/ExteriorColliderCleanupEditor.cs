@@ -7,7 +7,7 @@ public static class ExteriorColliderCleanupEditor
     const string ScenePath = "Assets/Scenes/MainScene.unity";
     const string AeNewYorkRoot = "Assets/AE_New_York/";
 
-    [MenuItem("TCG Card Caos/Strip Exterior Colliders")]
+    [MenuItem("TCG Card Chaos/Strip Exterior Colliders")]
     public static void StripExteriorCollidersInMainScene()
     {
         if (EditorSceneManager.GetActiveScene().path != ScenePath)
@@ -33,7 +33,7 @@ public static class ExteriorColliderCleanupEditor
             "Tamam");
     }
 
-    [MenuItem("TCG Card Caos/Ensure Column Colliders")]
+    [MenuItem("TCG Card Chaos/Ensure Column Colliders")]
     public static void EnsureColumnCollidersInMainScene()
     {
         if (EditorSceneManager.GetActiveScene().path != ScenePath)

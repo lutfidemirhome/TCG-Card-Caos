@@ -6,7 +6,7 @@ public static class ExteriorWallToonEditor
 {
     const string ScenePath = "Assets/Scenes/MainScene.unity";
 
-    [MenuItem("TCG Card Caos/Apply Store Wall Shading To Exterior Walls")]
+    [MenuItem("TCG Card Chaos/Apply Store Wall Shading To Exterior Walls")]
     public static void ApplyToMainScene()
     {
         if (EditorSceneManager.GetActiveScene().path != ScenePath)
@@ -39,7 +39,7 @@ public static class ExteriorWallToonEditor
             "Tamam");
     }
 
-    [MenuItem("TCG Card Caos/Apply Store Wall Shading To Selected")]
+    [MenuItem("TCG Card Chaos/Apply Store Wall Shading To Selected")]
     public static void ApplyToSelected()
     {
         Material wallTemplate = ExteriorWallToonUtility.LoadWallTemplate();

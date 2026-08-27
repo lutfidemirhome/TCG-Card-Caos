@@ -225,7 +225,7 @@ public class InGamePauseView : MonoBehaviour
         if (loadGamePanel != null)
             loadGamePanel.Show();
         else
-            Debug.Log("[Pause] Load Game panel is missing. Run TCG Card Caos → UI → Add In-Game Pause Menu.");
+            Debug.Log("[Pause] Load Game panel is missing. Run TCG Card Chaos → UI → Add In-Game Pause Menu.");
     }
 
     void OnSettings()

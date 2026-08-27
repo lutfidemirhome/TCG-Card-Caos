@@ -7,7 +7,7 @@ public static class StorefrontDoorEditor
     const string DoorPrefabPath = "Assets/ModernSupermarket/Prefabs/Architecture/Door_c5bu08.prefab";
     const string ShopDoorPrefabPath = "Assets/Prefabs/Architecture/Door_c5bu08_Shop.prefab";
 
-    [MenuItem("TCG Card Caos/Setup Selected Storefront Door")]
+    [MenuItem("TCG Card Chaos/Setup Selected Storefront Door")]
     public static void SetupSelectedDoor()
     {
         GameObject selected = Selection.activeGameObject;
@@ -27,7 +27,7 @@ public static class StorefrontDoorEditor
         Debug.Log("StorefrontDoor ayarlandi: " + doorRoot.name);
     }
 
-    [MenuItem("TCG Card Caos/Create Shop Door Prefab")]
+    [MenuItem("TCG Card Chaos/Create Shop Door Prefab")]
     public static void CreateShopDoorPrefab()
     {
         EnsureFolder("Assets/Prefabs/Architecture");

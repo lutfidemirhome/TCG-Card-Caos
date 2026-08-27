@@ -6,7 +6,7 @@ Hierarchy (not Play-only):
   MainScene  → InGamePauseCanvas / Panel_Settings
 
 Create / refresh (does not rebuild pause or HUD):
-  TCG Card Caos → UI → Add Settings Panel
+  TCG Card Chaos → UI → Add Settings Panel
 
 Panel starts disabled. Enable the eye icon to edit Rect / Image / TMP,
 then disable it again. Play uses the authored objects.

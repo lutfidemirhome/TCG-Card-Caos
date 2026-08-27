@@ -12,4 +12,4 @@ Delete hint
   Assigned to Panel_SaveGame / DeleteHint / Icon.
 
 Do not run the pause rebuild menu.
-If you want the panel authored in the scene: TCG Card Caos → UI → Add Save Game Panel
+If you want the panel authored in the scene: TCG Card Chaos → UI → Add Save Game Panel

@@ -16,7 +16,7 @@ public static class CardHolderPrefabEditor
     static readonly Vector3 Tutucu2VisualScale = Vector3.one * 0.007579446f;
     static readonly Vector3 Tutucu2VisualEuler = new Vector3(-89.715f, 0f, -90f);
 
-    [MenuItem("TCG Card Caos/Create PSA Card Holder Prefabs")]
+    [MenuItem("TCG Card Chaos/Create PSA Card Holder Prefabs")]
     public static void CreateOrUpdatePrefabs()
     {
         CreateOrUpdatePrefab(
@@ -45,7 +45,7 @@ public static class CardHolderPrefabEditor
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("TCG Card Caos: PSA card holder prefabs ready under Assets/Prefabs/PsaCabinet/");
+        Debug.Log("TCG Card Chaos: PSA card holder prefabs ready under Assets/Prefabs/PsaCabinet/");
     }
 
     static void CreateOrUpdatePrefab(
@@ -93,7 +93,7 @@ public static class CardHolderPrefabEditor
 
         Selection.activeObject = prefabAsset;
         EditorGUIUtility.PingObject(prefabAsset);
-        Debug.Log($"TCG Card Caos: Created {logLabel} prefab at {prefabPath}");
+        Debug.Log($"TCG Card Chaos: Created {logLabel} prefab at {prefabPath}");
     }
 
     static GameObject LoadModelPrefab(string[] modelPaths)

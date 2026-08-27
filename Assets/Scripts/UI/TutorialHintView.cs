@@ -394,7 +394,8 @@ public class TutorialHintView : MonoBehaviour
 
     static bool HasPickupInput()
     {
-        return Input.GetKeyDown(KeyCode.E) || Input.GetMouseButtonDown(0);
+        PlayerCardHand hand = PlayerCardHand.Instance;
+        return hand != null && hand.OccupiedHandSlots > 0;
     }
 
     static bool HasDropInput()

@@ -7,7 +7,7 @@ using UnityEngine;
 /// with one value per <see cref="GameLanguage"/> (indexed by the enum value).
 /// Lives in Resources so <see cref="Localization"/> can load it without a scene reference.
 /// </summary>
-[CreateAssetMenu(menuName = "TCG Card Caos/Localization Table", fileName = LocalizationTable.AssetName)]
+[CreateAssetMenu(menuName = "TCG Card Chaos/Localization Table", fileName = LocalizationTable.AssetName)]
 public class LocalizationTable : ScriptableObject
 {
     public const string AssetName = "LocalizationTable";

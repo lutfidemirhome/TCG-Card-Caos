@@ -5,14 +5,14 @@ using UnityEngine;
 
 /// <summary>
 /// Adds Panel_SaveGame under InGamePauseCanvas. Does not rebuild the pause menu.
-/// Menu: TCG Card Caos → UI → Add Save Game Panel
+/// Menu: TCG Card Chaos → UI → Add Save Game Panel
 /// </summary>
 public static class SaveGameUIBuilder
 {
     const string GameScenePath = "Assets/Scenes/MainScene.unity";
     const string CanvasRootName = "InGamePauseCanvas";
 
-    [MenuItem("TCG Card Caos/UI/Add Save Game Panel")]
+    [MenuItem("TCG Card Chaos/UI/Add Save Game Panel")]
     public static void AddSaveGamePanel()
     {
         if (!File.Exists(GameScenePath))

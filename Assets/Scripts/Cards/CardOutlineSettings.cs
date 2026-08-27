@@ -5,7 +5,7 @@ using UnityEngine;
 /// Tunable colors for every card outline in the game.
 /// Asset path: Resources/Settings/CardOutlineSettings
 /// </summary>
-[CreateAssetMenu(fileName = "CardOutlineSettings", menuName = "TCG Card Caos/Card Outline Settings")]
+[CreateAssetMenu(fileName = "CardOutlineSettings", menuName = "TCG Card Chaos/Card Outline Settings")]
 public class CardOutlineSettings : ScriptableObject
 {
     public const string ResourcePath = "Settings/CardOutlineSettings";

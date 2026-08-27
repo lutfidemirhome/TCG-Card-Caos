@@ -11,7 +11,7 @@ public class BuildTextureOptimizer : AssetPostprocessor
     const int CardMaxSize = CardTextureSettings.DetailMaxSize;
     const int EnvironmentMaxSize = 1024;
 
-    [MenuItem("TCG Card Caos/Optimize Build Textures")]
+    [MenuItem("TCG Card Chaos/Optimize Build Textures")]
     public static void OptimizeFromMenu()
     {
         int changed = 0;

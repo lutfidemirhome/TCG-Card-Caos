@@ -29,7 +29,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     bool _sawGrabbitActive;
     bool _promotingSelection;
 
-    [MenuItem("TCG Card Caos/Fix Pink Card Art")]
+    [MenuItem("TCG Card Chaos/Fix Pink Card Art")]
     public static void FixPinkCardArtInScene()
     {
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -47,11 +47,11 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-        Debug.Log("TCG Card Caos: refreshed art on " + count + " authored cards.");
+        Debug.Log("TCG Card Chaos: refreshed art on " + count + " authored cards.");
     }
 
-    [MenuItem("TCG Card Caos/Card Physics Level Builder")]
-    [MenuItem("Window/TCG Card Caos/Card Physics Level Builder")]
+    [MenuItem("TCG Card Chaos/Card Physics Level Builder")]
+    [MenuItem("Window/TCG Card Chaos/Card Physics Level Builder")]
     public static void Open()
     {
         PhysicsCardLevelBuilderWindow window = GetWindow<PhysicsCardLevelBuilderWindow>(
@@ -71,7 +71,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             window.position = new Rect(main.x + 36f, main.y + 72f, 440f, 740f);
         window.Show();
         window.Focus();
-        Debug.Log("Card Physics Level Builder opened. Look for the tab named Card Physics Level Builder, or Window → TCG Card Caos.");
+        Debug.Log("Card Physics Level Builder opened. Look for the tab named Card Physics Level Builder, or Window → TCG Card Chaos.");
     }
 
     void OnEnable()

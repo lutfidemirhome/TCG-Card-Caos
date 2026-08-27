@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// Builds the authored main menu hierarchy in MenuScene from the approved mockup layout.
 /// Every rect is positioned in 1920x1080 reference space so art slices can be dropped straight
 /// onto the matching Image component without moving anything.
-/// Menu: TCG Card Caos → UI → Build Main Menu UI
+/// Menu: TCG Card Chaos → UI → Build Main Menu UI
 /// </summary>
 public static class MainMenuUIBuilder
 {
@@ -22,14 +22,14 @@ public static class MainMenuUIBuilder
     const string CanvasRootName = "MainMenuCanvas";
     const string LegacyMenuRootName = "MainMenu";
 
-    [MenuItem("TCG Card Caos/UI/Open Main Menu Scene")]
+    [MenuItem("TCG Card Chaos/UI/Open Main Menu Scene")]
     public static void OpenMainMenuScene()
     {
         if (!File.Exists(MenuScenePath))
         {
             EditorUtility.DisplayDialog(
                 "Main Menu",
-                "MenuScene not found.\n\nRun: TCG Card Caos → UI → Build Main Menu UI",
+                "MenuScene not found.\n\nRun: TCG Card Chaos → UI → Build Main Menu UI",
                 "OK");
             return;
         }
@@ -43,14 +43,14 @@ public static class MainMenuUIBuilder
         EditorSceneManager.OpenScene(MenuScenePath, OpenSceneMode.Single);
     }
 
-    [MenuItem("TCG Card Caos/UI/Add Continue Button To Menu")]
+    [MenuItem("TCG Card Chaos/UI/Add Continue Button To Menu")]
     public static void AddContinueButtonToMenu()
     {
         if (!File.Exists(MenuScenePath))
         {
             EditorUtility.DisplayDialog(
                 "Main Menu",
-                "MenuScene not found.\n\nRun: TCG Card Caos → UI → Build Main Menu UI",
+                "MenuScene not found.\n\nRun: TCG Card Chaos → UI → Build Main Menu UI",
                 "OK");
             return;
         }
@@ -122,14 +122,14 @@ public static class MainMenuUIBuilder
         Debug.Log("[MainMenuUIBuilder] Button_Continue added above New Game (copied from Load Game).");
     }
 
-    [MenuItem("TCG Card Caos/UI/Add Load Game Panel")]
+    [MenuItem("TCG Card Chaos/UI/Add Load Game Panel")]
     public static void AddLoadGamePanelToMenu()
     {
         if (!File.Exists(MenuScenePath))
         {
             EditorUtility.DisplayDialog(
                 "Load Game",
-                "MenuScene not found.\n\nRun: TCG Card Caos → UI → Build Main Menu UI",
+                "MenuScene not found.\n\nRun: TCG Card Chaos → UI → Build Main Menu UI",
                 "OK");
             return;
         }
@@ -167,14 +167,14 @@ public static class MainMenuUIBuilder
         Debug.Log("[MainMenuUIBuilder] Panel_LoadGame added. Dress Images in Hierarchy, then wire save data later.");
     }
 
-    [MenuItem("TCG Card Caos/UI/Add Load Game Confirm Dialog")]
+    [MenuItem("TCG Card Chaos/UI/Add Load Game Confirm Dialog")]
     public static void AddLoadGameConfirmDialog()
     {
         if (!File.Exists(MenuScenePath))
         {
             EditorUtility.DisplayDialog(
                 "Load Confirm",
-                "MenuScene not found.\n\nRun: TCG Card Caos → UI → Build Main Menu UI",
+                "MenuScene not found.\n\nRun: TCG Card Chaos → UI → Build Main Menu UI",
                 "OK");
             return;
         }
@@ -203,7 +203,7 @@ public static class MainMenuUIBuilder
         {
             EditorUtility.DisplayDialog(
                 "Load Confirm",
-                "Panel_LoadGame not found.\n\nRun: TCG Card Caos → UI → Add Load Game Panel",
+                "Panel_LoadGame not found.\n\nRun: TCG Card Chaos → UI → Add Load Game Panel",
                 "OK");
             return;
         }
@@ -244,7 +244,7 @@ public static class MainMenuUIBuilder
             + "Replace placeholder Images: confirm_band / yes_button / no_button in Assets/UI/LoadGame/Art.");
     }
 
-    [MenuItem("TCG Card Caos/UI/Select Load Game Confirm For Editing")]
+    [MenuItem("TCG Card Chaos/UI/Select Load Game Confirm For Editing")]
     public static void SelectLoadGameConfirmForEditing()
     {
         EnsureLocalizationTable();
@@ -255,7 +255,7 @@ public static class MainMenuUIBuilder
         {
             EditorUtility.DisplayDialog(
                 "Load Confirm",
-                "Panel_LoadGame not found.\n\nRun: TCG Card Caos → UI → Add Load Game Panel",
+                "Panel_LoadGame not found.\n\nRun: TCG Card Chaos → UI → Add Load Game Panel",
                 "OK");
             return;
         }
@@ -339,7 +339,7 @@ public static class MainMenuUIBuilder
         return null;
     }
 
-    [MenuItem("TCG Card Caos/UI/Fix Load Game Scroll")]
+    [MenuItem("TCG Card Chaos/UI/Fix Load Game Scroll")]
     public static void FixLoadGameScrollInMenu()
     {
         if (!File.Exists(MenuScenePath))
@@ -409,7 +409,7 @@ public static class MainMenuUIBuilder
         Debug.Log("[MainMenuUIBuilder] Load Game circular scroll thumb fixed.");
     }
 
-    [MenuItem("TCG Card Caos/UI/Build Main Menu UI")]
+    [MenuItem("TCG Card Chaos/UI/Build Main Menu UI")]
     public static void BuildMainMenuUI()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -1696,7 +1696,7 @@ public static class MainMenuUIBuilder
 
     // ---------- localization table ----------
 
-    [MenuItem("TCG Card Caos/UI/Create Or Update Localization Table")]
+    [MenuItem("TCG Card Chaos/UI/Create Or Update Localization Table")]
     public static LocalizationTable EnsureLocalizationTable()
     {
         EnsureFolder("Assets/Resources");

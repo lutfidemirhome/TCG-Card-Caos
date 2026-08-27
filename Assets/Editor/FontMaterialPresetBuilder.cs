@@ -47,7 +47,7 @@ public static class FontMaterialPresetBuilder
         },
     };
 
-    [MenuItem("TCG Card Caos/UI/Create Font Material Presets")]
+    [MenuItem("TCG Card Chaos/UI/Create Font Material Presets")]
     public static void CreatePresetsFromMenu()
     {
         if (!CreatePresets())

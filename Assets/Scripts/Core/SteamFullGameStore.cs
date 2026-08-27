@@ -9,7 +9,11 @@ using UnityEngine;
 public static class SteamFullGameStore
 {
     public const uint FullGameAppId = 5125130u;
+    public const uint DemoAppId = 5144220u;
     public const string StoreUrl = "https://store.steampowered.com/app/5125130";
+
+    public static uint RunningAppId =>
+        GameBuildVariant.Current == GameBuildVariant.Demo ? DemoAppId : FullGameAppId;
 
     const float CooldownSeconds = 2f;
 
