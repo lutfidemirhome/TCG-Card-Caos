@@ -11,7 +11,6 @@ using UnityEngine.SceneManagement;
 public class PhysicsCardLevelBuilderWindow : EditorWindow
 {
     const int SpawnOverlapTries = 12;
-    const int MixPhysicsBatchIndexBase = 4000;
     const int MixAllPhysicsBatchIndex = 5000;
     const int MixShuffleSeed = 20260825;
     const float MixAllVolumeSide = 10f;
@@ -22,9 +21,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     const float MinSpawnClearance = 0.35f;
 
     Vector2 _scroll;
-    int _selectedBatchIndex = 1;
-    MixPlan _cachedMixPlan;
-    int _cachedMixPlanDemoCount = -1;
     MixAllPlan _cachedMixAllPlan;
     bool _hasMixAllPlan;
     List<PhysicsLevelItem> _guardItems;
@@ -33,45 +29,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     bool _floorGuardActive;
     bool _sawGrabbitActive;
     bool _promotingSelection;
-
-    const string DeleteAllCardsFlagPath = "Assets/Editor/DeleteAllSceneCards.run";
-    const string RemoveScatterZoneFlagPath = "Assets/Editor/RemoveCardScatterZone.run";
-    const string ApplyFaceDownFlagPath = "Assets/Editor/ApplyTenPercentFaceDown.run";
-
-    [InitializeOnLoadMethod]
-    static void ApplyFaceDownIfFlagged()
-    {
-        if (!System.IO.File.Exists(ApplyFaceDownFlagPath))
-            return;
-
-        EditorApplication.delayCall += ApplyTenPercentFaceDownFromFlag;
-    }
-
-    static void ApplyTenPercentFaceDownFromFlag()
-    {
-        if (!System.IO.File.Exists(ApplyFaceDownFlagPath))
-            return;
-
-        if (EditorApplication.isPlaying)
-        {
-            EditorApplication.isPlaying = false;
-            EditorApplication.delayCall += ApplyTenPercentFaceDownFromFlag;
-            return;
-        }
-
-        const string scenePath = "Assets/Scenes/MainScene.unity";
-        if (SceneManager.GetActiveScene().path != scenePath)
-            EditorSceneManager.OpenScene(scenePath);
-
-        string summary = ApplyTenPercentFaceDownOnExistingCards();
-        System.IO.File.Delete(ApplyFaceDownFlagPath);
-        if (System.IO.File.Exists(ApplyFaceDownFlagPath + ".meta"))
-            System.IO.File.Delete(ApplyFaceDownFlagPath + ".meta");
-
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-        EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
-        Debug.Log("TCG Card Chaos: " + summary);
-    }
 
     static string ApplyTenPercentFaceDownOnExistingCards()
     {
@@ -133,8 +90,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         return "face-down set to "
             + targetDown + "/" + total
             + " (~10%). flipped down=" + flippedDown
-            + " flipped up=" + flippedUp
-            + ". Scene saved.";
+            + " flipped up=" + flippedUp;
     }
 
     static void FlipAuthoredCardInPlace(WorldCard card)
@@ -147,87 +103,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         card.SetGroundShowsBack(false);
         EditorUtility.SetDirty(card.transform);
         EditorUtility.SetDirty(card);
-    }
-
-    [InitializeOnLoadMethod]
-    static void RemoveScatterZoneIfFlagged()
-    {
-        if (!System.IO.File.Exists(RemoveScatterZoneFlagPath))
-            return;
-
-        EditorApplication.delayCall += RemoveCardScatterZoneFromFlag;
-    }
-
-    static void RemoveCardScatterZoneFromFlag()
-    {
-        if (!System.IO.File.Exists(RemoveScatterZoneFlagPath))
-            return;
-
-        if (EditorApplication.isPlaying)
-        {
-            EditorApplication.isPlaying = false;
-            EditorApplication.delayCall += RemoveCardScatterZoneFromFlag;
-            return;
-        }
-
-        const string scenePath = "Assets/Scenes/MainScene.unity";
-        if (SceneManager.GetActiveScene().path != scenePath)
-            EditorSceneManager.OpenScene(scenePath);
-
-        CardScatterZone[] zones = Object.FindObjectsByType<CardScatterZone>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
-        int removed = 0;
-        for (int i = 0; i < zones.Length; i++)
-        {
-            if (zones[i] == null)
-                continue;
-            Object.DestroyImmediate(zones[i].gameObject);
-            removed++;
-        }
-
-        System.IO.File.Delete(RemoveScatterZoneFlagPath);
-        if (System.IO.File.Exists(RemoveScatterZoneFlagPath + ".meta"))
-            System.IO.File.Delete(RemoveScatterZoneFlagPath + ".meta");
-
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-        EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
-        Debug.Log("TCG Card Chaos: removed " + removed + " CardScatterZone(s). Scene saved.");
-    }
-
-    [InitializeOnLoadMethod]
-    static void DeleteAllSceneCardsIfFlagged()
-    {
-        if (!System.IO.File.Exists(DeleteAllCardsFlagPath))
-            return;
-
-        EditorApplication.delayCall += DeleteAllSceneCardsFromFlag;
-    }
-
-    static void DeleteAllSceneCardsFromFlag()
-    {
-        if (!System.IO.File.Exists(DeleteAllCardsFlagPath))
-            return;
-
-        if (EditorApplication.isPlaying)
-        {
-            EditorApplication.isPlaying = false;
-            EditorApplication.delayCall += DeleteAllSceneCardsFromFlag;
-            return;
-        }
-
-        const string scenePath = "Assets/Scenes/MainScene.unity";
-        if (SceneManager.GetActiveScene().path != scenePath)
-            EditorSceneManager.OpenScene(scenePath);
-
-        int removed = DeleteAllSceneCards();
-        System.IO.File.Delete(DeleteAllCardsFlagPath);
-        if (System.IO.File.Exists(DeleteAllCardsFlagPath + ".meta"))
-            System.IO.File.Delete(DeleteAllCardsFlagPath + ".meta");
-
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-        EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
-        Debug.Log("TCG Card Chaos: deleted " + removed + " scene cards/packs. Scene saved.");
     }
 
     [MenuItem("TCG Card Chaos/Fix Pink Card Art")]
@@ -273,20 +148,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         window.Show();
         window.Focus();
         Debug.Log("Card Physics Level Builder opened. Look for the tab named Card Physics Level Builder, or Window → TCG Card Chaos.");
-    }
-
-    void OnEnable()
-    {
-        try
-        {
-            PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
-            if (layout != null)
-                _selectedBatchIndex = layout.CurrentMainBatchIndex;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogWarning("Card Physics Level Builder OnEnable: " + ex.Message);
-        }
     }
 
     void OnDisable()
@@ -414,7 +275,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                     "Demo_Cards, Mix 1–10 ve Mix_All silinecek. Devam?",
                     "Sil",
                     "İptal"))
-                ClearAuthoredPiles(layout);
+                DeleteAllSceneCards();
         }
         EditorGUILayout.EndHorizontal();
 
@@ -554,11 +415,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
     }
 
-    static void ClearAuthoredPiles(PhysicsLevelLayout layout)
-    {
-        DeleteAllSceneCards();
-    }
-
     static int DeleteAllSceneCards()
     {
         int removed = 0;
@@ -645,7 +501,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                 "İptal"))
             return;
 
-        ClearAuthoredPiles(layout);
+        DeleteAllSceneCards();
 
         MixAllPlan plan = GetCachedMixAllPlan();
         Transform folder = GetOrCreateMixAllFolder(layout);
@@ -838,237 +694,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
 
         return count;
-    }
-
-    void GenerateDemo(PhysicsLevelLayout layout)
-    {
-        if (layout.DemoVolume == null || layout.DemoCardsRoot == null)
-        {
-            EditorUtility.DisplayDialog("Demo", "Demo spawn volume / Demo_Cards folder missing.", "OK");
-            return;
-        }
-
-        if (layout.DemoCardsRoot.childCount > 0)
-        {
-            if (!EditorUtility.DisplayDialog(
-                    "Replace Demo",
-                    "Sahneye kaydettiğin demo kartları silinip yeniden spawn olur. Grabbit pozları kaybolur. Devam edilsin mi?",
-                    "Yeniden oluştur",
-                    "İptal"))
-                return;
-        }
-
-        Undo.SetCurrentGroupName("Generate Demo Cards");
-        int undo = Undo.GetCurrentGroup();
-        DeleteArea(layout.DemoCardsRoot, "Clear Demo Cards", registerUndoOnly: true);
-        SpawnGroup(
-            layout,
-            layout.DemoVolume,
-            layout.DemoCardsRoot,
-            PhysicsLevelItem.AreaKind.Demo,
-            batchIndex: 0,
-            layout.DemoRegularCount,
-            layout.DemoPsaCount,
-            layout.DemoPackCount);
-        Undo.CollapseUndoOperations(undo);
-        MarkDirty(layout);
-        SelectChildren(layout.DemoCardsRoot);
-    }
-
-    void CreateMainBatch(PhysicsLevelLayout layout, int batchIndex)
-    {
-        if (layout.MainVolume == null || layout.MainLevelRoot == null)
-        {
-            EditorUtility.DisplayDialog("Main Level", "Main spawn volume / Main_Level folder missing.", "OK");
-            return;
-        }
-
-        Transform folder = FindBatch(layout, batchIndex);
-        if (folder != null && folder.childCount > 0)
-        {
-            if (!EditorUtility.DisplayDialog(
-                    "Batch exists",
-                    PhysicsLevelLayout.FormatBatchName(batchIndex) + " already has cards. Replace this batch only?",
-                    "Replace",
-                    "Cancel"))
-                return;
-
-            DeleteFolder(folder, "Replace Main Batch", registerUndoOnly: true);
-        }
-
-        folder = GetOrCreateBatchFolder(layout, batchIndex);
-        Undo.SetCurrentGroupName("Create Main Batch");
-        int undo = Undo.GetCurrentGroup();
-        SpawnGroup(
-            layout,
-            layout.MainVolume,
-            folder,
-            PhysicsLevelItem.AreaKind.Main,
-            batchIndex,
-            layout.MainBatchSize,
-            layout.MainPsaCount,
-            layout.MainPackCount);
-        Undo.CollapseUndoOperations(undo);
-        MarkDirty(layout);
-        SelectChildren(folder);
-    }
-
-    void CreateMixBatch(PhysicsLevelLayout layout, int mixIndex)
-    {
-        if (layout.MainVolume == null || layout.MainLevelRoot == null)
-        {
-            EditorUtility.DisplayDialog("Mix", "Main spawn volume / Main_Level folder missing.", "OK");
-            return;
-        }
-
-        MixPlan plan = GetCachedMixPlan(layout);
-        List<MixSpawnItem> items = plan.GetItems(mixIndex);
-        List<CardDefinition> packCards = plan.GetPackCards(mixIndex);
-        if (items.Count == 0 && packCards.Count == 0)
-        {
-            EditorUtility.DisplayDialog("Mix", "Mix " + mixIndex + " için kart kalmadı.", "OK");
-            return;
-        }
-
-        Transform folder = FindMixBatch(layout, mixIndex);
-        if (folder != null && folder.childCount > 0)
-        {
-            if (!EditorUtility.DisplayDialog(
-                    "Mix batch exists",
-                    PhysicsLevelLayout.FormatMixBatchName(mixIndex)
-                    + " zaten dolu. Sadece bu grup değişsin mi? Demo'ya dokunulmaz.",
-                    "Replace",
-                    "Cancel"))
-                return;
-
-            DeleteFolder(folder, "Replace Mix Batch", registerUndoOnly: true);
-        }
-
-        folder = GetOrCreateMixBatchFolder(layout, mixIndex);
-        Undo.SetCurrentGroupName("Create Mix Batch");
-        int undo = Undo.GetCurrentGroup();
-        int occupiedCount = items.Count + PhysicsLevelLayout.MixPacksPerBatch;
-        var occupied = new List<Vector3>(occupiedCount);
-        int itemBatchIndex = MixPhysicsBatchIndexBase + mixIndex;
-        Quaternion rotation;
-
-        for (int i = 0; i < items.Count; i++)
-        {
-            MixSpawnItem item = items[i];
-            if (item.IsPsa)
-            {
-                WorldCard card = CardFactory.CreateWorldPsaCard(
-                    NextSpawnPose(layout, layout.MainVolume, occupied, out rotation, pack: false),
-                    rotation,
-                    item.PsaSlot,
-                    item.PsaVariant,
-                    cardName: "PSA_" + item.PsaSlot + "_" + item.PsaVariant);
-                FinishCard(card, folder, PhysicsLevelItem.AreaKind.Main, itemBatchIndex);
-                continue;
-            }
-
-            if (item.Definition == null)
-                continue;
-
-            WorldCard regular = CardFactory.CreateWorldCard(
-                NextSpawnPose(layout, layout.MainVolume, occupied, out rotation, pack: false),
-                rotation,
-                item.Definition,
-                paletteIndex: 0,
-                cardName: "Card_" + item.Definition.DefinitionId);
-            FinishCard(regular, folder, PhysicsLevelItem.AreaKind.Main, itemBatchIndex);
-        }
-
-        BoosterPackDefinition packDefinition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
-        int packsPerBatch = PhysicsLevelLayout.MixPacksPerBatch;
-        for (int i = 0; i < packsPerBatch; i++)
-        {
-            var contents = new List<CardDefinition>(CardDimensions.CardsPerBoosterPack);
-            int start = i * CardDimensions.CardsPerBoosterPack;
-            for (int c = 0; c < CardDimensions.CardsPerBoosterPack && start + c < packCards.Count; c++)
-                contents.Add(packCards[start + c]);
-
-            int variantIndex = ((mixIndex - 1) * packsPerBatch + i) % PackArtLibrary.PackVariantCount + 1;
-            WorldBoosterPack pack = PackFactory.CreateWorldPack(
-                NextSpawnPose(layout, layout.MainVolume, occupied, out rotation, pack: true),
-                rotation,
-                packDefinition,
-                packName: "BoosterPack_M" + mixIndex + "_" + (i + 1),
-                packVariantIndex: variantIndex,
-                preRolledContents: contents);
-            FinishPack(pack, folder, PhysicsLevelItem.AreaKind.Main, itemBatchIndex);
-        }
-
-        Undo.CollapseUndoOperations(undo);
-        MarkDirty(layout);
-        SelectChildren(folder);
-    }
-
-    void SpawnGroup(
-        PhysicsLevelLayout layout,
-        PhysicsCardSpawnVolume volume,
-        Transform parent,
-        PhysicsLevelItem.AreaKind area,
-        int batchIndex,
-        int regularCount,
-        int psaCount,
-        int packCount)
-    {
-        CardArtLibrary.EnsureLoaded();
-        var occupied = new List<Vector3>(regularCount + psaCount + packCount);
-
-        int packedCards = packCount > 0 ? packCount * CardDimensions.CardsPerBoosterPack : 0;
-        List<CardDefinition> uniquePool = CardScatterUtility.AllocateLiveGroundCards(
-            regularCount + packedCards);
-        int regularTake = Mathf.Min(regularCount, uniquePool.Count);
-        List<CardDefinition> regulars = uniquePool.GetRange(0, regularTake);
-        List<CardDefinition> packPool = uniquePool.Count > regularTake
-            ? uniquePool.GetRange(regularTake, uniquePool.Count - regularTake)
-            : new List<CardDefinition>();
-
-        for (int i = 0; i < regulars.Count; i++)
-        {
-            WorldCard card = CardFactory.CreateWorldCard(
-                NextSpawnPose(layout, volume, occupied, out Quaternion rotation, pack: false),
-                rotation,
-                regulars[i],
-                paletteIndex: 0,
-                cardName: "Card_" + regulars[i].DefinitionId);
-            FinishCard(card, parent, area, batchIndex);
-        }
-
-        for (int i = 0; i < psaCount; i++)
-        {
-            int slot = PsaArtLibrary.CabinetSlotNumbers[i % PsaArtLibrary.CabinetSlotCount];
-            WorldCard card = CardFactory.CreateWorldPsaCard(
-                NextSpawnPose(layout, volume, occupied, out Quaternion rotation, pack: false),
-                rotation,
-                slot,
-                variantIndex: 1,
-                cardName: "PSA_" + slot + "_1");
-            FinishCard(card, parent, area, batchIndex);
-        }
-
-        if (packCount <= 0)
-            return;
-        BoosterPackDefinition packDefinition = Resources.Load<BoosterPackDefinition>("Cards/BoosterPackDefinition");
-        for (int i = 0; i < packCount; i++)
-        {
-            var contents = new List<CardDefinition>(CardDimensions.CardsPerBoosterPack);
-            int start = i * CardDimensions.CardsPerBoosterPack;
-            for (int c = 0; c < CardDimensions.CardsPerBoosterPack && start + c < packPool.Count; c++)
-                contents.Add(packPool[start + c]);
-
-            int variantIndex = (Mathf.Max(0, batchIndex - 1) * packCount + i) % PackArtLibrary.PackVariantCount + 1;
-            WorldBoosterPack pack = PackFactory.CreateWorldPack(
-                NextSpawnPose(layout, volume, occupied, out Quaternion rotation, pack: true),
-                rotation,
-                packDefinition,
-                packName: "BoosterPack_" + variantIndex,
-                packVariantIndex: variantIndex,
-                preRolledContents: contents);
-            FinishPack(pack, parent, area, batchIndex);
-        }
     }
 
     Vector3 NextSpawnPose(
@@ -1846,174 +1471,6 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         return false;
     }
 
-    void DeleteArea(Transform folder, string undoName, bool registerUndoOnly = false)
-    {
-        if (folder == null)
-            return;
-
-        for (int i = folder.childCount - 1; i >= 0; i--)
-            Undo.DestroyObjectImmediate(folder.GetChild(i).gameObject);
-
-        if (!registerUndoOnly)
-            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-    }
-
-    void DeleteFolder(Transform folder, string undoName, bool registerUndoOnly = false)
-    {
-        if (folder == null)
-            return;
-
-        Undo.DestroyObjectImmediate(folder.gameObject);
-        if (!registerUndoOnly)
-            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-    }
-
-    void DeleteBatch(PhysicsLevelLayout layout, int batchIndex)
-    {
-        Transform folder = FindBatch(layout, batchIndex);
-        if (folder == null)
-            return;
-
-        DeleteFolder(folder, "Delete Current Batch");
-    }
-
-    Transform FindBatch(PhysicsLevelLayout layout, int batchIndex)
-    {
-        if (layout.MainLevelRoot == null)
-            return null;
-
-        string name = PhysicsLevelLayout.FormatBatchName(batchIndex);
-        return layout.MainLevelRoot.Find(name);
-    }
-
-    Transform GetOrCreateBatchFolder(PhysicsLevelLayout layout, int batchIndex)
-    {
-        Transform existing = FindBatch(layout, batchIndex);
-        if (existing != null)
-            return existing;
-
-        var go = new GameObject(PhysicsLevelLayout.FormatBatchName(batchIndex));
-        Undo.RegisterCreatedObjectUndo(go, "Create Batch Folder");
-        Undo.SetTransformParent(go.transform, layout.MainLevelRoot, "Parent Batch Folder");
-        go.transform.localPosition = Vector3.zero;
-        go.transform.localRotation = Quaternion.identity;
-        go.transform.localScale = Vector3.one;
-        return go.transform;
-    }
-
-    MixPlan GetCachedMixPlan(PhysicsLevelLayout layout)
-    {
-        int demoCount = layout != null && layout.DemoCardsRoot != null ? layout.DemoCardsRoot.childCount : 0;
-        if (_cachedMixPlan.MixedItems != null && _cachedMixPlanDemoCount == demoCount)
-            return _cachedMixPlan;
-
-        _cachedMixPlan = BuildMixPlan(layout);
-        _cachedMixPlanDemoCount = demoCount;
-        return _cachedMixPlan;
-    }
-
-    Transform FindMixBatch(PhysicsLevelLayout layout, int mixIndex)
-    {
-        if (layout.MainLevelRoot == null)
-            return null;
-
-        return layout.MainLevelRoot.Find(PhysicsLevelLayout.FormatMixBatchName(mixIndex));
-    }
-
-    Transform GetOrCreateMixBatchFolder(PhysicsLevelLayout layout, int mixIndex)
-    {
-        Transform existing = FindMixBatch(layout, mixIndex);
-        if (existing != null)
-            return existing;
-
-        var go = new GameObject(PhysicsLevelLayout.FormatMixBatchName(mixIndex));
-        Undo.RegisterCreatedObjectUndo(go, "Create Mix Batch Folder");
-        Undo.SetTransformParent(go.transform, layout.MainLevelRoot, "Parent Mix Batch Folder");
-        go.transform.localPosition = Vector3.zero;
-        go.transform.localRotation = Quaternion.identity;
-        go.transform.localScale = Vector3.one;
-        return go.transform;
-    }
-
-    static MixPlan BuildMixPlan(PhysicsLevelLayout layout)
-    {
-        var demoCardIds = new HashSet<string>();
-        var demoPsaKeys = new HashSet<int>();
-        CollectDemoOccupancy(layout, demoCardIds, demoPsaKeys);
-
-        CardCatalog.EnsureLoaded();
-        var remainingCards = new List<CardDefinition>();
-        IReadOnlyList<CardDefinition> catalog = CardCatalog.All;
-        for (int i = 0; i < catalog.Count; i++)
-        {
-            CardDefinition definition = catalog[i];
-            if (definition == null || string.IsNullOrWhiteSpace(definition.DefinitionId))
-                continue;
-            if (demoCardIds.Contains(definition.DefinitionId))
-                continue;
-            remainingCards.Add(definition);
-        }
-
-        var remainingPsa = new List<MixSpawnItem>();
-        for (int i = 0; i < PsaArtLibrary.CabinetSlotCount; i++)
-        {
-            int slot = PsaArtLibrary.CabinetSlotNumbers[i];
-            int variantCount = PsaArtLibrary.CountVariantsInSlot(slot);
-            for (int variant = 1; variant <= variantCount; variant++)
-            {
-                if (demoPsaKeys.Contains(PsaKey(slot, variant)))
-                    continue;
-                remainingPsa.Add(MixSpawnItem.Psa(slot, variant));
-            }
-        }
-
-        Random.State previousState = Random.state;
-        Random.InitState(MixShuffleSeed);
-        Shuffle(remainingCards);
-
-        int packCardCount = PhysicsLevelLayout.MixPackCount * CardDimensions.CardsPerBoosterPack;
-        packCardCount = Mathf.Min(packCardCount, remainingCards.Count);
-        int floorCardCount = remainingCards.Count - packCardCount;
-        var packCards = remainingCards.GetRange(floorCardCount, packCardCount);
-
-        var mixed = new List<MixSpawnItem>(floorCardCount + remainingPsa.Count);
-        for (int i = 0; i < floorCardCount; i++)
-            mixed.Add(MixSpawnItem.Regular(remainingCards[i]));
-        mixed.AddRange(remainingPsa);
-        Shuffle(mixed);
-        Random.state = previousState;
-
-        return new MixPlan(mixed, packCards, floorCardCount, remainingPsa.Count);
-    }
-
-    static void CollectDemoOccupancy(
-        PhysicsLevelLayout layout,
-        HashSet<string> cardIds,
-        HashSet<int> psaKeys)
-    {
-        if (layout == null || layout.DemoCardsRoot == null)
-            return;
-
-        WorldCard[] cards = layout.DemoCardsRoot.GetComponentsInChildren<WorldCard>(true);
-        for (int i = 0; i < cards.Length; i++)
-        {
-            WorldCard card = cards[i];
-            if (card == null)
-                continue;
-
-            if (card.UsesPsaSlab)
-            {
-                psaKeys.Add(PsaKey(card.PsaSlotNumber, card.PsaVariantIndex));
-                continue;
-            }
-
-            if (card.Definition != null && !string.IsNullOrWhiteSpace(card.Definition.DefinitionId))
-                cardIds.Add(card.Definition.DefinitionId);
-        }
-    }
-
-    static int PsaKey(int slot, int variant) => slot * 1000 + variant;
-
     static void Shuffle<T>(List<T> items)
     {
         for (int i = items.Count - 1; i > 0; i--)
@@ -2027,89 +1484,13 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 
     struct MixSpawnItem
     {
-        public CardDefinition Definition;
         public int PsaSlot;
         public int PsaVariant;
-        public bool IsPsa;
-
-        public static MixSpawnItem Regular(CardDefinition definition)
-        {
-            return new MixSpawnItem { Definition = definition };
-        }
 
         public static MixSpawnItem Psa(int slot, int variant)
         {
-            return new MixSpawnItem { PsaSlot = slot, PsaVariant = variant, IsPsa = true };
+            return new MixSpawnItem { PsaSlot = slot, PsaVariant = variant };
         }
-    }
-
-    struct MixPlan
-    {
-        public readonly List<MixSpawnItem> MixedItems;
-        public readonly List<CardDefinition> PackCards;
-        public readonly int FloorCardCount;
-        public readonly int PsaCount;
-
-        public MixPlan(
-            List<MixSpawnItem> mixedItems,
-            List<CardDefinition> packCards,
-            int floorCardCount,
-            int psaCount)
-        {
-            MixedItems = mixedItems ?? new List<MixSpawnItem>();
-            PackCards = packCards ?? new List<CardDefinition>();
-            FloorCardCount = floorCardCount;
-            PsaCount = psaCount;
-        }
-
-        public int MixedItemCount => MixedItems.Count;
-        public int BaseItemsPerBatch =>
-            MixedItemCount / PhysicsLevelLayout.MixBatchCount;
-        public int Remainder =>
-            MixedItemCount % PhysicsLevelLayout.MixBatchCount;
-
-        public int GetItemCount(int mixIndex)
-        {
-            int start = GetItemStart(mixIndex);
-            return GetItemStart(mixIndex + 1) - start;
-        }
-
-        public List<MixSpawnItem> GetItems(int mixIndex)
-        {
-            int start = GetItemStart(mixIndex);
-            int count = GetItemCount(mixIndex);
-            if (start < 0 || count <= 0 || start >= MixedItems.Count)
-                return new List<MixSpawnItem>();
-            return MixedItems.GetRange(start, Mathf.Min(count, MixedItems.Count - start));
-        }
-
-        public List<CardDefinition> GetPackCards(int mixIndex)
-        {
-            int cardsPerBatch = PhysicsLevelLayout.MixPacksPerBatch * CardDimensions.CardsPerBoosterPack;
-            int start = (Mathf.Clamp(mixIndex, 1, PhysicsLevelLayout.MixBatchCount) - 1) * cardsPerBatch;
-            if (start >= PackCards.Count)
-                return new List<CardDefinition>();
-            int count = Mathf.Min(cardsPerBatch, PackCards.Count - start);
-            return PackCards.GetRange(start, count);
-        }
-
-        int GetItemStart(int mixIndex)
-        {
-            int index = Mathf.Clamp(mixIndex, 1, PhysicsLevelLayout.MixBatchCount + 1) - 1;
-            int extra = Remainder;
-            int per = BaseItemsPerBatch;
-            if (index <= extra)
-                return index * (per + 1);
-            return extra * (per + 1) + (index - extra) * per;
-        }
-    }
-
-    int NextFreeBatchIndex(PhysicsLevelLayout layout)
-    {
-        int index = 1;
-        while (FindBatch(layout, index) != null && FindBatch(layout, index).childCount > 0)
-            index++;
-        return index;
     }
 
     int CountArea(PhysicsLevelItem.AreaKind area, int batchIndex)

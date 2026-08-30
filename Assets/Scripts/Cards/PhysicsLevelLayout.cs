@@ -15,7 +15,6 @@ public class PhysicsLevelLayout : MonoBehaviour
     public const string BatchPrefix = "Batch_";
     public const string MixBatchPrefix = "Mix_";
     public const string MixAllName = "Mix_All";
-    public const int MixBatchCount = 10;
     public const int MixPackCount = 100;
 
     [Header("Demo")]
@@ -126,20 +125,8 @@ public class PhysicsLevelLayout : MonoBehaviour
         }
     }
 
-    public static string FormatBatchName(int index)
-    {
-        return BatchPrefix + index.ToString("000");
-    }
-
-    public static string FormatMixBatchName(int index)
-    {
-        return MixBatchPrefix + Mathf.Clamp(index, 1, MixBatchCount).ToString("00");
-    }
-
     public static string FormatMixAllName()
     {
         return MixAllName;
     }
-
-    public static int MixPacksPerBatch => MixPackCount / MixBatchCount;
 }
