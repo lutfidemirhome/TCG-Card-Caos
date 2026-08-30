@@ -17,6 +17,8 @@ public class InGameHudView : MonoBehaviour
     void Awake()
     {
         BindIfMissing();
+        if (GetComponent<SkillBarView>() == null)
+            gameObject.AddComponent<SkillBarView>();
         Refresh();
     }
 

@@ -209,7 +209,7 @@ public class FirstPersonController : MonoBehaviour
         if (!_controller.isGrounded)
             return;
 
-        _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        _verticalVelocity = Mathf.Sqrt(jumpHeight * PlayerJumpSkill.HeightMultiplier * -2f * gravity);
     }
 
     void ToggleCrouchInput()
