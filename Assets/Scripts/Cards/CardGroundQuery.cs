@@ -170,8 +170,6 @@ public static class CardGroundQuery
     {
         if (pack == null || pack.IsInHand || !pack.HasActivePhysics)
             return;
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(pack))
-            return;
 
         float scale = Mathf.Max(pack.transform.lossyScale.x, CardDimensions.GroundCardScale);
         Vector3 halfExtents = new Vector3(
@@ -195,8 +193,6 @@ public static class CardGroundQuery
     static void TryAddFlatPackHit(Ray ray, float maxDistance, WorldBoosterPack pack)
     {
         if (pack == null || pack.IsInHand || pack.HasActivePhysics)
-            return;
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(pack))
             return;
 
         float scale = Mathf.Max(pack.transform.lossyScale.x, CardDimensions.GroundCardScale);
@@ -242,8 +238,6 @@ public static class CardGroundQuery
     static void TryAddHit(Ray ray, float maxDistance, WorldCard candidate)
     {
         if (candidate == null || candidate.IsInHand || candidate.HasActivePhysics || candidate.IsShelfRowCompleteLocked)
-            return;
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(candidate))
             return;
 
         if (!TryRayHitCard(ray, candidate, maxDistance, out float distance))

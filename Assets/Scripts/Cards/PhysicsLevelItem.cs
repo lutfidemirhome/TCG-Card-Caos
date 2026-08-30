@@ -32,15 +32,6 @@ public class PhysicsLevelItem : MonoBehaviour
         return item != null && item.Area == AreaKind.Main;
     }
 
-    /// <summary>
-    /// Demo build: Mix cards/packs stay visible but are not pickable.
-    /// Full game (no TCG_DEMO) restores Mix interaction.
-    /// </summary>
-    public static bool IsMixStoreDisplayOnly(Component component)
-    {
-        return GameBuildVariant.IsDemo && IsMixStoreItem(component);
-    }
-
     public void Configure(AreaKind areaKind, int batch, bool isBaked)
     {
         area = areaKind;

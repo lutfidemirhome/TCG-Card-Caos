@@ -166,9 +166,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         EnsureContentsPreRolled();
         CardGroundStack.TrackPack(this);
         SetGroundModelVisible(true);
-
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this) && _collider != null)
-            _collider.enabled = false;
     }
 
     void ResolvePackVariantFromScene()
@@ -1261,9 +1258,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public string GetPromptText()
     {
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
-            return string.Empty;
-
         if (IsInHand)
             return string.Empty;
 
@@ -1287,9 +1281,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public void Interact(GameObject interactor)
     {
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
-            return;
-
         if (IsInHand)
             return;
 
@@ -1302,9 +1293,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     public void SetInteractionHighlight(bool highlighted)
     {
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
-            return;
-
         _interactionHighlighted = highlighted && _state == PackState.World;
         if (_interactionHighlighted && !_hasPackOutlineBounds)
             RefreshPackOutlineBoundsFromLayout();

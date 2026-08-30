@@ -52,7 +52,7 @@ public static class CardScatterUtility
 
     const int CardsPerSpawnFrame = 6;
     const int PositionsPerYield = 12;
-    const float GroundFaceDownRatio = 0.2f;
+    public const float GroundFaceDownRatio = 0.1f;
     const string RuntimePlayScatterSessionKey = "TCGCardCaos.RuntimePlayScatterCount";
 
 #if !UNITY_EDITOR
@@ -456,7 +456,7 @@ public static class CardScatterUtility
         }
     }
 
-    static HashSet<int> PickBackFacingIndices(int spawnCount)
+    public static HashSet<int> PickBackFacingIndices(int spawnCount)
     {
         int backFacingCount = Mathf.Clamp(Mathf.RoundToInt(spawnCount * GroundFaceDownRatio), 0, spawnCount);
         var indices = new int[spawnCount];

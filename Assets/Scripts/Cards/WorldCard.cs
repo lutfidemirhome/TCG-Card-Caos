@@ -389,18 +389,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void SetInteractionHighlight(bool highlighted)
     {
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
-            return;
-
         _interactionHighlighted = highlighted && !IsInHand;
         RefreshRenderMode();
     }
 
     public string GetPromptText()
     {
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
-            return string.Empty;
-
         if (IsInHand || IsFlyingToShelf || IsShelfRowCompleteLocked)
             return string.Empty;
 
@@ -425,9 +419,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void Interact(GameObject interactor)
     {
-        if (PhysicsLevelItem.IsMixStoreDisplayOnly(this))
-            return;
-
         if (IsInHand || IsFlyingToShelf || IsShelfRowCompleteLocked)
             return;
 

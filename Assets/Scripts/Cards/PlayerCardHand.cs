@@ -85,6 +85,7 @@ public class PlayerCardHand : MonoBehaviour
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
     public bool HasHeldPack => CountOccupiedPackSlots() > 0;
     public bool IsPackSelected => GetSelectedHeldPack() != null;
+    public WorldBoosterPack SelectedHeldPack => GetSelectedHeldPack();
     public bool IsOpeningPack => _isOpeningPack;
     public bool IsAwaitingRevealCollect => _awaitingRevealCollect;
 
@@ -209,9 +210,10 @@ public class PlayerCardHand : MonoBehaviour
             return false;
 
         if (entry.Card != null)
-            return entry.Card.IsHeld;
+            return entry.Card.IsHeld || entry.Card.IsFlyingToHand;
 
-        return entry.Pack != null && entry.Pack.IsHeld;
+        return entry.Pack != null
+            && (entry.Pack.IsHeld || entry.Pack.State == WorldBoosterPack.PackState.FlyingToHand);
     }
 
     bool TryGetEntryAtFanIndex(int fanIndex, out HandFanEntry entry)
@@ -338,7 +340,11 @@ public class PlayerCardHand : MonoBehaviour
             return null;
 
         WorldBoosterPack pack = entry.Pack;
-        return pack != null && pack.IsHeld ? pack : null;
+        if (pack == null)
+            return null;
+        if (pack.IsHeld || pack.State == WorldBoosterPack.PackState.FlyingToHand)
+            return pack;
+        return null;
     }
 
     WorldBoosterPack ResolveHeldPackToOpen()
@@ -425,6 +431,11 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool TryPickup(WorldCard card)
     {
+        return TryPickup(card, playSound: true);
+    }
+
+    public bool TryPickup(WorldCard card, bool playSound)
+    {
         if (card == null || card.IsInHand || card.IsFlyingToShelf || card.IsShelfRowCompleteLocked || IsHandInputLocked)
             return false;
 
@@ -447,9 +458,19 @@ public class PlayerCardHand : MonoBehaviour
             pickupFlightDuration,
             pickupFlightArcHeight,
             () => OnCardPickupFlightComplete(newCardIndex));
-        GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
+        if (playSound)
+            GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
         GameSaveSignals.MarkDirty();
         return true;
+    }
+
+    public void SelectRightmostFanEntry()
+    {
+        int fanCount = GetHandFanCount();
+        if (fanCount <= 0)
+            return;
+
+        _selectedIndex = fanCount - 1;
     }
 
     void OnCardPickupFlightComplete(int cardIndex)
@@ -460,7 +481,7 @@ public class PlayerCardHand : MonoBehaviour
         if (!_cards[cardIndex].IsHeld)
             return;
 
-        _selectedIndex = GetFanIndexForCard(_cards[cardIndex]);
+        _selectedIndex = GetHandFanCount() - 1;
     }
 
     public bool HasSelectedHeldCard()
@@ -597,7 +618,12 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool TryPickupPack(WorldBoosterPack pack)
     {
-        if (pack == null || pack.IsInHand || !CanPickUpPack)
+        return TryPickupPack(pack, playSound: true);
+    }
+
+    public bool TryPickupPack(WorldBoosterPack pack, bool playSound)
+    {
+        if (pack == null || pack.IsInHand || pack.State == WorldBoosterPack.PackState.FlyingToHand || !CanPickUpPack)
             return false;
 
         EnsureHandAnchor();
@@ -612,7 +638,8 @@ public class PlayerCardHand : MonoBehaviour
             pickupFlightDuration,
             pickupFlightArcHeight,
             () => OnPackPickupFlightComplete(packListIndex));
-        GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
+        if (playSound)
+            GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
         GameSaveSignals.MarkDirty();
         return true;
     }
@@ -626,7 +653,7 @@ public class PlayerCardHand : MonoBehaviour
         if (!pack.IsHeld)
             return;
 
-        _selectedIndex = GetFanIndexForPack(pack);
+        _selectedIndex = GetHandFanCount() - 1;
     }
 
     public bool TryOpenHeldPackFromInput()
@@ -1023,7 +1050,7 @@ public class PlayerCardHand : MonoBehaviour
             return null;
 
         WorldCard card = entry.Card;
-        return card != null && card.IsHeld ? card : null;
+        return card != null && (card.IsHeld || card.IsFlyingToHand) ? card : null;
     }
 
     int CountHeldCards()

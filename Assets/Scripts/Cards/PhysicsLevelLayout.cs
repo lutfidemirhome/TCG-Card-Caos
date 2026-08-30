@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Scene root for physically authored card piles. Demo and Main never share folders.
+/// Scene root for physically authored card piles. Full store uses Mix_All + Main_SpawnVolume.
 /// </summary>
 [DisallowMultipleComponent]
 public class PhysicsLevelLayout : MonoBehaviour
@@ -14,6 +14,7 @@ public class PhysicsLevelLayout : MonoBehaviour
     public const string MainVolumeName = "Main_SpawnVolume";
     public const string BatchPrefix = "Batch_";
     public const string MixBatchPrefix = "Mix_";
+    public const string MixAllName = "Mix_All";
     public const int MixBatchCount = 10;
     public const int MixPackCount = 100;
 
@@ -118,7 +119,9 @@ public class PhysicsLevelLayout : MonoBehaviour
         {
             Transform child = layout.mainLevelRoot.GetChild(i);
             if (child != null
-                && (child.name.StartsWith(BatchPrefix) || child.name.StartsWith(MixBatchPrefix)))
+                && (child.name.StartsWith(BatchPrefix)
+                    || child.name.StartsWith(MixBatchPrefix)
+                    || child.name == MixAllName))
                 child.gameObject.SetActive(active);
         }
     }
@@ -131,6 +134,11 @@ public class PhysicsLevelLayout : MonoBehaviour
     public static string FormatMixBatchName(int index)
     {
         return MixBatchPrefix + Mathf.Clamp(index, 1, MixBatchCount).ToString("00");
+    }
+
+    public static string FormatMixAllName()
+    {
+        return MixAllName;
     }
 
     public static int MixPacksPerBatch => MixPackCount / MixBatchCount;
