@@ -157,7 +157,7 @@ public class InteractionController : MonoBehaviour
         {
             _raycastAimedPack = null;
             ClearDelayedInspectUiState();
-            ClearActivePlacementAims();
+            ClearTarget();
             UpdateSelectedPackPrompt();
             return;
         }

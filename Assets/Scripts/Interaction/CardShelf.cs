@@ -11,6 +11,8 @@ public class CardShelf : MonoBehaviour, IInteractable
     [SerializeField] Transform placementRoot;
     [Tooltip("When aiming, prefer empty slots within this vertical distance of the hit point.")]
     [SerializeField] float levelYTolerance = 0.28f;
+    [Tooltip("Empty slot must be this close (XZ) to the look hit, or the place prompt hides.")]
+    [SerializeField] float slotAimMaxDistance = 0.18f;
     [SerializeField] float surfacePadding = 0.003f;
 
     [Header("Placement flight")]
@@ -265,7 +267,7 @@ public class CardShelf : MonoBehaviour, IInteractable
             if (slot == null)
             {
                 HidePlacementOutline();
-                return HasAnySlots() ? "Shelf Full" : "No Shelf Slots";
+                return string.Empty;
             }
 
             return InteractPrompt.Format(Localization.Get(LocalizationKeys.PromptPlaceCard));
@@ -721,7 +723,9 @@ public class CardShelf : MonoBehaviour, IInteractable
             if (!_hasAimPoint || Mathf.Abs(slotPos.y - aim.y) > levelYTolerance)
                 continue;
 
-            float dist = (slotPos - aim).sqrMagnitude;
+            float dist = HorizontalAimDistanceSq(slotPos, aim);
+            if (dist > slotAimMaxDistance * slotAimMaxDistance)
+                continue;
             if (dist < bestOnLevelDist)
             {
                 bestOnLevelDist = dist;
@@ -730,6 +734,13 @@ public class CardShelf : MonoBehaviour, IInteractable
         }
 
         return bestOnLevel;
+    }
+
+    static float HorizontalAimDistanceSq(Vector3 slotPos, Vector3 aim)
+    {
+        float dx = slotPos.x - aim.x;
+        float dz = slotPos.z - aim.z;
+        return dx * dx + dz * dz;
     }
 
     CardShelfSlot FindClosestSlot(Vector3 aim)
