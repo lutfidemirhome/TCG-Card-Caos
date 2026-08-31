@@ -313,6 +313,12 @@ public class CardShelf : MonoBehaviour, IInteractable
         ClearAim();
     }
 
+    public int CountPlaceableSlots()
+    {
+        RefreshSlotCache();
+        return _slots.Count;
+    }
+
     public int CountOccupiedSlots()
     {
         RefreshSlotCache();
@@ -328,36 +334,38 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     public int CountCorrectlyPlacedCards()
     {
-        RefreshSlotCache();
-        int count = 0;
-        for (int i = 0; i < _slots.Count; i++)
-        {
-            CardShelfSlot slot = _slots[i];
-            if (slot == null || slot.IsEmpty)
-                continue;
-
-            WorldCard card = slot.OccupiedCard;
-            if (card != null && !card.IsInHand && IsCorrectPlacement(card, slot))
-                count++;
-        }
-
-        return count;
+        CollectHudProgress(out int placed, out _);
+        return placed;
     }
 
     public bool IsComplete()
     {
+        CollectHudProgress(out _, out bool complete);
+        return complete;
+    }
+
+    /// <summary>Single slot scan for HUD / save progress.</summary>
+    public void CollectHudProgress(out int correctlyPlaced, out bool complete)
+    {
         RefreshSlotCache();
-        if (_slots.Count == 0)
-            return false;
+        correctlyPlaced = 0;
+        complete = _slots.Count > 0;
 
         for (int i = 0; i < _slots.Count; i++)
         {
             CardShelfSlot slot = _slots[i];
-            if (slot == null || slot.IsEmpty || !IsCorrectPlacement(slot.OccupiedCard, slot))
-                return false;
-        }
+            if (slot == null || slot.IsEmpty)
+            {
+                complete = false;
+                continue;
+            }
 
-        return true;
+            WorldCard card = slot.OccupiedCard;
+            if (card != null && !card.IsInHand && IsCorrectPlacement(card, slot))
+                correctlyPlaced++;
+            else
+                complete = false;
+        }
     }
 
     /// <summary>

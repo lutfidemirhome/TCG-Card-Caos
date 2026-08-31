@@ -10,7 +10,6 @@ public class InGameHudView : MonoBehaviour
     [SerializeField] TMP_Text shelvesValueText;
     [SerializeField] TMP_Text cardsValueText;
     [SerializeField] TMP_Text handValueText;
-    [SerializeField] int maxShelves = GameHudLimits.MaxShelves;
     const float RefreshInterval = 0.12f;
     float _refreshTimer;
 
@@ -51,7 +50,7 @@ public class InGameHudView : MonoBehaviour
     void Refresh()
     {
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
-        SetCounter(shelvesValueText, progress.shelvesCompleted, Mathf.Max(maxShelves, progress.totalShelves));
+        SetCounter(shelvesValueText, progress.shelvesCompleted, progress.totalShelves);
         SetCounter(cardsValueText, progress.cardsPlaced, progress.totalCards);
 
         PlayerCardHand hand = PlayerCardHand.Instance;

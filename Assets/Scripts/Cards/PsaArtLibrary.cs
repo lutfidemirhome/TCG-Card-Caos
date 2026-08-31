@@ -125,6 +125,16 @@ public static class PsaArtLibrary
         return Mathf.Max(1, count);
     }
 
+    /// <summary>Total graded PSA cards (Mix All + HUD denominator).</summary>
+    public static int CountAllVariants()
+    {
+        int total = 0;
+        for (int i = 0; i < CabinetSlotNumbers.Length; i++)
+            total += CountVariantsInSlot(CabinetSlotNumbers[i]);
+
+        return total;
+    }
+
     public static Material CreateSlabMaterial(int slotNumber, int variantIndex)
     {
         Material template = GetSharedSlabTemplate();

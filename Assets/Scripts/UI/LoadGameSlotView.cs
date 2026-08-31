@@ -113,7 +113,7 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
             dateText: FormatDate(metadata),
             playTimeText: FormatPlayTime(metadata.playTimeSeconds),
             cardsText: metadata.cardsPlaced + " / " + Mathf.Max(metadata.totalCards, metadata.cardsPlaced),
-            shelvesText: metadata.shelvesCompleted + " / " + Mathf.Max(GameHudLimits.MaxShelves, metadata.shelvesCompleted),
+            shelvesText: metadata.shelvesCompleted + " / " + Mathf.Max(metadata.totalShelves, metadata.shelvesCompleted),
             thumbnailTexture: thumbnailTexture,
             emptyThumbnail: thumbnailTexture == null && _isEmpty);
     }
@@ -137,7 +137,7 @@ public class LoadGameSlotView : MonoBehaviour, IPointerClickHandler
             dateText: FormatDateLong(metadata),
             playTimeText: FormatPlayTime(metadata.playTimeSeconds),
             cardsText: metadata.cardsPlaced + " / " + Mathf.Max(metadata.totalCards, metadata.cardsPlaced),
-            shelvesText: metadata.shelvesCompleted + " / " + Mathf.Max(GameHudLimits.MaxShelves, metadata.shelvesCompleted),
+            shelvesText: metadata.shelvesCompleted + " / " + Mathf.Max(metadata.totalShelves, metadata.shelvesCompleted),
             thumbnailTexture: thumbnailTexture,
             emptyThumbnail: false);
     }

@@ -78,6 +78,7 @@ public static class GameSaveRestore
         else
             GameSaveDirtyTracker.Clear();
         LastRestoreSucceeded = true;
+        GameProgressCounter.InvalidateCache();
         GameSaveEvents.RaiseLoadCompleted(slotId);
         LogRestore(slotId, data);
     }

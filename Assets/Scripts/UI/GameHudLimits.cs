@@ -1,9 +1,12 @@
 /// <summary>
-/// Demo HUD capacity targets shown as current / max in the in-game overlay.
-/// Cards: 235 floor + 4 PSA + 5 packs × 5 cards. Shelves are the six demo cabinets.
+/// Fallback HUD denominators when live counters are unavailable.
+/// Full builds use <see cref="GameProgressCounter"/> (98 cabinets, 5151 cards).
 /// </summary>
 public static class GameHudLimits
 {
     public const int MaxShelves = 6;
     public const int MaxPlacedCards = 264;
+
+    public const int FullMaxCabinets = 98;
+    public const int FullMaxPlacedCards = 5151;
 }

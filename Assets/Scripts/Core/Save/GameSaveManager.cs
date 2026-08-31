@@ -142,12 +142,14 @@ public sealed class GameSaveManager : MonoBehaviour
     {
         EnsureExists();
         GameSaveDirtyTracker.Clear();
+        GameProgressCounter.InvalidateCache();
         _instance.BeginGameplaySession(fromSave: false, 0d);
     }
 
     public static void NotifySaveRestored()
     {
         EnsureExists();
+        GameProgressCounter.InvalidateCache();
         _instance.BeginGameplaySession(fromSave: true, GamePlayTime.TotalSeconds);
     }
 

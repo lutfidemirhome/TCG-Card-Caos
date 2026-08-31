@@ -16,6 +16,23 @@ public class PsaCabinet : MonoBehaviour
         CollectSlots();
     }
 
+    public int CountPlaceableSlots()
+    {
+        CollectSlots();
+        int count = 0;
+        if (slots == null)
+            return 0;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot != null && slot.gameObject.activeInHierarchy)
+                count++;
+        }
+
+        return count;
+    }
+
     public int CountOccupiedSlots()
     {
         CollectSlots();
@@ -34,39 +51,44 @@ public class PsaCabinet : MonoBehaviour
 
     public int CountCorrectlyPlacedCards()
     {
+        CollectHudProgress(out int placed, out _);
+        return placed;
+    }
+
+    public bool IsComplete()
+    {
+        CollectHudProgress(out _, out bool complete);
+        return complete;
+    }
+
+    /// <summary>Single slot scan for HUD / save progress.</summary>
+    public void CollectHudProgress(out int correctlyPlaced, out bool complete)
+    {
         CollectSlots();
-        int count = 0;
+        correctlyPlaced = 0;
+        complete = slots != null && slots.Length > 0;
+
         if (slots == null)
-            return 0;
+        {
+            complete = false;
+            return;
+        }
 
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];
             if (slot == null || slot.IsEmpty || !PsaArtLibrary.IsCabinetSlotNumber(slot.SlotNumber))
+            {
+                complete = false;
                 continue;
+            }
 
             WorldCard card = slot.OccupiedCard;
             if (card != null && !card.IsInHand && slot.IsCorrectPlacement(card))
-                count++;
+                correctlyPlaced++;
+            else
+                complete = false;
         }
-
-        return count;
-    }
-
-    public bool IsComplete()
-    {
-        CollectSlots();
-        if (slots == null || slots.Length == 0)
-            return false;
-
-        for (int i = 0; i < slots.Length; i++)
-        {
-            PsaCabinetSlot slot = slots[i];
-            if (slot == null || slot.IsEmpty || !slot.IsCorrectPlacement(slot.OccupiedCard))
-                return false;
-        }
-
-        return true;
     }
 
     public bool TryRestoreCard(WorldCard card, int slotNumber)
