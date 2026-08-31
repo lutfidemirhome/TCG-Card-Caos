@@ -3,33 +3,24 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Bottom-left skill slots. 1 toggles Double Jump. 2 instantly pulls the selected series into hand.
+/// Bottom-left skill slot for video builds: Hand only (key 1). Double Jump hidden.
 /// </summary>
 public class SkillBarView : MonoBehaviour
 {
     const float ButtonSize = 108f;
     const float Margin = 28f;
-    const float ButtonGap = 12f;
 
     static readonly Color IdleColor = new Color(0.08f, 0.08f, 0.09f, 0.82f);
-    static readonly Color ArmedColor = new Color(0.22f, 0.42f, 0.28f, 0.92f);
-
-    [SerializeField] Image doubleJumpBackground;
 
     void Awake()
     {
         PlayerJumpSkill.DoubleJumpArmed = false;
-        doubleJumpBackground = EnsureSlot(
-            "Button_DoubleJump",
-            "Double Jump",
-            "1",
-            new Vector2(Margin, Margin));
+        HideLegacyJumpButton();
         EnsureSlot(
             "Button_Hand",
             "Hand",
-            "2",
-            new Vector2(Margin + ButtonSize + ButtonGap, Margin));
-        RefreshJumpVisual();
+            "1",
+            new Vector2(Margin, Margin));
     }
 
     void Update()
@@ -37,20 +28,16 @@ public class SkillBarView : MonoBehaviour
         if (GamePause.IsPaused)
             return;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
-        {
-            PlayerJumpSkill.DoubleJumpArmed = !PlayerJumpSkill.DoubleJumpArmed;
-            RefreshJumpVisual();
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)
+            || Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
             PlayerHandSkill.TryActivate();
     }
 
-    void RefreshJumpVisual()
+    void HideLegacyJumpButton()
     {
-        if (doubleJumpBackground != null)
-            doubleJumpBackground.color = PlayerJumpSkill.DoubleJumpArmed ? ArmedColor : IdleColor;
+        Transform jump = transform.Find("Button_DoubleJump");
+        if (jump != null)
+            jump.gameObject.SetActive(false);
     }
 
     Image EnsureSlot(string objectName, string label, string keyHint, Vector2 anchoredPosition)
@@ -59,9 +46,31 @@ public class SkillBarView : MonoBehaviour
         if (existing == null)
             existing = CreateSlot(transform, objectName, label, keyHint, anchoredPosition);
         else
+        {
             EnsureKeyHint(existing, keyHint);
+            RepositionSlot(existing, anchoredPosition);
+        }
 
         return existing.GetComponent<Image>();
+    }
+
+    static void RepositionSlot(Transform button, Vector2 anchoredPosition)
+    {
+        if (button == null)
+            return;
+
+        var rect = button as RectTransform;
+        if (rect == null)
+            rect = button.GetComponent<RectTransform>();
+
+        if (rect == null)
+            return;
+
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(0f, 0f);
+        rect.pivot = new Vector2(0f, 0f);
+        rect.anchoredPosition = anchoredPosition;
+        rect.sizeDelta = new Vector2(ButtonSize, ButtonSize);
     }
 
     static Transform CreateSlot(
