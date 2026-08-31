@@ -19,6 +19,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     const float AuthoringFloorThickness = 0.6f;
     const float FloorGuardBelowMargin = 0.25f;
     const float MinSpawnClearance = 0.35f;
+    const float AirborneMinClearance = 0.22f;
 
     Vector2 _scroll;
     MixAllPlan _cachedMixAllPlan;
@@ -294,6 +295,13 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         if (GUILayout.Button("Bake Mix All"))
             BakeFolder(folder, "Bake Mix All");
         EditorGUILayout.EndHorizontal();
+        if (GUILayout.Button("Settle Airborne (kart + pack + PSA)", GUILayout.Height(28)))
+            ScheduleSettleAirborne(folder);
+        EditorGUILayout.HelpBox(
+            "Settle Airborne: sadece dik duran veya yerden yüksekte kalan kart / PSA / pack düşer. "
+            + "Yerde düzgün yatanlara dokunmaz. Grabbit açılınca Scene view'de Left Shift basılı tut, "
+            + "otursun, sonra Bake Mix All → sahneyi kaydet.",
+            MessageType.None);
         if (GUILayout.Button("Apply 10% Face-Down (no respawn)"))
         {
             string summary = ApplyTenPercentFaceDownOnExistingCards();
@@ -848,6 +856,109 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
 
         EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift: true);
+    }
+
+    void ScheduleSettleAirborne(Transform folder)
+    {
+        List<PhysicsLevelItem> items = CollectAirborneOrUprightItems(folder);
+        if (items.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Settle Airborne",
+                "Havada veya dik duran kart / PSA / pack yok.",
+                "OK");
+            return;
+        }
+
+        int cards = 0;
+        int psa = 0;
+        int packs = 0;
+        for (int i = 0; i < items.Count; i++)
+        {
+            PhysicsLevelItem item = items[i];
+            if (item == null)
+                continue;
+
+            if (item.GetComponent<WorldBoosterPack>() != null)
+            {
+                packs++;
+                continue;
+            }
+
+            WorldCard card = item.GetComponent<WorldCard>();
+            if (card != null && card.UsesPsaSlab)
+                psa++;
+            else
+                cards++;
+        }
+
+        if (!EditorUtility.DisplayDialog(
+                "Settle Airborne",
+                cards + " kart, " + psa + " PSA, " + packs + " pack düşecek.\n"
+                + "Yerde düzgün yatanlara dokunulmaz.\n\n"
+                + "Grabbit açılınca Scene view'de Left Shift basılı tut. Oturunca Bake Mix All, sonra sahneyi kaydet.",
+                "Düşür",
+                "İptal"))
+            return;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] != null)
+                LayItemFlatKeepingYaw(items[i].transform);
+        }
+
+        EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift: true);
+    }
+
+    static List<PhysicsLevelItem> CollectAirborneOrUprightItems(Transform folder)
+    {
+        var items = new List<PhysicsLevelItem>();
+        if (folder == null)
+            return items;
+
+        float floorY = CardFactory.GroundSurfaceY();
+        for (int i = 0; i < folder.childCount; i++)
+        {
+            Transform child = folder.GetChild(i);
+            if (child == null || IsAuthoredCabinetOrShelfItem(child))
+                continue;
+
+            PhysicsLevelItem item = child.GetComponent<PhysicsLevelItem>();
+            if (item == null)
+                continue;
+
+            if (IsStandingOnEdge(child) || IsAirborne(child, floorY))
+                items.Add(item);
+        }
+
+        return items;
+    }
+
+    static bool IsAuthoredCabinetOrShelfItem(Transform t)
+    {
+        return t != null
+            && (t.GetComponentInParent<CardShelfSlot>() != null
+                || t.GetComponentInParent<PsaCabinetSlot>() != null);
+    }
+
+    static bool IsAirborne(Transform t, float floorY)
+    {
+        if (t == null)
+            return false;
+
+        Bounds bounds;
+        Collider col = t.GetComponent<Collider>();
+        if (col != null)
+            bounds = col.bounds;
+        else
+        {
+            Renderer renderer = t.GetComponentInChildren<Renderer>();
+            if (renderer == null)
+                return t.position.y > floorY + AirborneMinClearance;
+            bounds = renderer.bounds;
+        }
+
+        return bounds.min.y > floorY + AirborneMinClearance;
     }
 
     static List<PhysicsLevelItem> CollectUprightItems(Transform folder)
