@@ -28,6 +28,12 @@ public static class CardArtLibrary
     /// <summary>Cancels horizontal mirror for flat ground cards (left-right text).</summary>
     public static readonly Vector3 WorldVisualScale = new Vector3(-1f, 1f, 1f);
 
+    /// <summary>
+    /// When true, card faces ignore shop lights (Unlit). Bloom can still glow on very bright pixels.
+    /// Flip off to restore URP Lit.
+    /// </summary>
+    public const bool UseUnlitCardMaterials = true;
+
     /// <summary>Orientates the textured face toward the camera in the hand fan.</summary>
     public static readonly Quaternion HandVisualRotation = Quaternion.Euler(-90f, 180f, 0f);
 
@@ -255,7 +261,9 @@ public static class CardArtLibrary
 
     public static Material CreateFallbackLitMaterial(Texture2D texture, string materialName)
     {
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        Shader shader = UseUnlitCardMaterials
+            ? Shader.Find("Universal Render Pipeline/Unlit")
+            : Shader.Find("Universal Render Pipeline/Lit");
         if (shader == null)
             shader = Shader.Find("Universal Render Pipeline/Unlit");
         if (shader == null)
@@ -523,6 +531,7 @@ public static class CardArtLibrary
         if (material == null)
             return;
 
+        ApplyUnlitCardShader(material);
         ApplyNoShadowMaterialSettings(material);
         ForceOpaqueSurface(material);
         if (material.HasProperty("_ZWrite"))
@@ -542,18 +551,51 @@ public static class CardArtLibrary
     }
 
     /// <summary>
-    /// Mesh cards (hand, throw, shelf flight, PSA slabs): solid opaque URP Lit.
-    /// Transparent surface looked solid on Metal but alpha-blends on Windows/D3D — same opaque
-    /// Geometry queue as hand packs.
+    /// Mesh cards (hand, throw, shelf flight, PSA slabs): solid opaque. Unlit when
+    /// <see cref="UseUnlitCardMaterials"/> is on so art is not relit by the shop.
     /// </summary>
     public static void ConfigureHandDetailMaterial(Material material)
     {
         if (material == null)
             return;
 
+        ApplyUnlitCardShader(material);
         ApplyNoShadowMaterialSettings(material);
         ForceOpaqueSurface(material);
         material.renderQueue = (int)RenderQueue.Geometry;
+    }
+
+    static void ApplyUnlitCardShader(Material material)
+    {
+        if (material == null || !UseUnlitCardMaterials)
+            return;
+
+        Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
+        if (unlit == null || material.shader == unlit)
+            return;
+
+        Texture baseMap = material.HasProperty("_BaseMap") ? material.GetTexture("_BaseMap") : null;
+        Texture mainTex = material.HasProperty("_MainTex") ? material.GetTexture("_MainTex") : null;
+        Color baseColor = material.HasProperty("_BaseColor") ? material.GetColor("_BaseColor") : Color.white;
+        Vector2 baseScale = material.HasProperty("_BaseMap") ? material.GetTextureScale("_BaseMap") : Vector2.one;
+        Vector2 baseOffset = material.HasProperty("_BaseMap") ? material.GetTextureOffset("_BaseMap") : Vector2.zero;
+
+        material.shader = unlit;
+
+        if (material.HasProperty("_BaseMap") && baseMap != null)
+        {
+            material.SetTexture("_BaseMap", baseMap);
+            material.SetTextureScale("_BaseMap", baseScale);
+            material.SetTextureOffset("_BaseMap", baseOffset);
+        }
+
+        if (material.HasProperty("_MainTex") && mainTex != null)
+            material.SetTexture("_MainTex", mainTex);
+
+        if (material.HasProperty("_BaseColor"))
+            material.SetColor("_BaseColor", baseColor);
+        if (material.HasProperty("_Color"))
+            material.SetColor("_Color", baseColor);
     }
 
     static void ApplyNoShadowMaterialSettings(Material material)
