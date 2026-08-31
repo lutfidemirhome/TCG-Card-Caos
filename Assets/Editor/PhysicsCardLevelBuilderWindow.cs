@@ -295,6 +295,13 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         if (GUILayout.Button("Bake Mix All"))
             BakeFolder(folder, "Bake Mix All");
         EditorGUILayout.EndHorizontal();
+        if (GUILayout.Button("Wake / Re-simulate All (kart + pack + PSA)", GUILayout.Height(32)))
+            ScheduleWakeAllGroundItems();
+        EditorGUILayout.HelpBox(
+            "Tek tek Wake / Re-simulate Selected ile aynı: her kart 4 cm kalkar, Grabbit Fall açılır. "
+            + "Scene view'de Left Shift basılı tut, yere otursun. Raycast ile yere yapıştırmaz. "
+            + "Raftaki / dolaptaki kartlara dokunmaz. Bitince Bake Mix All → sahneyi kaydet.",
+            MessageType.Info);
         if (GUILayout.Button("Settle Airborne (kart + pack + PSA)", GUILayout.Height(28)))
             ScheduleSettleAirborne(folder);
         EditorGUILayout.HelpBox(
@@ -835,6 +842,80 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
 
         EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift: true);
+    }
+
+    void ScheduleWakeAllGroundItems()
+    {
+        List<PhysicsLevelItem> items = CollectAllGroundPhysicsItems();
+        if (items.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Wake / Re-simulate All",
+                "Yerde düşürülecek kart / PSA / pack yok.",
+                "OK");
+            return;
+        }
+
+        CountGroundItemKinds(items, out int cards, out int psa, out int packs);
+        if (!EditorUtility.DisplayDialog(
+                "Wake / Re-simulate All",
+                cards + " kart, " + psa + " PSA, " + packs + " pack\n"
+                + "tek tek Wake ile yaptığın gibi 4 cm kalkıp Grabbit'e gidecek.\n\n"
+                + "Grabbit açılınca Scene view'e tıkla, Left Shift basılı tut.\n"
+                + "Yere gömme yok. Oturunca Bake Mix All, sonra sahneyi kaydet.",
+                "Düşür",
+                "İptal"))
+            return;
+
+        EditorApplication.delayCall += () => DropSelectedWithGrabbit(items, lift: true);
+    }
+
+    static List<PhysicsLevelItem> CollectAllGroundPhysicsItems()
+    {
+        var items = new List<PhysicsLevelItem>();
+        PhysicsLevelItem[] all = Object.FindObjectsByType<PhysicsLevelItem>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            PhysicsLevelItem item = all[i];
+            if (item == null || !BelongsToPhysicsLevel(item))
+                continue;
+            if (IsAuthoredCabinetOrShelfItem(item.transform))
+                continue;
+
+            items.Add(item);
+        }
+
+        return items;
+    }
+
+    static void CountGroundItemKinds(List<PhysicsLevelItem> items, out int cards, out int psa, out int packs)
+    {
+        cards = 0;
+        psa = 0;
+        packs = 0;
+        if (items == null)
+            return;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            PhysicsLevelItem item = items[i];
+            if (item == null)
+                continue;
+
+            if (item.GetComponent<WorldBoosterPack>() != null)
+            {
+                packs++;
+                continue;
+            }
+
+            WorldCard card = item.GetComponent<WorldCard>();
+            if (card != null && card.UsesPsaSlab)
+                psa++;
+            else
+                cards++;
+        }
     }
 
     void ScheduleDropUpright(Transform folder)
