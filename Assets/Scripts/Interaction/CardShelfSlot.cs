@@ -224,24 +224,6 @@ public class CardShelfSlot : MonoBehaviour
     }
 #endif
 
-    void LateUpdate()
-    {
-        if (Application.isPlaying)
-        {
-            HidePreviewForPlayMode();
-            return;
-        }
-
-#if UNITY_EDITOR
-        // Never drive preview visibility on the prefab asset — that dirties 50+ cabinet YAML files.
-        if (IsEditingPrefabAsset())
-            return;
-#endif
-
-        EnsurePreview();
-        RefreshPreviewVisibility();
-    }
-
     void RefreshPreviewVisibility()
     {
         bool show = !Application.isPlaying && IsEmpty;

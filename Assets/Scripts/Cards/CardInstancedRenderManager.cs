@@ -352,7 +352,6 @@ public class CardInstancedRenderManager : MonoBehaviour
             return;
 
         EnsureBucketsInitialized();
-        CardArtLibrary.EnsureLoaded();
 
         Mesh frontMesh = CardArtLibrary.InstancedCardMesh;
         Mesh backMesh = CardArtLibrary.InstancedCardBackMesh;

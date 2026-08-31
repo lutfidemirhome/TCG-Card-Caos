@@ -176,6 +176,12 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     {
         EnsureLabelExists();
         RefreshLabel();
+
+        if (!Application.isPlaying)
+            return;
+
+        HideEditorPreviewForPlayMode();
+        enabled = _placementFlights.Count > 0;
     }
 
     void OnDestroy()
@@ -191,57 +197,15 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     void LateUpdate()
     {
-        UpdatePlacementFlights();
-
-        if (Application.isPlaying)
+        if (_placementFlights.Count == 0)
         {
-            HideEditorPreviewForPlayMode();
-            RefreshLabelCanvasForPlayView();
+            if (Application.isPlaying)
+                enabled = false;
             return;
         }
 
-#if UNITY_EDITOR
-        RefreshLabelCanvasForEditorView();
-
-        if (IsEditingPrefabAsset())
-            return;
-#endif
-
-        EnsureEditorPreview();
-        RefreshEditorPreviewVisibility();
+        UpdatePlacementFlights();
     }
-
-    /// <summary>
-    /// Safety net for occupancy changes that did not route through <see cref="RefreshLabel"/>.
-    /// Steady state costs one bool compare, so it stays allocation free.
-    /// </summary>
-    void RefreshLabelCanvasForPlayView()
-    {
-        if (!showSlotLabel)
-            return;
-
-        CacheLabelReferences();
-
-        // A partially authored label would make RefreshLabel bail out before updating state,
-        // which would otherwise retrigger it every frame.
-        if (!_labelFound)
-            return;
-
-        bool visible = ShouldShowSlotLabel();
-        if (visible != _labelVisible || _labelCanvasRect.gameObject.activeSelf != visible)
-            RefreshLabel();
-    }
-
-#if UNITY_EDITOR
-    void RefreshLabelCanvasForEditorView()
-    {
-        RefreshLabelCanvasForPlayView();
-
-        // The Scene view camera can change between repaints, so keep re-applying it in the editor.
-        if (_labelCanvasRect != null && _labelCanvasRect.gameObject.activeSelf)
-            ConfigureLabelCanvas();
-    }
-#endif
 
     void ResolveReferences()
     {
@@ -914,6 +878,9 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
+
+        if (Application.isPlaying)
+            enabled = true;
 
         _placementFlights.Add(new PlacementFlightEntry { Card = card });
 
