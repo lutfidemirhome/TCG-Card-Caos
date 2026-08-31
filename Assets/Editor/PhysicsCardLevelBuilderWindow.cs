@@ -645,6 +645,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             CardDefinition definition = catalog[i];
             if (definition == null || string.IsNullOrWhiteSpace(definition.DefinitionId))
                 continue;
+            if (definition.FrontTexture == null)
+                continue;
             floorCards.Add(definition);
         }
 

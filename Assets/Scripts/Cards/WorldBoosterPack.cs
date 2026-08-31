@@ -1709,7 +1709,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         for (int i = 0; i < all.Count; i++)
         {
             CardDefinition definition = all[i];
-            if (definition == null)
+            if (definition == null || definition.FrontTexture == null)
                 continue;
             if (!CardScatterUtility.IsLiveGroundCategory(definition.ShelfCategoryId))
                 continue;
@@ -1758,7 +1758,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     /// </summary>
     void ApplyPackBodyCollider()
     {
-        if (_cardRef == null || !(_collider is BoxCollider boxCollider))
+        var boxCollider = _collider as BoxCollider;
+        if (_cardRef == null || boxCollider == null)
             return;
 
         if (TryFitColliderToPackMesh(boxCollider))
