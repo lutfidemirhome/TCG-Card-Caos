@@ -18,6 +18,7 @@ public static class PackOpenSequence
     const float RevealWaveDipHeightFactor = 0.042f;
     const float RevealScreenScaleMultiplier = 1.2f;
     const float RevealCardSpacingFactor = 1.12f;
+    const float RevealScreenMargin = 0.05f;
     const float RevealCardAnchorHeight = 0.02f;
     const float PackRevealLocalYOffsetFactor = 0.44f;
     const float PackMoveToRevealDuration = 0.1f;
@@ -58,7 +59,11 @@ public static class PackOpenSequence
         revealRoot.localRotation = Quaternion.identity;
 
         float heldScale = hand.EffectiveHeldScale;
-        float revealScale = heldScale * RevealScreenScaleMultiplier;
+        float revealScale = FitRevealScale(
+            camera,
+            revealDistance,
+            heldScale,
+            CardDimensions.CardsPerBoosterPack);
         float duration = hand.OpenSequenceDuration;
         Quaternion revealFaceRotation = CardArtLibrary.RevealRootLocalRotation;
         Quaternion packRevealWorldRotation = revealRoot.rotation * revealFaceRotation;
@@ -218,6 +223,26 @@ public static class PackOpenSequence
         hand.ClearHeldPackReference(pack);
         hand.SetHandInputLocked(false);
         GameSaveSignals.NotifyMilestone();
+    }
+
+    /// Shrinks the five-card reveal row when the live frustum is too narrow (e.g. 1400x1920).
+    /// 16:9 keeps the authored scale.
+    static float FitRevealScale(Camera camera, float revealDistance, float heldScale, int cardCount)
+    {
+        float preferredScale = heldScale * RevealScreenScaleMultiplier;
+        if (camera == null || cardCount <= 0)
+            return preferredScale;
+
+        float halfFovRad = camera.fieldOfView * 0.5f * Mathf.Deg2Rad;
+        float frustumHeight = 2f * Mathf.Max(0.01f, revealDistance) * Mathf.Tan(halfFovRad);
+        float availableWidth = frustumHeight * camera.aspect * (1f - RevealScreenMargin * 2f);
+        float peakScale = Mathf.Max(RevealWavePeak, FlipRevealPopPeak);
+        float widthFactor = RevealCardSpacingFactor * Mathf.Max(0, cardCount - 1) + peakScale;
+        float neededWidth = CardDimensions.Width * preferredScale * widthFactor;
+        if (neededWidth <= availableWidth || neededWidth <= 0.0001f)
+            return preferredScale;
+
+        return preferredScale * (availableWidth / neededWidth);
     }
 
     static IEnumerator PackRevealSettleRoutine(

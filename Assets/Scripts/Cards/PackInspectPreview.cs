@@ -46,6 +46,7 @@ public class PackInspectPreview : MonoBehaviour
             _previewRoot.gameObject.SetActive(true);
 
         ApplyPackArt(pack);
+        FitToScreen();
     }
 
     public void Hide()
@@ -69,8 +70,8 @@ public class PackInspectPreview : MonoBehaviour
         _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);
         _previewRoot.anchorMax = new Vector2(0.5f, 0.5f);
         _previewRoot.pivot = new Vector2(0.5f, 0.5f);
-        _previewRoot.anchoredPosition = anchoredPosition;
         _previewRoot.sizeDelta = packSize;
+        FitToScreen();
 
         var plateGo = new GameObject("Plate");
         plateGo.transform.SetParent(rootGo.transform, false);
@@ -120,5 +121,16 @@ public class PackInspectPreview : MonoBehaviour
         _packImage.texture = texture;
         _packImage.uvRect = new Rect(0f, 0f, 1f, 1f);
         _shownVariantIndex = variantIndex;
+    }
+
+    void LateUpdate()
+    {
+        if (_previewRoot != null && _previewRoot.gameObject.activeSelf)
+            FitToScreen();
+    }
+
+    void FitToScreen()
+    {
+        InspectPreviewScreenFit.Apply(_previewRoot, packSize, anchoredPosition);
     }
 }

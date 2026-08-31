@@ -46,6 +46,7 @@ public class PsaInspectPreview : MonoBehaviour
             _previewRoot.gameObject.SetActive(true);
 
         ApplyPreviewArt(card);
+        FitToScreen();
     }
 
     public void Hide()
@@ -69,8 +70,8 @@ public class PsaInspectPreview : MonoBehaviour
         _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);
         _previewRoot.anchorMax = new Vector2(0.5f, 0.5f);
         _previewRoot.pivot = new Vector2(0.5f, 0.5f);
-        _previewRoot.anchoredPosition = anchoredPosition;
         _previewRoot.sizeDelta = previewSize;
+        FitToScreen();
 
         var plateGo = new GameObject("Plate");
         plateGo.transform.SetParent(rootGo.transform, false);
@@ -122,5 +123,16 @@ public class PsaInspectPreview : MonoBehaviour
         _previewImage.texture = texture;
         _previewImage.uvRect = new Rect(0f, 0f, 1f, 1f);
         _shownKey = key;
+    }
+
+    void LateUpdate()
+    {
+        if (_previewRoot != null && _previewRoot.gameObject.activeSelf)
+            FitToScreen();
+    }
+
+    void FitToScreen()
+    {
+        InspectPreviewScreenFit.Apply(_previewRoot, previewSize, anchoredPosition);
     }
 }

@@ -46,6 +46,7 @@ public class CardInspectPreview : MonoBehaviour
             _previewRoot.gameObject.SetActive(true);
 
         ApplyCardArt(card);
+        FitToScreen();
     }
 
     public void Hide()
@@ -69,8 +70,8 @@ public class CardInspectPreview : MonoBehaviour
         _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);
         _previewRoot.anchorMax = new Vector2(0.5f, 0.5f);
         _previewRoot.pivot = new Vector2(0.5f, 0.5f);
-        _previewRoot.anchoredPosition = anchoredPosition;
         _previewRoot.sizeDelta = cardSize;
+        FitToScreen();
 
         // Soft dark plate behind the card so art pops against busy scenes.
         var plateGo = new GameObject("Plate");
@@ -129,5 +130,16 @@ public class CardInspectPreview : MonoBehaviour
 
         _cardImage.texture = texture;
         _shownDefinitionId = definitionId;
+    }
+
+    void LateUpdate()
+    {
+        if (_previewRoot != null && _previewRoot.gameObject.activeSelf)
+            FitToScreen();
+    }
+
+    void FitToScreen()
+    {
+        InspectPreviewScreenFit.Apply(_previewRoot, cardSize, anchoredPosition);
     }
 }
