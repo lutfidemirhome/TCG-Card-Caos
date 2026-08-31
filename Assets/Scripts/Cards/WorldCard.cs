@@ -829,8 +829,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         EnsureCardVisual();
         RestoreCardVisualMeshAndRenderer();
         ApplyCardVisualTextureQuality();
-        if (_cardVisual != null && !_cardVisual.gameObject.activeSelf)
-            _cardVisual.gameObject.SetActive(true);
+        if (_cardVisual != null)
+        {
+            _cardVisual.localPosition = Vector3.zero;
+            if (!_cardVisual.gameObject.activeSelf)
+                _cardVisual.gameObject.SetActive(true);
+        }
     }
 
     public void ApplySolidEditorCollider()
