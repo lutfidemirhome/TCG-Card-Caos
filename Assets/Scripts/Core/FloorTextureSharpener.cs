@@ -6,8 +6,8 @@ using UnityEngine;
 /// </summary>
 public static class FloorTextureSharpener
 {
-    const int Aniso = 16;
-    const float MipBias = -1f;
+    const int Aniso = VideoCaptureQuality.TextureAniso;
+    const float MipBias = VideoCaptureQuality.TextureMipBias;
 
     public static void Apply()
     {

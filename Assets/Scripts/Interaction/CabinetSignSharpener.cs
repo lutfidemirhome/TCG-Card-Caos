@@ -6,8 +6,8 @@ using UnityEngine.Rendering;
 /// </summary>
 public static class CabinetSignSharpener
 {
-    const int Aniso = 8;
-    const float MipBias = -0.85f;
+    const int Aniso = VideoCaptureQuality.TextureAniso;
+    const float MipBias = VideoCaptureQuality.TextureMipBias;
 
     public static void Apply()
     {
