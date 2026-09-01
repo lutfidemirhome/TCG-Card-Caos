@@ -9,10 +9,10 @@ using UnityEngine.Rendering;
 public class CardShelf : MonoBehaviour, IInteractable
 {
     [SerializeField] Transform placementRoot;
-    [Tooltip("When aiming, prefer empty slots within this vertical distance of the hit point.")]
+    [Tooltip("Legacy fallback when no view ray is available.")]
     [SerializeField] float levelYTolerance = 0.28f;
-    [Tooltip("Empty slot must be this close (XZ) to the look hit, or the place prompt hides.")]
-    [SerializeField] float slotAimMaxDistance = 0.18f;
+    [Tooltip("Max distance from the crosshair ray to an empty slot center.")]
+    [SerializeField] float slotAimMaxDistance = 0.22f;
     [SerializeField] float surfacePadding = 0.003f;
 
     [Header("Placement flight")]
@@ -39,6 +39,8 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     Vector3 _aimWorldPoint;
     bool _hasAimPoint;
+    Ray _aimRay;
+    bool _hasAimRay;
     GameObject _placementOutline;
     CardShelfSlot _previewSlot;
 
@@ -230,16 +232,25 @@ public class CardShelf : MonoBehaviour, IInteractable
         return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot, _slots);
     }
 
+    public void SetAimHit(RaycastHit hit, Ray aimRay)
+    {
+        _aimRay = aimRay;
+        _hasAimRay = true;
+        _aimWorldPoint = hit.point;
+        _hasAimPoint = hit.collider != null;
+        RefreshPlacementPreview();
+    }
+
     public void SetAimHit(RaycastHit hit)
     {
-        _aimWorldPoint = hit.point;
-        _hasAimPoint = true;
-        RefreshPlacementPreview();
+        SetAimHit(hit, default);
+        _hasAimRay = false;
     }
 
     public void ClearAim()
     {
         _hasAimPoint = false;
+        _hasAimRay = false;
         _previewSlot = null;
         HidePlacementOutline();
     }
@@ -250,8 +261,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (hand == null)
             return string.Empty;
 
-        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
-        bool aimOnOccupied = IsAimOnOccupiedSlot(aim);
+        bool aimOnOccupied = IsAimOnOccupiedSlot();
 
         if (hand.HasSelectedHeldCard() && !aimOnOccupied)
         {
@@ -283,8 +293,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (hand == null)
             return;
 
-        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
-        if (!hand.HasSelectedHeldCard() || IsAimOnOccupiedSlot(aim))
+        if (!hand.HasSelectedHeldCard() || IsAimOnOccupiedSlot())
             return;
 
         // Resolve and validate the seat BEFORE the card leaves the hand. A taken card is still
@@ -597,10 +606,20 @@ public class CardShelf : MonoBehaviour, IInteractable
         return rowColMatch != null ? rowColMatch : nearest;
     }
 
-    public bool IsAimOnOccupiedSlot(Vector3 aim)
+    public bool IsAimOnOccupiedSlot()
+    {
+        return IsAimOnOccupiedSlot(_aimRay, _hasAimRay);
+    }
+
+    public bool IsAimOnOccupiedSlot(Ray aimRay)
+    {
+        return IsAimOnOccupiedSlot(aimRay, aimRay.direction.sqrMagnitude > 0.0001f);
+    }
+
+    bool IsAimOnOccupiedSlot(Ray aimRay, bool useRay)
     {
         RefreshOccupancy();
-        CardShelfSlot closest = FindClosestSlot(aim);
+        CardShelfSlot closest = FindClosestSlotToAim(includeOccupied: true, aimRay, useRay);
         return closest != null && !closest.IsEmpty;
     }
 
@@ -686,7 +705,7 @@ public class CardShelf : MonoBehaviour, IInteractable
             return;
         }
 
-        if (IsAimOnOccupiedSlot(_aimWorldPoint))
+        if (IsAimOnOccupiedSlot())
         {
             HidePlacementOutline();
             return;
@@ -717,10 +736,9 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (!HasAnySlots())
             return null;
 
-        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
-
-        CardShelfSlot bestOnLevel = null;
-        float bestOnLevelDist = float.MaxValue;
+        CardShelfSlot best = null;
+        float bestDistSq = float.MaxValue;
+        float maxDistSq = slotAimMaxDistance * slotAimMaxDistance;
 
         for (int i = 0; i < _slots.Count; i++)
         {
@@ -728,21 +746,68 @@ public class CardShelf : MonoBehaviour, IInteractable
             if (slot == null || !slot.IsEmpty)
                 continue;
 
-            Vector3 slotPos = slot.transform.position;
-            if (!_hasAimPoint || Mathf.Abs(slotPos.y - aim.y) > levelYTolerance)
+            float distSq = GetAimDistanceSq(slot.transform.position, _aimRay, _hasAimRay);
+            if (distSq > maxDistSq || distSq >= bestDistSq)
                 continue;
 
-            float dist = HorizontalAimDistanceSq(slotPos, aim);
-            if (dist > slotAimMaxDistance * slotAimMaxDistance)
-                continue;
-            if (dist < bestOnLevelDist)
-            {
-                bestOnLevelDist = dist;
-                bestOnLevel = slot;
-            }
+            bestDistSq = distSq;
+            best = slot;
         }
 
-        return bestOnLevel;
+        return best;
+    }
+
+    CardShelfSlot FindClosestSlotToAim(bool includeOccupied, Ray aimRay, bool useRay)
+    {
+        CardShelfSlot best = null;
+        float bestDistSq = float.MaxValue;
+        float maxDistSq = slotAimMaxDistance * slotAimMaxDistance;
+
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || (!includeOccupied && !slot.IsEmpty))
+                continue;
+
+            float distSq = GetAimDistanceSq(slot.transform.position, aimRay, useRay);
+            if (distSq > maxDistSq || distSq >= bestDistSq)
+                continue;
+
+            bestDistSq = distSq;
+            best = slot;
+        }
+
+        return best;
+    }
+
+    CardShelfSlot FindClosestSlotToAim(bool includeOccupied)
+    {
+        return FindClosestSlotToAim(includeOccupied, _aimRay, _hasAimRay);
+    }
+
+    float GetAimDistanceSq(Vector3 slotPosition, Ray aimRay, bool useRay)
+    {
+        if (useRay)
+            return DistanceSqPointToRay(slotPosition, aimRay);
+
+        Vector3 aim = _hasAimPoint ? _aimWorldPoint : transform.position;
+        return FindAimTargetSlotFromHitPoint(slotPosition, aim);
+    }
+
+    float FindAimTargetSlotFromHitPoint(Vector3 slotPosition, Vector3 aim)
+    {
+        if (Mathf.Abs(slotPosition.y - aim.y) > levelYTolerance)
+            return float.MaxValue;
+
+        return HorizontalAimDistanceSq(slotPosition, aim);
+    }
+
+    static float DistanceSqPointToRay(Vector3 point, Ray ray)
+    {
+        Vector3 originToPoint = point - ray.origin;
+        float alongRay = Vector3.Dot(originToPoint, ray.direction);
+        Vector3 closestOnRay = ray.origin + ray.direction * alongRay;
+        return (point - closestOnRay).sqrMagnitude;
     }
 
     static float HorizontalAimDistanceSq(Vector3 slotPos, Vector3 aim)
