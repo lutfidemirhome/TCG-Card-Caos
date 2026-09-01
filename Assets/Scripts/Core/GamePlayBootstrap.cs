@@ -66,7 +66,6 @@ static class GamePlayBootstrap
         }
 
         CardInstancedRenderManager.BeginBulkGroundLoad();
-        VideoCaptureQuality.ApplySceneSettings();
         FloorTextureSharpener.Apply();
         CabinetSignSharpener.Apply();
         GameSaveManager.EnsureExists();

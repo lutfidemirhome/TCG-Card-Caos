@@ -12,8 +12,6 @@ public enum CardTextureQuality
 
 public static class CardTextureSettings
 {
-    /// <summary>Instanced floor cards — matched to detail for video capture.</summary>
-    public const int WorldMaxSize = 1024;
-
+    public const int WorldMaxSize = 512;
     public const int DetailMaxSize = 1024;
 }

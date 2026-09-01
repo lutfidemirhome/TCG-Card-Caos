@@ -75,8 +75,12 @@ public class WelcomePopupView : MonoBehaviour
         {
             _sessionDecided = true;
             GameLoadMode mode = GameSceneLoader.PendingLoadMode;
-            _showThisSession = mode == GameLoadMode.NewGame;
-            PlayerPrefs.DeleteKey("TCGCardCaos.HasSeenWelcome");
+            _showThisSession = !VideoCaptureQuality.DisableOnboardingUi
+                && mode == GameLoadMode.NewGame;
+            if (_showThisSession)
+                PlayerPrefs.DeleteKey("TCGCardCaos.HasSeenWelcome");
+            else
+                IsWaitingForStart = false;
         }
 
         return _showThisSession;

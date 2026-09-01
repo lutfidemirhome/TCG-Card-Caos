@@ -347,7 +347,8 @@ public class CardShelf : MonoBehaviour, IInteractable
     /// <summary>Single slot scan for HUD / save progress.</summary>
     public void CollectHudProgress(out int correctlyPlaced, out bool complete)
     {
-        RefreshSlotCache();
+        if (_slots.Count == 0)
+            RefreshSlotCache();
         correctlyPlaced = 0;
         complete = _slots.Count > 0;
 

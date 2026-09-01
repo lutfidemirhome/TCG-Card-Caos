@@ -191,7 +191,7 @@ public static class CardArtLibrary
             if (_runtimeMeshBackWorldMaterial == null || IsBrokenMaterial(_runtimeMeshBackWorldMaterial))
             {
                 _runtimeMeshBackWorldMaterial = CreateMaterialFromTemplate(
-                    _sharedBackDetailTemplate != null ? _sharedBackDetailTemplate : _sharedBackWorldTemplate,
+                    _sharedBackWorldTemplate,
                     "CardBackWorldMeshRuntime");
                 ApplyBackTextureUFlip(_runtimeMeshBackWorldMaterial);
                 ApplySharperGroundBackTexture(_runtimeMeshBackWorldMaterial);
@@ -223,8 +223,7 @@ public static class CardArtLibrary
         EnsureLoaded();
         if (_instancedGroundBackMaterial == null)
         {
-            _instancedGroundBackMaterial = new Material(
-                _sharedBackDetailTemplate != null ? _sharedBackDetailTemplate : _sharedBackWorldTemplate)
+            _instancedGroundBackMaterial = new Material(_sharedBackWorldTemplate)
             {
                 name = "CardBackWorldInstancedGround",
                 enableInstancing = true,
@@ -288,7 +287,7 @@ public static class CardArtLibrary
             : FrontDetailMaterialsByPalette;
 
         Material template = quality == CardTextureQuality.World
-            ? (_sharedFrontDetailTemplate != null ? _sharedFrontDetailTemplate : _sharedFrontWorldTemplate)
+            ? _sharedFrontWorldTemplate
             : _sharedFrontDetailTemplate;
 
         if (cache.TryGetValue(paletteIndex, out Material frontMaterial) && IsBrokenMaterial(frontMaterial))
@@ -328,7 +327,7 @@ public static class CardArtLibrary
             : FrontDetailMaterialsByDefinition;
 
         Material template = quality == CardTextureQuality.World
-            ? (_sharedFrontDetailTemplate != null ? _sharedFrontDetailTemplate : _sharedFrontWorldTemplate)
+            ? _sharedFrontWorldTemplate
             : _sharedFrontDetailTemplate;
 
         string cacheKey = definition.DefinitionId + ":" + (int)quality;
@@ -392,9 +391,9 @@ public static class CardArtLibrary
         if (texture == null)
             return;
 
-        if (texture.anisoLevel < VideoCaptureQuality.TextureAniso)
-            texture.anisoLevel = VideoCaptureQuality.TextureAniso;
-        texture.mipMapBias = VideoCaptureQuality.TextureMipBias;
+        if (texture.anisoLevel < 8)
+            texture.anisoLevel = 8;
+        texture.mipMapBias = -0.75f;
     }
 
     /// <summary>

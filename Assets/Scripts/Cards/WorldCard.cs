@@ -263,9 +263,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     void Awake()
     {
         _collider = GetComponent<Collider>();
-        _authoredPhysicsItem = GetComponent<PhysicsLevelItem>() != null
-            || GetComponentInParent<PhysicsLevelLayout>() != null
-            || !IsUnderScatterRoot(transform);
+        PhysicsLevelItem physicsItem = GetComponent<PhysicsLevelItem>();
+        if (physicsItem != null && physicsItem.Baked)
+            _authoredPhysicsItem = false;
+        else
+            _authoredPhysicsItem = physicsItem != null
+                || GetComponentInParent<PhysicsLevelLayout>() != null
+                || !IsUnderScatterRoot(transform);
 
         Transform existingVisual = transform.Find("CardVisual");
         if (existingVisual != null)
@@ -1418,13 +1422,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     }
 
     /// <summary>
-    /// Ground setup for play. Scene-authored Grabbit cards keep their mesh and world pose.
-    /// Only leftover runtime scatter cards that are clearly face-up may GPU-instance.
+    /// Ground setup for play. Baked layout cards switch to GPU instancing; cards with active
+    /// physics keep their mesh until they settle.
     /// </summary>
     public void RegisterForInstancedGround()
     {
         if (IsInHand)
             return;
+
+        PhysicsLevelItem physicsItem = GetComponent<PhysicsLevelItem>();
+        if (physicsItem == null || physicsItem.Baked)
+            _authoredPhysicsItem = false;
 
         CardInstancedRenderManager.EnsureExists();
         ReleaseInteractionOutline();

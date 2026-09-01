@@ -15,7 +15,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     const int MaxInstancesPerBatch = 1023;
     const int CardsRegisteredPerFrame = 256;
 
-    [SerializeField] float drawDistance = 500f;
+    [SerializeField] float drawDistance = 40f;
 
     static CardInstancedRenderManager _instance;
 
@@ -281,14 +281,8 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     void CacheDistances()
     {
-        drawDistance = Mathf.Max(VideoCaptureQuality.MinCardDrawDistance, drawDistance);
+        drawDistance = Mathf.Max(4f, drawDistance);
         _drawDistanceSq = drawDistance * drawDistance;
-    }
-
-    public void EnsureVideoDrawDistance()
-    {
-        drawDistance = Mathf.Max(VideoCaptureQuality.MinCardDrawDistance, drawDistance);
-        CacheDistances();
     }
 
     void LateUpdate()

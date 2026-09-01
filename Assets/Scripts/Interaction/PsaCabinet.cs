@@ -64,7 +64,8 @@ public class PsaCabinet : MonoBehaviour
     /// <summary>Single slot scan for HUD / save progress.</summary>
     public void CollectHudProgress(out int correctlyPlaced, out bool complete)
     {
-        CollectSlots();
+        if (slots == null || slots.Length == 0)
+            CollectSlots();
         correctlyPlaced = 0;
         complete = slots != null && slots.Length > 0;
 

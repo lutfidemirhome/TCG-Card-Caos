@@ -56,7 +56,8 @@ public class TutorialHintView : MonoBehaviour
     {
         _step = Step.Move;
         _sessionDecided = true;
-        _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
+        _showThisSession = !VideoCaptureQuality.DisableOnboardingUi
+            && GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
         _usedCrouchBeforeHint = false;
         if (_gameplayInstance != null)
             _gameplayInstance.Hide();
@@ -193,7 +194,8 @@ public class TutorialHintView : MonoBehaviour
 
         _sessionDecided = true;
         _step = Step.Move;
-        _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
+        _showThisSession = !VideoCaptureQuality.DisableOnboardingUi
+            && GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
         _usedCrouchBeforeHint = false;
     }
 
