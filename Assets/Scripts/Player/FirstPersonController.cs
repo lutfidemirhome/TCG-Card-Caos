@@ -32,11 +32,15 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] float minPitch = -80f;
     [SerializeField] float maxPitch = 89f;
     [SerializeField] bool lockCursorOnStart = true;
+    [SerializeField] int lookFramesToSkipAfterCursorLock = 2;
+    [SerializeField] float maxLookDeltaPerFrame = 12f;
 
     CharacterController _controller;
     float _pitch;
     float _verticalVelocity;
     bool _cursorLocked;
+    CursorLockMode _lastCursorLockState = CursorLockMode.None;
+    int _suppressLookFrames;
     float _crouchBlend;
     bool _crouchToggled;
     float _standingHeight;
@@ -58,6 +62,18 @@ public class FirstPersonController : MonoBehaviour
         _standingHeight = _controller.height;
         _standingCenterY = _controller.center.y;
         _standingCameraLocalY = cameraTransform != null ? cameraTransform.localPosition.y : _standingHeight * 0.89f;
+        SyncPitchFromCamera();
+    }
+
+    void SyncPitchFromCamera()
+    {
+        if (cameraTransform == null)
+            return;
+
+        float pitchEuler = cameraTransform.localEulerAngles.x;
+        _pitch = pitchEuler > 180f ? pitchEuler - 360f : pitchEuler;
+        _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
+        cameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
     }
 
     void Start()
@@ -111,8 +127,15 @@ public class FirstPersonController : MonoBehaviour
 
     void HandleLook()
     {
+        SyncCursorLockState();
         if (!_cursorLocked || cameraTransform == null)
             return;
+
+        if (_suppressLookFrames > 0)
+        {
+            _suppressLookFrames--;
+            return;
+        }
 
         float lookSpeed = GameSettings.LookSensitivity;
         if (lookSpeed <= 0.01f)
@@ -120,6 +143,11 @@ public class FirstPersonController : MonoBehaviour
 
         float mouseX = Input.GetAxisRaw("Mouse X") * lookSpeed;
         float mouseY = Input.GetAxisRaw("Mouse Y") * lookSpeed;
+        if (maxLookDeltaPerFrame > 0f)
+        {
+            mouseX = Mathf.Clamp(mouseX, -maxLookDeltaPerFrame, maxLookDeltaPerFrame);
+            mouseY = Mathf.Clamp(mouseY, -maxLookDeltaPerFrame, maxLookDeltaPerFrame);
+        }
         if (GameSettings.InvertX)
             mouseX = -mouseX;
         if (GameSettings.InvertY)
@@ -130,6 +158,22 @@ public class FirstPersonController : MonoBehaviour
         _pitch -= mouseY;
         _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
         cameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+    }
+
+    void SyncCursorLockState()
+    {
+        CursorLockMode lockState = Cursor.lockState;
+        if (lockState == _lastCursorLockState)
+        {
+            _cursorLocked = lockState == CursorLockMode.Locked;
+            return;
+        }
+
+        if (lockState == CursorLockMode.Locked)
+            _suppressLookFrames = Mathf.Max(_suppressLookFrames, lookFramesToSkipAfterCursorLock);
+
+        _lastCursorLockState = lockState;
+        _cursorLocked = lockState == CursorLockMode.Locked;
     }
 
     void UpdateCrouch()
@@ -254,8 +298,13 @@ public class FirstPersonController : MonoBehaviour
 
     void SetCursorLocked(bool locked)
     {
+        CursorLockMode next = locked ? CursorLockMode.Locked : CursorLockMode.None;
+        if (next == CursorLockMode.Locked)
+            _suppressLookFrames = Mathf.Max(_suppressLookFrames, lookFramesToSkipAfterCursorLock);
+
         _cursorLocked = locked;
-        Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
+        _lastCursorLockState = next;
+        Cursor.lockState = next;
         Cursor.visible = !locked;
     }
 

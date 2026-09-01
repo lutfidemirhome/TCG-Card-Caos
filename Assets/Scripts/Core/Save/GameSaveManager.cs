@@ -90,6 +90,12 @@ public sealed class GameSaveManager : MonoBehaviour
         if (Time.timeScale > 0f)
             GamePlayTime.Tick(Time.deltaTime);
 
+        if (!GamePause.IsPaused && Input.GetKeyDown(KeyCode.O))
+        {
+            int filled = CabinetFillDebug.FillCabinets(CabinetFillDebug.DefaultCabinetCount);
+            Debug.Log("[Debug] O: filled " + filled + " / " + CabinetFillDebug.DefaultCabinetCount + " cabinets.");
+        }
+
         _periodicTimer += Time.unscaledDeltaTime;
         if (_periodicTimer >= _settings.PeriodicAutosaveSeconds)
         {
