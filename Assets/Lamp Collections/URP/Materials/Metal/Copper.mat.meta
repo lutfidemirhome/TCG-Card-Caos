@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0efcfed78cc804f469438a6d4a6857cf
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Metal/Copper.mat
+  uploadId: 485169

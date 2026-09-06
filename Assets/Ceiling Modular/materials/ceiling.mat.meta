@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e45f7f14b7b8dc24ab00af112d84878a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 315924
+  packageName: Ceiling Modular
+  packageVersion: 1.0
+  assetPath: Assets/Ceiling Modular/materials/ceiling.mat
+  uploadId: 745628

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: dac804990032a264b90b59302d74c7b2
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Demo/Demo URPSettings.lighting
+  uploadId: 485169

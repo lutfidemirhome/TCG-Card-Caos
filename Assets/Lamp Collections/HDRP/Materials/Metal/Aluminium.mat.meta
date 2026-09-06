@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: eea5362275f41b3479f03ca068a3ea7b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Metal/Aluminium.mat
+  uploadId: 485169

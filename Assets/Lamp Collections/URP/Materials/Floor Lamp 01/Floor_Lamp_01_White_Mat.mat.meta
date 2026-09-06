@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 88a50888fbbf38b47989ffabbed72ec8
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Floor Lamp 01/Floor_Lamp_01_White_Mat.mat
+  uploadId: 485169

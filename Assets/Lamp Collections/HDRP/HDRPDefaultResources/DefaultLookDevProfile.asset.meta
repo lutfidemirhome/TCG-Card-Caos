@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2357f6a726c49824598d22111a574a74
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/HDRPDefaultResources/DefaultLookDevProfile.asset
+  uploadId: 485169

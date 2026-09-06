@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4efc13a9e2d07ec4e83c1a83f25255d9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Additions/LED_01_Red_Mat.mat
+  uploadId: 485169

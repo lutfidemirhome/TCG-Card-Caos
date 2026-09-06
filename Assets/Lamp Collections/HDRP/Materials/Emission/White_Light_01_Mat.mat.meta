@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d2f0033d0b03e41489a555a7fe19fa8d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Emission/White_Light_01_Mat.mat
+  uploadId: 485169

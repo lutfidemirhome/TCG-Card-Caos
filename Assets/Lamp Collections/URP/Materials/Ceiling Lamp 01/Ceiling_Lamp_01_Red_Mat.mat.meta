@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 51a21bc605ed3a04f8eab216be6c4b3f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Ceiling Lamp 01/Ceiling_Lamp_01_Red_Mat.mat
+  uploadId: 485169

@@ -169,7 +169,7 @@ public class StoreLighting : MonoBehaviour
             for (int i = 0; i < transforms.Length; i++)
             {
                 Transform t = transforms[i];
-                if (t == null || !IsCeilingTileName(t.name))
+                if (t == null || !IsCeilingTileName(t.name) || t.childCount > 0)
                     continue;
 
                 int id = t.GetInstanceID();

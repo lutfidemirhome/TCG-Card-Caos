@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7d9fef5327eefa444bc6770c78aac784
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Post Processing/Post FX Profile.asset
+  uploadId: 485169

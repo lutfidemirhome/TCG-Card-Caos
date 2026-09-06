@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e4e0eaaef30813d44ba08f3309db6e56
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/RenderPipeline/UniversalRenderPipelineAsset_Renderer.asset
+  uploadId: 485169

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9808bad8f7976c34d86e95f890b61fb7
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Neon_Character/Neon_Character_Purple_Mat.mat
+  uploadId: 485169

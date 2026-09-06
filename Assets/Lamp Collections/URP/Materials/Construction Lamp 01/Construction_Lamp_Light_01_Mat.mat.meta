@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4d897d27dc0144b4abddeeea6dfe5eac
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Construction Lamp 01/Construction_Lamp_Light_01_Mat.mat
+  uploadId: 485169

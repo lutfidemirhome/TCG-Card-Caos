@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 899983b18797bf34ea8dc121bb55d6cb
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/HDRPDefaultResources/DefaultSceneRoot.prefab
+  uploadId: 485169

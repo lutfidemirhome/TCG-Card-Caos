@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c385dfd81f6500e46898a6ca4dd1ac82
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/HDRPDefaultResources/HDRP Diffusion Profile.asset
+  uploadId: 485169

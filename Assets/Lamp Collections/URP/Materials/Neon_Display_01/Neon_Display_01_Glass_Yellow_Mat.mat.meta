@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f069bd8e33d30304d9d726f96a901c74
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Neon_Display_01/Neon_Display_01_Glass_Yellow_Mat.mat
+  uploadId: 485169

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7c6afbef87817ba4fbb9b65d1e56291b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Ceiling Lamp 01/Ceiling_Lamp_Glass_01_Mat.mat
+  uploadId: 485169

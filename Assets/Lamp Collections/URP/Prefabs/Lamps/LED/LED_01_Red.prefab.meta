@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: dee262d7da12ce44d9b5c4cab5b1de7f
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Prefabs/Lamps/LED/LED_01_Red.prefab
+  uploadId: 485169
