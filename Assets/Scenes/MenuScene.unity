@@ -13080,7 +13080,8 @@ MonoBehaviour:
     Fazla Kart Kategorisi\n\u2022 Daha Fazla Raf ve Depolama\n\u2022 Ek Kart Paketleri\n\u2022
     Daha Fazla Dereceli Kart\n\u2022 Yeni Nadir Kart T\xFCrleri\n\u2022 Yetenekler
     ve Geli\u015Ftirmeler\n\u2022 Ba\u015Far\u0131mlar\n\u2022 Kullan\u0131m Kolayl\u0131\u011F\u0131
-    \u0130yile\u015Ftirmeleri\n\u2026ve daha fazlas\u0131!"
+    \u0130yile\u015Ftirmeleri\n\u2022 Japon Kart Serileri ve Paketleri\n\u2026ve
+    daha fazlas\u0131!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 19133410948514086983d0026b2d8795, type: 2}
   m_sharedMaterial: {fileID: 1109455171129820241, guid: 19133410948514086983d0026b2d8795, type: 2}

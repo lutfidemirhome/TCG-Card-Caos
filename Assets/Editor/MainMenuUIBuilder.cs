@@ -1770,6 +1770,7 @@ public static class MainMenuUIBuilder
         + "• Skills & Upgrades\n"
         + "• Achievements\n"
         + "• Quality-of-Life Improvements\n"
+        + "• Japanese Card Series & Packs\n"
         + "…and more!";
 
     const string RoadmapItemsTurkish =
@@ -1783,6 +1784,7 @@ public static class MainMenuUIBuilder
         + "• Yetenekler ve Geliştirmeler\n"
         + "• Başarımlar\n"
         + "• Kullanım Kolaylığı İyileştirmeleri\n"
+        + "• Japon Kart Serileri ve Paketleri\n"
         + "…ve daha fazlası!";
 
     static void EnsureFolder(string path)
