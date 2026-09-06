@@ -29,7 +29,8 @@ public static class ExteriorColliderCleanupEditor
             + $"Kaldirilan rigidbody: {removedRigidbodies}\n\n"
             + "Room, shop duvarlari (Wall_*) ve Door_c5bu08 dokunulmadi.\n"
             + "House_*_Wall_* ic duvar collider'lari korundu.\n"
-            + "Column_* kolon collider'lari korundu.",
+            + "Column_* kolon collider'lari korundu.\n"
+            + "Fence_* korkuluk collider'lari korundu.",
             "Tamam");
     }
 
@@ -53,6 +54,44 @@ public static class ExteriorColliderCleanupEditor
                 ? $"Column objelerine {added} collider eklendi."
                 : "Column objelerinde collider zaten var veya Column bulunamadi.",
             "Tamam");
+    }
+
+    [MenuItem("TCG Card Chaos/Ensure Fence Colliders")]
+    public static void EnsureFenceCollidersInMainScene()
+    {
+        OpenMainSceneIfNeeded();
+        int added = ExteriorColliderCleanup.EnsurePlacedFenceColliders();
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+
+        EditorUtility.DisplayDialog(
+            "Korkuluk collider",
+            added > 0
+                ? $"Fence objelerine {added} collider eklendi."
+                : "Fence objelerinde collider zaten var veya Fence bulunamadi.",
+            "Tamam");
+    }
+
+    public static void BatchEnsureFenceColliders()
+    {
+        OpenMainSceneIfNeeded();
+        int added = ExteriorColliderCleanup.EnsurePlacedFenceColliders();
+        SaveMainScene(added, "Fence");
+        EditorApplication.Exit(0);
+    }
+
+    static void OpenMainSceneIfNeeded()
+    {
+        if (EditorSceneManager.GetActiveScene().path == ScenePath)
+            return;
+
+        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+    }
+
+    static void SaveMainScene(int added, string label)
+    {
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        EditorSceneManager.SaveOpenScenes();
+        Debug.Log($"{label} collider batch: {added} added.");
     }
 
     static int StripComponents<T>() where T : Component
@@ -84,6 +123,9 @@ public static class ExteriorColliderCleanupEditor
         if (ExteriorColliderCleanup.IsPlacedColumnTransform(gameObject.transform))
             return false;
 
+        if (ExteriorColliderCleanup.IsPlacedFenceTransform(gameObject.transform))
+            return false;
+
         if (ExteriorColliderCleanup.IsExteriorObject(gameObject))
             return true;
 
@@ -95,6 +137,9 @@ public static class ExteriorColliderCleanupEditor
             return false;
 
         if (ExteriorColliderCleanup.IsPlacedColumnTransform(prefabRoot.transform))
+            return false;
+
+        if (ExteriorColliderCleanup.IsPlacedFenceTransform(prefabRoot.transform))
             return false;
 
         string prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(prefabRoot);

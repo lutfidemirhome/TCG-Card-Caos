@@ -26,6 +26,8 @@ public static class ExteriorColliderCleanup
         "Card",
         "Floor",
         "Ceiling",
+        "Fence",
+        "Wooden_Fence",
     };
 
     static readonly string[] ExteriorRootPrefixes =
@@ -50,6 +52,7 @@ public static class ExteriorColliderCleanup
         RemoveMatchingComponents<Rigidbody>();
         EnsurePlacedHouseWallColliders();
         EnsurePlacedColumnColliders();
+        EnsurePlacedFenceColliders();
     }
 
     public static bool ShouldStrip(GameObject gameObject)
@@ -64,6 +67,9 @@ public static class ExteriorColliderCleanup
             return false;
 
         if (IsPlacedColumnTransform(gameObject.transform))
+            return false;
+
+        if (IsPlacedFenceTransform(gameObject.transform))
             return false;
 
         return IsExteriorObject(gameObject);
@@ -175,6 +181,76 @@ public static class ExteriorColliderCleanup
         }
 
         return added;
+    }
+
+    public static bool IsPlacedFenceName(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+            return false;
+
+        return objectName.StartsWith("Fence_", StringComparison.OrdinalIgnoreCase)
+            || objectName.StartsWith("Wooden_Fence", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsPlacedFenceTransform(Transform transform)
+    {
+        Transform current = transform;
+        while (current != null)
+        {
+            if (IsPlacedFenceName(current.name))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    public static int EnsurePlacedFenceColliders()
+    {
+        var processedRoots = new HashSet<int>();
+        int added = 0;
+
+        MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            Transform fenceRoot = FindFenceRoot(renderer.transform);
+            if (fenceRoot == null)
+                continue;
+
+            if (!processedRoots.Add(fenceRoot.GetInstanceID()))
+                continue;
+
+            if (fenceRoot.GetComponent<Collider>() != null)
+                continue;
+
+            if (TryAddBoxColliderFromRenderers(fenceRoot))
+                added++;
+        }
+
+        return added;
+    }
+
+    static Transform FindFenceRoot(Transform transform)
+    {
+        Transform fenceRoot = null;
+        Transform current = transform;
+        while (current != null)
+        {
+            if (IsPlacedFenceName(current.name))
+                fenceRoot = current;
+
+            current = current.parent;
+        }
+
+        return fenceRoot;
     }
 
     static Transform FindColumnRoot(Transform transform)
