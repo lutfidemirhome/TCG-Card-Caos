@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a0a8944d54cc9ac44b02fd1689fab1af
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Construction Lamp 01/Construction_Lamp_Light_01_Mat.mat
+  uploadId: 485169

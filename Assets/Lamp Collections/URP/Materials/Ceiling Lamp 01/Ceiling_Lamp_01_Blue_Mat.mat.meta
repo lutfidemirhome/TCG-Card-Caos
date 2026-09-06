@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bd67b34892d644b4fbf892f72ed23121
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Ceiling Lamp 01/Ceiling_Lamp_01_Blue_Mat.mat
+  uploadId: 485169

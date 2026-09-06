@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: adb8cea561e717e4c97d094f0652f31b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Tube Lamp 02/Tube_Lamp_02_Mat_Blue.mat
+  uploadId: 485169

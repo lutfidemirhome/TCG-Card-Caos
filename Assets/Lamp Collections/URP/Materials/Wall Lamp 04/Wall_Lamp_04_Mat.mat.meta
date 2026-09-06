@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c092ae5cd74cd5540b3ae7b89f6c8e81
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Wall Lamp 04/Wall_Lamp_04_Mat.mat
+  uploadId: 485169

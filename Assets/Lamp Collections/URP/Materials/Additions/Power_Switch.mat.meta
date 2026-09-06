@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d35711a130a81fb4c8e167c740fd3051
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Additions/Power_Switch.mat
+  uploadId: 485169

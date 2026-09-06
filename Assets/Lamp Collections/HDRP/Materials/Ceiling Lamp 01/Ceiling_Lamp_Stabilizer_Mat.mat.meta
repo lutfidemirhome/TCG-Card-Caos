@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4cf44aa1815ce3345bf0164e2aedf587
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Ceiling Lamp 01/Ceiling_Lamp_Stabilizer_Mat.mat
+  uploadId: 485169

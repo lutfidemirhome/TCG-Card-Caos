@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4bcc634b4cfea2146a180c7416d6701e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/General/Scripts/MoveCamera.cs
+  uploadId: 485169

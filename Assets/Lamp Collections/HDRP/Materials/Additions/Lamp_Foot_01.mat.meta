@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0a565980413cb8245a52f418d7eda626
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Additions/Lamp_Foot_01.mat
+  uploadId: 485169

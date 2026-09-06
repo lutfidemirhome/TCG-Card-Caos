@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a33768632c877b14fb2f7648cfbf6b89
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/HDRPDefaultResources/Skin Diffusion Profile.asset
+  uploadId: 485169

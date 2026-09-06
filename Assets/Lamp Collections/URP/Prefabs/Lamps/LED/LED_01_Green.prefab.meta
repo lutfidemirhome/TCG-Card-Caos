@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a160bfaf3132c9a46a2ced0e49a6e9a3
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Prefabs/Lamps/LED/LED_01_Green.prefab
+  uploadId: 485169

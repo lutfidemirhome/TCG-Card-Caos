@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 80deab7a03e64b4468cc8862740e9a06
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Additions/Lamp_Foot_01.mat
+  uploadId: 485169

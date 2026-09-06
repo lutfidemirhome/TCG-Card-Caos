@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 382b06fb68206e84d81900be144cd955
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Enviroment/Plaster Wall/Wall_Mat.mat
+  uploadId: 485169

@@ -1,0 +1,268 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!64 &1884743520355788203
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1884743520355788204}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 4
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 3395684793195706907, guid: 888425fff84d54a4ca7030abd7c759a3, type: 3}
+--- !u!1 &5867528338951927530
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7437409148864726265}
+  - component: {fileID: 1904453680168287951}
+  - component: {fileID: 5283131258377224758}
+  - component: {fileID: 5867528338951927529}
+  m_Layer: 0
+  m_Name: Construction Lamp 01
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 4294967295
+  m_IsActive: 1
+--- !u!4 &7437409148864726265
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5867528338951927530}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 3576857204162153918}
+  - {fileID: 3205628238538758079}
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &1904453680168287951
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5867528338951927530}
+  m_Mesh: {fileID: 7858139655363487940, guid: c311436705b080845b8012ffcf19c89e, type: 3}
+--- !u!23 &5283131258377224758
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5867528338951927530}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 77257b0e43c75bf4e93fd03f423ffe77, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+--- !u!64 &5867528338951927529
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5867528338951927530}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 4
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 7858139655363487940, guid: c311436705b080845b8012ffcf19c89e, type: 3}
+--- !u!1001 &4353143608132086678
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 7437409148864726265}
+    m_Modifications:
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.1506
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_RootOrder
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180.00002
+      objectReference: {fileID: 0}
+    - target: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2760298870826012218, guid: 36df8ad8dae537545a8c57eb86de65fa,
+        type: 3}
+      propertyPath: m_Name
+      value: Construction Lamp Arm  01
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 36df8ad8dae537545a8c57eb86de65fa, type: 3}
+--- !u!1 &1884743520355788204 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2760298870826012218, guid: 36df8ad8dae537545a8c57eb86de65fa,
+    type: 3}
+  m_PrefabInstance: {fileID: 4353143608132086678}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &3205628238538758079 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1159066581325184041, guid: 36df8ad8dae537545a8c57eb86de65fa,
+    type: 3}
+  m_PrefabInstance: {fileID: 4353143608132086678}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &7461887138416249100
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 7437409148864726265}
+    m_Modifications:
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 3.7083
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.00000262698
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.0000015166876
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.8660254
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_RootOrder
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180.00002
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6950505188376213153, guid: c54755ee2fc90284086f1e89d63050bb,
+        type: 3}
+      propertyPath: m_Name
+      value: Construction Lamp Light 01
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c54755ee2fc90284086f1e89d63050bb, type: 3}
+--- !u!4 &3576857204162153918 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6210040008661435570, guid: c54755ee2fc90284086f1e89d63050bb,
+    type: 3}
+  m_PrefabInstance: {fileID: 7461887138416249100}
+  m_PrefabAsset: {fileID: 0}

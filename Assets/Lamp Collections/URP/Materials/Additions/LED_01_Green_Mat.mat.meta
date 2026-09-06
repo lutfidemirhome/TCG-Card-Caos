@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ff6ff3129983f364385d1cb0326c4a7a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Additions/LED_01_Green_Mat.mat
+  uploadId: 485169

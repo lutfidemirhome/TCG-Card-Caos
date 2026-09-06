@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d6d002b895835a942b93a13f86b7e3af
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Garden Lamp 02/Garden_Lamp_Base_02_Mat.mat
+  uploadId: 485169

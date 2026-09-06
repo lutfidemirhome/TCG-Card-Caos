@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 254f647565b2d84419f09b61c26e4b1b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Garden Lamp 01/Garden_Lamp_01_Orange_Mat.mat
+  uploadId: 485169

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 96fb95605b3a918479113aa8b7d7b813
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Neon_Character/Neon_Character_Green_Mat.mat
+  uploadId: 485169

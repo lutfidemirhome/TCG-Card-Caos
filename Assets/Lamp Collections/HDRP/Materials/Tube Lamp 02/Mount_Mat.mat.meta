@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c5d06b5629cd589449d4610041c70ba5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Tube Lamp 02/Mount_Mat.mat
+  uploadId: 485169

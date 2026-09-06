@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0d7c8c3f9509427488f7fd390716dd8d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Neon_Display_01/Neon_Display_01_Frame_Mat.mat
+  uploadId: 485169

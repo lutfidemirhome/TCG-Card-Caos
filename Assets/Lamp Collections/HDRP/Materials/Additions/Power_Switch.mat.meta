@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e2a4fa2ff10d0b342ac14c7966cdcfe0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Additions/Power_Switch.mat
+  uploadId: 485169

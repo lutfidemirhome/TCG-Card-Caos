@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: eb9b6d49f7967a942931c840e08c357c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Ground Material.mat
+  uploadId: 485169

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bef58c63a4f574f439522cc85a3ef792
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Additions/Black_Cable_Mat.mat
+  uploadId: 485169

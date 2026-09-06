@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f86ea9ede1f932247ad88692804c4a02
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Additions/LED_01_White_Mat.mat
+  uploadId: 485169

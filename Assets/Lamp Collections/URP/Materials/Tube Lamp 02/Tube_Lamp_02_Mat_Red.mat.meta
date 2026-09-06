@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e6002071522b28440ac0e40c19b3f7f4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Tube Lamp 02/Tube_Lamp_02_Mat_Red.mat
+  uploadId: 485169

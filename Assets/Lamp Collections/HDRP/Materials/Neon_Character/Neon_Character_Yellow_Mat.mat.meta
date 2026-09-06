@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5b8d606c7ee7ed4418b8f665a6cfe65c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/HDRP/Materials/Neon_Character/Neon_Character_Yellow_Mat.mat
+  uploadId: 485169

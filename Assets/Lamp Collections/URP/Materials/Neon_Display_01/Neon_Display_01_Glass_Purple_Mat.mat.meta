@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0e250c23a440f6a4d8d957d94d5159a7
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Neon_Display_01/Neon_Display_01_Glass_Purple_Mat.mat
+  uploadId: 485169

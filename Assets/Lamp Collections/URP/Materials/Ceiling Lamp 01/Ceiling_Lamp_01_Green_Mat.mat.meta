@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fa16f3d64b0e19048ad879f0ad3fbe56
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173876
+  packageName: Lamp Collections
+  packageVersion: 1.5
+  assetPath: Assets/Lamp Collections/URP/Materials/Ceiling Lamp 01/Ceiling_Lamp_01_Green_Mat.mat
+  uploadId: 485169
