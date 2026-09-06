@@ -30,6 +30,14 @@ public static class ExteriorColliderCleanup
         "Wooden_Fence",
     };
 
+    static readonly string[] PlacedPropNamePrefixes =
+    {
+        "Fence_",
+        "Wooden_Fence",
+        "Flower_Pot_",
+        "Balcony_Pot_",
+    };
+
     static readonly string[] ExteriorRootPrefixes =
     {
         "House_",
@@ -52,7 +60,7 @@ public static class ExteriorColliderCleanup
         RemoveMatchingComponents<Rigidbody>();
         EnsurePlacedHouseWallColliders();
         EnsurePlacedColumnColliders();
-        EnsurePlacedFenceColliders();
+        EnsurePlacedPropColliders();
     }
 
     public static bool ShouldStrip(GameObject gameObject)
@@ -69,7 +77,7 @@ public static class ExteriorColliderCleanup
         if (IsPlacedColumnTransform(gameObject.transform))
             return false;
 
-        if (IsPlacedFenceTransform(gameObject.transform))
+        if (IsPlacedPropTransform(gameObject.transform))
             return false;
 
         return IsExteriorObject(gameObject);
@@ -183,6 +191,34 @@ public static class ExteriorColliderCleanup
         return added;
     }
 
+    public static bool IsPlacedPropName(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+            return false;
+
+        for (int i = 0; i < PlacedPropNamePrefixes.Length; i++)
+        {
+            if (objectName.StartsWith(PlacedPropNamePrefixes[i], StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsPlacedPropTransform(Transform transform)
+    {
+        Transform current = transform;
+        while (current != null)
+        {
+            if (IsPlacedPropName(current.name))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
     public static bool IsPlacedFenceName(string objectName)
     {
         if (string.IsNullOrEmpty(objectName))
@@ -206,7 +242,30 @@ public static class ExteriorColliderCleanup
         return false;
     }
 
-    public static int EnsurePlacedFenceColliders()
+    public static bool IsPlacedFlowerPotName(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+            return false;
+
+        return objectName.StartsWith("Flower_Pot_", StringComparison.OrdinalIgnoreCase)
+            || objectName.StartsWith("Balcony_Pot_", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsPlacedFlowerPotTransform(Transform transform)
+    {
+        Transform current = transform;
+        while (current != null)
+        {
+            if (IsPlacedFlowerPotName(current.name))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    public static int EnsurePlacedPropColliders()
     {
         var processedRoots = new HashSet<int>();
         int added = 0;
@@ -221,36 +280,79 @@ public static class ExteriorColliderCleanup
             if (renderer == null)
                 continue;
 
-            Transform fenceRoot = FindFenceRoot(renderer.transform);
-            if (fenceRoot == null)
+            Transform propRoot = FindPlacedPropRoot(renderer.transform);
+            if (propRoot == null)
                 continue;
 
-            if (!processedRoots.Add(fenceRoot.GetInstanceID()))
+            if (!processedRoots.Add(propRoot.GetInstanceID()))
                 continue;
 
-            if (fenceRoot.GetComponent<Collider>() != null)
+            if (propRoot.GetComponent<Collider>() != null)
                 continue;
 
-            if (TryAddBoxColliderFromRenderers(fenceRoot))
+            if (TryAddBoxColliderFromRenderers(propRoot))
                 added++;
         }
 
         return added;
     }
 
-    static Transform FindFenceRoot(Transform transform)
+    public static int EnsurePlacedFenceColliders() => EnsurePlacedPropCollidersFor(IsPlacedFenceName);
+
+    public static int EnsurePlacedFlowerPotColliders() => EnsurePlacedPropCollidersFor(IsPlacedFlowerPotName);
+
+    static int EnsurePlacedPropCollidersFor(Func<string, bool> nameMatcher)
     {
-        Transform fenceRoot = null;
+        var processedRoots = new HashSet<int>();
+        int added = 0;
+
+        MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            Transform propRoot = FindPlacedPropRoot(renderer.transform, nameMatcher);
+            if (propRoot == null)
+                continue;
+
+            if (!processedRoots.Add(propRoot.GetInstanceID()))
+                continue;
+
+            if (propRoot.GetComponent<Collider>() != null)
+                continue;
+
+            if (TryAddBoxColliderFromRenderers(propRoot))
+                added++;
+        }
+
+        return added;
+    }
+
+    static Transform FindPlacedPropRoot(Transform transform, Func<string, bool> nameMatcher = null)
+    {
+        Transform propRoot = null;
         Transform current = transform;
         while (current != null)
         {
-            if (IsPlacedFenceName(current.name))
-                fenceRoot = current;
+            if (nameMatcher != null)
+            {
+                if (nameMatcher(current.name))
+                    propRoot = current;
+            }
+            else if (IsPlacedPropName(current.name))
+            {
+                propRoot = current;
+            }
 
             current = current.parent;
         }
 
-        return fenceRoot;
+        return propRoot;
     }
 
     static Transform FindColumnRoot(Transform transform)

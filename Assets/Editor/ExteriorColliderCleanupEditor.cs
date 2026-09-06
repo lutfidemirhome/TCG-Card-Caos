@@ -30,7 +30,7 @@ public static class ExteriorColliderCleanupEditor
             + "Room, shop duvarlari (Wall_*) ve Door_c5bu08 dokunulmadi.\n"
             + "House_*_Wall_* ic duvar collider'lari korundu.\n"
             + "Column_* kolon collider'lari korundu.\n"
-            + "Fence_* korkuluk collider'lari korundu.",
+            + "Fence_*, Flower_Pot_* ve Balcony_Pot_* collider'lari korundu.",
             "Tamam");
     }
 
@@ -61,22 +61,45 @@ public static class ExteriorColliderCleanupEditor
     {
         OpenMainSceneIfNeeded();
         int added = ExteriorColliderCleanup.EnsurePlacedFenceColliders();
+        MarkSceneAndShowPropDialog("Korkuluk collider", "Fence", added);
+    }
+
+    [MenuItem("TCG Card Chaos/Ensure Flower Pot Colliders")]
+    public static void EnsureFlowerPotCollidersInMainScene()
+    {
+        OpenMainSceneIfNeeded();
+        int added = ExteriorColliderCleanup.EnsurePlacedFlowerPotColliders();
+        MarkSceneAndShowPropDialog("Saksı collider", "Flower_Pot / Balcony_Pot", added);
+    }
+
+    [MenuItem("TCG Card Chaos/Ensure Scene Prop Colliders")]
+    public static void EnsureScenePropCollidersInMainScene()
+    {
+        OpenMainSceneIfNeeded();
+        int added = ExteriorColliderCleanup.EnsurePlacedPropColliders();
+        MarkSceneAndShowPropDialog("Sahne prop collider", "Fence + Flower_Pot + Balcony_Pot", added);
+    }
+
+    public static void BatchEnsureScenePropColliders()
+    {
+        OpenMainSceneIfNeeded();
+        int added = ExteriorColliderCleanup.EnsurePlacedPropColliders();
+        SaveMainScene(added, "Scene prop");
+        EditorApplication.Exit(0);
+    }
+
+    public static void BatchEnsureFenceColliders() => BatchEnsureScenePropColliders();
+
+    static void MarkSceneAndShowPropDialog(string title, string label, int added)
+    {
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
         EditorUtility.DisplayDialog(
-            "Korkuluk collider",
+            title,
             added > 0
-                ? $"Fence objelerine {added} collider eklendi."
-                : "Fence objelerinde collider zaten var veya Fence bulunamadi.",
+                ? $"{label} objelerine {added} collider eklendi."
+                : $"{label} objelerinde collider zaten var veya obje bulunamadi.",
             "Tamam");
-    }
-
-    public static void BatchEnsureFenceColliders()
-    {
-        OpenMainSceneIfNeeded();
-        int added = ExteriorColliderCleanup.EnsurePlacedFenceColliders();
-        SaveMainScene(added, "Fence");
-        EditorApplication.Exit(0);
     }
 
     static void OpenMainSceneIfNeeded()
@@ -123,7 +146,7 @@ public static class ExteriorColliderCleanupEditor
         if (ExteriorColliderCleanup.IsPlacedColumnTransform(gameObject.transform))
             return false;
 
-        if (ExteriorColliderCleanup.IsPlacedFenceTransform(gameObject.transform))
+        if (ExteriorColliderCleanup.IsPlacedPropTransform(gameObject.transform))
             return false;
 
         if (ExteriorColliderCleanup.IsExteriorObject(gameObject))
@@ -139,7 +162,7 @@ public static class ExteriorColliderCleanupEditor
         if (ExteriorColliderCleanup.IsPlacedColumnTransform(prefabRoot.transform))
             return false;
 
-        if (ExteriorColliderCleanup.IsPlacedFenceTransform(prefabRoot.transform))
+        if (ExteriorColliderCleanup.IsPlacedPropTransform(prefabRoot.transform))
             return false;
 
         string prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(prefabRoot);
