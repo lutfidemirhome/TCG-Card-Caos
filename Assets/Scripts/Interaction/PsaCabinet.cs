@@ -106,6 +106,30 @@ public class PsaCabinet : MonoBehaviour
         System.Array.Sort(slots, (a, b) => a.SlotNumber.CompareTo(b.SlotNumber));
     }
 
+    public bool TryGetClaimedSet(PsaCabinetSlot excludeSlot, out PsaCardSet claimed)
+    {
+        claimed = PsaCardSet.English;
+        CollectSlots();
+        if (slots == null)
+            return false;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            PsaCabinetSlot slot = slots[i];
+            if (slot == null || slot == excludeSlot || slot.IsEmpty)
+                continue;
+
+            WorldCard card = slot.OccupiedCard;
+            if (card == null || card.IsInHand || !card.UsesPsaSlab)
+                continue;
+
+            claimed = card.PsaSet;
+            return true;
+        }
+
+        return false;
+    }
+
     public PsaCabinetSlot FindSlot(int slotNumber)
     {
         if (slots == null || slots.Length == 0)

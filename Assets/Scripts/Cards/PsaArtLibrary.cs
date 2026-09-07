@@ -3,9 +3,8 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// PSA slab art under Resources/Cards/PsaCard/.
-/// Cabinet slots 7–10 (left→right). Each slot folder holds variant subfolders:
-/// psa_7/psa_7_1/card_diffuseMAT.png, psa_7_1_Preview.png, psa_7_2/…
+/// PSA slab art under Resources/Cards/PsaCard/ (English) and
+/// Resources/Cards/PsaCard/Japanese/ (Japanese). Cabinet slots 7–10.
 /// </summary>
 public static class PsaArtLibrary
 {
@@ -39,7 +38,17 @@ public static class PsaArtLibrary
         $"{GetSlotFolderName(slotNumber)}_{Mathf.Max(1, variantIndex)}";
 
     public static string GetVariantResourceFolder(int slotNumber, int variantIndex) =>
-        $"Cards/PsaCard/{GetSlotFolderName(slotNumber)}/{GetVariantFolderName(slotNumber, variantIndex)}";
+        GetVariantResourceFolder(slotNumber, variantIndex, PsaCardSet.English);
+
+    public static string GetVariantResourceFolder(int slotNumber, int variantIndex, PsaCardSet cardSet)
+    {
+        string slotFolder = GetSlotFolderName(slotNumber);
+        string variantFolder = GetVariantFolderName(slotNumber, variantIndex);
+        if (cardSet == PsaCardSet.Japanese)
+            return $"Cards/PsaCard/Japanese/{slotFolder}/{variantFolder}";
+
+        return $"Cards/PsaCard/{slotFolder}/{variantFolder}";
+    }
 
     public static GameObject LoadModelPrefab()
     {
@@ -51,36 +60,51 @@ public static class PsaArtLibrary
 
     public static Texture2D GetSlabTexture(int slotNumber, int variantIndex)
     {
-        return GetSlabTexture(slotNumber, variantIndex, allowFallback: true);
+        return GetSlabTexture(slotNumber, variantIndex, PsaCardSet.English, allowFallback: true);
+    }
+
+    public static Texture2D GetSlabTexture(int slotNumber, int variantIndex, PsaCardSet cardSet)
+    {
+        return GetSlabTexture(slotNumber, variantIndex, cardSet, allowFallback: true);
     }
 
     public static Texture2D GetSlabTexture(int slotNumber, int variantIndex, bool allowFallback)
+    {
+        return GetSlabTexture(slotNumber, variantIndex, PsaCardSet.English, allowFallback);
+    }
+
+    public static Texture2D GetSlabTexture(int slotNumber, int variantIndex, PsaCardSet cardSet, bool allowFallback)
     {
         slotNumber = ClampCabinetSlotNumber(slotNumber);
         variantIndex = Mathf.Max(1, variantIndex);
 
         string uniqueName = GetVariantFolderName(slotNumber, variantIndex) + "_slab";
         Texture2D texture = Resources.Load<Texture2D>(
-            GetVariantResourceFolder(slotNumber, variantIndex) + "/" + uniqueName);
+            GetVariantResourceFolder(slotNumber, variantIndex, cardSet) + "/" + uniqueName);
         if (texture == null)
-            texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, uniqueName);
+            texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, uniqueName, cardSet);
         if (texture == null)
-            texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, SlabTextureFileName);
+            texture = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, SlabTextureFileName, cardSet);
         if (texture == null && allowFallback && variantIndex != 1)
-            texture = GetSlabTexture(slotNumber, 1, allowFallback: false);
+            texture = GetSlabTexture(slotNumber, 1, cardSet, allowFallback: false);
         return texture;
     }
 
     /// <summary>UI inspect preview — upright PNG per variant, like Pack0N_Preview.</summary>
     public static Texture2D GetVariantPreview(int slotNumber, int variantIndex)
     {
+        return GetVariantPreview(slotNumber, variantIndex, PsaCardSet.English);
+    }
+
+    public static Texture2D GetVariantPreview(int slotNumber, int variantIndex, PsaCardSet cardSet)
+    {
         slotNumber = ClampCabinetSlotNumber(slotNumber);
         variantIndex = Mathf.Max(1, variantIndex);
 
         string previewName = GetVariantFolderName(slotNumber, variantIndex) + PreviewTextureSuffix;
-        Texture2D preview = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, previewName);
+        Texture2D preview = LoadNamedTextureInVariantFolder(slotNumber, variantIndex, previewName, cardSet);
         if (preview == null && variantIndex != 1)
-            preview = GetVariantPreview(slotNumber, 1);
+            preview = GetVariantPreview(slotNumber, 1, cardSet);
         return preview;
     }
 
@@ -88,9 +112,13 @@ public static class PsaArtLibrary
     /// Folder-scoped load. Every variant file is named card_diffuseMAT; a global
     /// Resources.Load by that name can return psa_10 after the new imports.
     /// </summary>
-    static Texture2D LoadNamedTextureInVariantFolder(int slotNumber, int variantIndex, string textureName)
+    static Texture2D LoadNamedTextureInVariantFolder(
+        int slotNumber,
+        int variantIndex,
+        string textureName,
+        PsaCardSet cardSet = PsaCardSet.English)
     {
-        string folder = GetVariantResourceFolder(slotNumber, variantIndex);
+        string folder = GetVariantResourceFolder(slotNumber, variantIndex, cardSet);
         Texture2D[] textures = Resources.LoadAll<Texture2D>(folder);
         if (textures != null)
         {
@@ -107,16 +135,26 @@ public static class PsaArtLibrary
 
     public static bool HasVariant(int slotNumber, int variantIndex)
     {
-        return GetSlabTexture(slotNumber, variantIndex, allowFallback: false) != null;
+        return HasVariant(slotNumber, variantIndex, PsaCardSet.English);
+    }
+
+    public static bool HasVariant(int slotNumber, int variantIndex, PsaCardSet cardSet)
+    {
+        return GetSlabTexture(slotNumber, variantIndex, cardSet, allowFallback: false) != null;
     }
 
     public static int CountVariantsInSlot(int slotNumber)
+    {
+        return CountVariantsInSlot(slotNumber, PsaCardSet.English);
+    }
+
+    public static int CountVariantsInSlot(int slotNumber, PsaCardSet cardSet)
     {
         slotNumber = ClampCabinetSlotNumber(slotNumber);
         int count = 0;
         for (int variantIndex = 1; variantIndex <= MaxVariantsPerSlot; variantIndex++)
         {
-            if (!HasVariant(slotNumber, variantIndex))
+            if (!HasVariant(slotNumber, variantIndex, cardSet))
                 break;
 
             count = variantIndex;
@@ -125,31 +163,50 @@ public static class PsaArtLibrary
         return Mathf.Max(1, count);
     }
 
-    /// <summary>Total graded PSA cards (Mix All + HUD denominator).</summary>
+    /// <summary>English graded PSA cards (Mix All + HUD denominator). Japanese is separate.</summary>
     public static int CountAllVariants()
     {
         int total = 0;
         for (int i = 0; i < CabinetSlotNumbers.Length; i++)
-            total += CountVariantsInSlot(CabinetSlotNumbers[i]);
+            total += CountVariantsInSlot(CabinetSlotNumbers[i], PsaCardSet.English);
+
+        return total;
+    }
+
+    public static int CountJapaneseVariants()
+    {
+        int total = 0;
+        for (int i = 0; i < CabinetSlotNumbers.Length; i++)
+            total += CountVariantsInSlot(CabinetSlotNumbers[i], PsaCardSet.Japanese);
 
         return total;
     }
 
     public static Material CreateSlabMaterial(int slotNumber, int variantIndex)
     {
+        return CreateSlabMaterial(slotNumber, variantIndex, PsaCardSet.English);
+    }
+
+    public static Material CreateSlabMaterial(int slotNumber, int variantIndex, PsaCardSet cardSet)
+    {
         Material template = GetSharedSlabTemplate();
         var material = new Material(template);
-        ApplyCardTexture(material, GetSlabTexture(slotNumber, variantIndex));
+        ApplyCardTexture(material, GetSlabTexture(slotNumber, variantIndex, cardSet));
         CardArtLibrary.ConfigureHandDetailMaterial(material);
         return material;
     }
 
     public static void ApplySlabMaterials(Transform modelRoot, int slotNumber, int variantIndex)
     {
+        ApplySlabMaterials(modelRoot, slotNumber, variantIndex, PsaCardSet.English);
+    }
+
+    public static void ApplySlabMaterials(Transform modelRoot, int slotNumber, int variantIndex, PsaCardSet cardSet)
+    {
         if (modelRoot == null)
             return;
 
-        Texture2D texture = GetSlabTexture(slotNumber, variantIndex);
+        Texture2D texture = GetSlabTexture(slotNumber, variantIndex, cardSet);
 
         Renderer[] renderers = modelRoot.GetComponentsInChildren<Renderer>(true);
         for (int i = 0; i < renderers.Length; i++)

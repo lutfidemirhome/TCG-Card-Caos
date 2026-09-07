@@ -109,8 +109,9 @@ public class PsaInspectPreview : MonoBehaviour
 
         int slotNumber = card.PsaSlotNumber;
         int variantIndex = card.PsaVariantIndex;
-        string key = slotNumber + ":" + variantIndex;
-        Texture texture = PsaArtLibrary.GetVariantPreview(slotNumber, variantIndex);
+        PsaCardSet cardSet = card.PsaSet;
+        string key = (int)cardSet + ":" + slotNumber + ":" + variantIndex;
+        Texture texture = PsaArtLibrary.GetVariantPreview(slotNumber, variantIndex, cardSet);
         if (texture == null)
         {
             Hide();

@@ -54,7 +54,8 @@ public static class CardFactory
         Quaternion rotation,
         int slotNumber,
         int variantIndex = 1,
-        string cardName = null)
+        string cardName = null,
+        PsaCardSet cardSet = PsaCardSet.English)
     {
         CardArtLibrary.EnsureLoaded();
 
@@ -62,7 +63,7 @@ public static class CardFactory
         variantIndex = Mathf.Max(1, variantIndex);
 
         string resolvedName = string.IsNullOrWhiteSpace(cardName)
-            ? $"PSA {slotNumber}-{variantIndex}"
+            ? (cardSet == PsaCardSet.Japanese ? $"JP PSA {slotNumber}-{variantIndex}" : $"PSA {slotNumber}-{variantIndex}")
             : cardName;
 
         var root = new GameObject(resolvedName);
@@ -76,7 +77,7 @@ public static class CardFactory
         collider.enabled = false;
 
         var card = root.AddComponent<WorldCard>();
-        card.InitializePsa(slotNumber, variantIndex);
+        card.InitializePsa(slotNumber, variantIndex, cardSet);
         PersistentId.GetOrCreate(root).AssignNew();
         return card;
     }

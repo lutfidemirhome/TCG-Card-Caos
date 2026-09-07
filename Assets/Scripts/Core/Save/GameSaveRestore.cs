@@ -182,7 +182,8 @@ public static class GameSaveRestore
                 record.Position,
                 record.Rotation,
                 record.psaSlot,
-                record.psaVariant);
+                record.psaVariant,
+                cardSet: (PsaCardSet)record.psaSet);
         }
 
         if (string.IsNullOrEmpty(record.definitionId)

@@ -44,6 +44,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     [SerializeField] int psaSlotNumber;
     [Tooltip("PSA slot içindeki varyant (psa_7_1 → 1, psa_7_2 → 2).")]
     [SerializeField] int psaVariantIndex;
+    [SerializeField] PsaCardSet psaCardSet;
 
     Collider _collider;
     PsaCardVisualController _psaController;
@@ -107,6 +108,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool UsesPsaSlab => PsaArtLibrary.IsCabinetSlotNumber(psaSlotNumber);
     public int PsaSlotNumber => psaSlotNumber;
     public int PsaVariantIndex => Mathf.Max(1, psaVariantIndex);
+    public PsaCardSet PsaSet => psaCardSet;
+    public bool IsJapanesePsa => UsesPsaSlab && psaCardSet == PsaCardSet.Japanese;
     public float GroundRestLift => UsesPsaSlab && _psaController != null ? _psaController.GroundRestLift : 0f;
     internal Transform RootTransform => transform;
     internal Collider PhysCollider => _collider;
@@ -229,21 +232,24 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         paletteIndex = palette;
         psaSlotNumber = 0;
         psaVariantIndex = 0;
+        psaCardSet = PsaCardSet.English;
 
         if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
             cardLabel = definition.DisplayName;
     }
 
     /// <summary>PSA slab kartı — normal kart oyun mantığı, 3D holder görseli.</summary>
-    public void InitializePsa(int slotNumber, int variantIndex = 1)
+    public void InitializePsa(int slotNumber, int variantIndex = 1, PsaCardSet cardSet = PsaCardSet.English)
     {
         definition = null;
         paletteIndex = 0;
         psaSlotNumber = PsaArtLibrary.ClampCabinetSlotNumber(slotNumber);
         psaVariantIndex = Mathf.Max(1, variantIndex);
-        cardLabel = "PSA " + psaSlotNumber + "-" + psaVariantIndex;
+        psaCardSet = cardSet;
+        cardLabel = (cardSet == PsaCardSet.Japanese ? "JP PSA " : "PSA ")
+            + psaSlotNumber + "-" + psaVariantIndex;
         _psaController = new PsaCardVisualController(this);
-        _psaController.Build(psaSlotNumber, psaVariantIndex);
+        _psaController.Build(psaSlotNumber, psaVariantIndex, psaCardSet);
     }
 
     public void Initialize(int definitionId, int palette)
@@ -413,7 +419,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
             return definition.DisplayName;
         if (psaSlotNumber > 0)
-            return "PSA " + psaSlotNumber + "-" + psaVariantIndex;
+            return (psaCardSet == PsaCardSet.Japanese ? "JP PSA " : "PSA ")
+                + psaSlotNumber + "-" + psaVariantIndex;
         return string.IsNullOrWhiteSpace(cardLabel) ? "Card" : cardLabel;
     }
 
@@ -1448,7 +1455,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             if (_psaController == null)
             {
                 _psaController = new PsaCardVisualController(this);
-                _psaController.Build(psaSlotNumber, psaVariantIndex);
+                _psaController.Build(psaSlotNumber, psaVariantIndex, psaCardSet);
             }
             else
                 _psaController.EnsureVisual();

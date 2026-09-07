@@ -45,7 +45,9 @@ public static class PlayerHandSkill
     {
         int slot = selected.PsaSlotNumber;
         CollectGroundCards(CardScratch, card =>
-            card.UsesPsaSlab && card.PsaSlotNumber == slot);
+            card.UsesPsaSlab
+            && card.PsaSlotNumber == slot
+            && card.PsaSet == selected.PsaSet);
 
         return PickupCards(hand, CardScratch);
     }

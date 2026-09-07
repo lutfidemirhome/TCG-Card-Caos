@@ -109,6 +109,12 @@ public static class CardShelfCategories
 
     public const string AllEnergy = "all_energy";
 
+    public const string DragonEpicJapan = "dragon_epic_japan";
+    public const string FireMythicGoldJapan = "fire_mythic_gold_japan";
+    public const string GroundMasterArtJapan = "ground_master_art_japan";
+    public const string IcePrismEliteJapan = "ice_prism_elite_japan";
+    public const string PsychicEliteJapan = "psychic_elite_japan";
+
     public const int MinSlotNumber = 1;
     public const int MaxSlotNumber = 10;
     public const int DefaultSlotsPerRow = 10;
@@ -136,6 +142,9 @@ public static class CardShelfCategories
     {
         if (string.IsNullOrWhiteSpace(categoryId))
             return DefaultSlotsPerRow;
+
+        if (categoryId.EndsWith("_japan"))
+            categoryId = categoryId.Substring(0, categoryId.Length - "_japan".Length);
 
         if (categoryId.EndsWith("_uncommon") || categoryId.EndsWith("_epic") || categoryId.EndsWith("_prism_elite"))
             return 5;

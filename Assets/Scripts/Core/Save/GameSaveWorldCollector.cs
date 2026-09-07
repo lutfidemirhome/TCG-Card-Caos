@@ -102,6 +102,7 @@ public static class GameSaveWorldCollector
             definitionId = card.Definition != null ? card.Definition.DefinitionId : string.Empty,
             psaSlot = card.PsaSlotNumber,
             psaVariant = card.PsaVariantIndex,
+            psaSet = (int)card.PsaSet,
             palette = card.PaletteIndex,
             faceDown = card.IsGroundFaceDown,
             stackLayer = card.GroundStackLayer,

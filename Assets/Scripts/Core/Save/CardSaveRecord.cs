@@ -8,6 +8,7 @@ public class CardSaveRecord
     public string definitionId = string.Empty;
     public int psaSlot;
     public int psaVariant;
+    public int psaSet;
     public int palette;
     public CardRuntimeLocation location;
     public float px;
