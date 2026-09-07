@@ -11,6 +11,8 @@ public static class CardArtLibrary
 {
     public const string FrontTextureAssetPath = "Assets/Art/Cards/card_texture_ön_test.png";
     public const string BackTextureAssetPath = "Assets/Art/Cards/kart_arka_template.png";
+    public const string JapaneseBackTextureAssetPath = "Assets/Art/Cards/Japanese/kart_arka_template_japon.png";
+    public const string JapaneseBackResourcePath = "Cards/JapaneseCardBack/kart_arka_template_japon";
     public const string FrontMaterialAssetPath = "Assets/Art/Cards/CardFront.mat";
     public const string BackMaterialAssetPath = "Assets/Art/Cards/CardBack.mat";
 
@@ -78,6 +80,10 @@ public static class CardArtLibrary
     static Material _instancedGroundBackMaterial;
     static Material _runtimeMeshBackDetailMaterial;
     static Material _runtimeMeshBackWorldMaterial;
+    static Material _japaneseInstancedGroundBackMaterial;
+    static Material _japaneseMeshBackDetailMaterial;
+    static Material _japaneseMeshBackWorldMaterial;
+    static Texture2D _japaneseBackTexture;
     static Vector3? _flatSize;
     static Rect? _frontArtUvRect;
     static readonly Dictionary<int, Material> FrontWorldMaterialsByPalette = new Dictionary<int, Material>();
@@ -184,7 +190,19 @@ public static class CardArtLibrary
 
     public static Material GetBackMaterial(CardTextureQuality quality)
     {
+        return GetBackMaterial(quality, japanese: false);
+    }
+
+    public static Material GetBackMaterial(CardTextureQuality quality, CardDefinition definition)
+    {
+        return GetBackMaterial(quality, definition != null && definition.IsJapanese);
+    }
+
+    public static Material GetBackMaterial(CardTextureQuality quality, bool japanese)
+    {
         EnsureLoaded();
+        if (japanese)
+            return GetJapaneseBackMaterial(quality);
 
         if (quality == CardTextureQuality.World)
         {
@@ -220,7 +238,15 @@ public static class CardArtLibrary
     /// </summary>
     public static Material GetInstancedGroundBackMaterial()
     {
+        return GetInstancedGroundBackMaterial(japanese: false);
+    }
+
+    public static Material GetInstancedGroundBackMaterial(bool japanese)
+    {
         EnsureLoaded();
+        if (japanese)
+            return GetJapaneseInstancedGroundBackMaterial();
+
         if (_instancedGroundBackMaterial == null)
         {
             _instancedGroundBackMaterial = new Material(_sharedBackWorldTemplate)
@@ -234,6 +260,78 @@ public static class CardArtLibrary
         }
 
         return _instancedGroundBackMaterial;
+    }
+
+    static Texture2D GetJapaneseBackTexture()
+    {
+        if (_japaneseBackTexture == null)
+            _japaneseBackTexture = Resources.Load<Texture2D>(JapaneseBackResourcePath);
+
+        return _japaneseBackTexture;
+    }
+
+    static Material GetJapaneseBackMaterial(CardTextureQuality quality)
+    {
+        Texture2D japaneseBack = GetJapaneseBackTexture();
+        if (quality == CardTextureQuality.World)
+        {
+            if (_japaneseMeshBackWorldMaterial == null || IsBrokenMaterial(_japaneseMeshBackWorldMaterial))
+            {
+                _japaneseMeshBackWorldMaterial = CreateMaterialFromTemplate(
+                    _sharedBackWorldTemplate,
+                    "CardBackWorldMeshRuntimeJapan");
+                ApplyTextureMap(_japaneseMeshBackWorldMaterial, japaneseBack);
+                ApplyBackTextureUFlip(_japaneseMeshBackWorldMaterial);
+                if (japaneseBack != null)
+                    SharpenGroundItemTexture(japaneseBack);
+                ConfigureGroundWorldMaterial(_japaneseMeshBackWorldMaterial);
+            }
+
+            return _japaneseMeshBackWorldMaterial;
+        }
+
+        if (_japaneseMeshBackDetailMaterial == null || IsBrokenMaterial(_japaneseMeshBackDetailMaterial))
+        {
+            _japaneseMeshBackDetailMaterial = CreateMaterialFromTemplate(
+                _sharedBackDetailTemplate,
+                "CardBackDetailMeshRuntimeJapan");
+            ApplyTextureMap(_japaneseMeshBackDetailMaterial, japaneseBack);
+            ApplyBackTextureUFlip(_japaneseMeshBackDetailMaterial);
+            ConfigureHandDetailMaterial(_japaneseMeshBackDetailMaterial);
+        }
+
+        return _japaneseMeshBackDetailMaterial;
+    }
+
+    static Material GetJapaneseInstancedGroundBackMaterial()
+    {
+        if (_japaneseInstancedGroundBackMaterial == null)
+        {
+            Texture2D japaneseBack = GetJapaneseBackTexture();
+            _japaneseInstancedGroundBackMaterial = new Material(_sharedBackWorldTemplate)
+            {
+                name = "CardBackWorldInstancedGroundJapan",
+                enableInstancing = true,
+            };
+            ApplyTextureMap(_japaneseInstancedGroundBackMaterial, japaneseBack);
+            ApplyInstancedGroundBackTextureTransform(_japaneseInstancedGroundBackMaterial);
+            if (japaneseBack != null)
+                SharpenGroundItemTexture(japaneseBack);
+            ConfigureGroundWorldMaterial(_japaneseInstancedGroundBackMaterial);
+        }
+
+        return _japaneseInstancedGroundBackMaterial;
+    }
+
+    static void ApplyTextureMap(Material material, Texture2D texture)
+    {
+        if (material == null || texture == null)
+            return;
+
+        if (material.HasProperty("_BaseMap"))
+            material.SetTexture("_BaseMap", texture);
+        if (material.HasProperty("_MainTex"))
+            material.SetTexture("_MainTex", texture);
     }
 
     public static bool IsBrokenMaterial(Material material)
@@ -435,7 +533,7 @@ public static class CardArtLibrary
         return new[]
         {
             GetFrontMaterial(definition, quality),
-            GetBackMaterial(quality),
+            GetBackMaterial(quality, definition),
         };
     }
 
@@ -453,6 +551,10 @@ public static class CardArtLibrary
         _instancedGroundBackMaterial = null;
         _runtimeMeshBackDetailMaterial = null;
         _runtimeMeshBackWorldMaterial = null;
+        _japaneseInstancedGroundBackMaterial = null;
+        _japaneseMeshBackDetailMaterial = null;
+        _japaneseMeshBackWorldMaterial = null;
+        _japaneseBackTexture = null;
         _sharedFrontWorldTemplate = null;
         _sharedBackWorldTemplate = null;
         _sharedFrontDetailTemplate = null;

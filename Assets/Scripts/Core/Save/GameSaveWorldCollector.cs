@@ -165,6 +165,7 @@ public static class GameSaveWorldCollector
         {
             id = PersistentId.Resolve(pack),
             variant = pack.PackVariantIndex,
+            packSet = (int)pack.PackSet,
             held = heldPacks.Contains(pack) || pack.IsInHand,
             faceDown = pack.GroundShowsBack,
             stackLayer = pack.GroundStackLayer,

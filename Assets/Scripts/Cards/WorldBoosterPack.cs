@@ -23,6 +23,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     [Tooltip("Optional imported pack model prefab. Parented on PackCardRef (invisible card proxy).")]
     [SerializeField] GameObject visualPrefab;
     [SerializeField] int packVariantIndex = 1;
+    [SerializeField] PackCardSet packSet = PackCardSet.English;
     [SerializeField] List<CardDefinition> preRolledContents;
 
     const string CardRefChildName = "PackCardRef";
@@ -94,7 +95,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public int GroundStackLayer => _groundStackLayer;
     public BoosterPackDefinition Definition => packDefinition;
     public int PackVariantIndex => packVariantIndex;
-    public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(packVariantIndex);
+    public PackCardSet PackSet => packSet;
+    public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(packVariantIndex, packSet);
     public bool GroundShowsBack => _groundShowsBack;
     public Transform PackVisualRoot => _packModel;
     internal BoxCollider PhysCollider => _collider;
@@ -222,9 +224,11 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public void Initialize(
         BoosterPackDefinition definition,
         int packVariantIndex = 1,
-        IReadOnlyList<CardDefinition> preRolledContents = null)
+        IReadOnlyList<CardDefinition> preRolledContents = null,
+        PackCardSet packSet = PackCardSet.English)
     {
         packDefinition = definition;
+        this.packSet = definition != null ? definition.PackSet : packSet;
         this.packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
         if (preRolledContents != null && preRolledContents.Count > 0)
             this.preRolledContents = new List<CardDefinition>(preRolledContents);
@@ -540,7 +544,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _packModel = instance.transform;
             _visualBaseScale = Vector3.one;
 
-            PackArtLibrary.ApplyPackMaterials(_packModel, packVariantIndex);
+            PackArtLibrary.ApplyPackMaterials(_packModel, packVariantIndex, forHand: false, packSet);
             StripVisualColliders(_packModel);
             ApplyPackModelShadowSettings();
             return;
@@ -551,7 +555,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     void ConfigurePackModelFromExisting()
     {
-        PackArtLibrary.ApplyPackMaterials(_packModel, packVariantIndex);
+        PackArtLibrary.ApplyPackMaterials(_packModel, packVariantIndex, forHand: false, packSet);
         StripVisualColliders(_packModel);
         ApplyPackModelShadowSettings();
         CaptureExistingVisualLayout();
@@ -1143,7 +1147,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             if (useHandMaterials)
                 EnsureLiveHandMaterials(renderer);
             else
-                PackArtLibrary.ApplyPackMaterials(renderer, packVariantIndex, forHand: false);
+                PackArtLibrary.ApplyPackMaterials(renderer, packVariantIndex, forHand: false, packSet);
         }
 
         ApplyPackRendererVisibility();
@@ -1158,7 +1162,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (_liveHandMaterialsByRenderer.ContainsKey(rendererId))
             return;
 
-        Material[] instances = PackArtLibrary.CreatePackHandMaterialInstances(renderer, packVariantIndex);
+        Material[] instances = PackArtLibrary.CreatePackHandMaterialInstances(renderer, packVariantIndex, packSet);
         if (instances != null)
             _liveHandMaterialsByRenderer[rendererId] = instances;
     }
@@ -1658,11 +1662,13 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     }
 
     static List<CardDefinition> _cachedDefaultPool;
+    static List<CardDefinition> _cachedJapaneseDefaultPool;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetPackContentCache()
     {
         _cachedDefaultPool = null;
+        _cachedJapaneseDefaultPool = null;
     }
 
     public IReadOnlyList<CardDefinition> RollContents(int count)
@@ -1683,7 +1689,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         var results = new List<CardDefinition>(count);
         IReadOnlyList<CardDefinition> pool = packDefinition != null
             ? packDefinition.BuildCardPool()
-            : GetDefaultPool();
+            : GetDefaultPool(packSet);
 
         if (pool.Count == 0)
         {
@@ -1698,8 +1704,11 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         preRolledContents = results;
     }
 
-    static IReadOnlyList<CardDefinition> GetDefaultPool()
+    static IReadOnlyList<CardDefinition> GetDefaultPool(PackCardSet requestedSet)
     {
+        if (requestedSet == PackCardSet.Japanese)
+            return GetJapaneseDefaultPool();
+
         if (_cachedDefaultPool != null)
             return _cachedDefaultPool;
 
@@ -1711,12 +1720,35 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             CardDefinition definition = all[i];
             if (definition == null || definition.FrontTexture == null)
                 continue;
+            if (definition.IsJapanese)
+                continue;
             if (!CardScatterUtility.IsLiveGroundCategory(definition.ShelfCategoryId))
                 continue;
             _cachedDefaultPool.Add(definition);
         }
 
         return _cachedDefaultPool;
+    }
+
+    static IReadOnlyList<CardDefinition> GetJapaneseDefaultPool()
+    {
+        if (_cachedJapaneseDefaultPool != null)
+            return _cachedJapaneseDefaultPool;
+
+        CardCatalog.EnsureLoaded();
+        IReadOnlyList<CardDefinition> all = CardCatalog.All;
+        _cachedJapaneseDefaultPool = new List<CardDefinition>(all.Count);
+        for (int i = 0; i < all.Count; i++)
+        {
+            CardDefinition definition = all[i];
+            if (definition == null || definition.FrontTexture == null)
+                continue;
+            if (!definition.IsJapanese)
+                continue;
+            _cachedJapaneseDefaultPool.Add(definition);
+        }
+
+        return _cachedJapaneseDefaultPool;
     }
 
     void AdvanceFlightToward(Vector3 targetWorldPos, Quaternion targetWorldRot)

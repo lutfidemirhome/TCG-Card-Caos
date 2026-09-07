@@ -15,7 +15,9 @@ public class PhysicsLevelLayout : MonoBehaviour
     public const string BatchPrefix = "Batch_";
     public const string MixBatchPrefix = "Mix_";
     public const string MixAllName = "Mix_All";
+    public const string MixJapanName = "Mix_Japan";
     public const int MixPackCount = 100;
+    public const int JapanPackCount = 15;
 
     [Header("Demo")]
     [SerializeField] int demoRegularCount = 235;
@@ -120,7 +122,8 @@ public class PhysicsLevelLayout : MonoBehaviour
             if (child != null
                 && (child.name.StartsWith(BatchPrefix)
                     || child.name.StartsWith(MixBatchPrefix)
-                    || child.name == MixAllName))
+                    || child.name == MixAllName
+                    || child.name == MixJapanName))
                 child.gameObject.SetActive(active);
         }
     }
@@ -128,5 +131,10 @@ public class PhysicsLevelLayout : MonoBehaviour
     public static string FormatMixAllName()
     {
         return MixAllName;
+    }
+
+    public static string FormatMixJapanName()
+    {
+        return MixJapanName;
     }
 }

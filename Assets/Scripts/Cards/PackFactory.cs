@@ -9,7 +9,8 @@ public static class PackFactory
         BoosterPackDefinition packDefinition = null,
         string packName = "Booster Pack",
         int packVariantIndex = 1,
-        IReadOnlyList<CardDefinition> preRolledContents = null)
+        IReadOnlyList<CardDefinition> preRolledContents = null,
+        PackCardSet packSet = PackCardSet.English)
     {
         CardArtLibrary.EnsureLoaded();
 
@@ -23,7 +24,7 @@ public static class PackFactory
         collider.isTrigger = false;
 
         var pack = root.AddComponent<WorldBoosterPack>();
-        pack.Initialize(packDefinition, packVariantIndex, preRolledContents);
+        pack.Initialize(packDefinition, packVariantIndex, preRolledContents, packSet);
         PersistentId.GetOrCreate(root).AssignNew();
         return pack;
     }

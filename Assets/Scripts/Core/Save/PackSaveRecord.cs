@@ -6,6 +6,7 @@ public class PackSaveRecord
 {
     public string id = string.Empty;
     public int variant = 1;
+    public int packSet;
     public bool held;
     public float px;
     public float py;

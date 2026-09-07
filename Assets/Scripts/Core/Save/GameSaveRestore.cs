@@ -480,7 +480,7 @@ public static class GameSaveRestore
             if (!demoAuthored)
             {
                 WakeRestoredObject(pack.transform);
-                pack.Initialize(null, record.variant, contents);
+                pack.Initialize(null, record.variant, contents, (PackCardSet)record.packSet);
             }
         }
         else
@@ -491,7 +491,8 @@ public static class GameSaveRestore
                 packDefinition: null,
                 packName: "Booster Pack",
                 packVariantIndex: record.variant,
-                preRolledContents: contents);
+                preRolledContents: contents,
+                packSet: (PackCardSet)record.packSet);
             PersistentId.GetOrCreate(pack.gameObject).AssignExisting(restoreId);
         }
 

@@ -12,6 +12,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 {
     const int SpawnOverlapTries = 12;
     const int MixAllPhysicsBatchIndex = 5000;
+    const int JapanPhysicsBatchIndex = 5100;
     const int MixShuffleSeed = 20260825;
     const float MixAllVolumeSide = 10f;
     const float MixAllVolumeHeight = 2.6f;
@@ -24,6 +25,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     Vector2 _scroll;
     MixAllPlan _cachedMixAllPlan;
     bool _hasMixAllPlan;
+    JapanMixPlan _cachedJapanPlan;
+    bool _hasJapanPlan;
     List<PhysicsLevelItem> _guardItems;
     PhysicsCardSpawnVolume _guardVolume;
     GameObject _authoringFloor;
@@ -219,6 +222,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUILayout.Space(8);
         DrawMixAll(layout);
         EditorGUILayout.Space(10);
+        DrawJapanDrop(layout);
+        EditorGUILayout.Space(10);
         DrawSelectedCards();
         EditorGUILayout.Space(10);
         DrawSpawnSettings(layout);
@@ -231,11 +236,14 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     void DrawTotals(PhysicsLevelLayout layout)
     {
         Transform mixAll = FindMixAll(layout);
+        Transform mixJapan = FindMixJapan(layout);
         int mixAllItems = mixAll != null ? mixAll.childCount : 0;
+        int mixJapanItems = mixJapan != null ? mixJapan.childCount : 0;
         int leftoverDemo = CountArea(PhysicsLevelItem.AreaKind.Demo, -1);
         int leftoverMix = CountLegacyMixItems(layout);
         EditorGUILayout.LabelField("Live counts", EditorStyles.boldLabel);
         EditorGUILayout.LabelField("Mix All in scene", mixAllItems.ToString());
+        EditorGUILayout.LabelField("Mix Japan in scene", mixJapanItems.ToString());
         EditorGUILayout.LabelField("Leftover Demo items", leftoverDemo.ToString());
         EditorGUILayout.LabelField("Leftover Mix 1-10 items", leftoverMix.ToString());
     }
@@ -317,6 +325,69 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUI.EndDisabledGroup();
 
         EditorGUILayout.EndVertical();
+    }
+
+    void DrawJapanDrop(PhysicsLevelLayout layout)
+    {
+        Transform folder = FindMixJapan(layout);
+        int inScene = folder != null ? folder.childCount : 0;
+        JapanMixPlan plan = GetCachedJapanMixPlan();
+
+        EditorGUILayout.LabelField("Japanese Mix", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.HelpBox(
+            "Mevcut Mix All kartlarına dokunmaz. Japonca normal kartlar + Japonca PSA + "
+            + PhysicsLevelLayout.JapanPackCount
+            + " Japonca pack spawn olur, sonra Grabbit Fall açılır. "
+            + "Scene view'de Left Shift basılı tut — mevcut kartların üzerine düşer. "
+            + "Mix All'dan SONRA bas; Mix All tekrar her şeyi siler. "
+            + "Oturunca Bake Mix All veya Bake Selected → sahneyi kaydet.",
+            MessageType.Info);
+        EditorGUILayout.LabelField("Japanese cards", plan.FloorCards.Count.ToString());
+        EditorGUILayout.LabelField("Japanese PSA", plan.PsaItems.Count.ToString());
+        EditorGUILayout.LabelField("Japanese packs", PhysicsLevelLayout.JapanPackCount.ToString());
+        EditorGUILayout.LabelField("In scene", inScene.ToString());
+
+        if (GUILayout.Button("Drop Japanese (cards + PSA + 15 packs)", GUILayout.Height(36)))
+            CreateJapanDropAndFall(layout);
+
+        EditorGUI.BeginDisabledGroup(folder == null || folder.childCount == 0);
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Select Japanese Mix"))
+            SelectChildren(folder);
+        if (GUILayout.Button("Grabbit Fall Japanese"))
+            ScheduleDrop(layout, layout.MainVolume, folder);
+        EditorGUILayout.EndHorizontal();
+        if (GUILayout.Button("Delete Japanese Mix"))
+        {
+            if (EditorUtility.DisplayDialog(
+                    "Delete Japanese Mix",
+                    "Mix_Japan silinecek. İngilizce Mix All durur.",
+                    "Sil",
+                    "İptal"))
+                DeleteJapanMix(layout);
+        }
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.EndVertical();
+    }
+
+    [MenuItem("TCG Card Chaos/Drop Japanese Mix")]
+    public static void MenuDropJapaneseMix()
+    {
+        PhysicsCardLevelBuilderWindow window = GetWindow<PhysicsCardLevelBuilderWindow>(
+            false,
+            "Card Physics Level Builder",
+            true);
+        window.Show();
+        window.Focus();
+        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
+        if (layout == null)
+        {
+            EditorUtility.DisplayDialog("Japanese Mix", "Physics_Card_Level missing in this scene.", "OK");
+            return;
+        }
+
+        window.CreateJapanDropAndFall(layout);
     }
 
     void DrawSelectedCards()
@@ -582,7 +653,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                     packDefinition,
                     packName: "BoosterPack_All_" + (i + 1),
                     packVariantIndex: variantIndex,
-                    preRolledContents: contents);
+                    preRolledContents: contents,
+                    packSet: PackCardSet.English);
                 FinishPack(pack, folder, PhysicsLevelItem.AreaKind.Main, MixAllPhysicsBatchIndex, registerUndo: false);
                 pack.SetGroundShowsBack(faceDown);
                 done++;
@@ -625,6 +697,217 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         return go.transform;
     }
 
+    Transform FindMixJapan(PhysicsLevelLayout layout)
+    {
+        if (layout == null || layout.MainLevelRoot == null)
+            return null;
+
+        return layout.MainLevelRoot.Find(PhysicsLevelLayout.FormatMixJapanName());
+    }
+
+    Transform GetOrCreateMixJapanFolder(PhysicsLevelLayout layout)
+    {
+        Transform existing = FindMixJapan(layout);
+        if (existing != null)
+            return existing;
+
+        var go = new GameObject(PhysicsLevelLayout.FormatMixJapanName());
+        go.transform.SetParent(layout.MainLevelRoot, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+        return go.transform;
+    }
+
+    void DeleteJapanMix(PhysicsLevelLayout layout)
+    {
+        Transform folder = FindMixJapan(layout);
+        if (folder != null)
+            Object.DestroyImmediate(folder.gameObject);
+
+        MarkDirty(layout);
+    }
+
+    void CreateJapanDropAndFall(PhysicsLevelLayout layout)
+    {
+        if (layout == null || layout.MainVolume == null || layout.MainLevelRoot == null)
+        {
+            EditorUtility.DisplayDialog("Japanese Mix", "Main spawn volume / Main_Level folder missing.", "OK");
+            return;
+        }
+
+        Transform existing = FindMixJapan(layout);
+        if (existing != null && existing.childCount > 0)
+        {
+            if (!EditorUtility.DisplayDialog(
+                    "Japanese Mix",
+                    "Mix_Japan zaten dolu. Silinip yeniden spawn olacak. İngilizce Mix All durur.",
+                    "Yeniden spawn",
+                    "İptal"))
+                return;
+
+            DestroyChildrenImmediate(existing);
+        }
+
+        JapanMixPlan plan = GetCachedJapanMixPlan();
+        if (plan.FloorCards.Count == 0 && plan.PsaItems.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Japanese Mix",
+                "Japonca kart veya PSA bulunamadı. Unity import bitsin, sonra tekrar dene.",
+                "OK");
+            return;
+        }
+
+        Transform folder = GetOrCreateMixJapanFolder(layout);
+        var occupied = new List<Vector3>(
+            plan.FloorCards.Count + plan.PsaItems.Count + PhysicsLevelLayout.JapanPackCount);
+        HashSet<int> cardFaceDown = CardScatterUtility.PickBackFacingIndices(plan.FloorCards.Count);
+        HashSet<int> psaFaceDown = CardScatterUtility.PickBackFacingIndices(plan.PsaItems.Count);
+        HashSet<int> packFaceDown = CardScatterUtility.PickBackFacingIndices(PhysicsLevelLayout.JapanPackCount);
+        int total = plan.FloorCards.Count + plan.PsaItems.Count + PhysicsLevelLayout.JapanPackCount;
+        int done = 0;
+
+        try
+        {
+            for (int i = 0; i < plan.FloorCards.Count; i++)
+            {
+                CardDefinition definition = plan.FloorCards[i];
+                if (definition == null)
+                    continue;
+
+                bool faceDown = cardFaceDown.Contains(i);
+                WorldCard card = CardFactory.CreateWorldCard(
+                    NextSpawnPose(layout, layout.MainVolume, occupied, out Quaternion rotation, pack: false, faceDown),
+                    rotation,
+                    definition,
+                    paletteIndex: 0,
+                    cardName: "JP_Card_" + definition.DefinitionId);
+                FinishCard(card, folder, PhysicsLevelItem.AreaKind.Main, JapanPhysicsBatchIndex, registerUndo: false);
+                card.SetGroundShowsBack(faceDown);
+                done++;
+                if (done % 25 == 0)
+                    EditorUtility.DisplayProgressBar("Japanese Mix", "Spawning cards " + done + " / " + total, done / (float)total);
+            }
+
+            for (int i = 0; i < plan.PsaItems.Count; i++)
+            {
+                MixSpawnItem item = plan.PsaItems[i];
+                bool faceDown = psaFaceDown.Contains(i);
+                WorldCard card = CardFactory.CreateWorldPsaCard(
+                    NextSpawnPose(layout, layout.MainVolume, occupied, out Quaternion rotation, pack: false, faceDown),
+                    rotation,
+                    item.PsaSlot,
+                    item.PsaVariant,
+                    cardName: "JP_PSA_" + item.PsaSlot + "_" + item.PsaVariant,
+                    cardSet: PsaCardSet.Japanese);
+                FinishCard(card, folder, PhysicsLevelItem.AreaKind.Main, JapanPhysicsBatchIndex, registerUndo: false);
+                card.SetGroundShowsBack(faceDown);
+                done++;
+                if (done % 10 == 0)
+                    EditorUtility.DisplayProgressBar("Japanese Mix", "Spawning PSA " + done + " / " + total, done / (float)total);
+            }
+
+            BoosterPackDefinition packDefinition = Resources.Load<BoosterPackDefinition>("Cards/JapaneseBoosterPackDefinition");
+            for (int i = 0; i < PhysicsLevelLayout.JapanPackCount; i++)
+            {
+                var contents = new List<CardDefinition>(CardDimensions.CardsPerBoosterPack);
+                int start = i * CardDimensions.CardsPerBoosterPack;
+                for (int c = 0; c < CardDimensions.CardsPerBoosterPack && start + c < plan.PackCards.Count; c++)
+                    contents.Add(plan.PackCards[start + c]);
+
+                int variantIndex = i % PackArtLibrary.PackVariantCount + 1;
+                bool faceDown = packFaceDown.Contains(i);
+                WorldBoosterPack pack = PackFactory.CreateWorldPack(
+                    NextSpawnPose(layout, layout.MainVolume, occupied, out Quaternion rotation, pack: true, faceDown),
+                    rotation,
+                    packDefinition,
+                    packName: "BoosterPack_Japan_" + (i + 1),
+                    packVariantIndex: variantIndex,
+                    preRolledContents: contents,
+                    packSet: PackCardSet.Japanese);
+                FinishPack(pack, folder, PhysicsLevelItem.AreaKind.Main, JapanPhysicsBatchIndex, registerUndo: false);
+                pack.SetGroundShowsBack(faceDown);
+                done++;
+                EditorUtility.DisplayProgressBar("Japanese Mix", "Spawning packs " + done + " / " + total, done / (float)total);
+            }
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+
+        MarkDirty(layout);
+        SelectChildren(folder);
+        ScheduleDrop(layout, layout.MainVolume, folder);
+        Debug.Log(
+            "TCG Card Chaos: Japanese Mix spawned "
+            + plan.FloorCards.Count + " cards, "
+            + plan.PsaItems.Count + " PSA, "
+            + PhysicsLevelLayout.JapanPackCount + " packs. Grabbit Fall starting.");
+    }
+
+    static JapanMixPlan BuildJapanMixPlan()
+    {
+        CardCatalog.EnsureLoaded();
+        var floorCards = new List<CardDefinition>();
+        IReadOnlyList<CardDefinition> catalog = CardCatalog.All;
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            CardDefinition definition = catalog[i];
+            if (definition == null || string.IsNullOrWhiteSpace(definition.DefinitionId))
+                continue;
+            if (definition.FrontTexture == null)
+                continue;
+            if (!definition.IsJapanese)
+                continue;
+            floorCards.Add(definition);
+        }
+
+        var psaItems = new List<MixSpawnItem>();
+        for (int i = 0; i < PsaArtLibrary.CabinetSlotCount; i++)
+        {
+            int slot = PsaArtLibrary.CabinetSlotNumbers[i];
+            int variantCount = PsaArtLibrary.CountVariantsInSlot(slot, PsaCardSet.Japanese);
+            for (int variant = 1; variant <= variantCount; variant++)
+                psaItems.Add(MixSpawnItem.Psa(slot, variant));
+        }
+
+        Random.State previousState = Random.state;
+        Random.InitState(MixShuffleSeed + 31);
+        Shuffle(floorCards);
+        Shuffle(psaItems);
+
+        int packCardCount = PhysicsLevelLayout.JapanPackCount * CardDimensions.CardsPerBoosterPack;
+        var packCards = new List<CardDefinition>(packCardCount);
+        if (floorCards.Count > 0)
+        {
+            for (int i = 0; i < packCardCount; i++)
+                packCards.Add(floorCards[Random.Range(0, floorCards.Count)]);
+            Shuffle(packCards);
+        }
+
+        Random.state = previousState;
+        return new JapanMixPlan(floorCards, psaItems, packCards);
+    }
+
+    struct JapanMixPlan
+    {
+        public readonly List<CardDefinition> FloorCards;
+        public readonly List<MixSpawnItem> PsaItems;
+        public readonly List<CardDefinition> PackCards;
+
+        public JapanMixPlan(
+            List<CardDefinition> floorCards,
+            List<MixSpawnItem> psaItems,
+            List<CardDefinition> packCards)
+        {
+            FloorCards = floorCards ?? new List<CardDefinition>();
+            PsaItems = psaItems ?? new List<MixSpawnItem>();
+            PackCards = packCards ?? new List<CardDefinition>();
+        }
+    }
+
     MixAllPlan GetCachedMixAllPlan()
     {
         if (_hasMixAllPlan && _cachedMixAllPlan.FloorCards != null)
@@ -633,6 +916,16 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         _cachedMixAllPlan = BuildMixAllPlan();
         _hasMixAllPlan = true;
         return _cachedMixAllPlan;
+    }
+
+    JapanMixPlan GetCachedJapanMixPlan()
+    {
+        if (_hasJapanPlan && _cachedJapanPlan.FloorCards != null)
+            return _cachedJapanPlan;
+
+        _cachedJapanPlan = BuildJapanMixPlan();
+        _hasJapanPlan = true;
+        return _cachedJapanPlan;
     }
 
     static MixAllPlan BuildMixAllPlan()
@@ -646,6 +939,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             if (definition == null || string.IsNullOrWhiteSpace(definition.DefinitionId))
                 continue;
             if (definition.FrontTexture == null)
+                continue;
+            if (definition.IsJapanese)
                 continue;
             floorCards.Add(definition);
         }
@@ -703,7 +998,9 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         for (int i = 0; i < layout.MainLevelRoot.childCount; i++)
         {
             Transform child = layout.MainLevelRoot.GetChild(i);
-            if (child == null || child.name == PhysicsLevelLayout.MixAllName)
+            if (child == null
+                || child.name == PhysicsLevelLayout.MixAllName
+                || child.name == PhysicsLevelLayout.MixJapanName)
                 continue;
             if (child.name.StartsWith(PhysicsLevelLayout.MixBatchPrefix)
                 || child.name.StartsWith(PhysicsLevelLayout.BatchPrefix))

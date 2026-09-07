@@ -170,7 +170,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public string GetInstancedBatchKey()
     {
         if (CanUseInstancedBackRendering)
-            return CardInstancedRenderManager.BackBatchKey;
+        {
+            return definition != null && definition.IsJapanese
+                ? CardInstancedRenderManager.JapaneseBackBatchKey
+                : CardInstancedRenderManager.BackBatchKey;
+        }
 
         if (UsesDefinitionFrontArt && definition != null)
             return definition.DefinitionId;

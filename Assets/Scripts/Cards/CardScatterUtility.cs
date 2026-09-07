@@ -141,7 +141,8 @@ public static class CardScatterUtility
                 definition,
                 packName: PackArtLibrary.GetVariantDisplayName(variantIndex),
                 packVariantIndex: variantIndex,
-                preRolledContents: packContents);
+                preRolledContents: packContents,
+                packSet: PackCardSet.English);
             pack.SetGroundShowsBack(packBackFacingIndices.Contains(i));
             pack.transform.SetParent(scatterRoot, true);
             CardGroundStack.ApplyStackHeight(pack, placeOnTop: false);
@@ -449,7 +450,8 @@ public static class CardScatterUtility
                 definition,
                 packName: PackArtLibrary.GetVariantDisplayName(variantIndex),
                 packVariantIndex: variantIndex,
-                preRolledContents: packContents);
+                preRolledContents: packContents,
+                packSet: PackCardSet.English);
             pack.SetGroundShowsBack(packBackFacingIndices.Contains(i));
             pack.transform.SetParent(scatterRoot, true);
             CardGroundStack.ApplyStackHeight(pack, placeOnTop: false);

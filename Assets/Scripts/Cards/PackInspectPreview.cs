@@ -14,6 +14,7 @@ public class PackInspectPreview : MonoBehaviour
     RectTransform _previewRoot;
     RawImage _packImage;
     int _shownVariantIndex;
+    PackCardSet _shownPackSet;
 
     public static PackInspectPreview EnsureOn(Camera camera)
     {
@@ -52,6 +53,7 @@ public class PackInspectPreview : MonoBehaviour
     public void Hide()
     {
         _shownVariantIndex = 0;
+        _shownPackSet = PackCardSet.English;
         if (_previewRoot != null)
             _previewRoot.gameObject.SetActive(false);
     }
@@ -108,19 +110,21 @@ public class PackInspectPreview : MonoBehaviour
             return;
 
         int variantIndex = pack.PackVariantIndex;
-        Texture texture = PackArtLibrary.GetVariantPreview(variantIndex);
+        PackCardSet packSet = pack.PackSet;
+        Texture texture = PackArtLibrary.GetVariantPreview(variantIndex, packSet);
         if (texture == null)
         {
             Hide();
             return;
         }
 
-        if (variantIndex == _shownVariantIndex && _packImage.texture == texture)
+        if (variantIndex == _shownVariantIndex && packSet == _shownPackSet && _packImage.texture == texture)
             return;
 
         _packImage.texture = texture;
         _packImage.uvRect = new Rect(0f, 0f, 1f, 1f);
         _shownVariantIndex = variantIndex;
+        _shownPackSet = packSet;
     }
 
     void LateUpdate()

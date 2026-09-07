@@ -5,11 +5,13 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// GPU-instanced draws for static world cards that share mesh/material batches.
-/// Definition-art cards batch by <see cref="CardDefinition.DefinitionId"/>; face-down cards share one back batch.
+/// Definition-art cards batch by <see cref="CardDefinition.DefinitionId"/>;
+/// English and Japanese face-down cards use separate back batches.
 /// </summary>
 public class CardInstancedRenderManager : MonoBehaviour
 {
     public const string BackBatchKey = "__back__";
+    public const string JapaneseBackBatchKey = "__back_japan__";
     public const string PaletteBatchPrefix = "palette:";
 
     const int MaxInstancesPerBatch = 1023;
@@ -372,7 +374,7 @@ public class CardInstancedRenderManager : MonoBehaviour
             if (!_cardsByBatchKey.TryGetValue(batchKey, out HashSet<WorldCard> cards))
                 continue;
 
-            bool backFace = batchKey == BackBatchKey;
+            bool backFace = batchKey == BackBatchKey || batchKey == JapaneseBackBatchKey;
             Material material = ResolveBatchMaterial(batchKey);
             Mesh mesh = backFace ? backMesh : frontMesh;
             if (material == null || mesh == null)
@@ -415,6 +417,9 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     static Material ResolveBatchMaterial(string batchKey)
     {
+        if (batchKey == JapaneseBackBatchKey)
+            return CardArtLibrary.GetInstancedGroundBackMaterial(japanese: true);
+
         if (batchKey == BackBatchKey)
             return CardArtLibrary.GetInstancedGroundBackMaterial();
 

@@ -4,7 +4,8 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// Loads booster pack PBR textures from Resources and applies them to imported pack meshes.
-/// Each variant lives under Resources/Cards/BoosterPack/Pack01 … Pack05.
+/// English variants live under Resources/Cards/BoosterPack/Pack01 … Pack05.
+/// Japanese variants live under Resources/Cards/BoosterPack/Japanese/Pack01 … Pack05.
 /// </summary>
 public static class PackArtLibrary
 {
@@ -44,44 +45,49 @@ public static class PackArtLibrary
         "Solar Abyss Pack",
     };
 
-    public static string GetVariantDisplayName(int packVariantIndex)
+    public static string GetVariantDisplayName(int packVariantIndex, PackCardSet packSet = PackCardSet.English)
     {
         int index = Mathf.Clamp(packVariantIndex, 1, PackVariantCount) - 1;
-        return VariantDisplayNames[index];
+        string name = VariantDisplayNames[index];
+        return packSet == PackCardSet.Japanese ? name + " Japan" : name;
     }
 
     /// <summary>
     /// UI inspect preview art — one upright PNG per variant, separate from the 3D foil atlas.
     /// Drop files at Resources/Cards/BoosterPack/Pack0N/Pack0N_Preview.png
     /// </summary>
-    public static Texture2D GetVariantPreview(int packVariantIndex)
+    public static Texture2D GetVariantPreview(int packVariantIndex, PackCardSet packSet = PackCardSet.English)
     {
         packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackVariantCount);
-        Texture2D preview = LoadVariantTexture(packVariantIndex, "Preview");
+        Texture2D preview = LoadVariantTexture(packVariantIndex, "Preview", packSet);
         if (preview == null && packVariantIndex != 1)
-            preview = LoadVariantTexture(1, "Preview");
+            preview = LoadVariantTexture(1, "Preview", packSet);
         return preview;
     }
 
-    public static Texture2D GetVariantBaseColor(int packVariantIndex)
+    public static Texture2D GetVariantBaseColor(int packVariantIndex, PackCardSet packSet = PackCardSet.English)
     {
         packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackVariantCount);
-        Texture2D baseColor = LoadVariantTexture(packVariantIndex, "BaseColor");
+        Texture2D baseColor = LoadVariantTexture(packVariantIndex, "BaseColor", packSet);
         if (baseColor == null && packVariantIndex != 1)
-            baseColor = LoadVariantTexture(1, "BaseColor");
-        if (baseColor == null)
+            baseColor = LoadVariantTexture(1, "BaseColor", packSet);
+        if (baseColor == null && packSet == PackCardSet.English)
             baseColor = Resources.Load<Texture2D>(LegacyBaseColorResourcePath);
         return baseColor;
     }
 
-    public static void ApplyPackMaterials(Renderer renderer, int packVariantIndex = 1, bool forHand = false)
+    public static void ApplyPackMaterials(
+        Renderer renderer,
+        int packVariantIndex = 1,
+        bool forHand = false,
+        PackCardSet packSet = PackCardSet.English)
     {
         if (renderer == null)
             return;
 
         Material template = forHand
-            ? GetHandMaterialTemplate(packVariantIndex)
-            : GetWorldMaterialTemplate(packVariantIndex);
+            ? GetHandMaterialTemplate(packVariantIndex, packSet)
+            : GetWorldMaterialTemplate(packVariantIndex, packSet);
         if (template == null)
             return;
 
@@ -100,12 +106,15 @@ public static class PackArtLibrary
     /// Play-mode hand tuning: unique material instances so Inspector edits show live in Game view.
     /// Discarded when Play stops or the pack returns to the world.
     /// </summary>
-    public static Material[] CreatePackHandMaterialInstances(Renderer renderer, int packVariantIndex = 1)
+    public static Material[] CreatePackHandMaterialInstances(
+        Renderer renderer,
+        int packVariantIndex = 1,
+        PackCardSet packSet = PackCardSet.English)
     {
         if (renderer == null)
             return null;
 
-        Material template = GetHandMaterialTemplate(packVariantIndex);
+        Material template = GetHandMaterialTemplate(packVariantIndex, packSet);
         if (template == null)
             return null;
 
@@ -141,45 +150,56 @@ public static class PackArtLibrary
         }
     }
 
-    public static void ApplyPackMaterials(Transform visualRoot, int packVariantIndex = 1, bool forHand = false)
+    public static void ApplyPackMaterials(
+        Transform visualRoot,
+        int packVariantIndex = 1,
+        bool forHand = false,
+        PackCardSet packSet = PackCardSet.English)
     {
         if (visualRoot == null)
             return;
 
         Renderer[] renderers = visualRoot.GetComponentsInChildren<Renderer>(true);
         for (int i = 0; i < renderers.Length; i++)
-            ApplyPackMaterials(renderers[i], packVariantIndex, forHand);
+            ApplyPackMaterials(renderers[i], packVariantIndex, forHand, packSet);
     }
 
-    static Material GetWorldMaterialTemplate(int packVariantIndex)
+    static int MaterialCacheKey(int packVariantIndex, PackCardSet packSet)
+    {
+        return ((int)packSet * 100) + packVariantIndex;
+    }
+
+    static Material GetWorldMaterialTemplate(int packVariantIndex, PackCardSet packSet)
     {
         packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackVariantCount);
-        if (WorldMaterialTemplates.TryGetValue(packVariantIndex, out Material cached) && cached != null)
+        int cacheKey = MaterialCacheKey(packVariantIndex, packSet);
+        if (WorldMaterialTemplates.TryGetValue(cacheKey, out Material cached) && cached != null)
             return cached;
 
-        Material created = BuildWorldMaterial(packVariantIndex);
+        Material created = BuildWorldMaterial(packVariantIndex, packSet);
         if (created != null)
-            WorldMaterialTemplates[packVariantIndex] = created;
+            WorldMaterialTemplates[cacheKey] = created;
 
         return created;
     }
 
-    static Material GetHandMaterialTemplate(int packVariantIndex)
+    static Material GetHandMaterialTemplate(int packVariantIndex, PackCardSet packSet)
     {
         packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackVariantCount);
-        if (HandMaterialTemplates.TryGetValue(packVariantIndex, out Material cached) && cached != null)
+        int cacheKey = MaterialCacheKey(packVariantIndex, packSet);
+        if (HandMaterialTemplates.TryGetValue(cacheKey, out Material cached) && cached != null)
             return cached;
 
-        Material created = BuildPackMaterial(packVariantIndex, forHand: true);
+        Material created = BuildPackMaterial(packVariantIndex, forHand: true, packSet);
         if (created != null)
-            HandMaterialTemplates[packVariantIndex] = created;
+            HandMaterialTemplates[cacheKey] = created;
 
         return created;
     }
 
-    static Material BuildPackMaterial(int packVariantIndex, bool forHand)
+    static Material BuildPackMaterial(int packVariantIndex, bool forHand, PackCardSet packSet)
     {
-        Material source = BuildPackMaterialCore(packVariantIndex);
+        Material source = BuildPackMaterialCore(packVariantIndex, packSet);
         if (source == null)
             return null;
 
@@ -189,14 +209,14 @@ public static class PackArtLibrary
         return material;
     }
 
-    static Material BuildWorldMaterial(int packVariantIndex)
+    static Material BuildWorldMaterial(int packVariantIndex, PackCardSet packSet)
     {
-        return BuildPackMaterial(packVariantIndex, forHand: false);
+        return BuildPackMaterial(packVariantIndex, forHand: false, packSet);
     }
 
-    static Material BuildPackMaterialCore(int packVariantIndex)
+    static Material BuildPackMaterialCore(int packVariantIndex, PackCardSet packSet)
     {
-        string folder = GetVariantFolderResourcePath(packVariantIndex);
+        string folder = GetVariantFolderResourcePath(packVariantIndex, packSet);
         string prefix = GetVariantFilePrefix(packVariantIndex);
 
         Material loaded = Resources.Load<Material>(folder + "/" + prefix + "World");
@@ -207,45 +227,56 @@ public static class PackArtLibrary
             return instance;
         }
 
-        Texture2D baseColor = LoadVariantTexture(packVariantIndex, "BaseColor");
-        Texture2D normalMap = LoadVariantTexture(packVariantIndex, "Normal");
-        Texture2D metallicMap = LoadVariantTexture(packVariantIndex, "Metallic");
-        Texture2D roughnessMap = LoadVariantTexture(packVariantIndex, "Roughness");
+        Texture2D baseColor = LoadVariantTexture(packVariantIndex, "BaseColor", packSet);
+        Texture2D normalMap = LoadVariantTexture(packVariantIndex, "Normal", packSet);
+        Texture2D metallicMap = LoadVariantTexture(packVariantIndex, "Metallic", packSet);
+        Texture2D roughnessMap = LoadVariantTexture(packVariantIndex, "Roughness", packSet);
 
         if (baseColor == null && packVariantIndex != 1)
         {
-            baseColor = LoadVariantTexture(1, "BaseColor");
+            baseColor = LoadVariantTexture(1, "BaseColor", packSet);
             if (normalMap == null)
-                normalMap = LoadVariantTexture(1, "Normal");
+                normalMap = LoadVariantTexture(1, "Normal", packSet);
             if (metallicMap == null)
-                metallicMap = LoadVariantTexture(1, "Metallic");
+                metallicMap = LoadVariantTexture(1, "Metallic", packSet);
             if (roughnessMap == null)
-                roughnessMap = LoadVariantTexture(1, "Roughness");
+                roughnessMap = LoadVariantTexture(1, "Roughness", packSet);
         }
 
-        if (baseColor == null)
+        if (baseColor == null && packSet == PackCardSet.English)
             baseColor = Resources.Load<Texture2D>(LegacyBaseColorResourcePath);
 
         if (baseColor == null)
         {
-            Material legacyMaterial = Resources.Load<Material>(LegacyWorldMaterialResourcePath);
-            if (legacyMaterial != null)
+            if (packSet == PackCardSet.English)
             {
-                Material instance = Object.Instantiate(legacyMaterial);
-                instance.name = legacyMaterial.name;
-                return instance;
+                Material legacyMaterial = Resources.Load<Material>(LegacyWorldMaterialResourcePath);
+                if (legacyMaterial != null)
+                {
+                    Material instance = Object.Instantiate(legacyMaterial);
+                    instance.name = legacyMaterial.name;
+                    return instance;
+                }
             }
 
-            Debug.LogWarning("PackArtLibrary: No pack textures found for variant " + packVariantIndex + ".");
+            Debug.LogWarning(
+                "PackArtLibrary: No pack textures found for variant "
+                + packVariantIndex
+                + " ("
+                + packSet
+                + ").");
             return null;
         }
 
-        if (normalMap == null)
-            normalMap = Resources.Load<Texture2D>(LegacyNormalResourcePath);
-        if (metallicMap == null)
-            metallicMap = Resources.Load<Texture2D>(LegacyMetallicResourcePath);
-        if (roughnessMap == null)
-            roughnessMap = Resources.Load<Texture2D>(LegacyRoughnessResourcePath);
+        if (packSet == PackCardSet.English)
+        {
+            if (normalMap == null)
+                normalMap = Resources.Load<Texture2D>(LegacyNormalResourcePath);
+            if (metallicMap == null)
+                metallicMap = Resources.Load<Texture2D>(LegacyMetallicResourcePath);
+            if (roughnessMap == null)
+                roughnessMap = Resources.Load<Texture2D>(LegacyRoughnessResourcePath);
+        }
 
         Shader shader = Shader.Find("Universal Render Pipeline/Lit");
         if (shader == null)
@@ -387,16 +418,19 @@ public static class PackArtLibrary
         destination.SetTexture(propertyName, texture);
     }
 
-    static Texture2D LoadVariantTexture(int packVariantIndex, string mapSuffix)
+    static Texture2D LoadVariantTexture(int packVariantIndex, string mapSuffix, PackCardSet packSet)
     {
-        string folder = GetVariantFolderResourcePath(packVariantIndex);
+        string folder = GetVariantFolderResourcePath(packVariantIndex, packSet);
         string prefix = GetVariantFilePrefix(packVariantIndex);
         return Resources.Load<Texture2D>(folder + "/" + prefix + "_" + mapSuffix);
     }
 
-    static string GetVariantFolderResourcePath(int packVariantIndex)
+    static string GetVariantFolderResourcePath(int packVariantIndex, PackCardSet packSet)
     {
-        return "Cards/BoosterPack/Pack" + packVariantIndex.ToString("00");
+        string folder = "Cards/BoosterPack/Pack" + packVariantIndex.ToString("00");
+        if (packSet == PackCardSet.Japanese)
+            return "Cards/BoosterPack/Japanese/Pack" + packVariantIndex.ToString("00");
+        return folder;
     }
 
     static string GetVariantFilePrefix(int packVariantIndex)

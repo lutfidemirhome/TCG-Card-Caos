@@ -115,6 +115,11 @@ public static class CardShelfCategories
     public const string IcePrismEliteJapan = "ice_prism_elite_japan";
     public const string PsychicEliteJapan = "psychic_elite_japan";
 
+    public static bool IsJapanese(string categoryId)
+    {
+        return !string.IsNullOrWhiteSpace(categoryId) && categoryId.EndsWith("_japan");
+    }
+
     public const int MinSlotNumber = 1;
     public const int MaxSlotNumber = 10;
     public const int DefaultSlotsPerRow = 10;
