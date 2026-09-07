@@ -15,6 +15,10 @@ unity-create.log
 __pycache__/
 *.pyc
 
+# SteamPipe local upload folder and logs — never commit.
+Tools/SteamPipe/content
+Tools/SteamPipe/output/
+
 # Unity standalone player builds — never commit (GitHub 100 MB file limit).
 TCG Card Chaos/
 MonoBleedingEdge/

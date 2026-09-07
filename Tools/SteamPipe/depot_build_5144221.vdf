@@ -1,0 +1,17 @@
+"DepotBuild"
+{
+	"DepotID" "5144221"
+
+	"FileMapping"
+	{
+		"LocalPath" "*"
+		"DepotPath" "."
+		"Recursive" "1"
+	}
+
+	"FileExclusion" "steam_appid.txt"
+	"FileExclusion" "*.DS_Store"
+	"FileExclusion" "*DoNotShip*"
+	"FileExclusion" "*DoNotShip*/"
+	"FileExclusion" "*BackUpThisFolder*"
+}

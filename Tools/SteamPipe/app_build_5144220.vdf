@@ -1,0 +1,14 @@
+"AppBuild"
+{
+	"AppID" "5144220"
+	"Desc" "Demo shop decoration update (ceiling, walls, fences, lamps)"
+	"Preview" "0"
+	"ContentRoot" "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/Tools/SteamPipe/content"
+	"BuildOutput" "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/Tools/SteamPipe/output"
+	"verbose" "1"
+
+	"Depots"
+	{
+		"5144221" "depot_build_5144221.vdf"
+	}
+}
