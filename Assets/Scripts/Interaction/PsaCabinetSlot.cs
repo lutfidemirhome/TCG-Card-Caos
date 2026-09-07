@@ -763,17 +763,8 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         && card.UsesPsaSlab
         && PsaArtLibrary.IsCabinetSlotNumber(card.PsaSlotNumber);
 
-    public bool IsCorrectPlacement(WorldCard card)
-    {
-        if (!AcceptsPsaCard(card) || card.PsaSlotNumber != SlotNumber)
-            return false;
-
-        PsaCabinet cabinet = GetComponentInParent<PsaCabinet>();
-        if (cabinet != null && cabinet.TryGetClaimedSet(this, out PsaCardSet claimed))
-            return card.PsaSet == claimed;
-
-        return true;
-    }
+    public bool IsCorrectPlacement(WorldCard card) =>
+        AcceptsPsaCard(card) && card.PsaSlotNumber == SlotNumber;
 
     public bool CanPlaceHeldCard(WorldCard card) =>
         AcceptsPsaCard(card) && IsEmpty;
