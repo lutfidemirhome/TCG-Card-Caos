@@ -9,6 +9,9 @@ public class PhysicsCardSpawnVolume : MonoBehaviour
 {
     const float MinSize = 0.15f;
 
+    [SerializeField] Color gizmoFill = new Color(0.15f, 0.65f, 1f, 0.12f);
+    [SerializeField] Color gizmoWire = new Color(0.15f, 0.75f, 1f, 0.9f);
+
     BoxCollider _box;
 
     public BoxCollider Box
@@ -66,6 +69,12 @@ public class PhysicsCardSpawnVolume : MonoBehaviour
         return transform.TransformPoint(local);
     }
 
+    public void SetGizmoColor(Color fill, Color wire)
+    {
+        gizmoFill = fill;
+        gizmoWire = wire;
+    }
+
 #if UNITY_EDITOR
     void OnDrawGizmos()
     {
@@ -75,9 +84,9 @@ public class PhysicsCardSpawnVolume : MonoBehaviour
 
         Matrix4x4 previous = Gizmos.matrix;
         Gizmos.matrix = transform.localToWorldMatrix;
-        Gizmos.color = new Color(0.15f, 0.65f, 1f, 0.12f);
+        Gizmos.color = gizmoFill;
         Gizmos.DrawCube(box.center, box.size);
-        Gizmos.color = new Color(0.15f, 0.75f, 1f, 0.9f);
+        Gizmos.color = gizmoWire;
         Gizmos.DrawWireCube(box.center, box.size);
         Gizmos.matrix = previous;
     }

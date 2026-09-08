@@ -12,6 +12,7 @@ public class PhysicsLevelLayout : MonoBehaviour
     public const string DemoVolumeName = "Demo_SpawnVolume";
     public const string MainLevelName = "Main_Level";
     public const string MainVolumeName = "Main_SpawnVolume";
+    public const string JapanVolumeName = "Japan_SpawnVolume";
     public const string BatchPrefix = "Batch_";
     public const string MixBatchPrefix = "Mix_";
     public const string MixAllName = "Mix_All";
@@ -38,6 +39,7 @@ public class PhysicsLevelLayout : MonoBehaviour
 
     [SerializeField] PhysicsCardSpawnVolume demoVolume;
     [SerializeField] PhysicsCardSpawnVolume mainVolume;
+    [SerializeField] PhysicsCardSpawnVolume japanVolume;
     [SerializeField] Transform demoCardsRoot;
     [SerializeField] Transform mainLevelRoot;
 
@@ -63,6 +65,13 @@ public class PhysicsLevelLayout : MonoBehaviour
         get => mainVolume;
         set => mainVolume = value;
     }
+
+    public PhysicsCardSpawnVolume JapanVolume
+    {
+        get => japanVolume;
+        set => japanVolume = value;
+    }
+
     public Transform DemoCardsRoot => demoCardsRoot;
     public Transform MainLevelRoot => mainLevelRoot;
 

@@ -336,13 +336,20 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUILayout.LabelField("Japanese Mix", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical("box");
         EditorGUILayout.HelpBox(
-            "Mevcut Mix All kartlarına dokunmaz. Japonca normal kartlar + Japonca PSA + "
+            "Önce turuncu Japan_SpawnVolume karesini istediğin yere taşı. "
+            + "Sonra Drop: 260 kart + 40 PSA + "
             + PhysicsLevelLayout.JapanPackCount
-            + " Japonca pack spawn olur, sonra Grabbit Fall açılır. "
-            + "Scene view'de Left Shift basılı tut — mevcut kartların üzerine düşer. "
-            + "Mix All'dan SONRA bas; Mix All tekrar her şeyi siler. "
-            + "Oturunca Bake Mix All veya Bake Selected → sahneyi kaydet.",
+            + " pack oraya spawn olur, Grabbit Fall açılır. "
+            + "Havadaki yanlış spawn için Delete Japanese Mix. "
+            + "Mix All tuşuna basma — İngilizce yığını siler.",
             MessageType.Info);
+        layout.JapanVolume = ObjectFieldVolume("Japan Spawn Volume (turuncu kare)", layout.JapanVolume);
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Japonca alanı oluştur / seç"))
+            SelectJapanVolume(layout);
+        if (GUILayout.Button("Make Japan Volume Square"))
+            MakeJapanVolumeSquare(layout);
+        EditorGUILayout.EndHorizontal();
         EditorGUILayout.LabelField("Japanese cards", plan.FloorCards.Count.ToString());
         EditorGUILayout.LabelField("Japanese PSA", plan.PsaItems.Count.ToString());
         EditorGUILayout.LabelField("Japanese packs", PhysicsLevelLayout.JapanPackCount.ToString());
@@ -356,7 +363,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         if (GUILayout.Button("Select Japanese Mix"))
             SelectChildren(folder);
         if (GUILayout.Button("Grabbit Fall Japanese"))
-            ScheduleDrop(layout, layout.MainVolume, folder);
+            ScheduleDrop(layout, ResolveJapanVolumeOrMain(layout), folder);
         EditorGUILayout.EndHorizontal();
         if (GUILayout.Button("Delete Japanese Mix"))
         {
@@ -369,6 +376,23 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.EndVertical();
+    }
+
+    [MenuItem("TCG Card Chaos/Select Japan Spawn Volume")]
+    public static void MenuSelectJapanSpawnVolume()
+    {
+        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
+        if (layout == null)
+        {
+            EditorUtility.DisplayDialog("Japan Spawn Volume", "Physics_Card_Level missing. MainScene açık mı?", "OK");
+            return;
+        }
+
+        PhysicsCardLevelBuilderWindow window = GetWindow<PhysicsCardLevelBuilderWindow>(
+            false,
+            "Card Physics Level Builder",
+            true);
+        window.SelectJapanVolume(layout);
     }
 
     [MenuItem("TCG Card Chaos/Drop Japanese Mix")]
@@ -728,13 +752,126 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         MarkDirty(layout);
     }
 
-    void CreateJapanDropAndFall(PhysicsLevelLayout layout)
+    PhysicsCardSpawnVolume ResolveJapanVolumeOrMain(PhysicsLevelLayout layout)
     {
-        if (layout == null || layout.MainVolume == null || layout.MainLevelRoot == null)
+        if (layout != null && layout.JapanVolume != null)
+            return layout.JapanVolume;
+        return layout != null ? layout.MainVolume : null;
+    }
+
+    public void SelectJapanVolume(PhysicsLevelLayout layout)
+    {
+        PhysicsCardSpawnVolume volume = EnsureJapanVolume(layout);
+        if (volume == null)
         {
-            EditorUtility.DisplayDialog("Japanese Mix", "Main spawn volume / Main_Level folder missing.", "OK");
+            EditorUtility.DisplayDialog("Japanese Mix", "Main_Level missing.", "OK");
             return;
         }
+
+        Selection.activeGameObject = volume.gameObject;
+        if (SceneView.lastActiveSceneView != null)
+        {
+            SceneView.lastActiveSceneView.FrameSelected();
+            SceneView.lastActiveSceneView.Focus();
+        }
+
+        EditorUtility.DisplayDialog(
+            "Japonca alanı",
+            "Turuncu kareyi Scene view'de istediğin yere taşı (Move tool). "
+            + "Kartlar bu karenin içine spawn olup aşağı düşecek. "
+            + "Havadaki eski Japonca kartlar varsa önce Delete Japanese Mix.",
+            "Tamam");
+    }
+
+    PhysicsCardSpawnVolume EnsureJapanVolume(PhysicsLevelLayout layout)
+    {
+        if (layout == null || layout.MainLevelRoot == null)
+            return null;
+
+        if (layout.JapanVolume != null)
+        {
+            ApplyJapanVolumeGizmo(layout.JapanVolume);
+            return layout.JapanVolume;
+        }
+
+        Transform existing = layout.MainLevelRoot.Find(PhysicsLevelLayout.JapanVolumeName);
+        if (existing == null)
+        {
+            existing = CreateChild(layout.MainLevelRoot, PhysicsLevelLayout.JapanVolumeName);
+            PhysicsCardSpawnVolume created = Undo.AddComponent<PhysicsCardSpawnVolume>(existing.gameObject);
+            created.EnsureSetup(forceDefault: true);
+            existing.localRotation = Quaternion.identity;
+            existing.localScale = new Vector3(5f, MixAllVolumeHeight, 5f);
+            if (layout.MainVolume != null)
+                existing.position = layout.MainVolume.transform.position + new Vector3(8f, 0f, 0f);
+            else
+                existing.localPosition = new Vector3(8f, 1.3f, 0f);
+            ApplyJapanVolumeGizmo(created);
+            layout.JapanVolume = created;
+            MarkDirty(layout);
+            return created;
+        }
+
+        PhysicsCardSpawnVolume volume = existing.GetComponent<PhysicsCardSpawnVolume>();
+        if (volume == null)
+            volume = Undo.AddComponent<PhysicsCardSpawnVolume>(existing.gameObject);
+        volume.EnsureSetup();
+        ApplyJapanVolumeGizmo(volume);
+        layout.JapanVolume = volume;
+        MarkDirty(layout);
+        return volume;
+    }
+
+    static void ApplyJapanVolumeGizmo(PhysicsCardSpawnVolume volume)
+    {
+        if (volume == null)
+            return;
+
+        volume.SetGizmoColor(
+            new Color(1f, 0.45f, 0.08f, 0.16f),
+            new Color(1f, 0.55f, 0.1f, 0.95f));
+        EditorUtility.SetDirty(volume);
+    }
+
+    static void MakeJapanVolumeSquare(PhysicsLevelLayout layout)
+    {
+        PhysicsCardSpawnVolume volume = layout != null ? layout.JapanVolume : null;
+        if (volume == null)
+            return;
+
+        Transform t = volume.transform;
+        Undo.RecordObject(t, "Square Japan Volume");
+        t.localRotation = Quaternion.identity;
+        Vector3 scale = t.localScale;
+        float side = Mathf.Max(2f, (Mathf.Abs(scale.x) + Mathf.Abs(scale.z)) * 0.5f);
+        t.localScale = new Vector3(side, MixAllVolumeHeight, side);
+        ApplyJapanVolumeGizmo(volume);
+        EditorUtility.SetDirty(volume);
+        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+    }
+
+    void CreateJapanDropAndFall(PhysicsLevelLayout layout)
+    {
+        if (layout == null || layout.MainLevelRoot == null)
+        {
+            EditorUtility.DisplayDialog("Japanese Mix", "Main_Level folder missing.", "OK");
+            return;
+        }
+
+        PhysicsCardSpawnVolume japanVolume = EnsureJapanVolume(layout);
+        if (japanVolume == null)
+        {
+            EditorUtility.DisplayDialog("Japanese Mix", "Japan spawn volume missing.", "OK");
+            return;
+        }
+
+        if (!EditorUtility.DisplayDialog(
+                "Japanese Mix",
+                "Kartlar turuncu Japan_SpawnVolume karesinin içine düşecek.\n\n"
+                + "Kareyi istediğin yere taşıdın mı? Taşımadıysan İptal deyip önce kareyi koy.",
+                "Evet, düşür",
+                "İptal"))
+            return;
 
         Transform existing = FindMixJapan(layout);
         if (existing != null && existing.childCount > 0)
@@ -778,7 +915,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 
                 bool faceDown = cardFaceDown.Contains(i);
                 WorldCard card = CardFactory.CreateWorldCard(
-                    NextSpawnPose(layout, layout.MainVolume, occupied, out Quaternion rotation, pack: false, faceDown),
+                    NextSpawnPose(layout, japanVolume, occupied, out Quaternion rotation, pack: false, faceDown),
                     rotation,
                     definition,
                     paletteIndex: 0,
@@ -795,7 +932,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                 MixSpawnItem item = plan.PsaItems[i];
                 bool faceDown = psaFaceDown.Contains(i);
                 WorldCard card = CardFactory.CreateWorldPsaCard(
-                    NextSpawnPose(layout, layout.MainVolume, occupied, out Quaternion rotation, pack: false, faceDown),
+                    NextSpawnPose(layout, japanVolume, occupied, out Quaternion rotation, pack: false, faceDown),
                     rotation,
                     item.PsaSlot,
                     item.PsaVariant,
@@ -819,7 +956,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
                 int variantIndex = i % PackArtLibrary.PackVariantCount + 1;
                 bool faceDown = packFaceDown.Contains(i);
                 WorldBoosterPack pack = PackFactory.CreateWorldPack(
-                    NextSpawnPose(layout, layout.MainVolume, occupied, out Quaternion rotation, pack: true, faceDown),
+                    NextSpawnPose(layout, japanVolume, occupied, out Quaternion rotation, pack: true, faceDown),
                     rotation,
                     packDefinition,
                     packName: "BoosterPack_Japan_" + (i + 1),
@@ -839,7 +976,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 
         MarkDirty(layout);
         SelectChildren(folder);
-        ScheduleDrop(layout, layout.MainVolume, folder);
+        ScheduleDrop(layout, japanVolume, folder);
         Debug.Log(
             "TCG Card Chaos: Japanese Mix spawned "
             + plan.FloorCards.Count + " cards, "
