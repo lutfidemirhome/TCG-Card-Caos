@@ -12,6 +12,9 @@ public static class PlayerHandSkill
 
     public static bool TryActivate()
     {
+        if (!SkillBarView.SkillsEnabled)
+            return false;
+
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand == null || hand.IsHandInputLocked || hand.AvailableSlots <= 0)
             return false;

@@ -4,9 +4,12 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Bottom-left skill slots. 1 toggles Double Jump. 2 instantly pulls the selected series into hand.
+/// Flip <see cref="SkillsEnabled"/> when the skill pass starts.
 /// </summary>
 public class SkillBarView : MonoBehaviour
 {
+    public static bool SkillsEnabled = false;
+
     const float ButtonSize = 108f;
     const float Margin = 28f;
     const float ButtonGap = 12f;
@@ -19,6 +22,14 @@ public class SkillBarView : MonoBehaviour
     void Awake()
     {
         PlayerJumpSkill.DoubleJumpArmed = false;
+        if (!SkillsEnabled)
+        {
+            HideSlot("Button_DoubleJump");
+            HideSlot("Button_Hand");
+            enabled = false;
+            return;
+        }
+
         doubleJumpBackground = EnsureSlot(
             "Button_DoubleJump",
             "Double Jump",
@@ -32,9 +43,16 @@ public class SkillBarView : MonoBehaviour
         RefreshJumpVisual();
     }
 
+    void HideSlot(string objectName)
+    {
+        Transform existing = transform.Find(objectName);
+        if (existing != null)
+            existing.gameObject.SetActive(false);
+    }
+
     void Update()
     {
-        if (GamePause.IsPaused)
+        if (!SkillsEnabled || GamePause.IsPaused)
             return;
 
         if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
