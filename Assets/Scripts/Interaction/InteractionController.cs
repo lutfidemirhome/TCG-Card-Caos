@@ -187,7 +187,7 @@ public class InteractionController : MonoBehaviour
                 previousPsaSlot.ClearAim();
 
             ClearDelayedInspectUiState();
-            shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf));
+            shelf.SetAimHit(FindShelfHit(HitBuffer, hitCount, shelf), ray);
         }
         else
         {
@@ -449,11 +449,7 @@ public class InteractionController : MonoBehaviour
             {
                 if (!InteractionOcclusion.IsOccluded(ray, bestShelfDistance, interactDistance))
                 {
-                    Vector3 aim = hitCount > 0
-                        ? FindShelfHit(hits, hitCount, bestShelf).point
-                        : bestShelf.transform.position;
-
-                    if (!bestShelf.IsAimOnOccupiedSlot(aim))
+                    if (!bestShelf.IsAimOnOccupiedSlot(ray))
                         return bestShelf;
                 }
             }
@@ -512,13 +508,22 @@ public class InteractionController : MonoBehaviour
 
     static RaycastHit FindShelfHit(RaycastHit[] hits, int hitCount, CardShelf shelf)
     {
+        RaycastHit best = default;
+        float bestDistance = float.MaxValue;
+
         for (int i = 0; i < hitCount; i++)
         {
-            if (hits[i].collider != null && hits[i].collider.GetComponentInParent<CardShelf>() == shelf)
-                return hits[i];
+            if (hits[i].collider == null || hits[i].collider.GetComponentInParent<CardShelf>() != shelf)
+                continue;
+
+            if (hits[i].distance < bestDistance)
+            {
+                bestDistance = hits[i].distance;
+                best = hits[i];
+            }
         }
 
-        return default;
+        return best;
     }
 
     void HandleInput()
