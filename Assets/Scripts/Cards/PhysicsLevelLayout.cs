@@ -17,7 +17,7 @@ public class PhysicsLevelLayout : MonoBehaviour
     public const string MixAllName = "Mix_All";
     public const string MixJapanName = "Mix_Japan";
     public const int MixPackCount = 100;
-    public const int JapanPackCount = 15;
+    public const int JapanPackCount = 10;
 
     [Header("Demo")]
     [SerializeField] int demoRegularCount = 235;

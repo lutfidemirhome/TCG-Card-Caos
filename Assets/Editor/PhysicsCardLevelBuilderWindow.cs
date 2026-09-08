@@ -348,7 +348,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUILayout.LabelField("Japanese packs", PhysicsLevelLayout.JapanPackCount.ToString());
         EditorGUILayout.LabelField("In scene", inScene.ToString());
 
-        if (GUILayout.Button("Drop Japanese (cards + PSA + 15 packs)", GUILayout.Height(36)))
+        if (GUILayout.Button("Drop Japanese (cards + PSA + 10 packs)", GUILayout.Height(36)))
             CreateJapanDropAndFall(layout);
 
         EditorGUI.BeginDisabledGroup(folder == null || folder.childCount == 0);
