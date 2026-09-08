@@ -56,6 +56,8 @@ public class DemoCompleteView : MonoBehaviour
     public static void CaptureFromLoadedMenu()
     {
         DiscardCarried();
+        if (!GameBuildVariant.IsDemo)
+            return;
 
         Transform panel = FindLoadedMenuPanel();
         if (panel == null)
@@ -93,6 +95,9 @@ public class DemoCompleteView : MonoBehaviour
 
     void LateUpdate()
     {
+        if (!GameBuildVariant.IsDemo)
+            return;
+
         if (!GameScenes.IsActiveGameScene() || _gameplayInstance != this)
             return;
 
@@ -184,6 +189,9 @@ public class DemoCompleteView : MonoBehaviour
 
     public void Show()
     {
+        if (!GameBuildVariant.IsDemo)
+            return;
+
         BindExisting();
         if (root == null)
             return;

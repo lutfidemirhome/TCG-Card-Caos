@@ -55,8 +55,8 @@ public static class GameSaveEditorMenu
         string message =
             "Demo App ID: " + SteamFullGameStore.DemoAppId + "\n"
             + "Full App ID: " + SteamFullGameStore.FullGameAppId + " (wishlist bu sayfaya gider)\n\n"
-            + "1. Demo build'de TCG_DEMO tanımlı olmalı (şu an Standalone'da açık).\n"
-            + "2. Full build alırken TCG_DEMO satırını sil.\n"
+            + "1. Demo build'de TCG_DEMO tanımlı olmalı.\n"
+            + "2. Full build'de TCG_DEMO olmamalı (şu an Standalone'da kapalı — Full).\n"
             + "3. İstersen Steam Cloud Auto-Cloud bağla.\n"
             + "   Demo klasör: .../TCGCardChaos_Demo/\n"
             + "   Full klasör: .../TCGCardChaos/\n"
