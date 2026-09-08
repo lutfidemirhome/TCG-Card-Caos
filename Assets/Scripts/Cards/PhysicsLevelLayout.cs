@@ -17,6 +17,7 @@ public class PhysicsLevelLayout : MonoBehaviour
     public const string MixBatchPrefix = "Mix_";
     public const string MixAllName = "Mix_All";
     public const string MixJapanName = "Mix_Japan";
+    public const string MixMissingSeriesName = "Mix_MissingSeries";
     public const int MixPackCount = 100;
     public const int JapanPackCount = 10;
 

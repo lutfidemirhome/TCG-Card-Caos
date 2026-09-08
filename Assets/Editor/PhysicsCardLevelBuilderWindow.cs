@@ -13,6 +13,17 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     const int SpawnOverlapTries = 12;
     const int MixAllPhysicsBatchIndex = 5000;
     const int JapanPhysicsBatchIndex = 5100;
+    const int MissingSeriesPhysicsBatchIndex = 5200;
+
+    static readonly string[] MissingTenthSeriesPrefixes =
+    {
+        "lightning_uncommon_nimbuspark_",
+        "ice_rare_rimefang_",
+        "flying_rare_glaciri_",
+        "ground_rare_orbcrab_",
+        "dragon_uncommon_rhazakor_",
+        "rock_common_stonewyrm_",
+    };
     const int MixShuffleSeed = 20260825;
     const float MixAllVolumeSide = 10f;
     const float MixAllVolumeHeight = 2.6f;
@@ -224,6 +235,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUILayout.Space(10);
         DrawJapanDrop(layout);
         EditorGUILayout.Space(10);
+        DrawMissingSeriesDrop(layout);
+        EditorGUILayout.Space(10);
         DrawSelectedCards();
         EditorGUILayout.Space(10);
         DrawSpawnSettings(layout);
@@ -378,6 +391,36 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUILayout.EndVertical();
     }
 
+    void DrawMissingSeriesDrop(PhysicsLevelLayout layout)
+    {
+        Transform folder = FindMixMissingSeries(layout);
+        int inScene = folder != null ? folder.childCount : 0;
+        List<CardDefinition> missing = CollectMissingTenthSeries();
+
+        EditorGUILayout.LabelField("Eksik 10. seriler", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.HelpBox(
+            "Sadece şu boş rafların kartları: Lightning Uncommon nimbuspark, Ice Rare rimefang, "
+            + "Flying Rare glaciri, Ground Rare orbcrab, Dragon Uncommon rhazakor, Rock Common stonewyrm. "
+            + "Mix All / Mix Japan silinmez. Main Spawn Volume içine düşer.",
+            MessageType.Info);
+        EditorGUILayout.LabelField("Kart", missing.Count.ToString());
+        EditorGUILayout.LabelField("In scene", inScene.ToString());
+
+        if (GUILayout.Button("Drop Missing Series (29 kart)", GUILayout.Height(32)))
+            CreateMissingSeriesDropAndFall(layout);
+
+        EditorGUI.BeginDisabledGroup(folder == null || folder.childCount == 0);
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Select Missing Series"))
+            SelectChildren(folder);
+        if (GUILayout.Button("Grabbit Fall Missing Series"))
+            ScheduleDrop(layout, layout.MainVolume, folder);
+        EditorGUILayout.EndHorizontal();
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.EndVertical();
+    }
+
     [MenuItem("TCG Card Chaos/Select Japan Spawn Volume")]
     public static void MenuSelectJapanSpawnVolume()
     {
@@ -393,6 +436,25 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
             "Card Physics Level Builder",
             true);
         window.SelectJapanVolume(layout);
+    }
+
+    [MenuItem("TCG Card Chaos/Drop Missing Cabinet Series")]
+    public static void MenuDropMissingCabinetSeries()
+    {
+        PhysicsCardLevelBuilderWindow window = GetWindow<PhysicsCardLevelBuilderWindow>(
+            false,
+            "Card Physics Level Builder",
+            true);
+        window.Show();
+        window.Focus();
+        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
+        if (layout == null)
+        {
+            EditorUtility.DisplayDialog("Missing Series", "Physics_Card_Level missing. MainScene açık mı?", "OK");
+            return;
+        }
+
+        window.CreateMissingSeriesDropAndFall(layout);
     }
 
     [MenuItem("TCG Card Chaos/Drop Japanese Mix")]
@@ -741,6 +803,112 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         go.transform.localRotation = Quaternion.identity;
         go.transform.localScale = Vector3.one;
         return go.transform;
+    }
+
+    Transform FindMixMissingSeries(PhysicsLevelLayout layout)
+    {
+        if (layout == null || layout.MainLevelRoot == null)
+            return null;
+
+        return layout.MainLevelRoot.Find(PhysicsLevelLayout.MixMissingSeriesName);
+    }
+
+    Transform GetOrCreateMixMissingSeriesFolder(PhysicsLevelLayout layout)
+    {
+        Transform existing = FindMixMissingSeries(layout);
+        if (existing != null)
+            return existing;
+
+        var go = new GameObject(PhysicsLevelLayout.MixMissingSeriesName);
+        go.transform.SetParent(layout.MainLevelRoot, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+        return go.transform;
+    }
+
+    static List<CardDefinition> CollectMissingTenthSeries()
+    {
+        CardCatalog.Reload();
+        var result = new List<CardDefinition>(32);
+        IReadOnlyList<CardDefinition> catalog = CardCatalog.All;
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            CardDefinition definition = catalog[i];
+            if (definition == null || definition.FrontTexture == null)
+                continue;
+
+            string id = definition.DefinitionId;
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            for (int p = 0; p < MissingTenthSeriesPrefixes.Length; p++)
+            {
+                if (!id.StartsWith(MissingTenthSeriesPrefixes[p], System.StringComparison.Ordinal))
+                    continue;
+
+                result.Add(definition);
+                break;
+            }
+        }
+
+        result.Sort((a, b) => string.CompareOrdinal(a.DefinitionId, b.DefinitionId));
+        return result;
+    }
+
+    public void CreateMissingSeriesDropAndFall(PhysicsLevelLayout layout)
+    {
+        if (layout == null || layout.MainLevelRoot == null || layout.MainVolume == null)
+        {
+            EditorUtility.DisplayDialog(
+                "Missing Series",
+                "Main_Level veya Main Spawn Volume yok. Mix All karesini kullanıyoruz.",
+                "OK");
+            return;
+        }
+
+        if (!EditorUtility.DisplayDialog(
+                "Missing Series",
+                "Sadece 29 eksik kart spawn olacak. Mix All ve Mix Japan durur.\n\n"
+                + "Main Spawn Volume içine düşecek. Grabbit Fall açılınca Scene'de Left Shift.",
+                "Düşür",
+                "İptal"))
+            return;
+
+        List<CardDefinition> missing = CollectMissingTenthSeries();
+        if (missing.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Missing Series",
+                "Kart tanımları henüz görünmüyor. Unity import bitsin, sonra tekrar dene.",
+                "OK");
+            return;
+        }
+
+        Transform existing = FindMixMissingSeries(layout);
+        if (existing != null && existing.childCount > 0)
+            DestroyChildrenImmediate(existing);
+
+        Transform folder = GetOrCreateMixMissingSeriesFolder(layout);
+        var occupied = new List<Vector3>(missing.Count);
+        _hasMixAllPlan = false;
+
+        for (int i = 0; i < missing.Count; i++)
+        {
+            CardDefinition definition = missing[i];
+            WorldCard card = CardFactory.CreateWorldCard(
+                NextSpawnPose(layout, layout.MainVolume, occupied, out Quaternion rotation, pack: false),
+                rotation,
+                definition,
+                paletteIndex: 0,
+                cardName: "Missing_" + definition.DefinitionId);
+            FinishCard(card, folder, PhysicsLevelItem.AreaKind.Main, MissingSeriesPhysicsBatchIndex, registerUndo: false);
+        }
+
+        MarkDirty(layout);
+        SelectChildren(folder);
+        ScheduleDrop(layout, layout.MainVolume, folder);
+        Debug.Log("TCG Card Chaos: Missing series spawned " + missing.Count + " cards. Mix All / Japan untouched.");
     }
 
     void DeleteJapanMix(PhysicsLevelLayout layout)

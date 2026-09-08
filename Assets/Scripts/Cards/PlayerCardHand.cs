@@ -1121,6 +1121,40 @@ public class PlayerCardHand : MonoBehaviour
         destination.AddRange(_heldPacks);
     }
 
+    /// <summary>
+    /// Test-only: empties the hand lists without dropping items. Placement code then seats them.
+    /// </summary>
+    public void DetachAllHeldItems(List<WorldCard> cardsOut, List<WorldBoosterPack> packsOut)
+    {
+        if (cardsOut != null)
+        {
+            cardsOut.Clear();
+            cardsOut.AddRange(_cards);
+        }
+
+        if (packsOut != null)
+        {
+            packsOut.Clear();
+            packsOut.AddRange(_heldPacks);
+        }
+
+        _cards.Clear();
+        _heldPacks.Clear();
+        _handFanOrder.Clear();
+        _selectedIndex = 0;
+
+        if (_openPackRoutine != null)
+        {
+            StopCoroutine(_openPackRoutine);
+            _openPackRoutine = null;
+        }
+
+        _isOpeningPack = false;
+        SetAwaitingRevealCollect(false);
+        SetHandInputLocked(false);
+        SetPackOpenMovementLocked(false);
+    }
+
     public bool RestoreHeldCard(WorldCard card)
     {
         if (card == null)

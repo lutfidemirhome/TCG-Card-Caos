@@ -168,7 +168,9 @@ public static class GameProgressCounter
             return _cachedFullCardTotal;
 
         CardCatalog.EnsureLoaded();
-        _cachedFullCardTotal = CardCatalog.Count + PsaArtLibrary.CountAllVariants();
+        _cachedFullCardTotal = CardCatalog.Count
+            + PsaArtLibrary.CountAllVariants()
+            + PsaArtLibrary.CountJapaneseVariants();
         return _cachedFullCardTotal;
     }
 

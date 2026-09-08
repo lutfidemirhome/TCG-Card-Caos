@@ -93,6 +93,9 @@ static class GamePlayBootstrap
         if (camera.GetComponent<InteractionController>() == null)
             camera.gameObject.AddComponent<InteractionController>();
 
+        if (CompletionFillTest.Enabled && camera.GetComponent<CompletionFillTestView>() == null)
+            camera.gameObject.AddComponent<CompletionFillTestView>();
+
         CardInspectPreview.EnsureOn(camera);
         PackInspectPreview.EnsureOn(camera);
         PsaInspectPreview.EnsureOn(camera);
