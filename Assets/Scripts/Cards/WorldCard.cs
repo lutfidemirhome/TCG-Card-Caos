@@ -1054,6 +1054,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (UsesPsaSlab && _psaController != null)
         {
             ReleaseHandSelectionOutline();
+            if (_shelfPlacementFlashRoutine != null)
+                return;
+
             _psaController.RefreshOutlineState(_interactionHighlighted, selected);
             return;
         }
@@ -1071,10 +1074,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         PsaCabinetSlot cabinetSlot = GetComponentInParent<PsaCabinetSlot>();
         if (cabinetSlot != null)
-        {
             cabinetSlot.NotifyPlacementFeedback(isCorrect);
-            return;
-        }
 
         if (_shelfPlacementFlashRoutine != null)
         {
@@ -1115,11 +1115,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         PsaCabinetSlot cabinetSlot = GetComponentInParent<PsaCabinetSlot>();
         if (cabinetSlot != null)
-        {
             cabinetSlot.ClearPlacementFeedback();
-            RefreshRenderMode();
-            return;
-        }
 
         if (_shelfPlacementFlashRoutine != null)
         {
@@ -1130,11 +1126,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         StopShelfRowCompleteFeedback(restorePose: true);
         _shelfPlacementStatus = ShelfPlacementStatus.None;
         ReleaseShelfStatusOutline();
+        if (UsesPsaSlab && _psaController != null)
+            _psaController.DisableOutline();
         RefreshRenderMode();
     }
 
     System.Collections.IEnumerator ShelfPlacementFlashRoutine(ShelfPlacementStatus flashStatus)
     {
+        _shelfPlacementStatus = flashStatus;
+        bool psaCabinet = UsesPsaSlab && GetComponentInParent<PsaCabinetSlot>() != null;
         EnsureShelfStatusOutline();
 
         for (int pulse = 0; pulse < ShelfPlacementFlashPulses; pulse++)
@@ -1142,17 +1142,23 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             ApplyShelfStatusOutlineMaterial(flashStatus);
             if (_shelfStatusOutlineObject != null)
                 _shelfStatusOutlineObject.SetActive(true);
+            if (psaCabinet && _psaController != null)
+                _psaController.ShowPlacementOutline(flashStatus == ShelfPlacementStatus.Correct);
 
             yield return new WaitForSeconds(ShelfPlacementFlashOnSeconds);
 
             if (_shelfStatusOutlineObject != null)
                 _shelfStatusOutlineObject.SetActive(false);
+            if (psaCabinet && _psaController != null)
+                _psaController.DisableOutline();
 
             yield return new WaitForSeconds(ShelfPlacementFlashOffSeconds);
         }
 
         _shelfPlacementStatus = ShelfPlacementStatus.None;
         ReleaseShelfStatusOutline();
+        if (psaCabinet && _psaController != null)
+            _psaController.DisableOutline();
         _shelfPlacementFlashRoutine = null;
         RefreshRenderMode();
     }
@@ -1368,6 +1374,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             {
                 ReleaseInteractionOutline();
                 ReleaseHandSelectionOutline();
+                if (_shelfPlacementFlashRoutine != null || cabinetSlot.IsPlacementFlashActive)
+                    return;
+
                 ReleaseShelfStatusOutline();
                 _psaController.DisableOutline();
                 cabinetSlot.SetOccupiedCardAimOutline(_interactionHighlighted);

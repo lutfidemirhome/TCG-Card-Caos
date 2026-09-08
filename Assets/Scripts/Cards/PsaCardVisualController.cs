@@ -145,6 +145,16 @@ public sealed class PsaCardVisualController
             _modelOutline.enabled = false;
     }
 
+    public void ShowPlacementOutline(bool isCorrect)
+    {
+        EnsureOutline();
+        if (_modelOutline == null)
+            return;
+
+        CardOutlineSettings.Palette palette = CardOutlineSettings.GetPaletteOrDefaults();
+        ShowOutline(isCorrect ? palette.shelfCorrect : palette.shelfIncorrect);
+    }
+
     public void ApplyWorldOrientation(bool alignModelToGround)
     {
         EnsureVisual();

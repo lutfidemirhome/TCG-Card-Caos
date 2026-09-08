@@ -102,6 +102,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     const int HolderPlacementFlashPulses = 2;
     const float HolderPlacementFlashOnSeconds = 0.12f;
     const float HolderPlacementFlashOffSeconds = 0.1f;
+    const float HolderOutlineWidthScale = 0.7f;
 
     enum HolderOutlineMode
     {
@@ -797,7 +798,10 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     public void ClearAim()
     {
-        SetHolderOutlineActive(false);
+        if (IsHolderFlashActive)
+            return;
+
+        SetHolderOutlineMode(HolderOutlineMode.Off);
     }
 
     public string GetPromptText()
@@ -805,25 +809,25 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand == null || !hand.HasSelectedHeldCard())
         {
-            SetHolderOutlineActive(false);
+            ClearPlacementAimOutline();
             return string.Empty;
         }
 
         WorldCard selectedCard = hand.SelectedHeldCard;
         if (selectedCard == null || !AcceptsPsaCard(selectedCard))
         {
-            SetHolderOutlineActive(false);
+            ClearPlacementAimOutline();
             return string.Empty;
         }
 
         RefreshOccupancy();
         if (!IsEmpty)
         {
-            SetHolderOutlineActive(false);
+            ClearPlacementAimOutline();
             return string.Empty;
         }
 
-        SetHolderOutlineActive(true);
+        ShowPlacementAimOutline();
         return InteractPrompt.Format(Localization.Get(LocalizationKeys.PromptPlacePsa));
     }
 
@@ -847,10 +851,8 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
         }
 
-        SetHolderOutlineActive(false);
         Occupy(card);
         BeginPlacementFlight(card);
-        ClearAim();
     }
 
     void RefreshAimPreview()
@@ -858,19 +860,39 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand == null || !hand.HasSelectedHeldCard())
         {
-            SetHolderOutlineActive(false);
+            ClearPlacementAimOutline();
             return;
         }
 
         WorldCard selectedCard = hand.SelectedHeldCard;
         if (selectedCard == null || !CanPlaceHeldCard(selectedCard))
         {
-            SetHolderOutlineActive(false);
+            ClearPlacementAimOutline();
             return;
         }
 
-        SetHolderOutlineActive(true);
+        ShowPlacementAimOutline();
     }
+
+    void ShowPlacementAimOutline()
+    {
+        if (IsHolderFlashActive)
+            return;
+
+        SetHolderOutlineMode(HolderOutlineMode.Hover);
+    }
+
+    void ClearPlacementAimOutline()
+    {
+        if (IsHolderFlashActive)
+            return;
+
+        SetHolderOutlineMode(HolderOutlineMode.Off);
+    }
+
+    public bool IsPlacementFlashActive => _holderPlacementFlashRoutine != null;
+
+    bool IsHolderFlashActive => IsPlacementFlashActive;
 
     void BeginPlacementFlight(WorldCard card)
     {
@@ -967,7 +989,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     /// <summary>Yellow hover while the crosshair is on a card seated in this holder.</summary>
     public void SetOccupiedCardAimOutline(bool active)
     {
-        if (_holderPlacementFlashRoutine != null)
+        if (IsHolderFlashActive)
             return;
 
         SetHolderOutlineMode(active ? HolderOutlineMode.Hover : HolderOutlineMode.Off);
@@ -1002,7 +1024,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             _holderOutline = holderOutlineTarget.gameObject.AddComponent<Outline>();
 
         _holderOutline.OutlineMode = Outline.Mode.OutlineAll;
-        _holderOutline.OutlineWidth = PackVisualSettings.GetQuickOutlineWidthOrDefault();
+        _holderOutline.OutlineWidth = GetHolderOutlineWidth();
         _holderOutline.enabled = false;
     }
 
@@ -1030,11 +1052,16 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             HolderOutlineMode.Incorrect => palette.shelfIncorrect,
             _ => palette.cardHover,
         };
+        _holderOutline.OutlineWidth = mode == HolderOutlineMode.Hover
+            ? GetHolderOutlineWidth()
+            : PackVisualSettings.GetQuickOutlineWidthOrDefault();
         _holderOutline.enabled = true;
     }
 
-    void SetHolderOutlineActive(bool active) =>
-        SetHolderOutlineMode(active ? HolderOutlineMode.Hover : HolderOutlineMode.Off);
+    static float GetHolderOutlineWidth()
+    {
+        return PackVisualSettings.GetQuickOutlineWidthOrDefault() * HolderOutlineWidthScale;
+    }
 
     void OnEnable()
     {
