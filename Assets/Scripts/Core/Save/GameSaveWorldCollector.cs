@@ -296,8 +296,14 @@ public static class GameSaveWorldCollector
             PersistentId.GetOrCreate(cabinet.gameObject);
 
         record.location = CardRuntimeLocation.PsaCabinet;
-        record.psaCabinetId = cabinet != null ? PersistentId.Resolve(cabinet) : string.Empty;
+        record.psaCabinetId = cabinet != null ? PersistentId.BuildPathFallback(cabinet.transform) : string.Empty;
         record.psaCabinetSlot = psaSlot.SlotNumber;
+        // Grade numbers repeat within and across cabinets. Save the actual seat.
+        record.psaSlotPath = PersistentId.BuildPathFallback(psaSlot.transform);
+        // A save may happen while the card is still flying from the hand.
+        psaSlot.GetPlacementPose(out Vector3 position, out Quaternion rotation);
+        record.SetPosition(position);
+        record.SetRotation(rotation);
     }
 
     static void ApplyShelfRecord(CardSaveRecord record, WorldCard card, CardShelfSlot shelfSlot)

@@ -718,7 +718,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     public bool RestoreOccupiedCard(WorldCard card, bool playPlacementFeedback)
     {
-        if (card == null)
+        if (card == null || (!IsEmpty && occupiedCard != card))
             return false;
 
         Occupy(card);

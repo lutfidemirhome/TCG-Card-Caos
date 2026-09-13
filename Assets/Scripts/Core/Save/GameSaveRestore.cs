@@ -375,7 +375,7 @@ public static class GameSaveRestore
             ? record.psaCabinetSlot
             : record.psaSlot;
 
-        PsaCabinetSlot slot = FindPsaSlot(record.psaCabinetId, slotNumber);
+        PsaCabinetSlot slot = FindPsaSlot(record, slotNumber);
         if (slot == null)
         {
             Debug.LogWarning(
@@ -387,45 +387,60 @@ public static class GameSaveRestore
         return slot.RestoreOccupiedCard(card, playPlacementFeedback: false);
     }
 
-    static PsaCabinetSlot FindPsaSlot(string cabinetId, int slotNumber)
+    static PsaCabinetSlot FindPsaSlot(CardSaveRecord record, int slotNumber)
     {
-        if (!string.IsNullOrEmpty(cabinetId)
-            && PersistentIdRegistry.TryGetPsaCabinet(cabinetId, out PsaCabinet cabinet)
-            && cabinet != null)
-        {
-            PsaCabinetSlot slot = cabinet.FindSlot(slotNumber);
-            if (slot != null)
-                return slot;
-        }
-
-        foreach (PsaCabinet candidate in PersistentIdRegistry.AllPsaCabinets)
-        {
-            if (candidate == null)
-                continue;
-
-            PsaCabinetSlot slot = candidate.FindSlot(slotNumber);
-            if (slot != null)
-                return slot;
-        }
-
         PsaCabinetSlot[] slots = UnityEngine.Object.FindObjectsByType<PsaCabinetSlot>(
             FindObjectsInactive.Exclude,
             FindObjectsSortMode.None);
-        PsaCabinetSlot occupiedFallback = null;
+
+        if (!string.IsNullOrEmpty(record.psaSlotPath))
+        {
+            PsaCabinetSlot exact = null;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                PsaCabinetSlot slot = slots[i];
+                if (slot == null || PersistentId.BuildPathFallback(slot.transform) != record.psaSlotPath)
+                    continue;
+
+                // Ambiguous hierarchy names must not silently select a different seat.
+                if (exact != null)
+                    return null;
+                exact = slot;
+            }
+
+            return exact != null && exact.IsEmpty ? exact : null;
+        }
+
+        // Legacy saves have only a grade and a possibly shared prefab cabinet ID.
+        // Recover from the saved world position, never the first matching grade.
+        // If the old position cannot identify a nearby seat, keep the card in the
+        // world at its saved position instead of moving it to an unrelated cabinet.
+        const float MaxLegacySeatDistance = 0.5f;
+        float bestDistanceSq = MaxLegacySeatDistance * MaxLegacySeatDistance;
+        PsaCabinetSlot nearest = null;
+        bool ambiguous = false;
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];
             if (slot == null || slot.SlotNumber != slotNumber)
                 continue;
 
-            if (slot.IsEmpty)
-                return slot;
+            slot.GetPlacementPose(out Vector3 position, out _);
+            float distanceSq = (position - record.Position).sqrMagnitude;
+            if (nearest != null && Mathf.Abs(distanceSq - bestDistanceSq) < 0.000001f)
+            {
+                ambiguous = true;
+                continue;
+            }
+            if (distanceSq >= bestDistanceSq)
+                continue;
 
-            if (occupiedFallback == null)
-                occupiedFallback = slot;
+            bestDistanceSq = distanceSq;
+            nearest = slot;
+            ambiguous = false;
         }
 
-        return occupiedFallback;
+        return !ambiguous && nearest != null && nearest.IsEmpty ? nearest : null;
     }
 
     static bool TryRestoreHeldCard(WorldCard card)

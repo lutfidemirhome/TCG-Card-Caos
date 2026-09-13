@@ -27,6 +27,7 @@ public class CardSaveRecord
     public string shelfSlotPath = string.Empty;
     public string psaCabinetId = string.Empty;
     public int psaCabinetSlot;
+    public string psaSlotPath = string.Empty;
 
     public void SetPosition(Vector3 position)
     {
