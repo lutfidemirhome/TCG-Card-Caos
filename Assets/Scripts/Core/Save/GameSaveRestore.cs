@@ -16,6 +16,7 @@ public static class GameSaveRestore
     static int _shelfRestored;
     static int _shelfFailed;
     static int _psaRestored;
+    static int _removedFloorDuplicates;
     public static bool LastRestoreSucceeded { get; private set; }
 
     public static IEnumerator RestoreRoutine(string slotId)
@@ -44,18 +45,35 @@ public static class GameSaveRestore
         // rather than searching every scene object again for each card and pack.
         PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
         Transform demoRoot = layout != null ? layout.DemoCardsRoot : null;
+        var removedPackDuplicates = layout != null
+            ? new HashSet<string>(layout.RemovedPackDuplicateCardIds)
+            : new HashSet<string>();
         RestoredIds.Clear();
         _remappedIds = false;
         _shelfRestored = 0;
         _shelfFailed = 0;
         _psaRestored = 0;
+        _removedFloorDuplicates = 0;
 
         int processed = 0;
         if (data.cards != null)
         {
             for (int i = 0; i < data.cards.Length; i++)
             {
-                RestoreCard(data.cards[i], scatterRoot, demoRoot);
+                CardSaveRecord record = data.cards[i];
+                bool retiredFloorCopy = record != null && record.psaSlot == 0
+                    && !string.IsNullOrEmpty(record.id) && removedPackDuplicates.Contains(record.id);
+                if (retiredFloorCopy && record.location == CardRuntimeLocation.World)
+                {
+                    // One-time migration of the removed authored floor copies. Do not
+                    // filter by definition: a player can drop a legitimate pack card.
+                    _remappedIds = true;
+                    _removedFloorDuplicates++;
+                }
+                else
+                {
+                    RestoreCard(record, scatterRoot, demoRoot, retiredFloorCopy);
+                }
                 processed++;
                 if (processed % EntitiesPerFrame == 0)
                 {
@@ -88,6 +106,13 @@ public static class GameSaveRestore
         workTimer.Stop();
         yield return null;
         workTimer.Start();
+
+        if (data.player != null)
+        {
+            FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
+            if (player != null)
+                player.RestoreSaveState(data.player);
+        }
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null)
@@ -130,6 +155,7 @@ public static class GameSaveRestore
             + " shelf=" + _shelfRestored + "/" + shelfCards
             + (_shelfFailed > 0 ? " missing=" + _shelfFailed : string.Empty)
             + " psa=" + _psaRestored + "/" + psaCards
+            + (_removedFloorDuplicates > 0 ? " removedFloorDuplicates=" + _removedFloorDuplicates : string.Empty)
             + " total=" + (data != null && data.cards != null ? data.cards.Length : 0));
     }
 
@@ -144,12 +170,14 @@ public static class GameSaveRestore
         return generated;
     }
 
-    static void RestoreCard(CardSaveRecord record, Transform scatterRoot, Transform demoRoot)
+    static void RestoreCard(CardSaveRecord record, Transform scatterRoot, Transform demoRoot, bool retiredFloorCopy)
     {
         if (record == null)
             return;
 
-        string restoreId = AllocateRestoreId(record.id);
+        // Keep cards already collected into a hand/shelf in older saves. Give them
+        // a fresh identity so dropping them later does not trigger the floor migration.
+        string restoreId = AllocateRestoreId(retiredFloorCopy ? null : record.id);
 
         WorldCard card;
         if (PersistentIdRegistry.TryGetCard(restoreId, out WorldCard existing) && existing != null)

@@ -18,6 +18,8 @@ public class GameSaveData
     public int cabinetsCompleted;
     public int totalCabinets;
     public int handSelectedIndex;
+    // Null in older saves: retain the scene's normal spawn point.
+    public PlayerSaveRecord player;
     public CardSaveRecord[] cards = Array.Empty<CardSaveRecord>();
     public PackSaveRecord[] packs = Array.Empty<PackSaveRecord>();
 
@@ -43,4 +45,15 @@ public class GameSaveData
             isValid = true,
         };
     }
+}
+
+[Serializable]
+public class PlayerSaveRecord
+{
+    public float px;
+    public float py;
+    public float pz;
+    public float yaw;
+    public float pitch;
+    public bool crouching;
 }

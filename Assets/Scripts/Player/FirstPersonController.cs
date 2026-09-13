@@ -45,6 +45,46 @@ public class FirstPersonController : MonoBehaviour
 
     public bool IsCrouching => _crouchBlend > 0.05f;
 
+    public PlayerSaveRecord CaptureSaveState()
+    {
+        Vector3 position = transform.position;
+        return new PlayerSaveRecord
+        {
+            px = position.x,
+            py = position.y,
+            pz = position.z,
+            yaw = transform.eulerAngles.y,
+            pitch = _pitch,
+            crouching = _crouchToggled || IsCrouching,
+        };
+    }
+
+    public void RestoreSaveState(PlayerSaveRecord state)
+    {
+        if (state == null || _controller == null)
+            return;
+        if (!IsFinite(state.px) || !IsFinite(state.py) || !IsFinite(state.pz)
+            || !IsFinite(state.yaw) || !IsFinite(state.pitch))
+            return;
+
+        bool wasEnabled = _controller.enabled;
+        _controller.enabled = false;
+        transform.SetPositionAndRotation(
+            new Vector3(state.px, state.py, state.pz), Quaternion.Euler(0f, state.yaw, 0f));
+        _verticalVelocity = 0f;
+        _pitch = Mathf.Clamp(state.pitch, minPitch, maxPitch);
+        if (cameraTransform != null)
+            cameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+
+        // Restore a crouched capsule before enabling collision, including under shelves.
+        _crouchToggled = state.crouching;
+        _crouchBlend = state.crouching ? 1f : 0f;
+        UpdateCrouchPoseOnly();
+        _controller.enabled = wasEnabled;
+    }
+
+    static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
     void Awake()
     {
         _controller = GetComponent<CharacterController>();
@@ -84,9 +124,13 @@ public class FirstPersonController : MonoBehaviour
 
     void Update()
     {
-        if (GamePause.IsPaused)
+        if (GamePause.IsPaused || GameSceneLoader.IsLoading || !CardInstancedRenderManager.IsGameplayReady)
             return;
 
+        Vector3 previousPosition = transform.position;
+        Quaternion previousRotation = transform.rotation;
+        float previousPitch = _pitch;
+        bool previousCrouch = _crouchToggled;
         HandleLook();
 
         bool movementLocked = IsPackOpenMovementLocked();
@@ -101,6 +145,11 @@ public class FirstPersonController : MonoBehaviour
         }
 
         HandleMove(movementLocked);
+
+        // Walking/look changes alone must also trigger autosave and save-on-exit.
+        if (transform.position != previousPosition || transform.rotation != previousRotation
+            || _pitch != previousPitch || _crouchToggled != previousCrouch)
+            GameSaveDirtyTracker.MarkDirty();
     }
 
     bool IsPackOpenMovementLocked()

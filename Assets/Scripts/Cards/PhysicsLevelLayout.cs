@@ -44,6 +44,12 @@ public class PhysicsLevelLayout : MonoBehaviour
     [SerializeField] Transform demoCardsRoot;
     [SerializeField] Transform mainLevelRoot;
 
+    // Retired scene identities only, not card definition IDs. Old saves must not
+    // respawn these floor duplicates; cards obtained from packs have their own IDs.
+    [SerializeField, HideInInspector] string[] removedPackDuplicateCardIds = System.Array.Empty<string>();
+    public System.Collections.Generic.IReadOnlyList<string> RemovedPackDuplicateCardIds =>
+        removedPackDuplicateCardIds ?? System.Array.Empty<string>();
+
     public int DemoRegularCount { get => demoRegularCount; set => demoRegularCount = Mathf.Max(0, value); }
     public int DemoPsaCount { get => demoPsaCount; set => demoPsaCount = Mathf.Max(0, value); }
     public int DemoPackCount { get => demoPackCount; set => demoPackCount = Mathf.Max(0, value); }

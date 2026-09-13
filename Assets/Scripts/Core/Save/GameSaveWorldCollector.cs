@@ -65,6 +65,7 @@ public static class GameSaveWorldCollector
         }
 
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
+        FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
 
         var data = new GameSaveData
         {
@@ -83,6 +84,7 @@ public static class GameSaveWorldCollector
             cabinetsCompleted = progress.cabinetsCompleted,
             totalCabinets = progress.totalCabinets,
             handSelectedIndex = hand != null ? hand.SelectedIndex : 0,
+            player = player != null ? player.CaptureSaveState() : null,
             cards = CardScratch.ToArray(),
             packs = PackScratch.ToArray(),
         };
