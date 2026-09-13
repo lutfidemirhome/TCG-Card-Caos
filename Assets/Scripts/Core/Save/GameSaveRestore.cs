@@ -7,7 +7,9 @@ using UnityEngine;
 /// </summary>
 public static class GameSaveRestore
 {
-    const int EntitiesPerFrame = 24;
+    // Fixed batches keep the overlay responsive without paying a rendered frame
+    // for every 24 items in a full save (more than 230 frames).
+    const int EntitiesPerFrame = 512;
 
     static readonly HashSet<string> RestoredIds = new HashSet<string>();
     static bool _remappedIds;
@@ -18,6 +20,8 @@ public static class GameSaveRestore
 
     public static IEnumerator RestoreRoutine(string slotId)
     {
+        var workTimer = System.Diagnostics.Stopwatch.StartNew();
+        int batchWaits = 0;
         LastRestoreSucceeded = false;
         GameSaveEvents.RaiseLoadStarted(slotId);
 
@@ -29,11 +33,17 @@ public static class GameSaveRestore
 
         CardScatterUtility.ClearTestCards();
         PhysicsLevelLayout.SuspendAuthoredItemsForSaveRestore();
+        workTimer.Stop();
         yield return null;
+        workTimer.Start();
 
         PersistentIdRegistry.RebuildWorldLookups();
         PrepareShelvesForRestore();
         Transform scatterRoot = CardScatterUtility.GetOrCreateScatterRoot();
+        // The authored demo root is stable throughout this restore. Resolve it once,
+        // rather than searching every scene object again for each card and pack.
+        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
+        Transform demoRoot = layout != null ? layout.DemoCardsRoot : null;
         RestoredIds.Clear();
         _remappedIds = false;
         _shelfRestored = 0;
@@ -45,10 +55,15 @@ public static class GameSaveRestore
         {
             for (int i = 0; i < data.cards.Length; i++)
             {
-                RestoreCard(data.cards[i], scatterRoot);
+                RestoreCard(data.cards[i], scatterRoot, demoRoot);
                 processed++;
                 if (processed % EntitiesPerFrame == 0)
+                {
+                    batchWaits++;
+                    workTimer.Stop();
                     yield return null;
+                    workTimer.Start();
+                }
             }
         }
 
@@ -56,16 +71,23 @@ public static class GameSaveRestore
         {
             for (int i = 0; i < data.packs.Length; i++)
             {
-                RestorePack(data.packs[i], scatterRoot);
+                RestorePack(data.packs[i], scatterRoot, demoRoot);
                 processed++;
                 if (processed % EntitiesPerFrame == 0)
+                {
+                    batchWaits++;
+                    workTimer.Stop();
                     yield return null;
+                    workTimer.Start();
+                }
             }
         }
 
         FinalizeShelfRestores();
         FinalizePsaRestores();
+        workTimer.Stop();
         yield return null;
+        workTimer.Start();
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null)
@@ -81,6 +103,8 @@ public static class GameSaveRestore
         GameProgressCounter.InvalidateCache();
         GameSaveEvents.RaiseLoadCompleted(slotId);
         LogRestore(slotId, data);
+        workTimer.Stop();
+        Debug.Log($"[Loading] Restore work={workTimer.Elapsed.TotalSeconds:F2}s batch waits={batchWaits}");
     }
 
     static void LogRestore(string slotId, GameSaveData data)
@@ -120,7 +144,7 @@ public static class GameSaveRestore
         return generated;
     }
 
-    static void RestoreCard(CardSaveRecord record, Transform scatterRoot)
+    static void RestoreCard(CardSaveRecord record, Transform scatterRoot, Transform demoRoot)
     {
         if (record == null)
             return;
@@ -130,7 +154,7 @@ public static class GameSaveRestore
         WorldCard card;
         if (PersistentIdRegistry.TryGetCard(restoreId, out WorldCard existing) && existing != null)
         {
-            bool demoAuthored = IsDemoAuthored(existing);
+            bool demoAuthored = IsDemoAuthored(existing, demoRoot);
             if (demoAuthored && record.location == CardRuntimeLocation.World)
                 return;
 
@@ -452,7 +476,7 @@ public static class GameSaveRestore
         return hand.RestoreHeldCard(card);
     }
 
-    static bool IsDemoAuthored(Component component)
+    static bool IsDemoAuthored(Component component, Transform demoRoot)
     {
         if (component == null)
             return false;
@@ -461,8 +485,6 @@ public static class GameSaveRestore
         if (item != null && item.Area == PhysicsLevelItem.AreaKind.Demo)
             return true;
 
-        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
-        Transform demoRoot = layout != null ? layout.DemoCardsRoot : null;
         return demoRoot != null && component.transform.IsChildOf(demoRoot);
     }
 
@@ -476,7 +498,7 @@ public static class GameSaveRestore
             transform.gameObject.SetActive(true);
     }
 
-    static void RestorePack(PackSaveRecord record, Transform scatterRoot)
+    static void RestorePack(PackSaveRecord record, Transform scatterRoot, Transform demoRoot)
     {
         if (record == null)
             return;
@@ -487,7 +509,7 @@ public static class GameSaveRestore
         WorldBoosterPack pack;
         if (PersistentIdRegistry.TryGetPack(restoreId, out WorldBoosterPack existing) && existing != null)
         {
-            bool demoAuthored = IsDemoAuthored(existing);
+            bool demoAuthored = IsDemoAuthored(existing, demoRoot);
             if (demoAuthored && !record.held)
                 return;
 

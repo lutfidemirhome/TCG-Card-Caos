@@ -123,6 +123,7 @@ public class GameSceneLoader : MonoBehaviour
 
     static IEnumerator LoadGameRoutine(LoadingScreenUI loadingScreen)
     {
+        float loadStartedAt = Time.realtimeSinceStartup;
         if (loadingScreen == null)
             loadingScreen = LoadingScreenUI.Ensure();
 
@@ -142,6 +143,7 @@ public class GameSceneLoader : MonoBehaviour
         DemoCompleteView.CaptureFromLoadedMenu();
         TutorialHintView.CaptureFromLoadedMenu();
 
+        float sceneStartedAt = Time.realtimeSinceStartup;
         ThreadPriority previousPriority = Application.backgroundLoadingPriority;
         Application.backgroundLoadingPriority = ThreadPriority.Low;
 
@@ -175,6 +177,7 @@ public class GameSceneLoader : MonoBehaviour
             yield return null;
 
         Application.backgroundLoadingPriority = previousPriority;
+        float sceneReadyAt = Time.realtimeSinceStartup;
 
         while (!CardInstancedRenderManager.IsGameplayReady)
             yield return null;
@@ -183,6 +186,10 @@ public class GameSceneLoader : MonoBehaviour
         if (loadingScreen != null)
             loadingScreen.Hide();
         _isLoading = false;
+        Debug.Log($"[Loading] Total={Time.realtimeSinceStartup - loadStartedAt:F2}s "
+            + $"preparation={sceneStartedAt - loadStartedAt:F2}s "
+            + $"scene={sceneReadyAt - sceneStartedAt:F2}s "
+            + $"remaining setup={Time.realtimeSinceStartup - sceneReadyAt:F2}s");
     }
 
     void OnDestroy()
