@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Keeps flat world cards from resting inside static geometry (wall bases, shelf lips, etc.).
@@ -67,6 +68,7 @@ public static class CardCollisionUtility
 
     static PhysicsMaterial _sharedPhysicMaterial;
     static FirstPersonController _cachedPlayer;
+    static readonly List<Collider> PlayerColliderScratch = new List<Collider>(32);
     static readonly Collider[] OverlapBuffer = new Collider[OverlapBufferSize];
 
     public static PhysicsMaterial SharedPhysicMaterial
@@ -155,11 +157,12 @@ public static class CardCollisionUtility
         if (_cachedPlayer == null)
             return;
 
-        Collider[] playerColliders = _cachedPlayer.GetComponentsInChildren<Collider>();
-        for (int i = 0; i < playerColliders.Length; i++)
+        PlayerColliderScratch.Clear();
+        _cachedPlayer.GetComponentsInChildren<Collider>(false, PlayerColliderScratch);
+        for (int i = 0; i < PlayerColliderScratch.Count; i++)
         {
-            if (playerColliders[i] != null)
-                Physics.IgnoreCollision(itemCollider, playerColliders[i], true);
+            if (PlayerColliderScratch[i] != null)
+                Physics.IgnoreCollision(itemCollider, PlayerColliderScratch[i], true);
         }
     }
 
@@ -318,10 +321,13 @@ public static class CardCollisionUtility
         int selfId = cardTransform.GetInstanceID();
         WorldBoosterPack selfPack = self == null ? cardTransform.GetComponent<WorldBoosterPack>() : null;
 
-        CardGroundStack.ForEachPhysicsCard(other =>
+        // These lists are only read during separation. Indexed iteration avoids
+        // allocating two captured delegates on every physics step of every throw.
+        for (int i = 0; i < CardGroundStack.PhysicsCardCount; i++)
         {
+            WorldCard other = CardGroundStack.PhysicsCardAt(i);
             if (other == null || other == self)
-                return;
+                continue;
             if (SeparateFromThrownItem(
                     cardTransform,
                     cardCollider,
@@ -331,12 +337,13 @@ public static class CardCollisionUtility
                     other.PhysicsBody,
                     other.IsPhysicsSimulating))
                 moved = true;
-        });
+        }
 
-        CardGroundStack.ForEachPhysicsPack(other =>
+        for (int i = 0; i < CardGroundStack.PhysicsPackCount; i++)
         {
+            WorldBoosterPack other = CardGroundStack.PhysicsPackAt(i);
             if (other == null || other == selfPack)
-                return;
+                continue;
             if (SeparateFromThrownItem(
                     cardTransform,
                     cardCollider,
@@ -346,7 +353,7 @@ public static class CardCollisionUtility
                     other.PhysicsBody,
                     other.IsPhysicsSimulating))
                 moved = true;
-        });
+        }
 
         if (moved)
             body.WakeUp();

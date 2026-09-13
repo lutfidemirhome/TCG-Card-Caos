@@ -141,6 +141,7 @@ public class PlayerCardHand : MonoBehaviour
         if (IsHandInputLocked)
             return;
 
+        var inputPerformanceStart = GameplayPerformance.BeginSample();
         HandleScrollSelection();
 
         if (Input.GetKeyDown(dropKey))
@@ -150,10 +151,12 @@ public class PlayerCardHand : MonoBehaviour
             else
                 TryDropSelectedCard();
         }
+        GameplayPerformance.EndSample(GameplayPerformance.Area.Hand, inputPerformanceStart);
     }
 
     void LateUpdate()
     {
+        var performanceStart = GameplayPerformance.BeginSample();
         UpdateHandAnchorTransform();
         ReclaimOrphanedHeldItems();
         UpdatePickupFlights();
@@ -161,6 +164,7 @@ public class PlayerCardHand : MonoBehaviour
 
         if (GetHandFanCount() > 0)
             ApplyFanLayout();
+        GameplayPerformance.EndSample(GameplayPerformance.Area.Hand, performanceStart);
     }
 
     void HandleScrollSelection()
@@ -996,6 +1000,7 @@ public class PlayerCardHand : MonoBehaviour
         bool packSelected = selectedPack != null;
         WorldCard selectedCard = packSelected ? null : GetSelectedHeldCard();
         int fanIndex = 0;
+        int siblingIndex = 0;
 
         for (int i = 0; i < _handFanOrder.Count; i++)
         {
@@ -1011,8 +1016,12 @@ public class PlayerCardHand : MonoBehaviour
 
                 bool isSelected = !packSelected && selectedCard != null && card == selectedCard;
                 card.ApplyFanPose(fanIndex, fanCount, layout, isSelected);
-                card.SetHandSelected(isSelected);
-                card.transform.SetSiblingIndex(fanIndex);
+                if (!isSelected)
+                {
+                    if (card.transform.GetSiblingIndex() != siblingIndex)
+                        card.transform.SetSiblingIndex(siblingIndex);
+                    siblingIndex++;
+                }
                 fanIndex++;
                 continue;
             }
@@ -1031,13 +1040,20 @@ public class PlayerCardHand : MonoBehaviour
             HandCardPose packPose = HandFanLayout.GetPose(fanIndex, fanCount, packLayout, isPackSelected);
             pack.ApplyHeldPose(packPose.LocalPosition, packPose.LocalRotation, packPose.Scale);
             pack.SetHandSelected(isPackSelected);
-            pack.transform.SetSiblingIndex(fanIndex);
+            if (!isPackSelected)
+            {
+                if (pack.transform.GetSiblingIndex() != siblingIndex)
+                    pack.transform.SetSiblingIndex(siblingIndex);
+                siblingIndex++;
+            }
             fanIndex++;
         }
 
-        if (selectedCard != null)
+        // Selected item stays last. Do not move it to the middle and back on
+        // every frame: that repeatedly invalidates the hand's transform hierarchy.
+        if (selectedCard != null && selectedCard.transform.GetSiblingIndex() != _handAnchor.childCount - 1)
             selectedCard.transform.SetAsLastSibling();
-        else if (selectedPack != null)
+        else if (selectedPack != null && selectedPack.transform.GetSiblingIndex() != _handAnchor.childCount - 1)
             selectedPack.transform.SetAsLastSibling();
     }
 

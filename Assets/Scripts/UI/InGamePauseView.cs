@@ -148,13 +148,14 @@ public class InGamePauseView : MonoBehaviour
 
     public void Show()
     {
+        var performanceSample = GameplayPerformance.BeginSample();
         WelcomePopupView.CoverForPause();
         DemoCompleteView.CoverForPause();
 
         if (root != null)
         {
             root.SetActive(true);
-            root.transform.SetAsLastSibling();
+            BringToFrontIfNeeded(root.transform);
         }
         else
             gameObject.SetActive(true);
@@ -163,7 +164,16 @@ public class InGamePauseView : MonoBehaviour
         UiEventSystem.Ensure();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        transform.SetAsLastSibling();
+        BringToFrontIfNeeded(transform);
+        GameplayPerformance.EndPauseTransition("open", performanceSample);
+    }
+
+    static void BringToFrontIfNeeded(Transform target)
+    {
+        Transform parent = target.parent;
+        int siblingCount = parent != null ? parent.childCount : target.gameObject.scene.rootCount;
+        if (target.GetSiblingIndex() != siblingCount - 1)
+            target.SetAsLastSibling();
     }
 
     public void Hide()
@@ -182,6 +192,13 @@ public class InGamePauseView : MonoBehaviour
     }
 
     void Resume()
+    {
+        var performanceSample = GameplayPerformance.BeginSample();
+        ResumeInternal();
+        GameplayPerformance.EndPauseTransition("close", performanceSample);
+    }
+
+    void ResumeInternal()
     {
         Hide();
 

@@ -65,6 +65,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         CardArtLibrary.EnsureLoaded();
         CardCatalog.EnsureLoaded();
         GameSaveManager.EnsureExists();
+        yield return GameSoundEffects.PreloadRoutine();
 
         GameLoadMode loadMode = GameSceneLoader.PendingLoadMode;
         string pendingSlotId = GameSceneLoader.PendingSlotId;
@@ -296,7 +297,10 @@ public class CardInstancedRenderManager : MonoBehaviour
     void OnDestroy()
     {
         if (_instance == this)
+        {
             _instance = null;
+            GameplayPerformance.Reset();
+        }
     }
 
     void OnValidate()
@@ -312,6 +316,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     void LateUpdate()
     {
+        var performanceStart = GameplayPerformance.BeginSample();
         if (_camera == null)
             _camera = Camera.main;
 
@@ -320,6 +325,8 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         DrawInstancedCards();
         CullGroundPackRenderers();
+        GameplayPerformance.EndSample(GameplayPerformance.Area.CardDraw, performanceStart);
+        GameplayPerformance.Tick();
     }
 
     public void Register(WorldCard card)
@@ -398,9 +405,8 @@ public class CardInstancedRenderManager : MonoBehaviour
                 continue;
 
             bool backFace = batchKey == BackBatchKey || batchKey == JapaneseBackBatchKey;
-            Material material = ResolveBatchMaterial(batchKey);
             Mesh mesh = backFace ? backMesh : frontMesh;
-            if (material == null || mesh == null)
+            if (mesh == null)
                 continue;
 
             _drawSortScratch.Clear();
@@ -417,6 +423,11 @@ public class CardInstancedRenderManager : MonoBehaviour
             }
 
             if (_drawSortScratch.Count == 0)
+                continue;
+
+            // Resolve textures/materials only after at least one card is visible.
+            Material material = ResolveBatchMaterial(batchKey);
+            if (material == null)
                 continue;
 
             if (_drawSortScratch.Count <= 256)

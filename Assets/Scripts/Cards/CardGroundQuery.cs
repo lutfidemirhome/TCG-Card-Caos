@@ -142,10 +142,10 @@ public static class CardGroundQuery
             }
         }
 
-        if (CardGroundStack.PhysicsPackCount > 0)
-            CardGroundStack.ForEachPhysicsPack(pack => TryAddPhysicsPackHit(ray, maxDistance, pack));
-        if (CardGroundStack.TrackedPackCount > 0)
-            CardGroundStack.ForEachTrackedPack(pack => TryAddFlatPackHit(ray, maxDistance, pack));
+        for (int i = 0; i < CardGroundStack.PhysicsPackCount; i++)
+            TryAddPhysicsPackHit(ray, maxDistance, CardGroundStack.PhysicsPackAt(i));
+        for (int i = 0; i < CardGroundStack.TrackedPackCount; i++)
+            TryAddFlatPackHit(ray, maxDistance, CardGroundStack.TrackedPackAt(i));
 
         if (PackHitScratch.Count == 0)
         {

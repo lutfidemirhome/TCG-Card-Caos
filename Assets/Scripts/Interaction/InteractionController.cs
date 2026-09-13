@@ -98,9 +98,11 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
+        var performanceStart = GameplayPerformance.BeginSample();
         UpdateTarget();
         UpdateInspectPreview();
         HandleInput();
+        GameplayPerformance.EndSample(GameplayPerformance.Area.Interaction, performanceStart);
     }
 
     void UpdateTarget()

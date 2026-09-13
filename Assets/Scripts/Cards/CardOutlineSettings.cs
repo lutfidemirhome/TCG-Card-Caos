@@ -9,6 +9,29 @@ using UnityEngine;
 public class CardOutlineSettings : ScriptableObject
 {
     public const string ResourcePath = "Settings/CardOutlineSettings";
+    static CardOutlineSettings _cachedSettings;
+    static bool _settingsLoaded;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetCache()
+    {
+        _cachedSettings = null;
+        _settingsLoaded = false;
+    }
+
+    static CardOutlineSettings ResolveSettings()
+    {
+        // Cache the asset, not its values, so live Inspector tuning still works.
+        if (!Application.isPlaying)
+            return Resources.Load<CardOutlineSettings>(ResourcePath);
+        if (!_settingsLoaded)
+        {
+            _cachedSettings = Resources.Load<CardOutlineSettings>(ResourcePath);
+            _settingsLoaded = true;
+        }
+        return _cachedSettings;
+    }
+
 
     [Serializable]
     public struct Palette
@@ -63,7 +86,7 @@ public class CardOutlineSettings : ScriptableObject
 
     public static Palette GetPaletteOrDefaults()
     {
-        CardOutlineSettings settings = Resources.Load<CardOutlineSettings>(ResourcePath);
+        CardOutlineSettings settings = ResolveSettings();
         return settings != null ? settings.GetPalette() : Palette.CreateDefaults();
     }
 }

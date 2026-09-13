@@ -7,6 +7,29 @@ using UnityEngine;
 public class PsaVisualSettings : ScriptableObject
 {
     public const string ResourcePath = "Settings/PsaVisualSettings";
+    static PsaVisualSettings _cachedSettings;
+    static bool _settingsLoaded;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetCache()
+    {
+        _cachedSettings = null;
+        _settingsLoaded = false;
+    }
+
+    static PsaVisualSettings ResolveSettings()
+    {
+        // Cache the asset, not its values, so live Inspector tuning still works.
+        if (!Application.isPlaying)
+            return Resources.Load<PsaVisualSettings>(ResourcePath);
+        if (!_settingsLoaded)
+        {
+            _cachedSettings = Resources.Load<PsaVisualSettings>(ResourcePath);
+            _settingsLoaded = true;
+        }
+        return _cachedSettings;
+    }
+
     const float DefaultHeldThicknessFitMultiplier = 1f;
     const float DefaultFrontYawOffset = -90f;
     const float DefaultHeldForwardExtra = 0.012f;
@@ -43,8 +66,7 @@ public class PsaVisualSettings : ScriptableObject
     public Vector3 ModelRootScale => modelRootScale;
     public float FrontYawOffsetDegrees => frontYawOffsetDegrees;
 
-    public static PsaVisualSettings LoadOrNull() =>
-        Resources.Load<PsaVisualSettings>(ResourcePath);
+    public static PsaVisualSettings LoadOrNull() => ResolveSettings();
 
     public static float GetHeldThicknessFitMultiplierOrDefault()
     {

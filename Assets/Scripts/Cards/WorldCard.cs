@@ -52,6 +52,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     [SerializeField] Transform _cardVisual;
     bool _handSelected;
     GameObject _outlineObject;
+    // Only one hover target is active. Keep one spare border between targets
+    // instead of creating/destroying a renderer whenever the camera turns.
+    static GameObject _spareInteractionOutline;
     GameObject _handSelectionOutlineObject;
     GameObject _shelfStatusOutlineObject;
     ShelfPlacementStatus _shelfPlacementStatus = ShelfPlacementStatus.None;
@@ -400,6 +403,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public void SetInteractionHighlight(bool highlighted)
     {
         _interactionHighlighted = highlighted && !IsInHand;
+        if (_authoredPhysicsItem && !UsesPsaSlab && _cardVisual != null
+            && _handState == HandState.World)
+        {
+            // Authored cards keep their mesh whether highlighted or not. A hover
+            // only changes the border; do not reassign materials or the card pose.
+            RefreshInteractionOutline();
+            return;
+        }
         RefreshRenderMode();
     }
 
@@ -1063,9 +1074,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
         if (selected)
             EnsureHandSelectionOutlineRenderer();
-        else
+        else if (!IsInHand)
             ReleaseHandSelectionOutline();
 
+        // While cycling through held cards, hide and reuse each small border.
+        // Drop/release still destroys it, so floor cards do not retain hand UI.
         if (_handSelectionOutlineObject != null)
             _handSelectionOutlineObject.SetActive(selected && IsHeld);
     }
@@ -1614,19 +1627,34 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
-        _outlineObject = new GameObject("InteractionOutline");
+        if (Application.isPlaying && _spareInteractionOutline != null)
+        {
+            _outlineObject = _spareInteractionOutline;
+            _spareInteractionOutline = null;
+        }
+        else
+        {
+            _outlineObject = new GameObject("InteractionOutline");
+        }
         Transform outlineParent = _cardVisual != null ? _cardVisual : transform;
         _outlineObject.transform.SetParent(outlineParent, false);
+        _outlineObject.transform.localPosition = Vector3.zero;
+        _outlineObject.transform.localRotation = Quaternion.identity;
+        _outlineObject.transform.localScale = Vector3.one;
         if (_cardVisual == null)
         {
             _outlineObject.transform.localRotation = CardArtLibrary.WorldVisualRotation;
             _outlineObject.transform.localPosition = Vector3.up * GetOutlineLift();
         }
 
-        var meshFilter = _outlineObject.AddComponent<MeshFilter>();
+        var meshFilter = _outlineObject.GetComponent<MeshFilter>();
+        if (meshFilter == null)
+            meshFilter = _outlineObject.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
 
-        var meshRenderer = _outlineObject.AddComponent<MeshRenderer>();
+        var meshRenderer = _outlineObject.GetComponent<MeshRenderer>();
+        if (meshRenderer == null)
+            meshRenderer = _outlineObject.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = CardVisualResources.InteractionOutlineMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
@@ -1663,7 +1691,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_outlineObject == null)
             return;
 
-        if (Application.isPlaying)
+        if (Application.isPlaying && _spareInteractionOutline == null)
+        {
+            _outlineObject.SetActive(false);
+            _outlineObject.transform.SetParent(null, false);
+            _spareInteractionOutline = _outlineObject;
+        }
+        else if (Application.isPlaying)
             Destroy(_outlineObject);
         else
             DestroyImmediate(_outlineObject);

@@ -8,6 +8,11 @@ public static class UiEventSystem
 {
     public static void Ensure()
     {
+        // The active system already registers itself; avoid searching the large
+        // gameplay scene again each time an overlay opens.
+        if (EventSystem.current != null)
+            return;
+
         if (Object.FindAnyObjectByType<EventSystem>() != null)
             return;
 

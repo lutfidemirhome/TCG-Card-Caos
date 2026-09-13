@@ -44,11 +44,13 @@ public static class CardThrownPhysics
         bool hasSettled = false;
         int settleRejections = 0;
         int landingScopeId = CardGroundStack.BeginLandingColliderScope();
+        WorldCard thrownCard = itemTransform.GetComponent<WorldCard>();
 
         try
         {
             while (isActive())
             {
+                var performanceStart = GameplayPerformance.BeginSample();
                 elapsed += Time.deltaTime;
                 colliderRefreshTimer += Time.deltaTime;
                 if (!body.IsSleeping() && colliderRefreshTimer >= LandingColliderRefreshInterval)
@@ -65,7 +67,6 @@ public static class CardThrownPhysics
 
                 if (collider != null)
                 {
-                    WorldCard thrownCard = itemTransform.GetComponent<WorldCard>();
                     CardCollisionUtility.ResolveThrownFlightOverlap(itemTransform, collider, thrownCard, body);
                 }
 
@@ -90,6 +91,7 @@ public static class CardThrownPhysics
                         MaxRecoveryFlightSeconds);
                 }
 
+                GameplayPerformance.EndSample(GameplayPerformance.Area.Throw, performanceStart);
                 if (body.IsSleeping())
                 {
                     if (nearGround && shelfStuckTime <= 0f)

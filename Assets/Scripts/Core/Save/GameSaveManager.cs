@@ -468,7 +468,8 @@ public sealed class GameSaveManager : MonoBehaviour
             "[Save] Completed " + kind + " " + slotId
             + " shelf=" + shelfCards
             + " psa=" + psaCards
-            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0));
+            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0)
+            + $" collect={collectMs:F1}ms serialize={serializeMs:F1}ms write={writeMs:F1}ms");
     }
 
     void LoadLatestFromGameplay()
