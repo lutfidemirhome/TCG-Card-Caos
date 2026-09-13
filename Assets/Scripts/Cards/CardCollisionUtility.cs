@@ -553,6 +553,9 @@ public static class CardCollisionUtility
     {
         if (other == null || other == selfCollider)
             return true;
+        // Physics queries do not apply per-collider layer exclusions themselves.
+        if (selfCollider != null && (other.excludeLayers.value & (1 << selfCollider.gameObject.layer)) != 0)
+            return true;
         if (other.isTrigger)
             return true;
 

@@ -235,6 +235,9 @@ public class FirstPersonController : MonoBehaviour
             if (overlap == null)
                 continue;
 
+            if ((overlap.excludeLayers.value & (1 << gameObject.layer)) != 0)
+                continue;
+
             if (overlap.transform == transform || overlap.transform.IsChildOf(transform))
                 continue;
 

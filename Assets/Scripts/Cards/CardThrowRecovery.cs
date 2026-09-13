@@ -377,6 +377,8 @@ public static class CardThrowRecovery
             RaycastHit hit = FloorHitBuffer[i];
             if (hit.collider == null || hit.collider.isTrigger)
                 continue;
+            if ((hit.collider.excludeLayers.value & CardLayers.WorldCardMask.value) != 0)
+                continue;
             if (hit.collider.GetComponentInParent<CardShelf>() != null)
                 continue;
             if (IsLadderObject(hit.collider.gameObject))
