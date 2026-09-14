@@ -11,6 +11,8 @@ public class CrosshairUI : MonoBehaviour
     [SerializeField] bool hideWhenCursorUnlocked = true;
 
     Canvas _canvas;
+    Image _dot;
+    InteractionController _interaction;
 
     void Awake()
     {
@@ -19,19 +21,33 @@ public class CrosshairUI : MonoBehaviour
 
     void LateUpdate()
     {
+        if (_interaction == null)
+            _interaction = GetComponent<InteractionController>();
+        if (_dot != null)
+        {
+            Color targetColor = _interaction != null && _interaction.isActiveAndEnabled
+                && _interaction.HasAimedInteractable
+                ? new Color(1f, 0.85f, 0f, color.a) : color;
+            if (_dot.color != targetColor)
+                _dot.color = targetColor;
+        }
         if (_canvas != null && hideWhenCursorUnlocked)
             _canvas.enabled = Cursor.lockState == CursorLockMode.Locked;
     }
 
     void BuildCrosshair()
     {
-        _canvas = RuntimeOverlayCanvasFactory.Create(transform, "CrosshairCanvas", sortingOrder: 100);
+        // Scale against screen height so portrait recordings retain a visible reticle.
+        _canvas = RuntimeOverlayCanvasFactory.Create(
+            transform, "CrosshairCanvas", sortingOrder: 100, matchWidthOrHeight: 1f);
 
         var dotGo = new GameObject("CrosshairDot");
         dotGo.transform.SetParent(_canvas.transform, false);
 
         var dot = dotGo.AddComponent<Image>();
-        dot.sprite = CreateDotSprite(32, color);
+        _dot = dot;
+        dot.sprite = CreateDotSprite(32, Color.white);
+        dot.color = color;
         dot.raycastTarget = false;
 
         RectTransform rect = dot.rectTransform;

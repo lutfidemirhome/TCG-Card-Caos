@@ -82,7 +82,8 @@ public class PlayerCardHand : MonoBehaviour
     public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots();
     public int AvailableSlots => Mathf.Max(0, CardDimensions.MaxHandSize - OccupiedHandSlots);
     public int SelectedIndex => _selectedIndex;
-    public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
+    float OriginalHeldScale => heldCardScale * (1f - handScaleReductionPercent);
+    public float EffectiveHeldScale => OriginalHeldScale * 0.85f * 0.95f * 0.9f;
     public bool HasHeldPack => CountOccupiedPackSlots() > 0;
     public bool IsPackSelected => GetSelectedHeldPack() != null;
     public WorldBoosterPack SelectedHeldPack => GetSelectedHeldPack();
@@ -422,6 +423,9 @@ public class PlayerCardHand : MonoBehaviour
 
         float centerViewportY = cardViewportHeight * (0.5f - bottomClipPercent);
         float localY = (centerViewportY - 0.5f) * frustumHeight - handDownwardOffset;
+        // Preserve the previous lift, then add 20% of the newly reduced card height.
+        localY += CardDimensions.Height * OriginalHeldScale * 0.85f * 0.95f * 0.1f;
+        localY += CardDimensions.Height * EffectiveHeldScale * 0.2f;
 
         _handAnchor.localPosition = new Vector3(0f, localY, handDistance);
         _handAnchor.localRotation = Quaternion.identity;
@@ -429,7 +433,8 @@ public class PlayerCardHand : MonoBehaviour
 
     float GetCardViewportHeight(float frustumHeight)
     {
-        float cardWorldHeight = CardDimensions.Height * EffectiveHeldScale;
+        // Keep the original hand anchor position when reducing the visual size.
+        float cardWorldHeight = CardDimensions.Height * OriginalHeldScale;
         return cardWorldHeight / frustumHeight;
     }
 

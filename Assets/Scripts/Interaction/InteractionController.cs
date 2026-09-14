@@ -9,6 +9,7 @@ using UnityEngine.UI;
 /// </summary>
 public class InteractionController : MonoBehaviour
 {
+    public bool HasAimedInteractable { get; private set; }
     [SerializeField] Camera viewCamera;
     [SerializeField] float interactDistance = 4.5f;
     [SerializeField] LayerMask interactMask = ~0;
@@ -65,6 +66,7 @@ public class InteractionController : MonoBehaviour
 
     void Update()
     {
+        HasAimedInteractable = false;
         if (GamePause.IsPaused)
         {
             _raycastAimedCard = null;
@@ -223,6 +225,7 @@ public class InteractionController : MonoBehaviour
         }
 
         _pendingCardPromptTarget = null;
+        HasAimedInteractable = true;
         ShowPrompt(interactable, prompt);
     }
 
@@ -235,6 +238,7 @@ public class InteractionController : MonoBehaviour
         }
 
         ClearDelayedPackUiState();
+        HasAimedInteractable = true;
 
         if (inspectPreviewDelay <= 0f)
         {
@@ -267,6 +271,8 @@ public class InteractionController : MonoBehaviour
         }
 
         ClearDelayedCardUiState();
+
+        HasAimedInteractable = true;
 
         if (inspectPreviewDelay <= 0f)
         {
@@ -667,6 +673,7 @@ public class InteractionController : MonoBehaviour
 
     void ClearTarget()
     {
+        HasAimedInteractable = false;
         if (_currentTarget is CardShelf shelf)
             shelf.ClearAim();
         if (_currentTarget is PsaCabinetSlot psaSlot)

@@ -189,7 +189,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         // Leftover ScatteredCards from the old random spawn must not mix with the Grabbit scene.
         CardScatterUtility.ClearTestCards();
         PhysicsLevelLayout.NotifyNewGameUsingAuthoredLayout();
-        yield break;
+        yield return VideoShelfPreparation.FillHalfRoutine();
     }
 
     IEnumerator RegisterAllGroundCardsRoutine()

@@ -14,6 +14,8 @@ public class TutorialHintView : MonoBehaviour
     public const string SpriteResourcePath = "Sprite Assets/TutorialKeys";
     const string MenuCanvasName = "MainMenuCanvas";
     const float StepInputDelay = 0.4f;
+    // Disabled for video recording on video_tcg_3.
+    static readonly bool GameplayEnabled = false;
 
     enum Step
     {
@@ -56,7 +58,7 @@ public class TutorialHintView : MonoBehaviour
     {
         _step = Step.Move;
         _sessionDecided = true;
-        _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
+        _showThisSession = GameplayEnabled && GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
         _usedCrouchBeforeHint = false;
         if (_gameplayInstance != null)
             _gameplayInstance.Hide();
@@ -68,6 +70,8 @@ public class TutorialHintView : MonoBehaviour
     public static void CaptureFromLoadedMenu()
     {
         DiscardCarried();
+        if (!GameplayEnabled)
+            return;
 
         Transform panel = FindLoadedMenuPanel();
         if (panel == null)
@@ -193,7 +197,7 @@ public class TutorialHintView : MonoBehaviour
 
         _sessionDecided = true;
         _step = Step.Move;
-        _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
+        _showThisSession = GameplayEnabled && GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
         _usedCrouchBeforeHint = false;
     }
 

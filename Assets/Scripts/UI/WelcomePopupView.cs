@@ -11,6 +11,8 @@ public class WelcomePopupView : MonoBehaviour
 {
     public const string PanelName = "Panel_Welcome";
     const string MenuCanvasName = "MainMenuCanvas";
+    // Disabled for video recording on video_tcg_3.
+    static readonly bool GameplayEnabled = false;
 
     [SerializeField] GameObject root;
     [SerializeField] Button startButton;
@@ -54,6 +56,8 @@ public class WelcomePopupView : MonoBehaviour
     public static void CaptureFromLoadedMenu()
     {
         DiscardCarried();
+        if (!GameplayEnabled)
+            return;
 
         Transform panel = FindLoadedMenuPanel();
         if (panel == null)
@@ -71,6 +75,9 @@ public class WelcomePopupView : MonoBehaviour
 
     public static bool ShouldBlockGameplay()
     {
+        if (!GameplayEnabled)
+            return false;
+
         if (!_sessionDecided)
         {
             _sessionDecided = true;
@@ -169,6 +176,9 @@ public class WelcomePopupView : MonoBehaviour
 
     public void Show()
     {
+        if (!GameplayEnabled)
+            return;
+
         BindExisting();
         if (root == null)
             return;

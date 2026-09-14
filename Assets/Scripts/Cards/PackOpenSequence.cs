@@ -22,7 +22,7 @@ public static class PackOpenSequence
     const float RevealCardAnchorHeight = 0.02f;
     const float PackRevealLocalYOffsetFactor = 0.44f;
     const float PackMoveToRevealDuration = 0.1f;
-    const float PackDriftDurationFactor = 0.075f;
+    const float PackDriftDurationFactor = 0.05f;
     const float PackExitDropFactor = 1.35f;
     const float PackPostShakePause = 0.05f;
     const float PackRevealSettleDropFactor = 0.14f;
@@ -64,12 +64,14 @@ public static class PackOpenSequence
             revealDistance,
             heldScale,
             CardDimensions.CardsPerBoosterPack);
+        float cardRevealScale = revealScale * 0.75f;
+        float packLowerOffset = CardDimensions.Height * revealScale * 0.4f;
         float duration = hand.OpenSequenceDuration;
         Quaternion revealFaceRotation = CardArtLibrary.RevealRootLocalRotation;
         Quaternion packRevealWorldRotation = revealRoot.rotation * revealFaceRotation;
         Vector3 packRevealLocalStart = new Vector3(
             0f,
-            -CardDimensions.Height * revealScale * PackRevealLocalYOffsetFactor - packOnlyWorldDown,
+            -CardDimensions.Height * revealScale * PackRevealLocalYOffsetFactor - packOnlyWorldDown - packLowerOffset,
             0f);
 
         // Snap pack toward the reveal anchor; backdrop fades in at the same time.
@@ -124,13 +126,15 @@ public static class PackOpenSequence
         var revealCards = new List<WorldCard>(CardDimensions.CardsPerBoosterPack);
         var revealSparkles = new List<PackRevealCardSparkle>(CardDimensions.CardsPerBoosterPack);
         float packDriftDuration = duration * PackDriftDurationFactor;
-        float packExitLocalY = -CardDimensions.Height * revealScale * PackExitDropFactor;
+        float packExitLocalY = -CardDimensions.Height * revealScale * PackExitDropFactor - packLowerOffset;
 
         yield return EjectRevealCardsRoutine(
             pack,
+            camera,
             packTransform,
             revealRoot,
             revealFaceRotation,
+            cardRevealScale,
             revealScale,
             ejectAnchorPos,
             packDriftDuration,
@@ -169,7 +173,7 @@ public static class PackOpenSequence
             if (i < revealSparkles.Count && revealSparkles[i] != null)
                 revealSparkles[i].Show();
 
-            yield return RevealScalePulseRoutine(card.transform, revealScale, FlipRevealPopPeak, FlipRevealPopDuration);
+            yield return RevealScalePulseRoutine(card.transform, cardRevealScale, FlipRevealPopPeak, FlipRevealPopDuration);
 
             if (i < revealCards.Count - 1)
             {
@@ -182,7 +186,7 @@ public static class PackOpenSequence
             }
         }
 
-        yield return RevealMexicanWaveRoutine(revealCards, revealScale);
+        yield return RevealMexicanWaveRoutine(revealCards, cardRevealScale);
 
         // Hold the reveal screen until the player presses F to collect cards into the hand.
         hand.SetAwaitingRevealCollect(true);
@@ -239,10 +243,17 @@ public static class PackOpenSequence
         float peakScale = Mathf.Max(RevealWavePeak, FlipRevealPopPeak);
         float widthFactor = RevealCardSpacingFactor * Mathf.Max(0, cardCount - 1) + peakScale;
         float neededWidth = CardDimensions.Width * preferredScale * widthFactor;
-        if (neededWidth <= availableWidth || neededWidth <= 0.0001f)
-            return preferredScale;
+        float rowScale = neededWidth <= availableWidth || neededWidth <= 0.0001f
+            ? preferredScale : preferredScale * (availableWidth / neededWidth);
+        if (camera.aspect >= 1f)
+            return rowScale;
 
-        return preferredScale * (availableWidth / neededWidth);
+        int rows = 1 + Mathf.CeilToInt(Mathf.Max(0, cardCount - 1) / 2f);
+        float columnsFactor = cardCount > 1 ? RevealCardSpacingFactor + peakScale : peakScale;
+        float widthLimit = availableWidth / (CardDimensions.Width * columnsFactor);
+        float heightLimit = frustumHeight * 0.86f
+            / (CardDimensions.Height * ((rows - 1) * 1.18f + peakScale));
+        return Mathf.Min(rowScale * 2f, widthLimit, heightLimit);
     }
 
     static IEnumerator PackRevealSettleRoutine(
@@ -278,10 +289,12 @@ public static class PackOpenSequence
 
     static IEnumerator EjectRevealCardsRoutine(
         WorldBoosterPack pack,
+        Camera camera,
         Transform packTransform,
         Transform revealRoot,
         Quaternion revealFaceRotation,
         float revealScale,
+        float packScale,
         Vector3 baseLocalPos,
         float packDriftDuration,
         float packExitLocalY,
@@ -293,15 +306,20 @@ public static class PackOpenSequence
         float rowWidth = cardSpacing * Mathf.Max(0, contents.Count - 1);
         float halfHeight = CardDimensions.Height * revealScale * 0.5f;
         float rowBaseY = halfHeight + CardDimensions.Height * revealScale * 0.12f;
+        bool portrait = camera.aspect < 1f;
+        float frustumHeight = 2f * revealRoot.localPosition.z
+            * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float topRowY = frustumHeight * 0.46f - revealRoot.localPosition.y
+            - halfHeight * Mathf.Max(RevealWavePeak, FlipRevealPopPeak);
         float ejectStartScale = revealScale * CardEjectStartScaleFactor;
         float arcHeight = CardDimensions.Height * revealScale * CardEjectArcHeightFactor;
         Vector3 ejectStartLocal = baseLocalPos + new Vector3(
             0f,
-            CardDimensions.Height * revealScale * PackEjectLocalYOffsetFactor,
-            CardDimensions.Thickness * revealScale * PackEjectLocalZInsetFactor);
+            CardDimensions.Height * packScale * PackEjectLocalYOffsetFactor,
+            CardDimensions.Thickness * packScale * PackEjectLocalZInsetFactor);
 
         packTransform.localPosition = baseLocalPos;
-        packTransform.localScale = Vector3.one * revealScale;
+        packTransform.localScale = Vector3.one * packScale;
 
         GameSoundEffects.PlayPack(GameSoundEffects.PackId.PackOpen);
 
@@ -309,6 +327,14 @@ public static class PackOpenSequence
         {
             float targetX = contents.Count <= 1 ? 0f : -rowWidth * 0.5f + i * cardSpacing;
             Vector3 targetLocalPos = new Vector3(targetX, rowBaseY, 0f);
+            if (portrait)
+            {
+                // First card centered at the top, then pairs from left to right.
+                int row = i == 0 ? 0 : 1 + (i - 1) / 2;
+                float column = i == 0 ? 0f : ((i - 1) % 2 == 0 ? -0.5f : 0.5f);
+                targetLocalPos = new Vector3(column * cardSpacing,
+                    topRowY - row * CardDimensions.Height * revealScale * 1.18f, 0f);
+            }
 
             WorldCard card = CardFactory.CreateWorldCard(
                 revealRoot.TransformPoint(ejectStartLocal),
@@ -365,7 +391,7 @@ public static class PackOpenSequence
             pack,
             packTransform,
             baseLocalPos,
-            revealScale,
+            packScale,
             packDriftDuration,
             packExitLocalY);
     }
