@@ -561,6 +561,10 @@ public static class GameSaveRestore
             PersistentId.GetOrCreate(pack.gameObject).AssignExisting(restoreId);
         }
 
+        pack.PreserveSavedContents();
+        if (!string.IsNullOrEmpty(record.assignmentLabel))
+            pack.AssignmentLabel = record.assignmentLabel;
+
         if (record.held && PlayerCardHand.Instance != null && PlayerCardHand.Instance.RestoreHeldPack(pack))
             return;
 
@@ -578,8 +582,12 @@ public static class GameSaveRestore
 
         for (int i = 0; i < ids.Length; i++)
         {
-            if (CardCatalog.TryGetById(ids[i], out CardDefinition definition))
-                contents.Add(definition);
+            // Preserve the original five positions, including unresolved entries. Silently
+            // shortening the list used to reroll the entire saved pack on registration/opening.
+            CardDefinition definition = null;
+            if (!string.IsNullOrEmpty(ids[i]))
+                CardCatalog.TryGetById(ids[i], out definition);
+            contents.Add(definition);
         }
 
         return contents;

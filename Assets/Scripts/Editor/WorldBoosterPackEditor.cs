@@ -7,7 +7,26 @@ public class WorldBoosterPackEditor : Editor
 {
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
+        if (Application.isPlaying)
+            DrawDefaultInspector();
+        else
+        {
+            serializedObject.Update();
+            DrawPropertiesExcluding(serializedObject, "m_Script", "preRolledContents", "assignmentLabel");
+            serializedObject.ApplyModifiedProperties();
+            var authoredPack = (WorldBoosterPack)target;
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Sabit paket içeriği", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("5 kartın sırasını, dilini, diğer paketlerde kullanımını ve yerdeki kopyalarını atama penceresinden düzenle.", MessageType.Info);
+            if (!authoredPack.TryGetFixedContents(out var contents, out string error))
+                EditorGUILayout.HelpBox(error, MessageType.Warning);
+            if (contents != null)
+                using (new EditorGUI.DisabledScope(true))
+                    for (int i = 0; i < contents.Count; i++)
+                        EditorGUILayout.ObjectField("Kart " + (i + 1), contents[i], typeof(CardDefinition), false);
+            if (GUILayout.Button("Pack Kart Atamaları penceresini aç"))
+                EditorApplication.ExecuteMenuItem("TCG Card Chaos/Pack Kart Atamalari");
+        }
 
         if (!Application.isPlaying)
             return;

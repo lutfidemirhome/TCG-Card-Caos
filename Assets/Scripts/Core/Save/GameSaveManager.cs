@@ -27,6 +27,8 @@ public sealed class GameSaveManager : MonoBehaviour
     float _periodicTimer;
     bool _saveInProgress;
     bool _sessionStarted;
+    IEnumerator _saveRoutine;
+    Task _activeWriteTask;
     Coroutine _thumbnailRoutine;
     string _activeThumbnailSlot;
 
@@ -187,7 +189,7 @@ public sealed class GameSaveManager : MonoBehaviour
         if (kind != SaveRequestKind.Manual && kind != SaveRequestKind.Exit && !GameSaveDirtyTracker.IsDirty)
             return;
 
-        StartCoroutine(CommitRoutine(kind, manualSlotId: null));
+        StartCommitRoutine(kind, manualSlotId: null);
     }
 
     public void ForceAutosaveNow()
@@ -218,7 +220,7 @@ public sealed class GameSaveManager : MonoBehaviour
             return;
         }
 
-        StartCoroutine(CommitRoutine(SaveRequestKind.Manual, slotId));
+        StartCommitRoutine(SaveRequestKind.Manual, slotId);
     }
 
     public void SaveAndQuit()
@@ -236,17 +238,59 @@ public sealed class GameSaveManager : MonoBehaviour
     {
         if (!GameScenes.IsActiveGameScene() || !_sessionStarted)
             return;
-        if (!GameSaveDirtyTracker.IsDirty && !HasAnyCompatibleSave())
+
+        StopThumbnail();
+        // A queued coroutine cannot capture gameplay after the scene/app exits.
+        // Finish its disk operation first so the final snapshot never races the
+        // previous writer (including when both target the same autosave file).
+        bool interruptedSave = FinishActiveWriteForExit();
+        _milestoneQueued = false;
+        _autosaveQueued = false;
+        _manualQueued = false;
+        _queuedManualSlotId = null;
+        if (!GameSaveDirtyTracker.IsDirty && !interruptedSave)
             return;
-        if (!GameSaveDirtyTracker.IsDirty)
-            return;
-        if (_saveInProgress)
-        {
-            _autosaveQueued = true;
-            return;
-        }
 
         CommitSynchronous(SaveRequestKind.Exit, null);
+    }
+
+    bool FinishActiveWriteForExit()
+    {
+        if (_saveRoutine == null && _activeWriteTask == null)
+            return false;
+
+        if (_saveRoutine != null)
+        {
+            StopCoroutine(_saveRoutine);
+            _saveRoutine = null;
+        }
+
+        try
+        {
+            // The worker only performs file I/O; it never waits for the Unity
+            // thread. Blocking here is limited to the explicit leave/quit path.
+            if (_activeWriteTask != null)
+                _activeWriteTask.GetAwaiter().GetResult();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning("[Save] Previous write failed before exit: " + exception.Message);
+        }
+        finally
+        {
+            _activeWriteTask = null;
+            _saveInProgress = false;
+        }
+
+        // Its completion callback was stopped, so retain dirty state and save a
+        // fresh snapshot even if that worker happened to finish before this call.
+        return true;
+    }
+
+    void StartCommitRoutine(SaveRequestKind kind, string manualSlotId)
+    {
+        _saveRoutine = CommitRoutine(kind, manualSlotId);
+        StartCoroutine(_saveRoutine);
     }
 
     IEnumerator CommitRoutine(SaveRequestKind kind, string manualSlotId)
@@ -263,6 +307,7 @@ public sealed class GameSaveManager : MonoBehaviour
         GameSaveEvents.RaiseSaveStarted(slotId);
 
         float start = Time.realtimeSinceStartup;
+        ulong savedRevision = GameSaveDirtyTracker.Revision;
         data = GameSaveWorldCollector.Collect(slotId, slotType, slotIndex);
         collectMs = (Time.realtimeSinceStartup - start) * 1000f;
 
@@ -286,9 +331,11 @@ public sealed class GameSaveManager : MonoBehaviour
             watch.Stop();
             writeMs = (float)watch.Elapsed.TotalMilliseconds;
         });
+        _activeWriteTask = writeTask;
 
         while (!writeTask.IsCompleted)
             yield return null;
+        _activeWriteTask = null;
 
         if (writeTask.IsFaulted)
         {
@@ -300,7 +347,9 @@ public sealed class GameSaveManager : MonoBehaviour
 
         if (writeOk)
         {
-            GameSaveDirtyTracker.Clear();
+            // Gameplay continues while the worker writes. Changes after Collect
+            // (including a pack becoming five cards) still need their own save.
+            GameSaveDirtyTracker.ClearIfUnchanged(savedRevision);
             if (kind == SaveRequestKind.Autosave || kind == SaveRequestKind.Milestone || kind == SaveRequestKind.Exit)
                 AdvanceAutosaveIndex(slotIndex);
 
@@ -317,6 +366,7 @@ public sealed class GameSaveManager : MonoBehaviour
         }
 
         _saveInProgress = false;
+        _saveRoutine = null;
         DrainQueue();
     }
 
@@ -328,11 +378,12 @@ public sealed class GameSaveManager : MonoBehaviour
 
         try
         {
+            ulong savedRevision = GameSaveDirtyTracker.Revision;
             GameSaveData data = GameSaveWorldCollector.Collect(slotId, slotType, slotIndex);
             SaveSlotMetadata metadata = data.ToMetadata(false);
             if (SaveFileIO.TryWriteSaveAndMeta(data, metadata, out string error))
             {
-                GameSaveDirtyTracker.Clear();
+                GameSaveDirtyTracker.ClearIfUnchanged(savedRevision);
                 if (kind != SaveRequestKind.Manual)
                     AdvanceAutosaveIndex(slotIndex);
                 GameSaveEvents.RaiseSaveCompleted(metadata);
@@ -429,11 +480,20 @@ public sealed class GameSaveManager : MonoBehaviour
 
     void BeginThumbnail(string slotId)
     {
-        if (_thumbnailRoutine != null && _activeThumbnailSlot == slotId)
-            StopCoroutine(_thumbnailRoutine);
+        // Keep a single tracked capture so leaving gameplay can cancel all
+        // preview/metadata writes before committing the final save.
+        StopThumbnail();
 
         _activeThumbnailSlot = slotId;
         _thumbnailRoutine = StartCoroutine(ThumbnailWrapper(slotId));
+    }
+
+    void StopThumbnail()
+    {
+        if (_thumbnailRoutine != null)
+            StopCoroutine(_thumbnailRoutine);
+        _thumbnailRoutine = null;
+        _activeThumbnailSlot = null;
     }
 
     IEnumerator ThumbnailWrapper(string slotId)

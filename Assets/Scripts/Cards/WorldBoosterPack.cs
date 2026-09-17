@@ -24,6 +24,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     [SerializeField] GameObject visualPrefab;
     [SerializeField] int packVariantIndex = 1;
     [SerializeField] PackCardSet packSet = PackCardSet.English;
+    [SerializeField] string assignmentLabel = string.Empty;
     [SerializeField] List<CardDefinition> preRolledContents;
 
     const string CardRefChildName = "PackCardRef";
@@ -73,6 +74,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Renderer[] _packRenderers;
     bool _groundModelRenderersVisible = true;
     bool _authoredLevelItem;
+    bool _preserveSavedContents;
     readonly Dictionary<int, Material[]> _liveHandMaterialsByRenderer = new Dictionary<int, Material[]>();
 
     public PackState State => _state;
@@ -96,6 +98,11 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public BoosterPackDefinition Definition => packDefinition;
     public int PackVariantIndex => packVariantIndex;
     public PackCardSet PackSet => packSet;
+    public string AssignmentLabel
+    {
+        get => assignmentLabel;
+        set => assignmentLabel = value ?? string.Empty;
+    }
     public string PackDisplayName => PackArtLibrary.GetVariantDisplayName(packVariantIndex, packSet);
     public bool GroundShowsBack => _groundShowsBack;
     public Transform PackVisualRoot => _packModel;
@@ -230,7 +237,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         packDefinition = definition;
         this.packSet = definition != null ? definition.PackSet : packSet;
         this.packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
-        if (preRolledContents != null && preRolledContents.Count > 0)
+        _preserveSavedContents = false;
+        // An explicitly saved empty list must stay empty; never inherit scene contents or reroll.
+        if (preRolledContents != null)
             this.preRolledContents = new List<CardDefinition>(preRolledContents);
         EnsureVisual();
         RefreshPackModelLayout();
@@ -1438,6 +1447,13 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         return preRolledContents;
     }
 
+    // Older saves can contain repeats from the previous pack generator. Keep those exact
+    // snapshots playable; editor-authored/new-game packs still reject repeated definitions.
+    public void PreserveSavedContents()
+    {
+        _preserveSavedContents = true;
+    }
+
     public void RestoreIntoHand(Transform handAnchor, float targetHandScale)
     {
         BeginPickupFlight(handAnchor, targetHandScale, 0.05f, 0f);
@@ -1661,94 +1677,67 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ApplyPackModelShadowSettings();
     }
 
-    static List<CardDefinition> _cachedDefaultPool;
-    static List<CardDefinition> _cachedJapaneseDefaultPool;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetPackContentCache()
-    {
-        _cachedDefaultPool = null;
-        _cachedJapaneseDefaultPool = null;
-    }
-
     public IReadOnlyList<CardDefinition> RollContents(int count)
     {
-        EnsureContentsPreRolled(count);
-        if (preRolledContents == null || preRolledContents.Count == 0)
-            return new List<CardDefinition>();
+        if (count != CardDimensions.CardsPerBoosterPack
+            || !TryGetFixedContents(out IReadOnlyList<CardDefinition> contents, out _))
+            return System.Array.Empty<CardDefinition>();
 
-        int take = Mathf.Min(count, preRolledContents.Count);
-        return preRolledContents.GetRange(0, take);
+        return contents;
     }
 
+    // Kept for authored-layout and debug callers. Contents are now exclusively authored data.
     public void EnsureContentsPreRolled(int count = CardDimensions.CardsPerBoosterPack)
     {
-        if (preRolledContents != null && preRolledContents.Count >= count)
-            return;
-
-        var results = new List<CardDefinition>(count);
-        IReadOnlyList<CardDefinition> pool = packDefinition != null
-            ? packDefinition.BuildCardPool()
-            : GetDefaultPool(packSet);
-
-        if (pool.Count == 0)
-        {
-            Debug.LogWarning("WorldBoosterPack: No card definitions available for pack contents.");
-            preRolledContents = results;
-            return;
-        }
-
-        for (int i = 0; i < count; i++)
-            results.Add(pool[Random.Range(0, pool.Count)]);
-
-        preRolledContents = results;
+        if (!TryGetFixedContents(out _, out string error))
+            Debug.LogWarning("[Pack] " + name + ": " + error, this);
     }
 
-    static IReadOnlyList<CardDefinition> GetDefaultPool(PackCardSet requestedSet)
+    public bool TryGetFixedContents(out IReadOnlyList<CardDefinition> contents, out string error)
     {
-        if (requestedSet == PackCardSet.Japanese)
-            return GetJapaneseDefaultPool();
-
-        if (_cachedDefaultPool != null)
-            return _cachedDefaultPool;
-
-        CardCatalog.EnsureLoaded();
-        IReadOnlyList<CardDefinition> all = CardCatalog.All;
-        _cachedDefaultPool = new List<CardDefinition>(all.Count);
-        for (int i = 0; i < all.Count; i++)
+        contents = preRolledContents;
+        if (preRolledContents == null || preRolledContents.Count != CardDimensions.CardsPerBoosterPack)
         {
-            CardDefinition definition = all[i];
-            if (definition == null || definition.FrontTexture == null)
-                continue;
-            if (definition.IsJapanese)
-                continue;
-            if (!CardScatterUtility.IsLiveGroundCategory(definition.ShelfCategoryId))
-                continue;
-            _cachedDefaultPool.Add(definition);
+            error = "Pakete tam 5 kart atanmalı. Eksik veya fazla içerik rastgele tamamlanmaz.";
+            return false;
         }
 
-        return _cachedDefaultPool;
-    }
-
-    static IReadOnlyList<CardDefinition> GetJapaneseDefaultPool()
-    {
-        if (_cachedJapaneseDefaultPool != null)
-            return _cachedJapaneseDefaultPool;
-
-        CardCatalog.EnsureLoaded();
-        IReadOnlyList<CardDefinition> all = CardCatalog.All;
-        _cachedJapaneseDefaultPool = new List<CardDefinition>(all.Count);
-        for (int i = 0; i < all.Count; i++)
+        if (packSet != PackCardSet.English && packSet != PackCardSet.Japanese)
         {
-            CardDefinition definition = all[i];
-            if (definition == null || definition.FrontTexture == null)
-                continue;
-            if (!definition.IsJapanese)
-                continue;
-            _cachedJapaneseDefaultPool.Add(definition);
+            error = "Paket dili geçersiz.";
+            return false;
         }
 
-        return _cachedJapaneseDefaultPool;
+        for (int i = 0; i < preRolledContents.Count; i++)
+        {
+            CardDefinition definition = preRolledContents[i];
+            if (definition == null || definition.FrontTexture == null)
+            {
+                error = (i + 1) + ". kart eksik veya görseli bulunamadı.";
+                return false;
+            }
+            if (string.IsNullOrEmpty(definition.DefinitionId))
+            {
+                error = (i + 1) + ". kartın kalıcı tanımı eksik.";
+                return false;
+            }
+            if (definition.IsJapanese != (packSet == PackCardSet.Japanese))
+            {
+                error = (i + 1) + ". kartın dili paket diliyle eşleşmiyor.";
+                return false;
+            }
+            for (int earlier = 0; earlier < i; earlier++)
+            {
+                if (!_preserveSavedContents && preRolledContents[earlier].DefinitionId == definition.DefinitionId)
+                {
+                    error = (i + 1) + ". kart bu pakete zaten atanmış.";
+                    return false;
+                }
+            }
+        }
+
+        error = null;
+        return true;
     }
 
     void AdvanceFlightToward(Vector3 targetWorldPos, Quaternion targetWorldRot)

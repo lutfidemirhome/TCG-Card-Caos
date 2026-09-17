@@ -37,6 +37,44 @@ public static class PackOpenSequence
     const float RevealBackdropFadeInDuration = 0.12f;
     const float RevealBackdropFadeOutDuration = 0.32f;
 
+    // Opening spans many frames. Before all five cards exist, saves retain the unopened
+    // pack and omit partial previews. After the commit, saves contain all five held cards.
+    static PlayerCardHand _pendingOwner;
+    static WorldBoosterPack _pendingPack;
+    static PackSaveRecord _pendingPackSave;
+    static bool _openingCommitted;
+    static Transform _pendingRevealRoot;
+    static PackRevealBackdrop _pendingBackdrop;
+    static readonly HashSet<WorldCard> PendingCards = new HashSet<WorldCard>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetOpeningSave()
+    {
+        _pendingOwner = null;
+        _pendingPack = null;
+        _pendingPackSave = null;
+        _openingCommitted = false;
+        _pendingRevealRoot = null;
+        _pendingBackdrop = null;
+        PendingCards.Clear();
+    }
+
+    public static bool IsPendingSaveCard(WorldCard card)
+    {
+        return _pendingOwner != null && _pendingPackSave != null && PendingCards.Contains(card);
+    }
+
+    public static bool IsPendingSavePack(WorldBoosterPack pack)
+    {
+        return _pendingOwner != null && _pendingPackSave != null && _pendingPack == pack;
+    }
+
+    public static bool TryGetPendingPackSave(out PackSaveRecord record)
+    {
+        record = _pendingOwner != null ? _pendingPackSave : null;
+        return record != null;
+    }
+
     public static IEnumerator Run(PlayerCardHand hand, WorldBoosterPack pack, Camera camera)
     {
         if (hand == null || pack == null || camera == null)
@@ -45,6 +83,86 @@ public static class PackOpenSequence
             yield break;
         }
 
+        if (!pack.TryGetFixedContents(out IReadOnlyList<CardDefinition> contents, out string error))
+        {
+            Debug.LogWarning("[Pack] " + pack.name + ": " + error, pack);
+            hand.RestoreHeldPack(pack);
+            hand.SetPackOpenMovementLocked(false);
+            yield break;
+        }
+
+        PersistentId.GetOrCreate(pack.gameObject);
+        var savedContents = new string[contents.Count];
+        for (int i = 0; i < contents.Count; i++)
+            savedContents[i] = contents[i].DefinitionId;
+        _pendingOwner = hand;
+        _pendingPack = pack;
+        _openingCommitted = false;
+        _pendingPackSave = new PackSaveRecord
+        {
+            id = PersistentId.Resolve(pack),
+            assignmentLabel = pack.AssignmentLabel,
+            variant = pack.PackVariantIndex,
+            packSet = (int)pack.PackSet,
+            held = true,
+            faceDown = pack.GroundShowsBack,
+            stackLayer = pack.GroundStackLayer,
+            contents = savedContents,
+        };
+        _pendingPackSave.SetPosition(pack.transform.position);
+        _pendingPackSave.SetRotation(pack.transform.rotation);
+        PendingCards.Clear();
+        bool completed = false;
+        try
+        {
+            yield return RunValidated(hand, pack, camera, contents);
+            completed = true;
+        }
+        finally
+        {
+            if (_pendingOwner == hand)
+            {
+                if (!completed && !_openingCommitted)
+                {
+                    // Before commit, roll partial previews back into the intact pack.
+                    foreach (WorldCard card in PendingCards)
+                    {
+                        if (card == null)
+                            continue;
+                        card.gameObject.SetActive(false);
+                        Object.Destroy(card.gameObject);
+                    }
+                    if (hand != null && pack != null && hand.isActiveAndEnabled)
+                        hand.RestoreHeldPack(pack);
+                }
+                else if (!completed)
+                {
+                    // After commit, all five cards are owned. A stopped reveal must
+                    // finish delivery rather than leave them parented to a hidden UI root.
+                    if (hand != null && hand.isActiveAndEnabled)
+                        foreach (WorldCard card in PendingCards)
+                            if (card != null)
+                                hand.RestoreHeldCard(card);
+                    if (pack != null)
+                        Object.Destroy(pack.gameObject);
+                }
+                if (_pendingRevealRoot != null)
+                    Object.Destroy(_pendingRevealRoot.gameObject);
+                if (_pendingBackdrop != null)
+                    Object.Destroy(_pendingBackdrop.gameObject);
+                ResetOpeningSave();
+                if (!completed)
+                    GameSaveSignals.MarkDirty();
+            }
+        }
+    }
+
+    static IEnumerator RunValidated(
+        PlayerCardHand hand,
+        WorldBoosterPack pack,
+        Camera camera,
+        IReadOnlyList<CardDefinition> contents)
+    {
         pack.BeginOpening();
         hand.SetHandInputLocked(true);
         GameSoundEffects.EnsureExists();
@@ -52,8 +170,10 @@ public static class PackOpenSequence
         float revealDistance = hand.OpenRevealDistance;
         float packOnlyWorldDown = RevealCardAnchorHeight - hand.OpenRevealHeight;
         PackRevealBackdrop backdrop = PackRevealBackdrop.Create(camera, revealDistance);
+        _pendingBackdrop = backdrop;
 
         Transform revealRoot = new GameObject("PackRevealRoot").transform;
+        _pendingRevealRoot = revealRoot;
         revealRoot.SetParent(camera.transform, false);
         revealRoot.localPosition = new Vector3(0f, RevealCardAnchorHeight, revealDistance);
         revealRoot.localRotation = Quaternion.identity;
@@ -128,6 +248,7 @@ public static class PackOpenSequence
 
         yield return EjectRevealCardsRoutine(
             pack,
+            contents,
             packTransform,
             revealRoot,
             revealFaceRotation,
@@ -278,6 +399,7 @@ public static class PackOpenSequence
 
     static IEnumerator EjectRevealCardsRoutine(
         WorldBoosterPack pack,
+        IReadOnlyList<CardDefinition> contents,
         Transform packTransform,
         Transform revealRoot,
         Quaternion revealFaceRotation,
@@ -288,7 +410,6 @@ public static class PackOpenSequence
         List<WorldCard> revealCards,
         List<PackRevealCardSparkle> revealSparkles)
     {
-        IReadOnlyList<CardDefinition> contents = pack.RollContents(CardDimensions.CardsPerBoosterPack);
         float cardSpacing = CardDimensions.Width * revealScale * RevealCardSpacingFactor;
         float rowWidth = cardSpacing * Mathf.Max(0, contents.Count - 1);
         float halfHeight = CardDimensions.Height * revealScale * 0.5f;
@@ -316,6 +437,7 @@ public static class PackOpenSequence
                 contents[i],
                 paletteIndex: 0,
                 cardName: "PackCard_" + (i + 1));
+            PendingCards.Add(card);
 
             card.BeginRevealPreview(
                 revealRoot,
@@ -361,6 +483,11 @@ public static class PackOpenSequence
             }
         }
 
+        // No yield between this commit and updating the save representation: every
+        // later save sees all five reveal cards, which restore directly into the hand.
+        _openingCommitted = true;
+        _pendingPackSave = null;
+        GameSaveSignals.MarkDirty();
         yield return PackExitDriftRoutine(
             pack,
             packTransform,

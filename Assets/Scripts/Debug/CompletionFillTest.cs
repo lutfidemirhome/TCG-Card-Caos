@@ -71,8 +71,11 @@ public static class CompletionFillTest
         if (pack == null)
             return false;
 
-        pack.EnsureContentsPreRolled();
-        IReadOnlyList<CardDefinition> contents = pack.RollContents(CardDimensions.CardsPerBoosterPack);
+        if (!pack.TryGetFixedContents(out IReadOnlyList<CardDefinition> contents, out string error))
+        {
+            Debug.LogWarning("[Pack] " + pack.name + ": " + error, pack);
+            return false;
+        }
         Vector3 position = pack.transform.position;
         Quaternion rotation = pack.transform.rotation;
         Transform parent = pack.transform.parent;

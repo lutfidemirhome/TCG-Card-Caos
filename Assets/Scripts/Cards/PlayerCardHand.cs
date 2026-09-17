@@ -669,6 +669,12 @@ public class PlayerCardHand : MonoBehaviour
         if (!CanOpenHeldPack(pack) || _openPackRoutine != null)
             return false;
 
+        if (!pack.TryGetFixedContents(out _, out string contentsError))
+        {
+            Debug.LogWarning("[Pack] " + pack.name + ": " + contentsError, pack);
+            return false;
+        }
+
         if (_camera == null)
             _camera = Camera.main;
 

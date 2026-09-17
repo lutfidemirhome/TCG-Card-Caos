@@ -5,6 +5,7 @@ using UnityEngine;
 public class PackSaveRecord
 {
     public string id = string.Empty;
+    public string assignmentLabel = string.Empty;
     public int variant = 1;
     public int packSet;
     public bool held;

@@ -64,6 +64,9 @@ public static class GameSaveWorldCollector
                 PackScratch.Add(record);
         }
 
+        if (PackOpenSequence.TryGetPendingPackSave(out PackSaveRecord openingPack))
+            PackScratch.Add(openingPack);
+
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
         FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
 
@@ -94,7 +97,7 @@ public static class GameSaveWorldCollector
 
     static CardSaveRecord CollectCard(WorldCard card, HashSet<WorldCard> heldCards)
     {
-        if (card == null)
+        if (card == null || PackOpenSequence.IsPendingSaveCard(card))
             return null;
 
         PersistentId.GetOrCreate(card.gameObject);
@@ -112,7 +115,7 @@ public static class GameSaveWorldCollector
         record.SetPosition(card.transform.position);
         record.SetRotation(card.transform.rotation);
 
-        if (heldCards.Contains(card) || card.IsInHand)
+        if (heldCards.Contains(card) || card.IsInHand || card.IsPackReveal)
         {
             record.location = CardRuntimeLocation.Held;
             return record;
@@ -150,7 +153,8 @@ public static class GameSaveWorldCollector
 
     static PackSaveRecord CollectPack(WorldBoosterPack pack, HashSet<WorldBoosterPack> heldPacks)
     {
-        if (pack == null || pack.State == WorldBoosterPack.PackState.Opening)
+        if (pack == null || pack.State == WorldBoosterPack.PackState.Opening
+            || PackOpenSequence.IsPendingSavePack(pack))
             return null;
 
         PersistentId.GetOrCreate(pack.gameObject);
@@ -166,6 +170,7 @@ public static class GameSaveWorldCollector
         var record = new PackSaveRecord
         {
             id = PersistentId.Resolve(pack),
+            assignmentLabel = pack.AssignmentLabel,
             variant = pack.PackVariantIndex,
             packSet = (int)pack.PackSet,
             held = heldPacks.Contains(pack) || pack.IsInHand,

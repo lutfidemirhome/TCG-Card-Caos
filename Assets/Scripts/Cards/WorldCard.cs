@@ -95,6 +95,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool IsHeld => _handState == HandState.Held;
     public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
     public bool IsFlyingToShelf => _handState == HandState.FlyingToShelf;
+    public bool IsPackReveal => _handState == HandState.PackReveal;
     public bool IsInHand => _handState == HandState.Held || _handState == HandState.FlyingToHand;
     public bool HasActivePhysics => _rigidbody != null;
     public bool IsShelfRowCompleteLocked => _shelfRowCompleteRoutine != null;
