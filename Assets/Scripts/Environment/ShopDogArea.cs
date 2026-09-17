@@ -152,7 +152,6 @@ public sealed class ShopDogArea : MonoBehaviour
             // into a single gameplay frame. Never jump across disconnected floors.
             if ((i & 3) == 3) yield return null;
         }
-        int sourceCount = _sources.Count;
         _sources.Clear();
         if (_destinations.Count < 2)
         {
@@ -199,9 +198,6 @@ public sealed class ShopDogArea : MonoBehaviour
         playerCollision.Initialize(modelScale);
         controller.Initialize(this, agent, alignment, playerCollision);
         _routine = null;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[Shop Dog] Hazır: {_destinations.Count} dolaşma noktası, üst katta {upperPoints}, {sourceCount} sabit yüzey.", this);
-#endif
     }
 
     bool PrepareVisual()

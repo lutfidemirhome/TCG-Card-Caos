@@ -204,7 +204,6 @@ public sealed class GameSaveManager : MonoBehaviour
         if (_saveInProgress)
         {
             _autosaveQueued = true;
-            Debug.Log("[Save] Autosave queued; wait a moment.");
             return;
         }
 
@@ -296,9 +295,6 @@ public sealed class GameSaveManager : MonoBehaviour
     IEnumerator CommitRoutine(SaveRequestKind kind, string manualSlotId)
     {
         _saveInProgress = true;
-        float collectMs = 0f;
-        float serializeMs = 0f;
-        float writeMs = 0f;
         string error = null;
         GameSaveData data = null;
         SaveSlotMetadata metadata = null;
@@ -306,10 +302,8 @@ public sealed class GameSaveManager : MonoBehaviour
         ResolveSlot(kind, manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex);
         GameSaveEvents.RaiseSaveStarted(slotId);
 
-        float start = Time.realtimeSinceStartup;
         ulong savedRevision = GameSaveDirtyTracker.Revision;
         data = GameSaveWorldCollector.Collect(slotId, slotType, slotIndex);
-        collectMs = (Time.realtimeSinceStartup - start) * 1000f;
 
         metadata = data.ToMetadata(false);
 
@@ -320,20 +314,15 @@ public sealed class GameSaveManager : MonoBehaviour
         bool writeOk = false;
         Task writeTask = Task.Run(() =>
         {
-            var watch = System.Diagnostics.Stopwatch.StartNew();
             // Collect produced a detached snapshot of strings, values and arrays.
             // JsonUtility supports background threads; nothing may mutate these
             // DTOs until this task completes. Live Unity objects stay on the main thread.
             string json = JsonUtility.ToJson(data, false);
             string metaJson = JsonUtility.ToJson(metadata, false);
-            serializeMs = (float)watch.Elapsed.TotalMilliseconds;
 
-            watch.Restart();
             writeOk = SaveFileIO.TryWriteAtomic(savePath, json, out error);
             if (writeOk)
                 SaveFileIO.TryWriteAtomic(metaPath, metaJson, out _);
-            watch.Stop();
-            writeMs = (float)watch.Elapsed.TotalMilliseconds;
         });
         _activeWriteTask = writeTask;
 
@@ -358,7 +347,6 @@ public sealed class GameSaveManager : MonoBehaviour
                 AdvanceAutosaveIndex(slotIndex);
 
             GameSaveEvents.RaiseSaveCompleted(metadata);
-            LogSave(kind, slotId, data, collectMs, serializeMs, writeMs);
             BeginThumbnail(slotId);
         }
         else
@@ -391,7 +379,6 @@ public sealed class GameSaveManager : MonoBehaviour
                 if (kind != SaveRequestKind.Manual)
                     AdvanceAutosaveIndex(slotIndex);
                 GameSaveEvents.RaiseSaveCompleted(metadata);
-                LogSave(kind, slotId, data, 0f, 0f, 0f);
             }
             else
             {
@@ -508,32 +495,6 @@ public sealed class GameSaveManager : MonoBehaviour
             _activeThumbnailSlot = null;
             _thumbnailRoutine = null;
         }
-    }
-
-    void LogSave(SaveRequestKind kind, string slotId, GameSaveData data, float collectMs, float serializeMs, float writeMs)
-    {
-        int shelfCards = 0;
-        int psaCards = 0;
-        if (data != null && data.cards != null)
-        {
-            for (int i = 0; i < data.cards.Length; i++)
-            {
-                CardSaveRecord card = data.cards[i];
-                if (card == null)
-                    continue;
-                if (card.location == CardRuntimeLocation.Shelf)
-                    shelfCards++;
-                else if (card.location == CardRuntimeLocation.PsaCabinet)
-                    psaCards++;
-            }
-        }
-
-        Debug.Log(
-            "[Save] Completed " + kind + " " + slotId
-            + " shelf=" + shelfCards
-            + " psa=" + psaCards
-            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0)
-            + $" collect={collectMs:F1}ms serialize={serializeMs:F1}ms write={writeMs:F1}ms");
     }
 
     void LoadLatestFromGameplay()

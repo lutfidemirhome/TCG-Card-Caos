@@ -148,7 +148,6 @@ public class InGamePauseView : MonoBehaviour
 
     public void Show()
     {
-        var performanceSample = GameplayPerformance.BeginSample();
         WelcomePopupView.CoverForPause();
         DemoCompleteView.CoverForPause();
 
@@ -165,7 +164,6 @@ public class InGamePauseView : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         BringToFrontIfNeeded(transform);
-        GameplayPerformance.EndPauseTransition("open", performanceSample);
     }
 
     static void BringToFrontIfNeeded(Transform target)
@@ -193,9 +191,7 @@ public class InGamePauseView : MonoBehaviour
 
     void Resume()
     {
-        var performanceSample = GameplayPerformance.BeginSample();
         ResumeInternal();
-        GameplayPerformance.EndPauseTransition("close", performanceSample);
     }
 
     void ResumeInternal()

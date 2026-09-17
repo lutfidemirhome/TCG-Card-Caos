@@ -27,6 +27,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     readonly List<CardShelfSlot> _slots = new List<CardShelfSlot>(32);
     readonly Dictionary<CardShelfSlot, int> _resolvedSlotNumbers = new Dictionary<CardShelfSlot, int>(32);
+    bool _slotCacheValid;
 
     struct ShelfFlightEntry
     {
@@ -57,6 +58,16 @@ public class CardShelf : MonoBehaviour, IInteractable
         CabinetSignCompleteOverlay.Refresh(this);
     }
 
+    void OnEnable()
+    {
+        _slotCacheValid = false;
+    }
+
+    void OnTransformChildrenChanged()
+    {
+        _slotCacheValid = false;
+    }
+
     void OnDestroy()
     {
         DestroyPlacementOutline();
@@ -73,13 +84,19 @@ public class CardShelf : MonoBehaviour, IInteractable
 #if UNITY_EDITOR
     void OnValidate()
     {
+        _slotCacheValid = false;
         if (categoryDefinition != null && !string.IsNullOrWhiteSpace(categoryDefinition.CategoryId))
             categoryId = categoryDefinition.CategoryId;
     }
 #endif
 
+    /// <summary>
+    /// Force a topology/numbering rebuild after authoring or changing the runtime slot layout.
+    /// Card placement only changes occupancy, so gameplay reads reuse this topology.
+    /// </summary>
     public void RefreshSlotCache()
     {
+        _slotCacheValid = false;
         _slots.Clear();
         _resolvedSlotNumbers.Clear();
         GetComponentsInChildren(true, _slots);
@@ -98,6 +115,13 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         _slots.RemoveAll(slot => slot == null);
         RebuildResolvedSlotNumbers();
+        _slotCacheValid = true;
+    }
+
+    void EnsureSlotCache(bool refreshInEditor = false)
+    {
+        if (!_slotCacheValid || (refreshInEditor && !Application.isPlaying))
+            RefreshSlotCache();
     }
 
     /// <summary>
@@ -109,8 +133,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (slot == null)
             return 0;
 
-        if (_resolvedSlotNumbers.Count == 0)
-            RebuildResolvedSlotNumbers();
+        EnsureSlotCache();
 
         if (_resolvedSlotNumbers.TryGetValue(slot, out int number))
             return number;
@@ -140,7 +163,7 @@ public class CardShelf : MonoBehaviour, IInteractable
             rowSlots.Add(slot);
         }
 
-        Vector3 customerView = -GetCustomerFacingDirection();
+        Vector3 customerView = -GetCustomerFacingDirectionFromCachedSlots();
         customerView.y = 0f;
         if (customerView.sqrMagnitude < 0.0001f)
             customerView = Vector3.forward;
@@ -172,9 +195,12 @@ public class CardShelf : MonoBehaviour, IInteractable
     /// <summary>Horizontal direction customers face when reading cards on this shelf.</summary>
     public Vector3 GetCustomerFacingDirection()
     {
-        if (_slots.Count == 0)
-            RefreshSlotCache();
+        EnsureSlotCache();
+        return GetCustomerFacingDirectionFromCachedSlots();
+    }
 
+    Vector3 GetCustomerFacingDirectionFromCachedSlots()
+    {
         for (int i = 0; i < _slots.Count; i++)
         {
             CardShelfSlot slot = _slots[i];
@@ -226,8 +252,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (card == null || slot == null)
             return false;
 
-        if (_slots.Count == 0)
-            RefreshSlotCache();
+        EnsureSlotCache();
 
         return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot, _slots);
     }
@@ -324,13 +349,13 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     public int CountPlaceableSlots()
     {
-        RefreshSlotCache();
+        EnsureSlotCache(refreshInEditor: true);
         return _slots.Count;
     }
 
     public int CountOccupiedSlots()
     {
-        RefreshSlotCache();
+        EnsureSlotCache(refreshInEditor: true);
         int count = 0;
         for (int i = 0; i < _slots.Count; i++)
         {
@@ -356,7 +381,7 @@ public class CardShelf : MonoBehaviour, IInteractable
     /// <summary>Single slot scan for HUD / save progress.</summary>
     public void CollectHudProgress(out int correctlyPlaced, out bool complete)
     {
-        RefreshSlotCache();
+        EnsureSlotCache(refreshInEditor: true);
         correctlyPlaced = 0;
         complete = _slots.Count > 0;
 
@@ -383,7 +408,7 @@ public class CardShelf : MonoBehaviour, IInteractable
     /// </summary>
     public bool HasCompletedSeriesRow()
     {
-        RefreshSlotCache();
+        EnsureSlotCache(refreshInEditor: true);
         int needed = SlotsPerRow;
         if (needed <= 0 || _slots.Count == 0)
             return false;
@@ -572,18 +597,17 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     public CardShelfSlot FindSlotForRestore(WorldCard card, int rowIndex, int columnIndex, Vector3 worldHint)
     {
-        CardShelfSlot[] slots = GetComponentsInChildren<CardShelfSlot>(true);
+        EnsureSlotCache(refreshInEditor: true);
         CardShelfSlot rowColMatch = null;
         CardShelfSlot nearest = null;
         float nearestSq = 3f * 3f;
 
-        for (int i = 0; i < slots.Length; i++)
+        for (int i = 0; i < _slots.Count; i++)
         {
-            CardShelfSlot slot = slots[i];
+            CardShelfSlot slot = _slots[i];
             if (slot == null)
                 continue;
 
-            slot.SyncIndicesFromHierarchy();
             if (!slot.gameObject.activeInHierarchy)
                 continue;
             if (!slot.IsEmpty && slot.OccupiedCard != card)
@@ -798,8 +822,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     void RefreshOccupancy()
     {
-        if (_slots.Count == 0)
-            RefreshSlotCache();
+        EnsureSlotCache();
 
         for (int i = 0; i < _slots.Count; i++)
         {
@@ -810,8 +833,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     bool HasAnySlots()
     {
-        if (_slots.Count == 0)
-            RefreshSlotCache();
+        EnsureSlotCache();
         return _slots.Count > 0;
     }
 

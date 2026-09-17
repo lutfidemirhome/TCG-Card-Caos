@@ -13,16 +13,10 @@ public static class GameSaveRestore
 
     static readonly HashSet<string> RestoredIds = new HashSet<string>();
     static bool _remappedIds;
-    static int _shelfRestored;
-    static int _shelfFailed;
-    static int _psaRestored;
-    static int _removedFloorDuplicates;
     public static bool LastRestoreSucceeded { get; private set; }
 
     public static IEnumerator RestoreRoutine(string slotId)
     {
-        var workTimer = System.Diagnostics.Stopwatch.StartNew();
-        int batchWaits = 0;
         LastRestoreSucceeded = false;
         GameSaveEvents.RaiseLoadStarted(slotId);
 
@@ -34,9 +28,7 @@ public static class GameSaveRestore
 
         CardScatterUtility.ClearTestCards();
         PhysicsLevelLayout.SuspendAuthoredItemsForSaveRestore();
-        workTimer.Stop();
         yield return null;
-        workTimer.Start();
 
         PersistentIdRegistry.RebuildWorldLookups();
         PrepareShelvesForRestore();
@@ -50,10 +42,6 @@ public static class GameSaveRestore
             : new HashSet<string>();
         RestoredIds.Clear();
         _remappedIds = false;
-        _shelfRestored = 0;
-        _shelfFailed = 0;
-        _psaRestored = 0;
-        _removedFloorDuplicates = 0;
 
         int processed = 0;
         if (data.cards != null)
@@ -68,7 +56,6 @@ public static class GameSaveRestore
                     // One-time migration of the removed authored floor copies. Do not
                     // filter by definition: a player can drop a legitimate pack card.
                     _remappedIds = true;
-                    _removedFloorDuplicates++;
                 }
                 else
                 {
@@ -77,10 +64,7 @@ public static class GameSaveRestore
                 processed++;
                 if (processed % EntitiesPerFrame == 0)
                 {
-                    batchWaits++;
-                    workTimer.Stop();
                     yield return null;
-                    workTimer.Start();
                 }
             }
         }
@@ -93,19 +77,14 @@ public static class GameSaveRestore
                 processed++;
                 if (processed % EntitiesPerFrame == 0)
                 {
-                    batchWaits++;
-                    workTimer.Stop();
                     yield return null;
-                    workTimer.Start();
                 }
             }
         }
 
         FinalizeShelfRestores();
         FinalizePsaRestores();
-        workTimer.Stop();
         yield return null;
-        workTimer.Start();
 
         if (data.player != null)
         {
@@ -127,36 +106,6 @@ public static class GameSaveRestore
         LastRestoreSucceeded = true;
         GameProgressCounter.InvalidateCache();
         GameSaveEvents.RaiseLoadCompleted(slotId);
-        LogRestore(slotId, data);
-        workTimer.Stop();
-        Debug.Log($"[Loading] Restore work={workTimer.Elapsed.TotalSeconds:F2}s batch waits={batchWaits}");
-    }
-
-    static void LogRestore(string slotId, GameSaveData data)
-    {
-        int shelfCards = 0;
-        int psaCards = 0;
-        if (data != null && data.cards != null)
-        {
-            for (int i = 0; i < data.cards.Length; i++)
-            {
-                CardSaveRecord card = data.cards[i];
-                if (card == null)
-                    continue;
-                if (card.location == CardRuntimeLocation.Shelf)
-                    shelfCards++;
-                else if (card.location == CardRuntimeLocation.PsaCabinet)
-                    psaCards++;
-            }
-        }
-
-        Debug.Log(
-            "[Save] Restored " + slotId
-            + " shelf=" + _shelfRestored + "/" + shelfCards
-            + (_shelfFailed > 0 ? " missing=" + _shelfFailed : string.Empty)
-            + " psa=" + _psaRestored + "/" + psaCards
-            + (_removedFloorDuplicates > 0 ? " removedFloorDuplicates=" + _removedFloorDuplicates : string.Empty)
-            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0));
     }
 
     static string AllocateRestoreId(string savedId)
@@ -202,18 +151,11 @@ public static class GameSaveRestore
         switch (record.location)
         {
             case CardRuntimeLocation.Shelf:
-                if (TryRestoreShelfCard(card, record))
-                    _shelfRestored++;
-                else
-                {
-                    _shelfFailed++;
+                if (!TryRestoreShelfCard(card, record))
                     PlaceWorldCard(card, record, scatterRoot);
-                }
                 break;
             case CardRuntimeLocation.PsaCabinet:
-                if (TryRestorePsaCard(card, record))
-                    _psaRestored++;
-                else
+                if (!TryRestorePsaCard(card, record))
                     PlaceWorldCard(card, record, scatterRoot);
                 break;
             case CardRuntimeLocation.Held:

@@ -85,9 +85,7 @@ public sealed class ShopDogController : MonoBehaviour
 
     private void Update()
     {
-        var sample = GameplayPerformance.BeginSample();
         UpdateBehaviour();
-        GameplayPerformance.EndSample(GameplayPerformance.Area.Dog, sample);
     }
 
     private void UpdateBehaviour()

@@ -183,8 +183,6 @@ public static class CardGroundStack
     public static IEnumerator RebuildAllAsync()
     {
         yield return null;
-        var workTimer = System.Diagnostics.Stopwatch.StartNew();
-        int batchWaits = 0;
         RebuildSpatialBuckets();
 
         // Snapshot piles before yielding — Track/InsertIntoSpatialBucket can add keys on later
@@ -200,14 +198,9 @@ public static class CardGroundStack
             processed++;
             if (processed % PilesPerLoadFrame == 0)
             {
-                batchWaits++;
-                workTimer.Stop();
                 yield return null;
-                workTimer.Start();
             }
         }
-        workTimer.Stop();
-        Debug.Log($"[Loading] Ground work={workTimer.Elapsed.TotalSeconds:F2}s piles={piles.Count} batch waits={batchWaits}");
     }
 
     /// <summary>
@@ -269,13 +262,17 @@ public static class CardGroundStack
         }
 
         RelayoutSeen.Clear();
+        bool spatialBucketsRebuilt = false;
         for (int i = 0; i < CellSeedScratch.Count; i++)
         {
             WorldCard seed = CellSeedScratch[i];
             if (seed == null || RelayoutSeen.Contains(seed))
                 continue;
 
-            BuildLocalPile(seed, ClusterScratch);
+            // All seeds use the same live snapshot. Relayout only changes layer numbers,
+            // so rescanning every ground card for each separate pile cannot add new neighbors.
+            BuildLocalPile(seed, ClusterScratch, rebuildSpatialBuckets: !spatialBucketsRebuilt);
+            spatialBucketsRebuilt = true;
             if (ClusterScratch.Count == 0)
                 continue;
 
@@ -719,13 +716,14 @@ public static class CardGroundStack
     /// <summary>
     /// Flood-fill overlapping cards in neighboring cells only — not the whole floor.
     /// </summary>
-    static void BuildLocalPile(WorldCard seed, List<WorldCard> results)
+    static void BuildLocalPile(WorldCard seed, List<WorldCard> results, bool rebuildSpatialBuckets = true)
     {
         results.Clear();
         if (seed == null || seed.IsInHand)
             return;
 
-        RebuildSpatialBuckets();
+        if (rebuildSpatialBuckets)
+            RebuildSpatialBuckets();
         CollectNeighborhood(seed.transform.position, CellScratch);
         for (int i = CellScratch.Count - 1; i >= 0; i--)
         {

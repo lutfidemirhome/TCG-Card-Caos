@@ -59,7 +59,6 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     IEnumerator PlayModeSetupRoutine()
     {
-        float setupStartedAt = Time.realtimeSinceStartup;
         yield return null;
 
         CardArtLibrary.EnsureLoaded();
@@ -81,7 +80,6 @@ public class CardInstancedRenderManager : MonoBehaviour
 
             if (!string.IsNullOrEmpty(pendingSlotId))
             {
-                Debug.Log("[Save] Restoring " + pendingSlotId + "...");
                 yield return GameSaveRestore.RestoreRoutine(pendingSlotId);
                 if (GameSaveRestore.LastRestoreSucceeded)
                     GameSaveManager.NotifySaveRestored();
@@ -107,11 +105,8 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         GameSceneLoader.ClearPendingLoad();
         DeferGroundRegistration = false;
-        float registrationStartedAt = Time.realtimeSinceStartup;
         yield return RegisterAllGroundCardsRoutine();
-        float groundStartedAt = Time.realtimeSinceStartup;
         yield return CardGroundStack.RebuildAllAsync();
-        float visualsStartedAt = Time.realtimeSinceStartup;
         // Re-apply shelf/PSA poses AFTER ground rebuild — ApplyPileLayers used to snap Y to floor.
         RefreshAllShelfCardVisuals();
         RefreshAllPsaCabinetCardVisuals();
@@ -120,11 +115,6 @@ public class CardInstancedRenderManager : MonoBehaviour
         IsGameplayReady = true;
         GameProgressCounter.LockTotalFromWorld();
         _playModeSetupRoutine = null;
-        Debug.Log($"[Loading] Setup={Time.realtimeSinceStartup - setupStartedAt:F2}s "
-            + $"assets/save={registrationStartedAt - setupStartedAt:F2}s "
-            + $"registration={groundStartedAt - registrationStartedAt:F2}s "
-            + $"ground={visualsStartedAt - groundStartedAt:F2}s "
-            + $"visuals/totals={Time.realtimeSinceStartup - visualsStartedAt:F2}s");
     }
 
     static void RefreshAllShelfCardVisuals()
@@ -194,8 +184,6 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     IEnumerator RegisterAllGroundCardsRoutine()
     {
-        var workTimer = System.Diagnostics.Stopwatch.StartNew();
-        int batchWaits = 0;
         int processed = 0;
 
         WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(
@@ -211,10 +199,7 @@ public class CardInstancedRenderManager : MonoBehaviour
             processed++;
             if (processed % CardsRegisteredPerFrame == 0)
             {
-                batchWaits++;
-                workTimer.Stop();
                 yield return null;
-                workTimer.Start();
             }
         }
 
@@ -236,15 +221,10 @@ public class CardInstancedRenderManager : MonoBehaviour
                 processed++;
                 if (processed % CardsRegisteredPerFrame == 0)
                 {
-                    batchWaits++;
-                    workTimer.Stop();
                     yield return null;
-                    workTimer.Start();
                 }
             }
         }
-        workTimer.Stop();
-        Debug.Log($"[Loading] Registration work={workTimer.Elapsed.TotalSeconds:F2}s items={processed} batch waits={batchWaits}");
     }
 
     static bool IsDemoAreaItem(Component component)
@@ -299,7 +279,6 @@ public class CardInstancedRenderManager : MonoBehaviour
         if (_instance == this)
         {
             _instance = null;
-            GameplayPerformance.Reset();
         }
     }
 
@@ -316,7 +295,6 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     void LateUpdate()
     {
-        var performanceStart = GameplayPerformance.BeginSample();
         if (_camera == null)
             _camera = Camera.main;
 
@@ -325,8 +303,6 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         DrawInstancedCards();
         CullGroundPackRenderers();
-        GameplayPerformance.EndSample(GameplayPerformance.Area.CardDraw, performanceStart);
-        GameplayPerformance.Tick();
     }
 
     public void Register(WorldCard card)

@@ -3,12 +3,14 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Bottom-left skill slots. 1 toggles Double Jump. 2 instantly pulls the selected series into hand.
-/// Flip <see cref="SkillsEnabled"/> when the skill pass starts.
+/// Bottom-left skill slots, enabled separately. 1 toggles Double Jump.
+/// Hand remains unavailable until explicitly enabled.
 /// </summary>
 public class SkillBarView : MonoBehaviour
 {
-    public static bool SkillsEnabled = false;
+    public static bool JumpSkillEnabled = true;
+    public static bool HandSkillEnabled = false;
+    public static bool SkillsEnabled => JumpSkillEnabled || HandSkillEnabled;
 
     const float ButtonSize = 108f;
     const float Margin = 28f;
@@ -30,16 +32,27 @@ public class SkillBarView : MonoBehaviour
             return;
         }
 
-        doubleJumpBackground = EnsureSlot(
-            "Button_DoubleJump",
-            "Double Jump",
-            "1",
-            new Vector2(Margin, Margin));
-        EnsureSlot(
-            "Button_Hand",
-            "Hand",
-            "2",
-            new Vector2(Margin + ButtonSize + ButtonGap, Margin));
+        if (JumpSkillEnabled)
+        {
+            doubleJumpBackground = EnsureSlot(
+                "Button_DoubleJump",
+                "Double Jump",
+                "1",
+                new Vector2(Margin, Margin));
+        }
+        else
+            HideSlot("Button_DoubleJump");
+
+        if (HandSkillEnabled)
+        {
+            EnsureSlot(
+                "Button_Hand",
+                "Hand",
+                "2",
+                new Vector2(Margin + ButtonSize + ButtonGap, Margin));
+        }
+        else
+            HideSlot("Button_Hand");
         RefreshJumpVisual();
     }
 
@@ -55,13 +68,13 @@ public class SkillBarView : MonoBehaviour
         if (!SkillsEnabled || GamePause.IsPaused)
             return;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+        if (JumpSkillEnabled && (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)))
         {
             PlayerJumpSkill.DoubleJumpArmed = !PlayerJumpSkill.DoubleJumpArmed;
             RefreshJumpVisual();
         }
 
-        if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+        if (HandSkillEnabled && (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)))
             PlayerHandSkill.TryActivate();
     }
 
@@ -79,6 +92,7 @@ public class SkillBarView : MonoBehaviour
         else
             EnsureKeyHint(existing, keyHint);
 
+        existing.gameObject.SetActive(true);
         return existing.GetComponent<Image>();
     }
 

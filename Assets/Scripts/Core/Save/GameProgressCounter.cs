@@ -42,17 +42,20 @@ public static class GameProgressCounter
     static bool _cacheValid;
     static Snapshot _cachedSnapshot;
 
+    /// <summary>Card/progress changes only; walking and looking do not invalidate this revision.</summary>
+    public static ulong Revision { get; private set; }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
     {
         _lockedTotalCards = -1;
         _cachedFullCardTotal = -1;
-        _cacheValid = false;
         ClearCabinetCache();
     }
 
     public static void InvalidateCache()
     {
+        unchecked { Revision++; }
         _cacheValid = false;
     }
 
@@ -65,6 +68,7 @@ public static class GameProgressCounter
     public static void ClearLockedTotal()
     {
         _lockedTotalCards = -1;
+        InvalidateCache();
     }
 
     public static Snapshot Capture()
@@ -216,7 +220,7 @@ public static class GameProgressCounter
         AllShelves.Clear();
         AllPsaCabinets.Clear();
         _cachedSceneHandle = int.MinValue;
-        _cacheValid = false;
+        InvalidateCache();
     }
 
     static int CountLive<T>(List<T> items) where T : Object

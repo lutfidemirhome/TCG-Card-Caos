@@ -40,6 +40,10 @@ public class TutorialHintView : MonoBehaviour
     LocalizedText _localized;
     string _laidOutText;
     float _stepShownAt;
+    bool _arrangeCacheValid;
+    bool _arrangeComplete;
+    ulong _arrangeProgressRevision;
+    int _arrangeHandCardCount;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
@@ -59,7 +63,10 @@ public class TutorialHintView : MonoBehaviour
         _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
         _usedCrouchBeforeHint = false;
         if (_gameplayInstance != null)
+        {
+            _gameplayInstance._arrangeCacheValid = false;
             _gameplayInstance.Hide();
+        }
     }
 
     /// <summary>
@@ -97,6 +104,7 @@ public class TutorialHintView : MonoBehaviour
 
     void OnEnable()
     {
+        _arrangeCacheValid = false;
         Localization.LanguageChanged += OnLanguageChanged;
     }
 
@@ -121,6 +129,7 @@ public class TutorialHintView : MonoBehaviour
 
         if (GameSceneLoader.IsLoading || !CardInstancedRenderManager.IsGameplayReady)
         {
+            _arrangeCacheValid = false;
             Hide();
             return;
         }
@@ -298,6 +307,7 @@ public class TutorialHintView : MonoBehaviour
     void AdvanceTo(Step next)
     {
         _step = next;
+        _arrangeCacheValid = false;
         _laidOutText = null;
         _stepShownAt = Time.realtimeSinceStartup;
 
@@ -424,7 +434,30 @@ public class TutorialHintView : MonoBehaviour
         return hand != null && hand.Count >= 2;
     }
 
-    static bool HasArrangedMatchingRow()
+    bool HasArrangedMatchingRow()
+    {
+        // Save revisions also change on every camera turn. Progress revisions only change
+        // with cards/the world, so an unchanged shelf does not need another full scene scan.
+        ulong revision = GameProgressCounter.Revision;
+        PlayerCardHand hand = PlayerCardHand.Instance;
+        int handCardCount = hand != null ? hand.Count : 0;
+        if (_arrangeCacheValid
+            && _arrangeProgressRevision == revision
+            && _arrangeHandCardCount == handCardCount)
+        {
+            return _arrangeComplete;
+        }
+
+        // A slot is occupied as soon as its card leaves the hand, before the landing
+        // callback marks progress dirty. Keep that existing completion timing as well.
+        _arrangeProgressRevision = revision;
+        _arrangeHandCardCount = handCardCount;
+        _arrangeComplete = FindArrangedMatchingRow();
+        _arrangeCacheValid = true;
+        return _arrangeComplete;
+    }
+
+    static bool FindArrangedMatchingRow()
     {
         CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
             FindObjectsInactive.Exclude,

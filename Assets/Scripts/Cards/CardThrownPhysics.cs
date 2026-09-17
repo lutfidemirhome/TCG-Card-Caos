@@ -50,7 +50,6 @@ public static class CardThrownPhysics
         {
             while (isActive())
             {
-                var performanceStart = GameplayPerformance.BeginSample();
                 elapsed += Time.deltaTime;
                 colliderRefreshTimer += Time.deltaTime;
                 if (!body.IsSleeping() && colliderRefreshTimer >= LandingColliderRefreshInterval)
@@ -91,7 +90,6 @@ public static class CardThrownPhysics
                         MaxRecoveryFlightSeconds);
                 }
 
-                GameplayPerformance.EndSample(GameplayPerformance.Area.Throw, performanceStart);
                 if (body.IsSleeping())
                 {
                     if (nearGround && shelfStuckTime <= 0f)

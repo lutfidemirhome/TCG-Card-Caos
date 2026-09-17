@@ -19,7 +19,9 @@ public static class GameSaveWorldCollector
 
     public static GameSaveData Collect(string slotId, SaveSlotType slotType, int slotIndex)
     {
-        PersistentIdRegistry.RebuildWorldLookups();
+        // Restore owns card/pack/shelf lookup rebuilding. Collection already scans the
+        // live entities below and only needs the small PSA lookup for unparented slots.
+        PersistentIdRegistry.RebuildPsaCabinetLookups();
 
         CardScratch.Clear();
         PackScratch.Clear();
@@ -100,10 +102,10 @@ public static class GameSaveWorldCollector
         if (card == null || PackOpenSequence.IsPendingSaveCard(card))
             return null;
 
-        PersistentId.GetOrCreate(card.gameObject);
+        PersistentId persistent = PersistentId.GetOrCreate(card.gameObject);
         var record = new CardSaveRecord
         {
-            id = PersistentId.Resolve(card),
+            id = persistent.Value,
             definitionId = card.Definition != null ? card.Definition.DefinitionId : string.Empty,
             psaSlot = card.PsaSlotNumber,
             psaVariant = card.PsaVariantIndex,
@@ -112,8 +114,9 @@ public static class GameSaveWorldCollector
             faceDown = card.IsGroundFaceDown,
             stackLayer = card.GroundStackLayer,
         };
-        record.SetPosition(card.transform.position);
-        record.SetRotation(card.transform.rotation);
+        Transform cardTransform = card.transform;
+        record.SetPosition(cardTransform.position);
+        record.SetRotation(cardTransform.rotation);
 
         if (heldCards.Contains(card) || card.IsInHand || card.IsPackReveal)
         {
@@ -157,7 +160,7 @@ public static class GameSaveWorldCollector
             || PackOpenSequence.IsPendingSavePack(pack))
             return null;
 
-        PersistentId.GetOrCreate(pack.gameObject);
+        PersistentId persistent = PersistentId.GetOrCreate(pack.gameObject);
         IReadOnlyList<CardDefinition> contents = pack.PeekPreRolledContents();
         string[] ids = System.Array.Empty<string>();
         if (contents != null && contents.Count > 0)
@@ -169,7 +172,7 @@ public static class GameSaveWorldCollector
 
         var record = new PackSaveRecord
         {
-            id = PersistentId.Resolve(pack),
+            id = persistent.Value,
             assignmentLabel = pack.AssignmentLabel,
             variant = pack.PackVariantIndex,
             packSet = (int)pack.PackSet,
@@ -178,8 +181,9 @@ public static class GameSaveWorldCollector
             stackLayer = pack.GroundStackLayer,
             contents = ids,
         };
-        record.SetPosition(pack.transform.position);
-        record.SetRotation(pack.transform.rotation);
+        Transform packTransform = pack.transform;
+        record.SetPosition(packTransform.position);
+        record.SetRotation(packTransform.rotation);
         return record;
     }
 

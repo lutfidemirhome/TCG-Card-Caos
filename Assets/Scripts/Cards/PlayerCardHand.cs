@@ -141,7 +141,6 @@ public class PlayerCardHand : MonoBehaviour
         if (IsHandInputLocked)
             return;
 
-        var inputPerformanceStart = GameplayPerformance.BeginSample();
         HandleScrollSelection();
 
         if (Input.GetKeyDown(dropKey))
@@ -151,12 +150,10 @@ public class PlayerCardHand : MonoBehaviour
             else
                 TryDropSelectedCard();
         }
-        GameplayPerformance.EndSample(GameplayPerformance.Area.Hand, inputPerformanceStart);
     }
 
     void LateUpdate()
     {
-        var performanceStart = GameplayPerformance.BeginSample();
         UpdateHandAnchorTransform();
         ReclaimOrphanedHeldItems();
         UpdatePickupFlights();
@@ -164,7 +161,6 @@ public class PlayerCardHand : MonoBehaviour
 
         if (GetHandFanCount() > 0)
             ApplyFanLayout();
-        GameplayPerformance.EndSample(GameplayPerformance.Area.Hand, performanceStart);
     }
 
     void HandleScrollSelection()

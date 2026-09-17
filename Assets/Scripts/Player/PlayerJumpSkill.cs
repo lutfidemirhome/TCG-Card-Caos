@@ -9,5 +9,5 @@ public static class PlayerJumpSkill
     public static bool DoubleJumpArmed { get; set; }
 
     public static float HeightMultiplier =>
-        SkillBarView.SkillsEnabled && DoubleJumpArmed ? DoubleJumpHeightMultiplier : 1f;
+        SkillBarView.JumpSkillEnabled && DoubleJumpArmed ? DoubleJumpHeightMultiplier : 1f;
 }

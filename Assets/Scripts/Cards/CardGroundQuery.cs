@@ -34,7 +34,7 @@ public static class CardGroundQuery
 
     public static void UntrackShelfCard(WorldCard card)
     {
-        if (card == null || !ShelfCardSet.Remove(card))
+        if (ReferenceEquals(card, null) || !ShelfCardSet.Remove(card))
             return;
 
         ShelfCards.Remove(card);
@@ -75,8 +75,26 @@ public static class CardGroundQuery
         for (int i = 0; i < GroundCandidateScratch.Count; i++)
             TryAddHit(ray, maxDistance, GroundCandidateScratch[i]);
 
+        int liveShelfCount = 0;
         for (int i = 0; i < ShelfCards.Count; i++)
-            TryAddHit(ray, maxDistance, ShelfCards[i]);
+        {
+            WorldCard shelfCard = ShelfCards[i];
+            if (shelfCard == null)
+            {
+                ShelfCardSet.Remove(shelfCard);
+                continue;
+            }
+
+            // Compact in place so destroyed cards cannot accumulate in this static registry.
+            // Keep the original order, including equal-distance hit tie-breaking.
+            if (liveShelfCount != i)
+                ShelfCards[liveShelfCount] = shelfCard;
+            liveShelfCount++;
+            TryAddHit(ray, maxDistance, shelfCard);
+        }
+
+        if (liveShelfCount < ShelfCards.Count)
+            ShelfCards.RemoveRange(liveShelfCount, ShelfCards.Count - liveShelfCount);
 
         if (HitScratch.Count == 0)
         {
@@ -246,38 +264,77 @@ public static class CardGroundQuery
         HitScratch.Add(new CardRayHit { Card = candidate, Distance = distance });
     }
 
-    static bool IsOnDisplaySlot(WorldCard card) =>
-        card.GetComponentInParent<CardShelfSlot>() != null
-        || card.GetComponentInParent<PsaCabinetSlot>() != null;
-
     static bool TryRayHitCard(Ray ray, WorldCard card, float maxDistance, out float distance)
     {
         distance = float.MaxValue;
         if (card == null)
             return false;
 
-        Vector3 halfExtents = GetHalfExtents(card);
-        bool onDisplaySlot = IsOnDisplaySlot(card);
-        Vector3 center = onDisplaySlot ? card.transform.position : card.GetGroundQueryCenter();
+        Transform cardTransform = card.transform;
+        Vector3 lossyScale = cardTransform.lossyScale;
+        // Ground-query and display-slot centers both use the current root position.
+        // Read the live pose so shelf feedback and parent movement need no cache invalidation.
+        Vector3 center = card.GetGroundQueryCenter();
+        if (!MayRayHitCardBounds(ray, maxDistance, card, center, lossyScale))
+            return false;
 
-        if (!TryRayIntersectOrientedBox(ray, center, card.transform.rotation, halfExtents, out distance))
+        Vector3 halfExtents = GetHalfExtents(card, lossyScale);
+
+        if (!TryRayIntersectOrientedBox(ray, center, cardTransform.rotation, halfExtents, out distance))
             return false;
 
         return distance >= 0f && distance <= maxDistance;
     }
 
-    static Vector3 GetHalfExtents(WorldCard card)
+    static bool MayRayHitCardBounds(
+        Ray ray,
+        float maxDistance,
+        WorldCard card,
+        Vector3 center,
+        Vector3 lossyScale)
+    {
+        // Ground and upright shelf boxes swap their height/thickness axes. The ground
+        // thickness padding makes its bounding sphere conservative for both poses.
+        // This avoids hierarchy walks and matrix inversion for distant/off-ray cards.
+        float scale = Mathf.Max(lossyScale.x, CardDimensions.GroundCardScale);
+        float halfWidth = CardDimensions.Width * scale * 0.5f;
+        float halfHeight = CardDimensions.Height * scale * 0.5f;
+        float halfThickness = Mathf.Max(
+            CardDimensions.Thickness * scale * 0.5f + CardGroundStack.StackStep,
+            0.012f);
+        float radiusSquared = halfWidth * halfWidth
+            + halfHeight * halfHeight
+            + halfThickness * halfThickness;
+
+        if (card.UsesPsaSlab
+            && PsaSlabLayoutUtility.TryGetCabinetRootBounds(out _, out _, out Vector3 size))
+        {
+            Vector3 slabHalfExtents = Vector3.Scale(size * 0.5f, lossyScale);
+            radiusSquared = Mathf.Max(radiusSquared, slabHalfExtents.sqrMagnitude);
+        }
+
+        Vector3 toCenter = center - ray.origin;
+        float directionSquared = ray.direction.sqrMagnitude;
+        float alongRay = directionSquared > 0f
+            ? Mathf.Clamp(Vector3.Dot(toCenter, ray.direction) / directionSquared, 0f, maxDistance)
+            : 0f;
+        Vector3 closestOffset = toCenter - ray.direction * alongRay;
+
+        // Conservative tolerance keeps edge hits in the exact box test despite roundoff.
+        return !(closestOffset.sqrMagnitude > radiusSquared * 1.0001f + 0.0001f);
+    }
+
+    static Vector3 GetHalfExtents(WorldCard card, Vector3 lossyScale)
     {
         if (card.GetComponentInParent<PsaCabinetSlot>() != null && card.UsesPsaSlab)
         {
-            Vector3 lossyScale = card.transform.lossyScale;
             if (PsaSlabLayoutUtility.TryGetCabinetRootBounds(out _, out _, out Vector3 size))
             {
                 return Vector3.Scale(size * 0.5f, lossyScale);
             }
         }
 
-        float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.GroundCardScale);
+        float scale = Mathf.Max(lossyScale.x, CardDimensions.GroundCardScale);
         if (card.GetComponentInParent<CardShelfSlot>() != null)
         {
             return new Vector3(

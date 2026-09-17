@@ -67,7 +67,6 @@ public sealed class ShopDogGroundAlignment : MonoBehaviour
 
         float delta = Time.deltaTime;
         if (delta <= 0f) return;
-        GameplayPerformance.Sample measurement = GameplayPerformance.BeginSample();
         _sampleRemaining -= delta;
         if (_sampleRemaining <= 0f)
         {
@@ -95,7 +94,6 @@ public sealed class ShopDogGroundAlignment : MonoBehaviour
         // Avoid dirtying the entire animated hierarchy while resting on flat ground.
         if (Mathf.Abs(Quaternion.Dot(_pivot.localRotation, rotation)) < 0.9999999f)
             _pivot.localRotation = rotation;
-        GameplayPerformance.EndSample(GameplayPerformance.Area.Dog, measurement);
     }
 
     bool TrySamplePitch(Vector3 center, Vector3 forward, out float pitch)

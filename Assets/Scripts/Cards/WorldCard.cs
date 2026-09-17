@@ -50,6 +50,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     PsaCardVisualController _psaController;
     Rigidbody _rigidbody;
     [SerializeField] Transform _cardVisual;
+    bool _cardVisualBound;
     bool _handSelected;
     GameObject _outlineObject;
     // Only one hover target is active. Keep one spare border between targets
@@ -315,6 +316,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDestroy()
     {
+        CardGroundQuery.UntrackShelfCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
     }
 
@@ -1491,7 +1493,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
-        BindExistingCardVisual();
+        if (_cardVisual == null || !_cardVisualBound)
+            BindExistingCardVisual();
         if (_cardVisual != null)
             return;
 
@@ -1510,6 +1513,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshRenderer.receiveShadows = false;
 
         _cardVisual = visualGo.transform;
+        _cardVisualBound = true;
         ApplyCardVisualTextureQuality();
     }
 
@@ -1538,6 +1542,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                     DestroyImmediate(child.gameObject);
             }
         }
+
+        // Keep first-use duplicate cleanup and explicit authored refreshes, but do not
+        // walk every held card's children again for each unchanged hand pose.
+        _cardVisualBound = _cardVisual != null;
     }
 
     void RestoreCardVisualMeshAndRenderer()
@@ -1569,7 +1577,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshRenderer == null)
             return;
 
-        // Mesh cards stay opaque Geometry (hand packs same). Ground instanced quads use World/2501.
+        // Detail getters configure shared materials when created or repaired. Reapplying
+        // their shader settings on every hover/pickup also touches all other cards sharing them.
         Material[] materials = UsesDefinitionFrontArt
             ? CardArtLibrary.GetCardMaterials(definition, CardTextureQuality.Detail)
             : CardArtLibrary.GetCardMaterials(paletteIndex, CardTextureQuality.Detail);
@@ -1577,7 +1586,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         Texture2D frontTexture = UsesDefinitionFrontArt ? definition.FrontTexture : null;
         for (int i = 0; i < materials.Length; i++)
         {
-            CardArtLibrary.ConfigureHandDetailMaterial(materials[i]);
             if (CardArtLibrary.IsBrokenMaterial(materials[i]))
             {
                 materials[i] = CardArtLibrary.CreateFallbackLitMaterial(
@@ -1592,6 +1600,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void ReleaseCardVisual()
     {
+        _cardVisualBound = false;
         ReleaseInteractionOutline();
         ReleaseHandSelectionOutline();
 

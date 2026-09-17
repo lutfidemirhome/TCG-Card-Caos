@@ -12,7 +12,7 @@ public static class PlayerHandSkill
 
     public static bool TryActivate()
     {
-        if (!SkillBarView.SkillsEnabled)
+        if (!SkillBarView.HandSkillEnabled)
             return false;
 
         PlayerCardHand hand = PlayerCardHand.Instance;
