@@ -1,0 +1,5 @@
+French Dog
+1 Material (M_French_Dog)
+4 Texture maps (Albedo,Normal,AO,MetallicSmoothness)
+13 Animations
+

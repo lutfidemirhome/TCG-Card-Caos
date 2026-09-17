@@ -6,7 +6,7 @@ using Unity.Profiling;
 /// <summary>Development-only frame summaries; no per-frame log or scene scan.</summary>
 public static class GameplayPerformance
 {
-    public enum Area { Interaction, Hand, CardDraw, Throw }
+    public enum Area { Interaction, Hand, CardDraw, Throw, Dog }
     public struct Sample
     {
         internal long Ticks;
@@ -14,9 +14,9 @@ public static class GameplayPerformance
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    static readonly double[] WorkMs = new double[4];
-    static readonly double[] MaxWorkMs = new double[4];
-    static readonly long[] AllocatedBytes = new long[4];
+    static readonly double[] WorkMs = new double[5];
+    static readonly double[] MaxWorkMs = new double[5];
+    static readonly long[] AllocatedBytes = new long[5];
     static ProfilerRecorder _drawCalls;
     static ProfilerRecorder _gcBytes;
     static ProfilerRecorder _mainThread;
@@ -142,6 +142,10 @@ public static class GameplayPerformance
             + $"scriptAllocKB(I/H/D/T)={AllocatedBytes[0] / (1024d * _frames):F1}/"
             + $"{AllocatedBytes[1] / (1024d * _frames):F1}/{AllocatedBytes[2] / (1024d * _frames):F1}/"
             + $"{AllocatedBytes[3] / (1024d * _frames):F1} "
+            // Dog samples cover behaviour/alignment scripts; Unity's native animation,
+            // skinning and GPU rendering run outside these measured sections.
+            + $"dogCPU={WorkMs[4] / _frames:F2}ms peakDog={MaxWorkMs[4]:F2}ms "
+            + $"scriptAllocDogKB={AllocatedBytes[4] / (1024d * _frames):F1} "
             + $"GC/frame={allocated}KB collections={System.GC.CollectionCount(0) - _gcStart}");
         ClearWindow();
 #endif

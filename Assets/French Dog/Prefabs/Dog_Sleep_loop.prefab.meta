@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 896a2145d944ee44b9f2f5b7548d01c7
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 262916
+  packageName: French Dog
+  packageVersion: 1.0
+  assetPath: Assets/French Dog/Prefabs/Dog_Sleep_loop.prefab
+  uploadId: 615216

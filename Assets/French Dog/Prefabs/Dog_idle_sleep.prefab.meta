@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 87a9aabd46868f146accf720ba8d3e8e
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 262916
+  packageName: French Dog
+  packageVersion: 1.0
+  assetPath: Assets/French Dog/Prefabs/Dog_idle_sleep.prefab
+  uploadId: 615216

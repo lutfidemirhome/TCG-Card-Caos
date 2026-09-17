@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: dbc58ba099e63f14dbd2305f8899398b
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 262916
+  packageName: French Dog
+  packageVersion: 1.0
+  assetPath: Assets/French Dog/Prefabs/Dog_Attack.prefab
+  uploadId: 615216

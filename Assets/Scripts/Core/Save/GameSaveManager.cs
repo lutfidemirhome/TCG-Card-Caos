@@ -267,8 +267,8 @@ public sealed class GameSaveManager : MonoBehaviour
 
         try
         {
-            // The worker only performs file I/O; it never waits for the Unity
-            // thread. Blocking here is limited to the explicit leave/quit path.
+            // The worker serializes detached DTOs and performs file I/O; it never
+            // waits for the Unity thread. Only the explicit leave/quit path blocks.
             if (_activeWriteTask != null)
                 _activeWriteTask.GetAwaiter().GetResult();
         }
@@ -311,11 +311,7 @@ public sealed class GameSaveManager : MonoBehaviour
         data = GameSaveWorldCollector.Collect(slotId, slotType, slotIndex);
         collectMs = (Time.realtimeSinceStartup - start) * 1000f;
 
-        start = Time.realtimeSinceStartup;
-        string json = JsonUtility.ToJson(data, false);
         metadata = data.ToMetadata(false);
-        string metaJson = JsonUtility.ToJson(metadata, false);
-        serializeMs = (Time.realtimeSinceStartup - start) * 1000f;
 
         SaveFileIO.CacheRootOnMainThread();
         string savePath = SaveFileIO.GetSavePath(data.slotId);
@@ -325,6 +321,14 @@ public sealed class GameSaveManager : MonoBehaviour
         Task writeTask = Task.Run(() =>
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
+            // Collect produced a detached snapshot of strings, values and arrays.
+            // JsonUtility supports background threads; nothing may mutate these
+            // DTOs until this task completes. Live Unity objects stay on the main thread.
+            string json = JsonUtility.ToJson(data, false);
+            string metaJson = JsonUtility.ToJson(metadata, false);
+            serializeMs = (float)watch.Elapsed.TotalMilliseconds;
+
+            watch.Restart();
             writeOk = SaveFileIO.TryWriteAtomic(savePath, json, out error);
             if (writeOk)
                 SaveFileIO.TryWriteAtomic(metaPath, metaJson, out _);

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 363245bf459dbe34ab253b53e166e405
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 262916
+  packageName: French Dog
+  packageVersion: 1.0
+  assetPath: Assets/French Dog/Prefabs/Dog_eat_loop.prefab
+  uploadId: 615216

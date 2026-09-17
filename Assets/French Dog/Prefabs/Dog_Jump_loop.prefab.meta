@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 27cf36578bdc7994cb044265c7b5d822
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 262916
+  packageName: French Dog
+  packageVersion: 1.0
+  assetPath: Assets/French Dog/Prefabs/Dog_Jump_loop.prefab
+  uploadId: 615216
