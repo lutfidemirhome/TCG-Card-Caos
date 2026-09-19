@@ -119,6 +119,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     internal Transform RootTransform => transform;
     internal Collider PhysCollider => _collider;
     internal Rigidbody PhysicsBody => _rigidbody;
+    internal bool GroundVisualShowsBack => groundShowsBack;
     public CardDefinition Definition => definition;
     public bool HasShelfRules => definition != null;
     public string ShelfCategoryId => definition != null ? definition.ShelfCategoryId : string.Empty;
@@ -764,21 +765,41 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             CardCollisionUtility.UnstickThrownSpawnOverlap(transform, thrownBox, this, _rigidbody);
 
         CardGroundStack.TrackPhysicsCard(this);
-        StartCoroutine(MonitorThrownCardRoutine());
+        StartCoroutine(MonitorThrownCardRoutine(_rigidbody));
     }
 
-    IEnumerator MonitorThrownCardRoutine()
+    public void ResumeSavedPhysics(ThrownPhysicsSaveState state)
+    {
+        if (state == null || !state.isSimulating || _handState != HandState.World || HasActivePhysics)
+            return;
+
+        EnsureRigidbody();
+        RefreshRenderMode();
+        ApplyFlatWorldCollider();
+        if (_collider != null)
+        {
+            _collider.enabled = true;
+            _collider.isTrigger = false;
+            _worldColliderRequested = true;
+        }
+        IgnorePlayerCollision();
+        state.Apply(_rigidbody);
+        CardGroundStack.TrackPhysicsCard(this);
+        StartCoroutine(MonitorThrownCardRoutine(_rigidbody));
+    }
+
+    IEnumerator MonitorThrownCardRoutine(Rigidbody body)
     {
         var boxCollider = _collider as BoxCollider;
 
         yield return CardThrownPhysics.Monitor(
             transform,
-            _rigidbody,
+            body,
             boxCollider,
-            () => _handState == HandState.World && _rigidbody != null,
-            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody, attempt));
+            () => _handState == HandState.World && body != null && _rigidbody == body,
+            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, body, attempt));
 
-        if (_handState != HandState.World || _rigidbody == null)
+        if (_handState != HandState.World || body == null || _rigidbody != body)
             yield break;
 
         SetInteractionHighlight(false);

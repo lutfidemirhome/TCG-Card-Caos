@@ -151,6 +151,9 @@ public static class GameSaveWorldCollector
         }
 
         record.location = CardRuntimeLocation.World;
+        record.physics = ThrownPhysicsSaveState.Capture(card.PhysicsBody);
+        if (record.physics != null)
+            record.faceDown = card.GroundVisualShowsBack;
         return record;
     }
 
@@ -184,6 +187,8 @@ public static class GameSaveWorldCollector
         Transform packTransform = pack.transform;
         record.SetPosition(packTransform.position);
         record.SetRotation(packTransform.rotation);
+        if (!record.held)
+            record.physics = ThrownPhysicsSaveState.Capture(pack.PhysicsBody);
         return record;
     }
 

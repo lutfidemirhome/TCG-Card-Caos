@@ -309,7 +309,9 @@ public class FirstPersonController : MonoBehaviour
         _verticalVelocity += gravity * Time.deltaTime;
         move.y = _verticalVelocity;
 
-        _controller.Move(move * Time.deltaTime);
+        CollisionFlags collisions = _controller.Move(move * Time.deltaTime);
+        if ((collisions & CollisionFlags.Above) != 0 && _verticalVelocity > 0f)
+            _verticalVelocity = 0f;
     }
 
     void SetCursorLocked(bool locked)

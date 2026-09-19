@@ -82,6 +82,7 @@ public class GameSceneLoader : MonoBehaviour
         if (_isLoading || !Application.isPlaying)
             return;
 
+        GameSaveManager.NotifySceneLoadStarting();
         _isLoading = true;
 
         LoadingScreenUI loadingScreen = LoadingScreenUI.Ensure();
@@ -134,6 +135,7 @@ public class GameSceneLoader : MonoBehaviour
 
         yield return null;
 
+        yield return GameSaveManager.PrepareForSceneLoadRoutine();
         GameAssetPrewarm.EnsureReady();
         GamePlayBootstrap.PrepareForSceneReload();
         CardInstancedRenderManager.ResetGameplayReady();

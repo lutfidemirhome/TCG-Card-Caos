@@ -32,6 +32,16 @@ public class InteractionBlocker : MonoBehaviour
         if (collider.GetComponent<InteractionBlocker>() != null)
             return true;
 
+        // Placed shop walls already have solid colliders but do not carry the
+        // demo-only marker/material. Include their mesh children as well.
+        for (Transform current = collider.transform; current != null; current = current.parent)
+        {
+            string objectName = current.name;
+            if (objectName.StartsWith("Wall_", System.StringComparison.OrdinalIgnoreCase)
+                || ExteriorColliderCleanup.IsPlacedHouseWallName(objectName))
+                return true;
+        }
+
         MeshRenderer renderer = collider.GetComponent<MeshRenderer>();
         if (renderer == null)
             return false;

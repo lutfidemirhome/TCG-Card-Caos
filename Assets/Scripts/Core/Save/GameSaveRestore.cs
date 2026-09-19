@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Physics-safe world restore. Spawns cards settled; does not wake Rigidbodies.
+/// Restores settled poses first; saved throws resume only after the whole world is ready.
 /// </summary>
 public static class GameSaveRestore
 {
@@ -12,11 +12,16 @@ public static class GameSaveRestore
     const int EntitiesPerFrame = 512;
 
     static readonly HashSet<string> RestoredIds = new HashSet<string>();
+    static readonly List<KeyValuePair<WorldCard, ThrownPhysicsSaveState>> PendingCardPhysics =
+        new List<KeyValuePair<WorldCard, ThrownPhysicsSaveState>>();
+    static readonly List<KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>> PendingPackPhysics =
+        new List<KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>>();
     static bool _remappedIds;
     public static bool LastRestoreSucceeded { get; private set; }
 
     public static IEnumerator RestoreRoutine(string slotId)
     {
+        ClearPendingPhysics();
         LastRestoreSucceeded = false;
         GameSaveEvents.RaiseLoadStarted(slotId);
 
@@ -106,6 +111,32 @@ public static class GameSaveRestore
         LastRestoreSucceeded = true;
         GameProgressCounter.InvalidateCache();
         GameSaveEvents.RaiseLoadCompleted(slotId);
+    }
+
+    public static void ClearPendingPhysics()
+    {
+        PendingCardPhysics.Clear();
+        PendingPackPhysics.Clear();
+    }
+
+    public static void ResumePendingPhysics()
+    {
+        bool hasPendingMotion = PendingCardPhysics.Count > 0 || PendingPackPhysics.Count > 0;
+        for (int i = 0; i < PendingCardPhysics.Count; i++)
+        {
+            var pending = PendingCardPhysics[i];
+            if (pending.Key != null)
+                pending.Key.ResumeSavedPhysics(pending.Value);
+        }
+        for (int i = 0; i < PendingPackPhysics.Count; i++)
+        {
+            var pending = PendingPackPhysics[i];
+            if (pending.Key != null)
+                pending.Key.ResumeSavedPhysics(pending.Value);
+        }
+        ClearPendingPhysics();
+        if (hasPendingMotion)
+            GameSaveDirtyTracker.MarkDirty();
     }
 
     static string AllocateRestoreId(string savedId)
@@ -202,6 +233,8 @@ public static class GameSaveRestore
         card.transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
         card.SetGroundShowsBack(record.faceDown);
         card.SetGroundStackLayer(record.stackLayer);
+        if (record.location == CardRuntimeLocation.World && record.physics != null && record.physics.isSimulating)
+            PendingCardPhysics.Add(new KeyValuePair<WorldCard, ThrownPhysicsSaveState>(card, record.physics));
     }
 
     static bool TryRestoreShelfCard(WorldCard card, CardSaveRecord record)
@@ -487,7 +520,8 @@ public static class GameSaveRestore
             if (!demoAuthored)
             {
                 WakeRestoredObject(pack.transform);
-                pack.Initialize(null, record.variant, contents, (PackCardSet)record.packSet);
+                pack.Initialize(null, record.variant, contents, (PackCardSet)record.packSet,
+                    preserveExistingVisualLayout: true);
             }
         }
         else
@@ -514,6 +548,8 @@ public static class GameSaveRestore
         pack.transform.SetPositionAndRotation(record.Position, record.Rotation);
         pack.RestoreSavedWorldPose(record.faceDown, record.stackLayer);
         CardGroundStack.TrackPack(pack);
+        if (!record.held && record.physics != null && record.physics.isSimulating)
+            PendingPackPhysics.Add(new KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>(pack, record.physics));
     }
 
     static List<CardDefinition> ResolvePackContents(string[] ids)

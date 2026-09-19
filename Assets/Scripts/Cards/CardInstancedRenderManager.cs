@@ -46,6 +46,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     public static void BeginBulkGroundLoad()
     {
+        GameSaveRestore.ClearPendingPhysics();
         DeferGroundRegistration = true;
     }
 
@@ -114,6 +115,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         IsGameplayReady = true;
         GameProgressCounter.LockTotalFromWorld();
+        GameSaveRestore.ResumePendingPhysics();
         _playModeSetupRoutine = null;
     }
 

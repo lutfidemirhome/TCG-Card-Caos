@@ -79,11 +79,12 @@ public static class CardShelfRules
             return true;
 
         int? assignedRow = FindRowForSeries(seriesId, occupiedSlots, excludeSlot, shelfCategoryId);
-        if (assignedRow.HasValue)
-            return slot.RowIndex == assignedRow.Value;
+        if (assignedRow.HasValue && slot.RowIndex != assignedRow.Value)
+            return false;
 
-        string rowSeries = FindSeriesOnRow(slot.RowIndex, occupiedSlots, excludeSlot, shelfCategoryId);
-        return rowSeries == null || rowSeries == seriesId;
+        // Finding this series (including the card itself after placement) must not
+        // bypass the rule that every card on this row belongs to the same series.
+        return RowMatchesSeries(slot.RowIndex, seriesId, occupiedSlots, excludeSlot, shelfCategoryId);
     }
 
     static int? FindRowForSeries(
@@ -121,14 +122,15 @@ public static class CardShelfRules
         return foundRow;
     }
 
-    static string FindSeriesOnRow(
+    static bool RowMatchesSeries(
         int rowIndex,
+        string seriesId,
         IReadOnlyList<CardShelfSlot> occupiedSlots,
         CardShelfSlot excludeSlot,
         string shelfCategoryId)
     {
         if (occupiedSlots == null)
-            return null;
+            return true;
 
         for (int i = 0; i < occupiedSlots.Count; i++)
         {
@@ -143,11 +145,12 @@ public static class CardShelfRules
             if (!CountsForSeriesRow(card, shelfCategoryId))
                 continue;
 
-            if (CardShelfSeries.TryGetSeriesId(card.Definition, out string occupiedSeriesId))
-                return occupiedSeriesId;
+            if (CardShelfSeries.TryGetSeriesId(card.Definition, out string occupiedSeriesId)
+                && !string.Equals(occupiedSeriesId, seriesId, System.StringComparison.Ordinal))
+                return false;
         }
 
-        return null;
+        return true;
     }
 
     static bool CountsForSeriesRow(WorldCard card, string shelfCategoryId)

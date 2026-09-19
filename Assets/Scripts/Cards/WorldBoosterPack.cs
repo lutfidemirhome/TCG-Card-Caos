@@ -232,7 +232,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         BoosterPackDefinition definition,
         int packVariantIndex = 1,
         IReadOnlyList<CardDefinition> preRolledContents = null,
-        PackCardSet packSet = PackCardSet.English)
+        PackCardSet packSet = PackCardSet.English,
+        bool preserveExistingVisualLayout = false)
     {
         packDefinition = definition;
         this.packSet = definition != null ? definition.PackSet : packSet;
@@ -242,7 +243,17 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (preRolledContents != null)
             this.preRolledContents = new List<CardDefinition>(preRolledContents);
         EnsureVisual();
-        RefreshPackModelLayout();
+        if (preserveExistingVisualLayout)
+        {
+            // Scene models are already fitted and their mesh child is already tuned.
+            // Fitting again would compensate for that tuning and shrink the authored model.
+            CaptureExistingVisualLayout();
+            RefreshPackModelBounds();
+        }
+        else
+        {
+            RefreshPackModelLayout();
+        }
         ApplyWorldVisualOrientation();
         ApplyPackModelShadowSettings();
     }
@@ -772,6 +783,11 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _packModelCenterOffset = Vector3.zero;
         }
 
+        RefreshPackModelBounds();
+    }
+
+    void RefreshPackModelBounds()
+    {
         RefreshPackModelGroundOffset(faceDown: false, out _packModelGroundOffsetYFaceUp);
         RefreshPackModelGroundOffset(faceDown: true, out _packModelGroundOffsetYFaceDown);
         RefreshPackOutlineBoundsFromLayout();
@@ -1519,21 +1535,40 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         CardLayers.ApplyToGameObject(gameObject);
         CardGroundStack.TrackPhysicsPack(this);
-        StartCoroutine(MonitorThrownPackRoutine());
+        StartCoroutine(MonitorThrownPackRoutine(_rigidbody));
     }
 
-    IEnumerator MonitorThrownPackRoutine()
+    public void ResumeSavedPhysics(ThrownPhysicsSaveState state)
+    {
+        if (state == null || !state.isSimulating || _state != PackState.World || HasActivePhysics)
+            return;
+
+        EnsureRigidbody();
+        ApplyWorldVisualOrientation(alignPackModelToGround: false);
+        ApplyPackBodyCollider();
+        if (_collider != null)
+        {
+            _collider.enabled = true;
+            _collider.isTrigger = false;
+        }
+        IgnorePlayerCollision();
+        state.Apply(_rigidbody);
+        CardGroundStack.TrackPhysicsPack(this);
+        StartCoroutine(MonitorThrownPackRoutine(_rigidbody));
+    }
+
+    IEnumerator MonitorThrownPackRoutine(Rigidbody body)
     {
         var boxCollider = _collider as BoxCollider;
 
         yield return CardThrownPhysics.Monitor(
             transform,
-            _rigidbody,
+            body,
             boxCollider,
-            () => _state == PackState.World && _rigidbody != null,
-            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody, attempt));
+            () => _state == PackState.World && body != null && _rigidbody == body,
+            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, body, attempt));
 
-        if (_state != PackState.World || _rigidbody == null)
+        if (_state != PackState.World || body == null || _rigidbody != body)
             yield break;
 
         bool alignToGround = CardSettlePlacement.IsFlatOnFloor(transform);

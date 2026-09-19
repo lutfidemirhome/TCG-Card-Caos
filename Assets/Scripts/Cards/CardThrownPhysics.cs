@@ -2,6 +2,44 @@ using System;
 using System.Collections;
 using UnityEngine;
 
+[Serializable]
+public sealed class ThrownPhysicsSaveState
+{
+    public bool isSimulating;
+    public Vector3 linearVelocity;
+    public Vector3 angularVelocity;
+
+    public static ThrownPhysicsSaveState Capture(Rigidbody body)
+    {
+        if (body == null || body.isKinematic)
+            return null;
+        return new ThrownPhysicsSaveState
+        {
+            isSimulating = true,
+            linearVelocity = body.linearVelocity,
+            angularVelocity = body.angularVelocity,
+        };
+    }
+
+    public void Apply(Rigidbody body)
+    {
+        body.isKinematic = false;
+        body.useGravity = true;
+        body.constraints = RigidbodyConstraints.None;
+        CardCollisionUtility.ConfigureThrownBody(body);
+        body.position = body.transform.position;
+        body.rotation = body.transform.rotation;
+        body.linearVelocity = IsFinite(linearVelocity) ? linearVelocity : Vector3.zero;
+        body.angularVelocity = IsFinite(angularVelocity) ? angularVelocity : Vector3.zero;
+        body.WakeUp();
+    }
+
+    static bool IsFinite(Vector3 value) =>
+        !float.IsNaN(value.x) && !float.IsInfinity(value.x)
+        && !float.IsNaN(value.y) && !float.IsInfinity(value.y)
+        && !float.IsNaN(value.z) && !float.IsInfinity(value.z);
+}
+
 /// <summary>
 /// Keeps Q-thrown cards and packs in physics until they settle — no flatten/snap, no rotation/texture
 /// changes. Once truly at rest on the floor they freeze (kinematic) so they stop costing solver time
@@ -48,7 +86,7 @@ public static class CardThrownPhysics
 
         try
         {
-            while (isActive())
+            while (itemTransform != null && body != null && isActive())
             {
                 elapsed += Time.deltaTime;
                 colliderRefreshTimer += Time.deltaTime;

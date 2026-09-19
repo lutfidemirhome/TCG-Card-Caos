@@ -10,7 +10,6 @@ using UnityEngine.UI;
 /// </summary>
 public class SaveGamePanelView : MonoBehaviour
 {
-    int EmptySlotRows => GameSaveStore.ManualSlotCount;
     const string ConfirmRootName = "Panel_SaveConfirm";
     const float SpinnerSpeed = 220f;
     const float MinSavingHintSeconds = 1.25f;
@@ -35,6 +34,7 @@ public class SaveGamePanelView : MonoBehaviour
     string _pendingSlotId;
     ConfirmMode _confirmMode;
     bool _savedThisOpen;
+    bool _saveFailed;
     float _savingShownAt = -1f;
     Coroutine _savingHintRoutine;
 
@@ -67,12 +67,14 @@ public class SaveGamePanelView : MonoBehaviour
     void OnEnable()
     {
         GameSaveEvents.SaveCompleted += OnSaveCompleted;
+        GameSaveEvents.SaveFailed += OnSaveFailed;
         Localization.LanguageChanged += OnLanguageChanged;
     }
 
     void OnDisable()
     {
         GameSaveEvents.SaveCompleted -= OnSaveCompleted;
+        GameSaveEvents.SaveFailed -= OnSaveFailed;
         Localization.LanguageChanged -= OnLanguageChanged;
     }
 
@@ -87,7 +89,7 @@ public class SaveGamePanelView : MonoBehaviour
             return;
 
         bool saving = savingSpinner != null && savingSpinner.gameObject.activeSelf;
-        savingLabel.text = Localization.Get(saving
+        savingLabel.text = Localization.Get(_saveFailed ? LocalizationKeys.SaveGameFailed : saving
             ? LocalizationKeys.SaveGameSaving
             : LocalizationKeys.SaveGameSaved);
     }
@@ -299,6 +301,7 @@ public class SaveGamePanelView : MonoBehaviour
 
     void RefreshSlotList()
     {
+        int emptySlotRows = GameSaveStore.AvailableManualSlotCount;
         List<SaveSlotMetadata> saves = GameSaveStore.GetSaveSlots();
         if (saves == null)
             saves = new List<SaveSlotMetadata>();
@@ -310,7 +313,7 @@ public class SaveGamePanelView : MonoBehaviour
                 filledCount++;
         }
 
-        slots = SaveSlotListLayout.EnsureRows(transform, filledCount + EmptySlotRows);
+        slots = SaveSlotListLayout.EnsureRows(transform, filledCount + emptySlotRows);
         EnsureSlotsArray();
         WireSlotClicks();
         if (slots == null || slots.Length == 0)
@@ -337,7 +340,7 @@ public class SaveGamePanelView : MonoBehaviour
             slot.BindSaveRow(save, filledThumb);
         }
 
-        for (int empty = 0; empty < EmptySlotRows && viewIndex < slots.Length; empty++)
+        for (int empty = 0; empty < emptySlotRows && viewIndex < slots.Length; empty++)
         {
             LoadGameSlotView slot = slots[viewIndex++];
             if (slot == null)
@@ -474,6 +477,7 @@ public class SaveGamePanelView : MonoBehaviour
             return;
 
         HideConfirm();
+        _saveFailed = false;
         _savedThisOpen = true;
         RefreshSlotList();
         ApplyEmptyClickLock();
@@ -484,8 +488,26 @@ public class SaveGamePanelView : MonoBehaviour
         _savingHintRoutine = StartCoroutine(HideSavingHintWhenDue());
     }
 
+    void OnSaveFailed(string message)
+    {
+        if (!IsOpen || savingHint == null || !savingHint.activeSelf)
+            return;
+
+        if (_savingHintRoutine != null)
+            StopCoroutine(_savingHintRoutine);
+        _savingHintRoutine = null;
+        _savedThisOpen = false;
+        _saveFailed = true;
+        RefreshSlotList();
+        if (savingSpinner != null)
+            savingSpinner.gameObject.SetActive(false);
+        if (savingLabel != null)
+            savingLabel.text = Localization.Get(LocalizationKeys.SaveGameFailed);
+    }
+
     void ShowSavingHint()
     {
+        _saveFailed = false;
         EnsureSavingHint();
         if (savingHint == null)
             return;
@@ -501,6 +523,7 @@ public class SaveGamePanelView : MonoBehaviour
 
     void HideSavingHint()
     {
+        _saveFailed = false;
         if (_savingHintRoutine != null)
         {
             StopCoroutine(_savingHintRoutine);
