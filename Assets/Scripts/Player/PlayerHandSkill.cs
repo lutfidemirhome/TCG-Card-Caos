@@ -146,7 +146,7 @@ public static class PlayerHandSkill
     {
         if (card == null || card.IsInHand || card.IsFlyingToShelf || card.IsShelfRowCompleteLocked)
             return false;
-        if (card.IsPhysicsSimulating)
+        if (card.IsPhysicsSimulating && !card.PhysicsBody.IsSleeping())
             return false;
         if (card.GetComponentInParent<CardShelfSlot>() != null)
             return false;
@@ -160,7 +160,7 @@ public static class PlayerHandSkill
     {
         if (pack == null || pack.IsInHand || pack.State == WorldBoosterPack.PackState.FlyingToHand)
             return false;
-        if (pack.IsPhysicsSimulating)
+        if (pack.IsPhysicsSimulating && !pack.PhysicsBody.IsSleeping())
             return false;
 
         return true;
