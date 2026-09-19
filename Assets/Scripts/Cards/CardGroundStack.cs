@@ -80,9 +80,33 @@ public static class CardGroundStack
         GroundCards.Add(card);
     }
 
+    /// <summary>Update a physical card's spatial entry without assigning a layer or changing its pose.</summary>
+    public static void TrackPhysicsPose(WorldCard card)
+    {
+        if (card == null || card.IsInHand)
+            return;
+        Track(card);
+        EnsureSpatialBucketsBuilt();
+        InsertIntoSpatialBucket(card);
+    }
+
     public static void Untrack(WorldCard card)
     {
-        if (card == null || !GroundCardSet.Remove(card))
+        if (card == null)
+            return;
+
+        // ClearAll can empty GroundCardSet before deferred destruction reaches OnDisable.
+        // Release support references independently so those old cards cannot remain in piles.
+        if (LandingColliderRefCounts.ContainsKey(card))
+        {
+            foreach (HashSet<WorldCard> scope in LandingColliderScopes.Values)
+            {
+                if (scope.Remove(card))
+                    ReleaseLandingColliderRef(card);
+            }
+        }
+
+        if (!GroundCardSet.Remove(card))
             return;
 
         Vector3 removedPos = card.transform.position;
@@ -328,7 +352,7 @@ public static class CardGroundStack
         }
     }
 
-    /// <summary>Turn nearby flat ground cards into solid surfaces while an item is in flight.</summary>
+    /// <summary>Keep local authored cards solid while a physical item can rest on them, including sleep.</summary>
     public static int BeginLandingColliderScope()
     {
         int scopeId = _nextLandingScopeId++;
@@ -822,6 +846,8 @@ public static class CardGroundStack
     public static int TrackedPackCount => GroundPacks.Count;
 
     public static WorldBoosterPack TrackedPackAt(int index) => GroundPacks[index];
+    public static bool IsTrackedPack(WorldBoosterPack pack) =>
+        pack != null && GroundPackSet.Contains(pack);
 
     public static int PhysicsPackCount => PhysicsPacks.Count;
     public static int PhysicsCardCount => PhysicsCards.Count;

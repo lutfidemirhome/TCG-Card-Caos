@@ -20,7 +20,7 @@ public class CardSaveRecord
     public float rw = 1f;
     public bool faceDown;
     public int stackLayer;
-    // Optional: older saves and already settled cards keep the existing pose-only behavior.
+    // Optional: authored cards and older pose-only saves stay static. Thrown piles also retain sleep state.
     public ThrownPhysicsSaveState physics;
     public string shelfId = string.Empty;
     public int slotRow;

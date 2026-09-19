@@ -1,20 +1,17 @@
 using UnityEngine;
 
 /// <summary>
-/// When Q-thrown cards or packs rest on cabinet geometry instead of the floor, knock them
-/// back down so they cannot become unrecoverable before force-settle snaps them underground.
+/// Recover a thrown item genuinely wedged inside cabinet geometry. Height alone is never an
+/// error: an item can rest naturally on a tall pile, on furniture, or on the upper floor.
 /// </summary>
 public static class CardThrowRecovery
 {
     public const float ShelfStuckRecoveryDelay = 2f;
 
-    const float MinElevatedYAboveGround = 0.32f;
-    const float HighElevatedYAboveGround = 0.55f;
+    const float MinShelfPenetration = 0.001f;
     const float LiftClearance = 0.04f;
-    const float SleepingFloorSkipY = 0.12f;
     const int OverlapBufferSize = 32;
 
-    static readonly RaycastHit[] FloorHitBuffer = new RaycastHit[16];
     static readonly Collider[] OverlapBuffer = new Collider[OverlapBufferSize];
 
     struct ShelfOverlapResult
@@ -25,17 +22,9 @@ public static class CardThrowRecovery
         public float PenetrationDepth;
     }
 
-    public enum ShelfSettleAdvance
-    {
-        Continue,
-        RecoverAndContinue,
-        BreakSettle,
-    }
-
-    public static bool ShouldTrackShelfStuck(
+    static bool ShouldTrackShelfStuck(
         Transform itemTransform,
         BoxCollider itemCollider,
-        Rigidbody body,
         bool slowEnough)
     {
         if (itemTransform == null || !slowEnough)
@@ -47,70 +36,36 @@ public static class CardThrowRecovery
         if (IsRestingOnLadder(itemTransform, itemCollider))
             return false;
 
-        float groundY = CardFactory.GroundHeightOffset();
-        if (body != null && body.IsSleeping() && itemTransform.position.y <= groundY + SleepingFloorSkipY)
-            return false;
-
-        if (TryQueryShelfOverlaps(itemTransform, itemCollider, out ShelfOverlapResult overlap)
-            && (overlap.TouchesShelf || overlap.PenetrationDepth > 0.001f))
-            return true;
-
-        float minElevatedY = groundY + MinElevatedYAboveGround;
-        if (itemTransform.position.y < minElevatedY)
-            return false;
-
-        return itemTransform.position.y >= groundY + HighElevatedYAboveGround;
+        return TryQueryShelfOverlaps(itemTransform, itemCollider, out ShelfOverlapResult overlap)
+            && overlap.PenetrationDepth > MinShelfPenetration;
     }
 
     /// <summary>
-    /// Shared shelf-stuck branch for card/pack settle coroutines.
+    /// Check cabinet penetration at the monitor's reduced polling rate. The caller supplies
+    /// elapsed simulation time since its previous check so the delay does not depend on polling rate.
     /// </summary>
-    public static ShelfSettleAdvance AdvanceShelfStuckSettle(
+    public static void AdvanceShelfStuckSettle(
         ref float shelfStuckTime,
-        ref float elapsed,
-        ref float groundedTime,
         Transform itemTransform,
         BoxCollider itemCollider,
         Rigidbody body,
-        bool nearGround,
         bool slowEnough,
-        float maxFlightTime)
+        float deltaTime)
     {
         if (itemCollider != null
-            && ShouldTrackShelfStuck(itemTransform, itemCollider, body, slowEnough))
+            && ShouldTrackShelfStuck(itemTransform, itemCollider, slowEnough))
         {
-            shelfStuckTime += Time.deltaTime;
+            shelfStuckTime += Mathf.Max(0f, deltaTime);
             if (shelfStuckTime >= ShelfStuckRecoveryDelay
                 && TryRecoverShelfStuckThrow(itemTransform, itemCollider, body))
             {
                 shelfStuckTime = 0f;
-                elapsed = 0f;
-                groundedTime = 0f;
             }
         }
         else
         {
             shelfStuckTime = 0f;
         }
-
-        if (elapsed < maxFlightTime)
-            return ShelfSettleAdvance.Continue;
-
-        if (!nearGround
-            && itemCollider != null
-            && !IsRestingOnLadder(itemTransform, itemCollider))
-        {
-            if (TryRecoverShelfStuckThrow(itemTransform, itemCollider, body)
-                || TryForceDropAboveFloor(itemTransform, itemCollider, body))
-            {
-                shelfStuckTime = 0f;
-                elapsed = 0f;
-                groundedTime = 0f;
-                return ShelfSettleAdvance.RecoverAndContinue;
-            }
-        }
-
-        return ShelfSettleAdvance.BreakSettle;
     }
 
     /// <summary>
@@ -130,12 +85,13 @@ public static class CardThrowRecovery
         if (IsRestingOnLadder(itemTransform, itemCollider))
             return false;
 
-        TryQueryShelfOverlaps(itemTransform, itemCollider, out ShelfOverlapResult overlap);
+        if (!TryQueryShelfOverlaps(itemTransform, itemCollider, out ShelfOverlapResult overlap)
+            || overlap.PenetrationDepth <= MinShelfPenetration)
+            return false;
+
         Vector3 pushOut = ComputeShelfPushOut(itemTransform, overlap);
         Vector3 pos = itemTransform.position;
-
-        if (overlap.PenetrationDepth > 0.001f)
-            pos.y += LiftClearance;
+        pos.y += LiftClearance;
 
         body.position = pos;
         itemTransform.position = pos;
@@ -146,38 +102,6 @@ public static class CardThrowRecovery
             Random.Range(-0.25f, 0.25f),
             Random.Range(-0.18f, 0.18f));
 
-        return true;
-    }
-
-    /// <summary>
-    /// Last resort before force-settle: drop straight above the floor at the current XZ.
-    /// </summary>
-    public static bool TryForceDropAboveFloor(
-        Transform itemTransform,
-        BoxCollider itemCollider,
-        Rigidbody body)
-    {
-        if (itemTransform == null)
-            return false;
-
-        if (itemTransform.GetComponentInParent<CardShelfSlot>() != null)
-            return false;
-
-        if (IsRestingOnLadder(itemTransform, itemCollider))
-            return false;
-
-        if (!TryFindFloorPoint(itemTransform.position, out Vector3 floorPoint))
-            floorPoint = new Vector3(itemTransform.position.x, CardFactory.GroundHeightOffset(), itemTransform.position.z);
-
-        Vector3 dropPos = floorPoint + Vector3.up * 0.22f;
-        if (body != null && !body.isKinematic)
-        {
-            body.position = dropPos;
-            body.linearVelocity = Vector3.down * 2.8f;
-            body.angularVelocity *= 0.35f;
-        }
-
-        itemTransform.position = dropPos;
         return true;
     }
 
@@ -353,62 +277,14 @@ public static class CardThrowRecovery
             return false;
         if (overlap.transform.IsChildOf(itemTransform))
             return false;
+        if ((overlap.excludeLayers.value & (1 << itemCollider.gameObject.layer)) != 0
+            || (itemCollider.excludeLayers.value & (1 << overlap.gameObject.layer)) != 0)
+            return false;
+        // A card placed in a shelf slot inherits the shelf parent, but it is still an item;
+        // landing against it must not trigger cabinet-recovery impulses.
+        if (overlap.GetComponentInParent<WorldCard>() != null
+            || overlap.GetComponentInParent<WorldBoosterPack>() != null)
+            return false;
         return overlap.GetComponentInParent<CardShelf>() != null;
-    }
-
-    static bool TryFindFloorPoint(Vector3 fromPosition, out Vector3 floorPoint)
-    {
-        floorPoint = default;
-        Vector3 origin = fromPosition + Vector3.up * 0.75f;
-        const float maxDistance = 4f;
-
-        int hitCount = Physics.RaycastNonAlloc(
-            origin,
-            Vector3.down,
-            FloorHitBuffer,
-            maxDistance,
-            ~0,
-            QueryTriggerInteraction.Ignore);
-
-        float bestY = float.NegativeInfinity;
-        bool found = false;
-        for (int i = 0; i < hitCount; i++)
-        {
-            RaycastHit hit = FloorHitBuffer[i];
-            if (hit.collider == null || hit.collider.isTrigger)
-                continue;
-            if ((hit.collider.excludeLayers.value & CardLayers.WorldCardMask.value) != 0)
-                continue;
-            if (hit.collider.GetComponentInParent<CardShelf>() != null)
-                continue;
-            if (IsLadderObject(hit.collider.gameObject))
-                continue;
-            if (hit.collider.GetComponentInParent<WorldCard>() != null)
-                continue;
-            if (hit.collider.GetComponentInParent<WorldBoosterPack>() != null)
-                continue;
-            if (hit.collider.GetComponentInParent<FirstPersonController>() != null)
-                continue;
-
-            string objectName = hit.collider.gameObject.name;
-            if (objectName.StartsWith("Shelf", System.StringComparison.OrdinalIgnoreCase)
-                || objectName.StartsWith("Wall", System.StringComparison.OrdinalIgnoreCase)
-                || objectName.StartsWith("Ceiling", System.StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (hit.point.y > bestY)
-            {
-                bestY = hit.point.y;
-                floorPoint = hit.point;
-                found = true;
-            }
-        }
-
-        if (!found)
-            floorPoint = new Vector3(fromPosition.x, CardFactory.GroundSurfaceY(), fromPosition.z);
-
-        return true;
     }
 }

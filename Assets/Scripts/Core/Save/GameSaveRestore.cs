@@ -121,18 +121,56 @@ public static class GameSaveRestore
 
     public static void ResumePendingPhysics()
     {
-        bool hasPendingMotion = PendingCardPhysics.Count > 0 || PendingPackPhysics.Count > 0;
+        bool hasPendingMotion = false;
+        // Rebuild sleeping supports before any moving item's monitor can inspect its surroundings.
+        // Both passes are synchronous: no fixed step can run with only part of the pile restored.
+        for (int pass = 0; pass < 2; pass++)
+        {
+            bool restoreSleeping = pass == 0;
+            for (int i = 0; i < PendingCardPhysics.Count; i++)
+            {
+                var pending = PendingCardPhysics[i];
+                if (pending.Key == null || pending.Value == null
+                    || pending.Value.isSleeping != restoreSleeping)
+                    continue;
+
+                pending.Key.ResumeSavedPhysics(pending.Value);
+                hasPendingMotion |= !restoreSleeping;
+            }
+            for (int i = 0; i < PendingPackPhysics.Count; i++)
+            {
+                var pending = PendingPackPhysics[i];
+                if (pending.Key == null || pending.Value == null
+                    || pending.Value.isSleeping != restoreSleeping)
+                    continue;
+
+                pending.Key.ResumeSavedPhysics(pending.Value);
+                hasPendingMotion |= !restoreSleeping;
+            }
+        }
+
+        // Collider construction and landing-surface activation may wake an earlier support.
+        // Restore the saved sleep state once the complete pile exists; real contacts can wake it
+        // naturally from the next physics step onward.
         for (int i = 0; i < PendingCardPhysics.Count; i++)
         {
             var pending = PendingCardPhysics[i];
-            if (pending.Key != null)
-                pending.Key.ResumeSavedPhysics(pending.Value);
+            if (pending.Key != null && pending.Value != null && pending.Value.isSleeping)
+            {
+                Rigidbody body = pending.Key.PhysicsBody;
+                if (body != null && !body.isKinematic)
+                    body.Sleep();
+            }
         }
         for (int i = 0; i < PendingPackPhysics.Count; i++)
         {
             var pending = PendingPackPhysics[i];
-            if (pending.Key != null)
-                pending.Key.ResumeSavedPhysics(pending.Value);
+            if (pending.Key != null && pending.Value != null && pending.Value.isSleeping)
+            {
+                Rigidbody body = pending.Key.PhysicsBody;
+                if (body != null && !body.isKinematic)
+                    body.Sleep();
+            }
         }
         ClearPendingPhysics();
         if (hasPendingMotion)
@@ -546,7 +584,8 @@ public static class GameSaveRestore
 
         pack.transform.SetParent(scatterRoot, true);
         pack.transform.SetPositionAndRotation(record.Position, record.Rotation);
-        pack.RestoreSavedWorldPose(record.faceDown, record.stackLayer);
+        pack.RestoreSavedWorldPose(record.faceDown, record.stackLayer,
+            preservePhysicsPose: !record.held && record.physics != null && record.physics.isSimulating);
         CardGroundStack.TrackPack(pack);
         if (!record.held && record.physics != null && record.physics.isSimulating)
             PendingPackPhysics.Add(new KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>(pack, record.physics));

@@ -52,14 +52,11 @@ public static class CardCollisionUtility
     /// </summary>
     const float ThrownMaxDepenetrationVelocity = 2f;
 
-    /// <summary>
-    /// Largest in-flight unstick per physics step. One card thickness — enough to leave coincident
-    /// throws, not enough to slide them toward a shared landing point.
-    /// </summary>
-    static float MaxSpawnUnstick => CardDimensions.Thickness * CardDimensions.GroundCardScale;
-
-    /// <summary>Relative speed used to peel two overlapping thrown items apart without a teleport.</summary>
-    const float ThrownOverlapSeparateSpeed = 1.25f;
+    // Keep the visible faces inside the physical box despite small solver penetration and the
+    // authored instanced-ground depth bias (up to 0.4 mm). This is a world-space margin per face.
+    const float CardSurfacePadding = 0.001f;
+    const float SpawnPenetrationTolerance = 0.0005f;
+    static readonly Collider[] PileOverlapBuffer = new Collider[128];
 
     /// <summary>Random launch spin, radians per second.</summary>
     const float ThrownSpinPitch = 0.2f;
@@ -81,7 +78,7 @@ public static class CardCollisionUtility
                 {
                     dynamicFriction = 0.65f,
                     staticFriction = 0.75f,
-                    bounciness = 0.04f,
+                    bounciness = 0f,
                     frictionCombine = PhysicsMaterialCombine.Maximum,
                     bounceCombine = PhysicsMaterialCombine.Minimum,
                 };
@@ -154,16 +151,41 @@ public static class CardCollisionUtility
 
         if (_cachedPlayer == null)
             _cachedPlayer = Object.FindFirstObjectByType<FirstPersonController>();
-        if (_cachedPlayer == null)
-            return;
 
         PlayerColliderScratch.Clear();
-        _cachedPlayer.GetComponentsInChildren<Collider>(false, PlayerColliderScratch);
+        if (_cachedPlayer != null)
+            _cachedPlayer.GetComponentsInChildren<Collider>(false, PlayerColliderScratch);
         for (int i = 0; i < PlayerColliderScratch.Count; i++)
         {
-            if (PlayerColliderScratch[i] != null)
-                Physics.IgnoreCollision(itemCollider, PlayerColliderScratch[i], true);
+            Collider playerCollider = PlayerColliderScratch[i];
+            if (playerCollider == null || playerCollider == itemCollider)
+                continue;
+
+            // HandAnchor is under the player's camera. Its held cards/packs are items,
+            // not player colliders, even when their Collider component is disabled.
+            // Ignoring those pairs also lets later throws pass through earlier throws.
+            if (IsCardOrPackCollider(playerCollider))
+            {
+                RestoreItemCollision(itemCollider, playerCollider);
+                continue;
+            }
+
+            Physics.IgnoreCollision(itemCollider, playerCollider, true);
         }
+        PlayerColliderScratch.Clear();
+
+        // Item pairs are never ignored above. There is no need to scan every world item
+        // on each throw/restore; ignored pairs are not persisted in saves.
+    }
+
+    static void RestoreItemCollision(Collider itemCollider, Collider other)
+    {
+        if (other == null || other == itemCollider || !itemCollider.enabled || !other.enabled
+            || !itemCollider.gameObject.activeInHierarchy || !other.gameObject.activeInHierarchy)
+            return;
+
+        if (Physics.GetIgnoreCollision(itemCollider, other))
+            Physics.IgnoreCollision(itemCollider, other, false);
     }
 
     public static void ApplyFlatWorldSize(BoxCollider collider)
@@ -172,6 +194,12 @@ public static class CardCollisionUtility
             return;
 
         collider.size = new Vector3(CardDimensions.Width, CardDimensions.Thickness, CardDimensions.Height);
+        if (Application.isPlaying)
+        {
+            Vector3 size = collider.size;
+            size.y += 2f * CardSurfacePadding / Mathf.Max(Mathf.Abs(collider.transform.lossyScale.y), 0.001f);
+            collider.size = size;
+        }
         collider.center = Vector3.zero;
         ApplyToCollider(collider);
     }
@@ -291,188 +319,123 @@ public static class CardCollisionUtility
     }
 
     /// <summary>
-    /// One-shot unstick at throw spawn or a rejected settle. Caps travel at one card thickness so
-    /// coincident throws separate without sliding toward a shared landing point.
+    /// Separate genuinely overlapping throw spawns at their final size. A one-card-thickness budget
+    /// cannot clear several coincident/tilted cards. Recheck the new pose after each full minimum
+    /// translation, including walls and floor, without imparting velocity or moving the old pile.
     /// </summary>
     public static bool UnstickThrownSpawnOverlap(
-        Transform cardTransform,
-        BoxCollider cardCollider,
-        WorldCard self,
-        Rigidbody body)
+        Transform cardTransform, BoxCollider cardCollider, WorldCard self, Rigidbody body)
     {
-        return ResolveThrownFlightOverlap(cardTransform, cardCollider, self, body);
+        return ResolveSpawnOverlaps(cardTransform, cardCollider, self, body);
     }
 
-    /// <summary>
-    /// ContinuousDynamic does not build contacts for items that spawn already overlapping, so rapid
-    /// Q-throws stay clipped until they freeze. Walk the in-flight list (not PhysX overlap, which
-    /// misses the same-frame pair) and peel them apart along the penetration normal.
-    /// </summary>
-    public static bool ResolveThrownFlightOverlap(
-        Transform cardTransform,
-        BoxCollider cardCollider,
-        WorldCard self,
-        Rigidbody body)
+    static bool ResolveSpawnOverlaps(
+        Transform itemTransform, BoxCollider collider, WorldCard self, Rigidbody body)
     {
-        if (cardTransform == null || cardCollider == null || !cardCollider.enabled || body == null)
+        if (itemTransform == null || collider == null || !collider.enabled || body == null || body.isKinematic)
             return false;
 
         bool moved = false;
-        int selfId = cardTransform.GetInstanceID();
-        WorldBoosterPack selfPack = self == null ? cardTransform.GetComponent<WorldBoosterPack>() : null;
-
-        // These lists are only read during separation. Indexed iteration avoids
-        // allocating two captured delegates on every physics step of every throw.
-        for (int i = 0; i < CardGroundStack.PhysicsCardCount; i++)
+        for (int iteration = 0; iteration < MaxResolveIterations; iteration++)
         {
-            WorldCard other = CardGroundStack.PhysicsCardAt(i);
-            if (other == null || other == self)
-                continue;
-            if (SeparateFromThrownItem(
-                    cardTransform,
-                    cardCollider,
-                    body,
-                    selfId,
-                    other.PhysCollider as BoxCollider,
-                    other.PhysicsBody,
-                    other.IsPhysicsSimulating))
-                moved = true;
-        }
+            Vector3 position = body.position;
+            Quaternion rotation = body.rotation;
+            Vector3 half = Vector3.Scale(collider.size * 0.5f, itemTransform.lossyScale);
+            half = new Vector3(Mathf.Abs(half.x), Mathf.Abs(half.y), Mathf.Abs(half.z));
+            Vector3 center = position + rotation * Vector3.Scale(collider.center, itemTransform.lossyScale);
+            float radius = half.magnitude;
+            int count = Physics.OverlapBoxNonAlloc(center, half, PileOverlapBuffer, rotation,
+                ~0, QueryTriggerInteraction.Ignore);
+            Collider[] overlaps = PileOverlapBuffer;
+            if (count == overlaps.Length)
+            {
+                // A throw starting inside a dense pile must not lose contacts at the buffer limit.
+                // This allocation is confined to spawn correction, never a frame loop.
+                overlaps = Physics.OverlapBox(center, half, rotation, ~0, QueryTriggerInteraction.Ignore);
+                count = overlaps.Length;
+            }
 
-        for (int i = 0; i < CardGroundStack.PhysicsPackCount; i++)
-        {
-            WorldBoosterPack other = CardGroundStack.PhysicsPackAt(i);
-            if (other == null || other == selfPack)
-                continue;
-            if (SeparateFromThrownItem(
-                    cardTransform,
-                    cardCollider,
-                    body,
-                    selfId,
-                    other.PhysCollider,
-                    other.PhysicsBody,
-                    other.IsPhysicsSimulating))
-                moved = true;
-        }
+            float deepest = SpawnPenetrationTolerance;
+            Vector3 correction = Vector3.zero;
+            for (int i = 0; i < count; i++)
+                ConsiderSpawnOverlap(collider, body, self, overlaps[i], ref deepest, ref correction);
 
-        if (moved)
-            body.WakeUp();
+            // A second throw can be created before PhysX updates its broadphase. Read the
+            // tracked bodies' current poses explicitly so that same-frame spawns are covered.
+            for (int i = 0; i < CardGroundStack.PhysicsCardCount; i++)
+            {
+                WorldCard other = CardGroundStack.PhysicsCardAt(i);
+                if (other != null && other != self
+                    && CouldOverlapSpawn(center, radius, other.PhysCollider, other.PhysicsBody))
+                    ConsiderSpawnOverlap(collider, body, self, other.PhysCollider, ref deepest, ref correction);
+            }
+            for (int i = 0; i < CardGroundStack.PhysicsPackCount; i++)
+            {
+                WorldBoosterPack other = CardGroundStack.PhysicsPackAt(i);
+                if (other != null
+                    && CouldOverlapSpawn(center, radius, other.PhysCollider, other.PhysicsBody))
+                    ConsiderSpawnOverlap(collider, body, self, other.PhysCollider, ref deepest, ref correction);
+            }
+
+            if (correction.sqrMagnitude == 0f)
+                break;
+
+            position += correction;
+            itemTransform.position = position;
+            body.position = position;
+            moved = true;
+        }
 
         return moved;
     }
 
-    static bool SeparateFromThrownItem(
-        Transform cardTransform,
-        BoxCollider cardCollider,
-        Rigidbody body,
-        int selfId,
-        BoxCollider otherCollider,
-        Rigidbody otherBody,
-        bool otherSimulating)
+    static bool CouldOverlapSpawn(Vector3 center, float radius, Collider other, Rigidbody otherBody)
     {
-        if (otherCollider == null || !otherCollider.enabled || otherCollider.isTrigger)
+        if (other == null || !other.enabled || !other.gameObject.activeInHierarchy)
             return false;
-        if (otherCollider == cardCollider)
-            return false;
-        if (otherBody != null && otherBody == body)
-            return false;
-
-        if (otherSimulating && otherBody != null && otherCollider.transform.GetInstanceID() < selfId
-            && CardGroundStack.IsTrackedPhysicsTransform(cardTransform))
-            return false;
-
-        if (!TryGetSeparation(
-                cardCollider,
-                cardTransform,
-                otherCollider,
-                out Vector3 direction,
-                out float distance))
-            return false;
-
-        bool share = otherSimulating
-            && otherBody != null
-            && !otherBody.isKinematic
-            && CardGroundStack.IsTrackedPhysicsTransform(cardTransform);
-        float push = Mathf.Min(distance + SeparationPush, MaxSpawnUnstick);
-        if (share)
-        {
-            Vector3 half = direction * (push * 0.5f);
-            cardTransform.position += half;
-            body.position = cardTransform.position;
-            otherBody.transform.position -= half;
-            otherBody.position = otherBody.transform.position;
-
-            ApplySeparatingVelocity(body, otherBody, direction);
-            otherBody.WakeUp();
-        }
-        else
-        {
-            cardTransform.position += direction * push;
-            body.position = cardTransform.position;
-            ApplySeparatingVelocity(body, null, direction);
-        }
-
-        return true;
-    }
-
-    static bool TryGetSeparation(
-        BoxCollider cardCollider,
-        Transform cardTransform,
-        BoxCollider otherCollider,
-        out Vector3 direction,
-        out float distance)
-    {
-        direction = Vector3.up;
-        distance = 0f;
-
-        if (Physics.ComputePenetration(
-                cardCollider,
-                cardTransform.position,
-                cardTransform.rotation,
-                otherCollider,
-                otherCollider.transform.position,
-                otherCollider.transform.rotation,
-                out direction,
-                out distance)
-            && distance > MinPenetration)
-        {
+        // The registered items use root BoxColliders. Fall back to the exact check for
+        // any other shape/hierarchy instead of assuming its dimensions or world pose.
+        if (!(other is BoxCollider box) || otherBody == null || box.transform != otherBody.transform)
             return true;
-        }
 
-        if (!cardCollider.bounds.Intersects(otherCollider.bounds))
-            return false;
-
-        Vector3 delta = cardTransform.position - otherCollider.transform.position;
-        if (delta.sqrMagnitude < 1e-8f)
-            delta = Vector3.up;
-
-        direction = delta.normalized;
-        distance = MaxSpawnUnstick;
-        return true;
+        // Reject distant items before the component lookups and penetration query. Use the
+        // body's pose, not collider.bounds: a same-frame throw may not be in the broadphase yet.
+        Vector3 scale = box.transform.lossyScale;
+        Vector3 otherCenter = otherBody.position + otherBody.rotation * Vector3.Scale(box.center, scale);
+        float otherRadius = Vector3.Scale(box.size * 0.5f, scale).magnitude;
+        float maxDistance = radius + otherRadius + SeparationPush;
+        return (center - otherCenter).sqrMagnitude <= maxDistance * maxDistance;
     }
 
-    static void ApplySeparatingVelocity(Rigidbody body, Rigidbody otherBody, Vector3 direction)
+    static void ConsiderSpawnOverlap(
+        BoxCollider collider, Rigidbody body, WorldCard self, Collider other,
+        ref float deepest, ref Vector3 correction)
     {
-        if (body == null)
+        if (ShouldIgnoreCollider(other, collider, self, body, ignoreMovingBodies: false)
+            || !other.enabled || !other.gameObject.activeInHierarchy)
+            return;
+        if ((collider.excludeLayers.value & (1 << other.gameObject.layer)) != 0
+            || Physics.GetIgnoreLayerCollision(collider.gameObject.layer, other.gameObject.layer)
+            || Physics.GetIgnoreCollision(collider, other))
             return;
 
-        Vector3 relative = otherBody != null
-            ? body.linearVelocity - otherBody.linearVelocity
-            : body.linearVelocity;
-        float closing = Vector3.Dot(relative, direction);
-        if (closing >= ThrownOverlapSeparateSpeed)
-            return;
-
-        float add = ThrownOverlapSeparateSpeed - closing;
-        if (otherBody != null && !otherBody.isKinematic)
+        Rigidbody otherBody = other.attachedRigidbody;
+        Vector3 otherPosition = other.transform.position;
+        Quaternion otherRotation = other.transform.rotation;
+        if (otherBody != null && other.transform == otherBody.transform)
         {
-            float half = add * 0.5f;
-            body.linearVelocity += direction * half;
-            otherBody.linearVelocity -= direction * half;
-            return;
+            // Interpolated render transforms lag a physics step. Collision checks must compare
+            // physics poses, otherwise visually lagging cards can produce a false correction.
+            otherPosition = otherBody.position;
+            otherRotation = otherBody.rotation;
         }
+        if (!Physics.ComputePenetration(collider, body.position, body.rotation,
+                other, otherPosition, otherRotation, out Vector3 direction, out float distance)
+            || distance <= deepest)
+            return;
 
-        body.linearVelocity += direction * add;
+        deepest = distance;
+        correction = direction * (distance + SeparationPush);
     }
 
     static bool TryResolveSinglePass(

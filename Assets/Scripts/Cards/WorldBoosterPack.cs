@@ -40,6 +40,10 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Transform _packModel;
     Transform _handAnchor;
     Rigidbody _rigidbody;
+    Coroutine _thrownPhysicsRoutine;
+    int _thrownLandingScope;
+    bool _preserveRestoredPhysicsPose;
+    bool _restoreGroundTrackingOnEnable;
     BoxCollider _collider;
     bool _interactionHighlighted;
     bool _handSelected;
@@ -56,12 +60,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     bool _hasPackOutlineBounds;
     Outline _packOutline;
     int _groundStackLayer;
-    bool _scaleTransitionActive;
-    float _scaleFrom;
-    float _scaleTo;
-    float _scaleTransitionDuration;
-    float _scaleTransitionElapsed;
-    Coroutine _scaleTransitionRoutine;
 
     float _flightDuration = 0.4f;
     float _flightElapsed;
@@ -89,9 +87,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public bool HasActivePhysics => _rigidbody != null;
 
     /// <summary>
-    /// True only while the solver is still moving the pack. A settled pack keeps a frozen (kinematic)
-    /// body as its solid surface, so <see cref="HasActivePhysics"/> alone cannot tell "still flying"
-    /// from "already at rest" — stack layering needs this distinction.
+    /// True for a dynamic physics pack, including a sleeping pack in a pile. Sleeping bodies
+    /// remain dynamic so contacts and removal of their support can wake them naturally.
     /// </summary>
     public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
     public int GroundStackLayer => _groundStackLayer;
@@ -138,15 +135,16 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     /// Re-applies a saved world pose without the flat-floor visual lift that would shift a leaning
     /// pack (e.g. against glass) along its local up and push it through walls on load.
     /// </summary>
-    public void RestoreSavedWorldPose(bool faceDown, int stackLayer)
+    public void RestoreSavedWorldPose(bool faceDown, int stackLayer, bool preservePhysicsPose = false)
     {
         _state = PackState.World;
+        _preserveRestoredPhysicsPose = preservePhysicsPose;
         _groundShowsBack = faceDown;
         SetGroundStackLayer(stackLayer);
 
-        // Flat packs match scatter/spawn (ground mesh lift). Tilted packs match post-throw settle
-        // (physics visual, mesh centred on root) — see CardSettlePlacement.FlatUpDot.
-        bool upright = CardSettlePlacement.IsFlatOnFloor(transform);
+        // Physical saves keep the same proxy basis even if the solver left the root flat.
+        // Older pose-only saves retain their original ground-pose interpretation.
+        bool upright = !preservePhysicsPose && CardSettlePlacement.IsFlatOnFloor(transform);
         ApplyWorldVisualOrientation(alignPackModelToGround: upright);
 
         if (_collider != null)
@@ -171,7 +169,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         EnsureVisual();
         CaptureExistingVisualLayout();
         ApplyPackBodyCollider();
-        LiftMeshAboveFloor();
+        if (!_preserveRestoredPhysicsPose)
+            LiftMeshAboveFloor();
         EnsureContentsPreRolled();
         CardGroundStack.TrackPack(this);
         SetGroundModelVisible(true);
@@ -239,6 +238,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         this.packSet = definition != null ? definition.PackSet : packSet;
         this.packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
         _preserveSavedContents = false;
+        _preserveRestoredPhysicsPose = false;
         // An explicitly saved empty list must stay empty; never inherit scene contents or reroll.
         if (preRolledContents != null)
             this.preRolledContents = new List<CardDefinition>(preRolledContents);
@@ -1203,8 +1203,28 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         _liveHandMaterialsByRenderer.Clear();
     }
 
+    void OnEnable()
+    {
+        if (_restoreGroundTrackingOnEnable && _state == PackState.World)
+            CardGroundStack.TrackPack(this);
+        _restoreGroundTrackingOnEnable = false;
+        if (_state == PackState.World && IsPhysicsSimulating)
+            StartThrownPhysicsMonitor(_rigidbody);
+    }
+
+    void OnDisable()
+    {
+        _restoreGroundTrackingOnEnable = CardGroundStack.IsTrackedPack(this);
+        CardGroundStack.UntrackPack(this);
+        StopThrownPhysicsMonitor();
+        CardGroundStack.UntrackPhysicsPack(this);
+    }
+
     void OnDestroy()
     {
+        CardGroundStack.UntrackPack(this);
+        StopThrownPhysicsMonitor();
+        CardGroundStack.UntrackPhysicsPack(this);
         ReleaseLiveHandMaterials();
     }
 
@@ -1511,6 +1531,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ConvertHandVisualToWorldRoot();
         transform.SetParent(null, true);
 
+        // Fit and launch at the final size so the collider cannot grow into another item
+        // after the initial overlap correction has already run.
+        transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
         ApplyPackBodyCollider();
 
         if (_collider is BoxCollider boxCollider)
@@ -1523,19 +1546,16 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _collider.enabled = true;
         }
 
-        IgnorePlayerCollision();
-
-        BeginScaleTransition(transform.localScale.x, CardDimensions.GroundCardScale, worldScaleTransitionDuration);
         ApplyPackModelShadowSettings();
 
         EnsureRigidbody();
         CardCollisionUtility.LaunchThrownBody(_rigidbody, velocity);
+        IgnorePlayerCollision();
         if (_collider is BoxCollider thrownBox)
             CardCollisionUtility.UnstickThrownSpawnOverlap(transform, thrownBox, null, _rigidbody);
 
         CardLayers.ApplyToGameObject(gameObject);
-        CardGroundStack.TrackPhysicsPack(this);
-        StartCoroutine(MonitorThrownPackRoutine(_rigidbody));
+        StartThrownPhysicsMonitor(_rigidbody);
     }
 
     public void ResumeSavedPhysics(ThrownPhysicsSaveState state)
@@ -1553,32 +1573,60 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         }
         IgnorePlayerCollision();
         state.Apply(_rigidbody);
-        CardGroundStack.TrackPhysicsPack(this);
-        StartCoroutine(MonitorThrownPackRoutine(_rigidbody));
+        _preserveRestoredPhysicsPose = false;
+        StartThrownPhysicsMonitor(_rigidbody);
     }
 
-    IEnumerator MonitorThrownPackRoutine(Rigidbody body)
+    void StartThrownPhysicsMonitor(Rigidbody body)
+    {
+        StopThrownPhysicsMonitor();
+        if (!isActiveAndEnabled || _state != PackState.World || body == null || body.isKinematic)
+            return;
+
+        CardGroundStack.TrackPhysicsPack(this);
+        _thrownLandingScope = CardGroundStack.BeginLandingColliderScope();
+        _thrownPhysicsRoutine = StartCoroutine(MonitorThrownPackRoutine(body, _thrownLandingScope));
+    }
+
+    void StopThrownPhysicsMonitor()
+    {
+        Coroutine routine = _thrownPhysicsRoutine;
+        int landingScope = _thrownLandingScope;
+        _thrownPhysicsRoutine = null;
+        _thrownLandingScope = 0;
+        if (routine != null)
+            StopCoroutine(routine);
+        if (landingScope != 0)
+            CardGroundStack.EndLandingColliderScope(landingScope);
+    }
+
+    IEnumerator MonitorThrownPackRoutine(Rigidbody body, int landingScope)
     {
         var boxCollider = _collider as BoxCollider;
 
-        yield return CardThrownPhysics.Monitor(
-            transform,
-            body,
-            boxCollider,
-            () => _state == PackState.World && body != null && _rigidbody == body,
-            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, body, attempt));
+        try
+        {
+            yield return CardThrownPhysics.Monitor(
+                transform,
+                body,
+                boxCollider,
+                () => isActiveAndEnabled && _state == PackState.World && body != null && _rigidbody == body,
+                onSettled: () => CardSettlePlacement.RegisterSleepingPose(this),
+                landingScopeId: landingScope);
+        }
+        finally
+        {
+            CardGroundStack.EndLandingColliderScope(landingScope);
+            if (_thrownLandingScope == landingScope)
+            {
+                _thrownLandingScope = 0;
+                _thrownPhysicsRoutine = null;
+            }
+        }
 
         if (_state != PackState.World || body == null || _rigidbody != body)
             yield break;
 
-        bool alignToGround = CardSettlePlacement.IsFlatOnFloor(transform);
-        ApplyWorldVisualOrientation(alignPackModelToGround: alignToGround);
-        if (!alignToGround)
-        {
-            LiftMeshAboveFloor();
-            if (boxCollider != null)
-                CardCollisionUtility.ResolveRestingPenetration(transform, boxCollider, null, _rigidbody);
-        }
         SetInteractionHighlight(false);
         RefreshPackOutlineState();
     }
@@ -1592,42 +1640,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         // Bake the hand pose into root rotation; proxy uses the fixed physics basis during the drop.
         transform.rotation = _cardRef.rotation * Quaternion.Inverse(GetPackPhysicsWorldLocalRotation());
         ApplyWorldVisualOrientation(alignPackModelToGround: false);
-    }
-
-    void BeginScaleTransition(float fromScale, float toScale, float duration)
-    {
-        _scaleFrom = fromScale;
-        _scaleTo = toScale;
-        _scaleTransitionDuration = Mathf.Max(0.01f, duration);
-        _scaleTransitionElapsed = 0f;
-        _scaleTransitionActive = true;
-        transform.localScale = Vector3.one * fromScale;
-        if (_scaleTransitionRoutine != null)
-            StopCoroutine(_scaleTransitionRoutine);
-        _scaleTransitionRoutine = StartCoroutine(ScaleTransitionRoutine());
-    }
-
-    IEnumerator ScaleTransitionRoutine()
-    {
-        while (_scaleTransitionActive && _state == PackState.World)
-        {
-            _scaleTransitionElapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(_scaleTransitionElapsed / _scaleTransitionDuration);
-            float smoothT = Mathf.SmoothStep(0f, 1f, t);
-            transform.localScale = Vector3.one * Mathf.Lerp(_scaleFrom, _scaleTo, smoothT);
-
-            if (t >= 1f)
-            {
-                _scaleTransitionActive = false;
-                _scaleTransitionRoutine = null;
-                yield break;
-            }
-
-            yield return null;
-        }
-
-        _scaleTransitionActive = false;
-        _scaleTransitionRoutine = null;
     }
 
     /// <summary>
@@ -1869,6 +1881,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
     void RemovePhysics()
     {
+        CardThrownPhysics.WakeSupportedBodies(_collider);
+        StopThrownPhysicsMonitor();
+        CardGroundStack.UntrackPhysicsPack(this);
         Rigidbody rb = _rigidbody != null ? _rigidbody : GetComponent<Rigidbody>();
         if (rb == null)
         {
@@ -1878,7 +1893,6 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
 
         DestroyImmediate(rb);
         _rigidbody = null;
-        CardGroundStack.UntrackPhysicsPack(this);
     }
 
     void IgnorePlayerCollision()

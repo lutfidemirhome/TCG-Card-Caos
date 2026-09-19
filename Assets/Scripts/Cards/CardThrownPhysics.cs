@@ -6,6 +6,7 @@ using UnityEngine;
 public sealed class ThrownPhysicsSaveState
 {
     public bool isSimulating;
+    public bool isSleeping;
     public Vector3 linearVelocity;
     public Vector3 angularVelocity;
 
@@ -13,11 +14,13 @@ public sealed class ThrownPhysicsSaveState
     {
         if (body == null || body.isKinematic)
             return null;
+        bool sleeping = body.IsSleeping();
         return new ThrownPhysicsSaveState
         {
             isSimulating = true,
-            linearVelocity = body.linearVelocity,
-            angularVelocity = body.angularVelocity,
+            isSleeping = sleeping,
+            linearVelocity = sleeping ? Vector3.zero : body.linearVelocity,
+            angularVelocity = sleeping ? Vector3.zero : body.angularVelocity,
         };
     }
 
@@ -31,7 +34,10 @@ public sealed class ThrownPhysicsSaveState
         body.rotation = body.transform.rotation;
         body.linearVelocity = IsFinite(linearVelocity) ? linearVelocity : Vector3.zero;
         body.angularVelocity = IsFinite(angularVelocity) ? angularVelocity : Vector3.zero;
-        body.WakeUp();
+        if (isSleeping)
+            body.Sleep();
+        else
+            body.WakeUp();
     }
 
     static bool IsFinite(Vector3 value) =>
@@ -41,150 +47,192 @@ public sealed class ThrownPhysicsSaveState
 }
 
 /// <summary>
-/// Keeps Q-thrown cards and packs in physics until they settle — no flatten/snap, no rotation/texture
-/// changes. Once truly at rest on the floor they freeze (kinematic) so they stop costing solver time
-/// and can no longer be woken up and jittered/sunk into by a freshly thrown item landing nearby.
+/// Preserves the solver's pose, including tilted and elevated piles. Resting bodies sleep naturally
+/// so new impacts and removal of their support can wake them again. Their local support colliders
+/// stay solid for the whole throw lifetime, including sleep.
 /// </summary>
 public static class CardThrownPhysics
 {
-    const float LandingColliderRefreshInterval = 0.02f;
+    const float LandingColliderRefreshInterval = 0.1f;
     const float LandingColliderRadius = 2f;
     const float LandingLookaheadSeconds = 0.2f;
     const float SlowVelocityThresholdSq = 0.35f;
-    const float MaxRecoveryFlightSeconds = 4f;
-    const float RestSettleDelay = 0.2f;
-    /// <summary>Cap on "settled inside something, drop again" rounds so a wedged item still comes to rest.</summary>
-    const int MaxSettleRejections = 6;
+    const float LandingRefreshTravelSq = 0.2f * 0.2f;
+    const float SupportContactPadding = 0.012f;
     static readonly WaitForFixedUpdate WaitFixed = new WaitForFixedUpdate();
+    static readonly WaitForSeconds WaitSleeping = new WaitForSeconds(0.25f);
 
     /// <param name="onSettled">
-    /// Resolves the final resting pose, taking the settle attempt index (0 on the first try). Returning
-    /// false means the item was still inside something and needs to keep simulating, so it is never
-    /// frozen while penetrating another collider.
+    /// Registers the sleeping pose without changing it or waking the body.
     /// </param>
     public static IEnumerator Monitor(
         Transform itemTransform,
         Rigidbody body,
         BoxCollider collider,
         Func<bool> isActive,
-        Func<int, bool> onSettled = null)
+        Action onSettled = null,
+        int landingScopeId = 0)
     {
         if (itemTransform == null || body == null || isActive == null)
             yield break;
 
         float shelfStuckTime = 0f;
-        float elapsed = 0f;
-        float groundedTime = 0f;
-        // Start "due" so the very first frame already solidifies nearby ground cards — a short, fast
-        // hand-drop can otherwise reach the floor before the first timed refresh ever fires.
+        float recoveryTimer = 0f;
         float colliderRefreshTimer = LandingColliderRefreshInterval;
-        float restSettleTime = 0f;
-        bool hasSettled = false;
-        int settleRejections = 0;
-        int landingScopeId = CardGroundStack.BeginLandingColliderScope();
-        WorldCard thrownCard = itemTransform.GetComponent<WorldCard>();
+        bool registeredSleep = false;
+        bool observedMotion = !body.IsSleeping();
+        bool hasLandingPosition = false;
+        Vector3 lastLandingPosition = default;
+        bool ownsScope = landingScopeId == 0;
+        if (ownsScope)
+            landingScopeId = CardGroundStack.BeginLandingColliderScope();
 
         try
         {
+            // Prime supports before the first simulation, but register sleep only after a physics
+            // step. Save restore creates all bodies and restores their sleep states synchronously;
+            // wait for that batch to end before recording the pile's resting poses.
+            lastLandingPosition = body.IsSleeping()
+                ? itemTransform.position
+                : itemTransform.position + body.linearVelocity * LandingLookaheadSeconds;
+            CardGroundStack.RefreshLandingColliderScope(landingScopeId, lastLandingPosition,
+                body.IsSleeping() ? GetRestingSupportRadius(collider) : LandingColliderRadius);
+            hasLandingPosition = true;
+            colliderRefreshTimer = 0f;
+            yield return WaitFixed;
+
             while (itemTransform != null && body != null && isActive())
             {
-                elapsed += Time.deltaTime;
-                colliderRefreshTimer += Time.deltaTime;
-                if (!body.IsSleeping() && colliderRefreshTimer >= LandingColliderRefreshInterval)
-                {
-                    colliderRefreshTimer = 0f;
-                    // Solidify slightly ahead of the current velocity too, so a fast-falling item meets an
-                    // already-solid collider instead of racing a same-frame trigger-to-solid toggle.
-                    Vector3 lookahead = itemTransform.position + body.linearVelocity * LandingLookaheadSeconds;
-                    CardGroundStack.RefreshLandingColliderScope(
-                        landingScopeId,
-                        lookahead,
-                        LandingColliderRadius);
-                }
-
-                if (collider != null)
-                {
-                    CardCollisionUtility.ResolveThrownFlightOverlap(itemTransform, collider, thrownCard, body);
-                }
-
-                CardFactory.LiftAboveFloor(itemTransform, body);
-
-                bool slowEnough = body.linearVelocity.sqrMagnitude < SlowVelocityThresholdSq;
-                float groundY = CardFactory.GroundHeightOffset();
-                float maxGroundedY = groundY + CardGroundStack.StackStep * 64f + 0.25f;
-                bool nearGround = itemTransform.position.y <= maxGroundedY;
-
-                if (collider != null)
-                {
-                    CardThrowRecovery.AdvanceShelfStuckSettle(
-                        ref shelfStuckTime,
-                        ref elapsed,
-                        ref groundedTime,
-                        itemTransform,
-                        collider,
-                        body,
-                        nearGround,
-                        slowEnough,
-                        MaxRecoveryFlightSeconds);
-                }
-
                 if (body.IsSleeping())
                 {
-                    if (nearGround && shelfStuckTime <= 0f)
+                    // A genuine cabinet penetration can itself fall asleep. Check once on landing,
+                    // then only while that confirmed problem persists; ordinary sleepers do no queries.
+                    if (observedMotion && collider != null && (!registeredSleep || shelfStuckTime > 0f))
                     {
-                        restSettleTime += Time.deltaTime;
-                        if (restSettleTime >= RestSettleDelay && !hasSettled)
-                        {
-                            // Physics can rest a thin flat item a hair below/above where it should sit
-                            // (or fully miss a trigger-based ground card whose landing collider toggled
-                            // on a frame late). Snap ONLY the Y position onto the real stack height on
-                            // top of whatever it is actually overlapping — position/rotation from the
-                            // physics tumble are left untouched, so this never affects front/back facing.
-                            if (onSettled != null
-                                && !onSettled.Invoke(settleRejections)
-                                && ++settleRejections < MaxSettleRejections)
-                            {
-                                restSettleTime = 0f;
-                                yield return null;
-                                continue;
-                            }
-
-                            CardFactory.LiftAboveFloor(itemTransform, body);
-                            hasSettled = true;
-
-                            // Truly at rest and not inside anything — freeze physics instead of leaving
-                            // the solver running on it forever. This is what stops fast back-to-back
-                            // throws from jittering/sinking into an already-settled pile, and stops
-                            // paying per-frame physics cost for items that already stopped moving.
-                            body.isKinematic = true;
-
-                            // Auto Sync Transforms is off project-wide, so the settle snap above only
-                            // moved the transform. Push the final pose into the body or the frozen
-                            // collider stays where the solver left it and later throws collide with
-                            // a surface that is no longer under the card they can see.
-                            body.position = itemTransform.position;
-                            body.rotation = itemTransform.rotation;
-                            yield break;
-                        }
+                        CardThrowRecovery.AdvanceShelfStuckSettle(
+                            ref shelfStuckTime, itemTransform, collider, body, true, 0.25f);
+                        if (!body.IsSleeping())
+                            continue;
                     }
-                    else
+                    if (!registeredSleep)
                     {
-                        restSettleTime = 0f;
-                        hasSettled = false;
+                        // Keep nearby authored supports solid for the sleeping pile's lifetime.
+                        CardGroundStack.RefreshLandingColliderScope(landingScopeId, itemTransform.position,
+                            GetRestingSupportRadius(collider));
+                        if (!body.IsSleeping())
+                            continue;
+                        // Do not depenetrate a solver-settled pile here. Moving one resting card
+                        // breaks its neighbours' contacts and causes repeated wake/settle cycles.
+                        onSettled?.Invoke();
+                        registeredSleep = true;
+                        if (observedMotion)
+                            GameSaveDirtyTracker.MarkDirty();
                     }
-
-                    yield return null;
+                    // No per-frame coroutine, overlap query or transform write for a sleeping pile.
+                    yield return WaitSleeping;
                     continue;
                 }
 
-                restSettleTime = 0f;
-                hasSettled = false;
+                if (registeredSleep)
+                {
+                    registeredSleep = false;
+                    hasLandingPosition = false;
+                    colliderRefreshTimer = LandingColliderRefreshInterval;
+                    shelfStuckTime = 0f;
+                    GameSaveDirtyTracker.MarkDirty();
+                }
+                observedMotion = true;
+                colliderRefreshTimer += Time.fixedDeltaTime;
+                Vector3 lookahead = itemTransform.position + body.linearVelocity * LandingLookaheadSeconds;
+                if (!hasLandingPosition || (colliderRefreshTimer >= LandingColliderRefreshInterval
+                    && (lookahead - lastLandingPosition).sqrMagnitude >= LandingRefreshTravelSq))
+                {
+                    colliderRefreshTimer = 0f;
+                    lastLandingPosition = lookahead;
+                    hasLandingPosition = true;
+                    CardGroundStack.RefreshLandingColliderScope(landingScopeId, lookahead, LandingColliderRadius);
+                }
+
+                // The authored ground offset includes visual padding. Clamping to it every step
+                // lifts an already resting card off its contact and prevents natural sleep.
+                RecoverBelowFloor(itemTransform, body, collider);
+                recoveryTimer += Time.fixedDeltaTime;
+                if (collider != null && recoveryTimer >= LandingColliderRefreshInterval)
+                {
+                    CardThrowRecovery.AdvanceShelfStuckSettle(
+                        ref shelfStuckTime, itemTransform, collider, body,
+                        body.linearVelocity.sqrMagnitude < SlowVelocityThresholdSq, recoveryTimer);
+                    recoveryTimer = 0f;
+                }
                 yield return WaitFixed;
             }
         }
         finally
         {
-            CardGroundStack.EndLandingColliderScope(landingScopeId);
+            if (ownsScope)
+                CardGroundStack.EndLandingColliderScope(landingScopeId);
         }
+    }
+
+    static float GetRestingSupportRadius(BoxCollider collider)
+    {
+        if (collider == null)
+            return 0.5f;
+        float cardHalfDiagonal = new Vector2(CardDimensions.Width, CardDimensions.Height).magnitude
+            * CardDimensions.GroundCardScale * 0.5f;
+        return Mathf.Max(0.5f, collider.bounds.extents.magnitude + cardHalfDiagonal + 0.02f);
+    }
+
+    static void RecoverBelowFloor(Transform itemTransform, Rigidbody body, BoxCollider collider)
+    {
+        if (collider == null)
+            return;
+        float floorY = CardFactory.GroundSurfaceY();
+        Bounds bounds = collider.bounds;
+        if (bounds.max.y >= floorY - 0.02f)
+            return;
+
+        // Only recover a collider that has completely passed below the lowest floor. Its rotated
+        // bounds determine the lift, so an edge-on card or thick pack is also brought fully above it.
+        Vector3 position = body.position + Vector3.up * (floorY + 0.002f - bounds.min.y);
+        itemTransform.position = position;
+        body.position = position;
+        Vector3 velocity = body.linearVelocity;
+        velocity.y = Mathf.Max(0f, velocity.y);
+        body.linearVelocity = velocity;
+    }
+
+    /// <summary>
+    /// Removing a static authored card is not an impact. Wake only touching physical neighbours so
+    /// a sleeping pile can follow its missing support; leave distant piles asleep and apply no forces.
+    /// </summary>
+    public static void WakeSupportedBodies(Collider support)
+    {
+        if (support == null || !support.enabled || !support.gameObject.activeInHierarchy || support.isTrigger)
+            return;
+
+        Bounds contactBounds = support.bounds;
+        contactBounds.Expand(SupportContactPadding * 2f);
+        for (int i = 0; i < CardGroundStack.PhysicsCardCount; i++)
+        {
+            WorldCard card = CardGroundStack.PhysicsCardAt(i);
+            if (card != null)
+                WakeTouchingBody(card.PhysicsBody, card.PhysCollider, support, contactBounds);
+        }
+        for (int i = 0; i < CardGroundStack.PhysicsPackCount; i++)
+        {
+            WorldBoosterPack pack = CardGroundStack.PhysicsPackAt(i);
+            if (pack != null)
+                WakeTouchingBody(pack.PhysicsBody, pack.PhysCollider, support, contactBounds);
+        }
+    }
+
+    static void WakeTouchingBody(Rigidbody body, Collider collider, Collider support, Bounds contactBounds)
+    {
+        if (body == null || body.isKinematic || !body.IsSleeping() || collider == null
+            || collider == support || !collider.enabled || collider.isTrigger)
+            return;
+        if (contactBounds.Intersects(collider.bounds))
+            body.WakeUp();
     }
 }
