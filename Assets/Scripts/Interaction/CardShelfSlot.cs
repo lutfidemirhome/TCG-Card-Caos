@@ -29,6 +29,7 @@ public class CardShelfSlot : MonoBehaviour
     MeshRenderer _fillRenderer;
     MeshRenderer _edgeRenderer;
     bool _previewDeferred;
+    bool _previewHiddenForPlay;
 
     public bool IsEmpty
     {
@@ -154,15 +155,19 @@ public class CardShelfSlot : MonoBehaviour
     void OnEnable()
     {
         SyncIndicesFromHierarchy();
-        EnsurePreview();
         if (Application.isPlaying)
+        {
+            _previewHiddenForPlay = false;
             HidePreviewForPlayMode();
+            return;
+        }
+
+        EnsurePreview();
 #if UNITY_EDITOR
-        else if (!IsEditingPrefabAsset())
+        if (!IsEditingPrefabAsset())
             RefreshPreviewVisibility();
 #else
-        else
-            RefreshPreviewVisibility();
+        RefreshPreviewVisibility();
 #endif
     }
 
@@ -219,6 +224,12 @@ public class CardShelfSlot : MonoBehaviour
         if (IsEditingPrefabAsset())
             return;
 
+        if (Application.isPlaying)
+        {
+            HidePreviewForPlayMode();
+            return;
+        }
+
         EnsurePreview();
         RefreshPreviewVisibility();
     }
@@ -236,15 +247,15 @@ public class CardShelfSlot : MonoBehaviour
     /// </summary>
     void SetPreviewActive(bool active)
     {
-        EnsurePreview();
-        if (_previewRoot == null)
-            return;
-
         if (Application.isPlaying)
         {
             HidePreviewForPlayMode();
             return;
         }
+
+        EnsurePreview();
+        if (_previewRoot == null)
+            return;
 
 #if UNITY_EDITOR
         if (IsEditingPrefabAsset())
@@ -256,7 +267,22 @@ public class CardShelfSlot : MonoBehaviour
 
     void HidePreviewForPlayMode()
     {
+        if (_previewHiddenForPlay)
+            return;
+
+        // Runtime slots need only occupancy data. Bind and hide any authored preview
+        // once; never create or reposition editor-only meshes while aiming at a shelf.
+        if (_previewRoot == null)
+            _previewRoot = transform.Find(PreviewObjectName);
+        if (_previewRoot != null)
+        {
+            if (_fillRenderer == null)
+                _fillRenderer = _previewRoot.Find("Fill")?.GetComponent<MeshRenderer>();
+            if (_edgeRenderer == null)
+                _edgeRenderer = _previewRoot.Find("Edge")?.GetComponent<MeshRenderer>();
+        }
         SetPreviewRenderersEnabled(false);
+        _previewHiddenForPlay = true;
     }
 
     void SetPreviewRenderersEnabled(bool enabled)

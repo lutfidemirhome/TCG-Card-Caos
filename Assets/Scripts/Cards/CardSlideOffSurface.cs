@@ -12,11 +12,39 @@ public sealed class CardSlideOffSurface : MonoBehaviour
     const float SlideSpeed = 0.8f;
     const float EdgeClearance = 0.08f;
     [SerializeField] bool useMeshColliders;
+    [Tooltip("Optional scene-authored solid column up to the local ceiling. Replaces foliage collision and sliding.")]
+    [SerializeField] BoxCollider ceilingBlocker;
     readonly Dictionary<Rigidbody, Vector3> _slideDirections = new Dictionary<Rigidbody, Vector3>();
     static readonly RaycastHit[] PathHits = new RaycastHit[64];
 
+    public bool ContainsCeilingBlockedPoint(Collider surface, Vector3 worldPoint)
+    {
+        if (ceilingBlocker == null || surface != ceilingBlocker)
+            return false;
+
+        Vector3 local = ceilingBlocker.transform.InverseTransformPoint(worldPoint) - ceilingBlocker.center;
+        Vector3 halfSize = ceilingBlocker.size * 0.5f;
+        return Mathf.Abs(local.x) <= halfSize.x
+            && Mathf.Abs(local.y) <= halfSize.y
+            && Mathf.Abs(local.z) <= halfSize.z;
+    }
+
     void Awake()
     {
+        if (ceilingBlocker != null)
+        {
+            // Indoor plants use one static box for the player and thrown items.
+            // Do not cook foliage meshes or leave overlapping collision surfaces.
+            foreach (Collider surface in GetComponentsInChildren<Collider>(true))
+            {
+                if (surface != ceilingBlocker && !surface.isTrigger)
+                    surface.enabled = false;
+            }
+            ceilingBlocker.isTrigger = false;
+            ceilingBlocker.enabled = true;
+            return;
+        }
+
         if (useMeshColliders)
             ConfigureMeshColliders();
 
@@ -116,6 +144,9 @@ public sealed class CardSlideOffSurface : MonoBehaviour
 
     void Slide(Collision collision)
     {
+        if (ceilingBlocker != null)
+            return;
+
         Rigidbody body = collision.rigidbody;
         if (body == null || body.isKinematic)
             return;

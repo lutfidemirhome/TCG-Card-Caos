@@ -9,7 +9,7 @@ public static class InteractionOcclusion
     const float FloorThroughMargin = 0.08f;
     static readonly RaycastHit[] Hits = new RaycastHit[32];
 
-    public static bool IsOccluded(Ray ray, float targetDistance, float maxDistance)
+    public static bool IsOccluded(Ray ray, float targetDistance, float maxDistance, bool recoverItemInsidePlant = false)
     {
         if (targetDistance >= float.MaxValue * 0.5f)
             return false;
@@ -35,6 +35,14 @@ public static class InteractionOcclusion
                 continue;
 
             if (collider is CharacterController)
+                continue;
+
+            // Older saves and authored floor cards may already lie inside a newly
+            // blocked plant. Allow taking those items out, while still blocking
+            // targets behind the column and all shelf placement through it.
+            if (recoverItemInsidePlant
+                && collider.TryGetComponent(out CardSlideOffSurface plant)
+                && plant.ContainsCeilingBlockedPoint(collider, ray.GetPoint(targetDistance)))
                 continue;
 
             if (IsFloorSlab(collider))
