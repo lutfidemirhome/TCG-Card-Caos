@@ -20,6 +20,8 @@ public class CardSaveRecord
     public float rw = 1f;
     public bool faceDown;
     public int stackLayer;
+    // Optional: older saves and already settled cards keep the existing pose-only behavior.
+    public ThrownPhysicsSaveState physics;
     public string shelfId = string.Empty;
     public int slotRow;
     public int slotColumn;

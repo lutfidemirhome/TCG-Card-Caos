@@ -38,6 +38,10 @@ public static class SaveFileIO
     public static string AutosaveSlotId(int index) => "autosave_" + index;
     public static string ManualSlotId(int index) => "manual_" + index;
 
+    public static bool HasSlotFiles(string slotId) =>
+        File.Exists(GetSavePath(slotId)) || File.Exists(GetMetaPath(slotId))
+        || File.Exists(GetBackupPath(slotId)) || File.Exists(GetLegacyBackupPath(slotId));
+
     public static void EnsureRoot()
     {
         Directory.CreateDirectory(RootFolder);
@@ -205,7 +209,8 @@ public static class SaveFileIO
             metadata.slotId = slotId;
             metadata.thumbnailAvailable = metadata.thumbnailAvailable && File.Exists(GetThumbnailPath(slotId));
             metadata.isValid = ValidateMetadata(metadata);
-            return metadata.isValid;
+            if (metadata.isValid)
+                return true;
         }
 
         if (TryLoadSave(slotId, out GameSaveData save, out _))
@@ -224,20 +229,27 @@ public static class SaveFileIO
             return results;
 
         string[] files = Directory.GetFiles(RootFolder, "*.meta.json");
+        var listed = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < files.Length; i++)
         {
             string slotId = Path.GetFileName(files[i]).Replace(".meta.json", string.Empty);
             if (TryLoadMetadata(slotId, out SaveSlotMetadata metadata))
+            {
                 results.Add(metadata);
+                listed.Add(slotId);
+            }
         }
 
-        if (results.Count == 0)
+        // A save can survive an interrupted metadata write even when other slots
+        // have valid metadata. Recover each missing entry, not just an empty list.
         {
             string[] saves = Directory.GetFiles(RootFolder, "*.json");
             for (int i = 0; i < saves.Length; i++)
             {
                 string name = Path.GetFileNameWithoutExtension(saves[i]);
                 if (name == "manifest" || name.EndsWith(".meta", StringComparison.Ordinal))
+                    continue;
+                if (listed.Contains(name))
                     continue;
                 if (TryLoadMetadata(name, out SaveSlotMetadata metadata))
                     results.Add(metadata);

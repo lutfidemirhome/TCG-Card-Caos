@@ -256,7 +256,7 @@ public static class CardGroundQuery
         if (card == null)
             return false;
 
-        Vector3 halfExtents = GetHalfExtents(card);
+        Vector3 halfExtents = GetHalfExtents(card, card.transform.lossyScale);
         bool onDisplaySlot = IsOnDisplaySlot(card);
         Vector3 center = onDisplaySlot ? card.transform.position : card.GetGroundQueryCenter();
 
@@ -266,18 +266,17 @@ public static class CardGroundQuery
         return distance >= 0f && distance <= maxDistance;
     }
 
-    static Vector3 GetHalfExtents(WorldCard card)
+    static Vector3 GetHalfExtents(WorldCard card, Vector3 lossyScale)
     {
         if (card.GetComponentInParent<PsaCabinetSlot>() != null && card.UsesPsaSlab)
         {
-            Vector3 lossyScale = card.transform.lossyScale;
             if (PsaSlabLayoutUtility.TryGetCabinetRootBounds(out _, out _, out Vector3 size))
             {
                 return Vector3.Scale(size * 0.5f, lossyScale);
             }
         }
 
-        float scale = Mathf.Max(card.transform.lossyScale.x, CardDimensions.GroundCardScale);
+        float scale = Mathf.Max(lossyScale.x, CardDimensions.GroundCardScale);
         if (card.GetComponentInParent<CardShelfSlot>() != null)
         {
             return new Vector3(

@@ -38,6 +38,7 @@ public static class LocalizationKeys
     public const string SaveGameDeleteConfirm = "save.delete_confirm";
     public const string SaveGameSaving = "save.saving";
     public const string SaveGameSaved = "save.saved";
+    public const string SaveGameFailed = "save.failed";
     public const string SaveGameAutoName = "save.auto_name";
     public const string SaveGameManualName = "save.manual_name";
 
