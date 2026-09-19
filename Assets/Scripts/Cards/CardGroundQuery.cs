@@ -18,32 +18,251 @@ public static class CardGroundQuery
         public float Distance;
     }
 
-    static readonly List<WorldCard> ShelfCards = new List<WorldCard>(64);
-    static readonly HashSet<WorldCard> ShelfCardSet = new HashSet<WorldCard>();
+    sealed class ShelfCardEntry
+    {
+        public WorldCard Card;
+        public long Order;
+        public ShelfGroup Group;
+    }
+
+    sealed class ShelfGroup
+    {
+        public Transform Root;
+        public readonly List<ShelfCardEntry> Cards = new List<ShelfCardEntry>(64);
+        public Bounds Bounds;
+        public Matrix4x4 RootMatrix;
+        public bool BoundsDirty = true;
+        public bool HasBounds;
+    }
+
+    sealed class ShelfCardOrderComparer : IComparer<ShelfCardEntry>
+    {
+        public int Compare(ShelfCardEntry left, ShelfCardEntry right)
+        {
+            return left.Order.CompareTo(right.Order);
+        }
+    }
+
+    static readonly Dictionary<WorldCard, ShelfCardEntry> ShelfCards = new Dictionary<WorldCard, ShelfCardEntry>();
+    static readonly Dictionary<Transform, ShelfGroup> ShelfGroupsByRoot = new Dictionary<Transform, ShelfGroup>();
+    static readonly List<ShelfGroup> ShelfGroups = new List<ShelfGroup>(128);
+    static readonly List<ShelfCardEntry> UngroupedShelfCards = new List<ShelfCardEntry>(16);
+    static readonly List<ShelfCardEntry> ShelfCandidateScratch = new List<ShelfCardEntry>(128);
+    static readonly ShelfCardOrderComparer ShelfOrderComparer = new ShelfCardOrderComparer();
     static readonly List<WorldCard> GroundCandidateScratch = new List<WorldCard>(128);
     static readonly List<CardRayHit> HitScratch = new List<CardRayHit>(32);
     static readonly List<PackRayHit> PackHitScratch = new List<PackRayHit>(16);
+    static long _nextShelfOrder;
 
     public static void TrackShelfCard(WorldCard card)
     {
-        if (card == null || !ShelfCardSet.Add(card))
+        if (card == null)
             return;
 
-        ShelfCards.Add(card);
+        Transform root = GetShelfGroupRoot(card);
+        if (ShelfCards.TryGetValue(card, out ShelfCardEntry existing))
+        {
+            Transform previousRoot = existing.Group != null ? existing.Group.Root : null;
+            if (ReferenceEquals(previousRoot, root))
+            {
+                // Placement/load code can reapply a pose without changing the parent.
+                if (existing.Group != null)
+                    existing.Group.BoundsDirty = true;
+                return;
+            }
+
+            RemoveFromShelfGroup(existing);
+            AddToShelfGroup(existing, root);
+            return;
+        }
+
+        var entry = new ShelfCardEntry { Card = card, Order = _nextShelfOrder++ };
+        ShelfCards.Add(card, entry);
+        AddToShelfGroup(entry, root);
     }
 
     public static void UntrackShelfCard(WorldCard card)
     {
-        if (ReferenceEquals(card, null) || !ShelfCardSet.Remove(card))
+        if (ReferenceEquals(card, null) || !ShelfCards.TryGetValue(card, out ShelfCardEntry entry))
             return;
 
         ShelfCards.Remove(card);
+        RemoveFromShelfGroup(entry);
     }
 
     public static void ClearShelfCards()
     {
         ShelfCards.Clear();
-        ShelfCardSet.Clear();
+        ShelfGroupsByRoot.Clear();
+        ShelfGroups.Clear();
+        UngroupedShelfCards.Clear();
+        ShelfCandidateScratch.Clear();
+        _nextShelfOrder = 0;
+    }
+
+    static Transform GetShelfGroupRoot(WorldCard card)
+    {
+        // Unseated or moving cards use the live fallback until their final placement.
+        if (card.IsInHand || card.IsFlyingToShelf || card.HasActivePhysics)
+            return null;
+
+        CardShelf shelf = card.GetComponentInParent<CardShelf>();
+        if (shelf != null)
+            return shelf.transform;
+
+        PsaCabinet cabinet = card.GetComponentInParent<PsaCabinet>();
+        if (cabinet != null)
+            return cabinet.transform;
+
+        PsaCabinetSlot holder = card.GetComponentInParent<PsaCabinetSlot>();
+        return holder != null ? holder.transform : null;
+    }
+
+    static void AddToShelfGroup(ShelfCardEntry entry, Transform root)
+    {
+        if (root == null)
+        {
+            UngroupedShelfCards.Add(entry);
+            return;
+        }
+
+        if (!ShelfGroupsByRoot.TryGetValue(root, out ShelfGroup group))
+        {
+            group = new ShelfGroup { Root = root };
+            ShelfGroupsByRoot.Add(root, group);
+            ShelfGroups.Add(group);
+        }
+
+        entry.Group = group;
+        group.Cards.Add(entry);
+        group.BoundsDirty = true;
+    }
+
+    static void RemoveFromShelfGroup(ShelfCardEntry entry)
+    {
+        ShelfGroup group = entry.Group;
+        entry.Group = null;
+        if (group == null)
+        {
+            UngroupedShelfCards.Remove(entry);
+            return;
+        }
+
+        group.Cards.Remove(entry);
+        group.BoundsDirty = true;
+        if (group.Cards.Count != 0)
+            return;
+
+        RemoveEmptyShelfGroup(group);
+    }
+
+    static void RemoveEmptyShelfGroup(ShelfGroup group)
+    {
+        ShelfGroupsByRoot.Remove(group.Root);
+        ShelfGroups.Remove(group);
+    }
+
+    static void CollectShelfCandidates(Ray ray, float maxDistance)
+    {
+        ShelfCandidateScratch.Clear();
+        for (int i = 0; i < ShelfGroups.Count; i++)
+        {
+            ShelfGroup group = ShelfGroups[i];
+            if (group.Root != null)
+            {
+                if (!group.Root.gameObject.activeInHierarchy)
+                    continue;
+
+                // One transform read per cabinet; card transforms are only read for
+                // nearby ray candidates, a changed cabinet, or a new placement.
+                Matrix4x4 rootMatrix = group.Root.localToWorldMatrix;
+                if (group.BoundsDirty || !rootMatrix.Equals(group.RootMatrix))
+                    RebuildShelfBounds(group, rootMatrix);
+
+                if (group.Cards.Count == 0)
+                {
+                    RemoveEmptyShelfGroup(group);
+                    i--;
+                    continue;
+                }
+
+                if (!group.HasBounds
+                    || (!group.Bounds.Contains(ray.origin)
+                        && (!group.Bounds.IntersectRay(ray, out float distance) || distance > maxDistance)))
+                    continue;
+            }
+
+            // A removed cabinet root must not hide surviving, reparented cards.
+            CollectLiveShelfEntries(group.Cards);
+            if (group.Cards.Count == 0)
+            {
+                RemoveEmptyShelfGroup(group);
+                i--;
+            }
+        }
+
+        CollectLiveShelfEntries(UngroupedShelfCards);
+        // Cabinet grouping must not change equal-distance targeting order.
+        ShelfCandidateScratch.Sort(ShelfOrderComparer);
+    }
+
+    static void RebuildShelfBounds(ShelfGroup group, Matrix4x4 rootMatrix)
+    {
+        group.HasBounds = false;
+        for (int i = 0; i < group.Cards.Count; i++)
+        {
+            WorldCard card = group.Cards[i].Card;
+            if (card == null)
+            {
+                RemoveDeadShelfEntry(group.Cards, i--);
+                continue;
+            }
+
+            // A sphere encloses every orientation of the exact card/slab query box.
+            // Padding also covers the small center shift of shelf completion pulses;
+            // those cards are locked until their original local pose is restored.
+            float radius = GetHalfExtents(card, card.transform.lossyScale).magnitude + 0.05f;
+            var cardBounds = new Bounds(card.GetGroundQueryCenter(), Vector3.one * (radius * 2f));
+            if (group.HasBounds)
+                group.Bounds.Encapsulate(cardBounds);
+            else
+            {
+                group.Bounds = cardBounds;
+                group.HasBounds = true;
+            }
+        }
+
+        group.RootMatrix = rootMatrix;
+        group.BoundsDirty = false;
+    }
+
+    static void CollectLiveShelfEntries(List<ShelfCardEntry> entries)
+    {
+        for (int i = entries.Count - 1; i >= 0; i--)
+        {
+            ShelfCardEntry entry = entries[i];
+            if (entry.Card == null)
+            {
+                // OnDestroy normally removes these immediately. Keep a fallback for
+                // destroyed references without retaining them in candidate lists.
+                RemoveDeadShelfEntry(entries, i);
+                continue;
+            }
+
+            if (entry.Card.gameObject.activeInHierarchy)
+                ShelfCandidateScratch.Add(entry);
+        }
+    }
+
+    static void RemoveDeadShelfEntry(List<ShelfCardEntry> entries, int index)
+    {
+        ShelfCardEntry entry = entries[index];
+        if (!ReferenceEquals(entry.Card, null))
+            ShelfCards.Remove(entry.Card);
+        if (entry.Group != null)
+            entry.Group.BoundsDirty = true;
+        entry.Group = null;
+        entries.RemoveAt(index);
     }
 
     public static bool TryRaycastWorldCard(Ray ray, float maxDistance, out WorldCard hitCard, out float hitDistance)
@@ -75,26 +294,9 @@ public static class CardGroundQuery
         for (int i = 0; i < GroundCandidateScratch.Count; i++)
             TryAddHit(ray, maxDistance, GroundCandidateScratch[i]);
 
-        int liveShelfCount = 0;
-        for (int i = 0; i < ShelfCards.Count; i++)
-        {
-            WorldCard shelfCard = ShelfCards[i];
-            if (shelfCard == null)
-            {
-                ShelfCardSet.Remove(shelfCard);
-                continue;
-            }
-
-            // Compact in place so destroyed cards cannot accumulate in this static registry.
-            // Keep the original order, including equal-distance hit tie-breaking.
-            if (liveShelfCount != i)
-                ShelfCards[liveShelfCount] = shelfCard;
-            liveShelfCount++;
-            TryAddHit(ray, maxDistance, shelfCard);
-        }
-
-        if (liveShelfCount < ShelfCards.Count)
-            ShelfCards.RemoveRange(liveShelfCount, ShelfCards.Count - liveShelfCount);
+        CollectShelfCandidates(ray, maxDistance);
+        for (int i = 0; i < ShelfCandidateScratch.Count; i++)
+            TryAddHit(ray, maxDistance, ShelfCandidateScratch[i].Card);
 
         if (HitScratch.Count == 0)
         {

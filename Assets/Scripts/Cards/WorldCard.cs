@@ -1282,6 +1282,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshRenderer.sharedMaterial = CardVisualResources.ShelfRowCompleteFillMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
+        ApplyUnlitRendererProbeSettings(meshRenderer);
     }
 
     void ReleaseShelfRowCompleteFill()
@@ -1532,6 +1533,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         var meshRenderer = visualGo.AddComponent<MeshRenderer>();
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
+        ApplyUnlitRendererProbeSettings(meshRenderer);
 
         _cardVisual = visualGo.transform;
         _cardVisualBound = true;
@@ -1567,6 +1569,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         // Keep first-use duplicate cleanup and explicit authored refreshes, but do not
         // walk every held card's children again for each unchanged hand pose.
         _cardVisualBound = _cardVisual != null;
+        if (_cardVisualBound)
+            ApplyUnlitRendererProbeSettings(_cardVisual.GetComponent<MeshRenderer>());
     }
 
     void RestoreCardVisualMeshAndRenderer()
@@ -1587,6 +1591,18 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshRenderer.enabled = true;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
+        ApplyUnlitRendererProbeSettings(meshRenderer);
+    }
+
+    static void ApplyUnlitRendererProbeSettings(Renderer renderer)
+    {
+        if (renderer == null || !CardArtLibrary.UseUnlitCardMaterials)
+            return;
+
+        // Card art and its unlit borders do not sample lighting/reflection probes.
+        // Keep thousands of placed cards out of that per-renderer bookkeeping.
+        renderer.lightProbeUsage = LightProbeUsage.Off;
+        renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
     }
 
     void ApplyCardVisualTextureQuality()
@@ -1689,6 +1705,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshRenderer.sharedMaterial = CardVisualResources.InteractionOutlineMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
+        ApplyUnlitRendererProbeSettings(meshRenderer);
     }
 
     void EnsureHandSelectionOutlineRenderer()
@@ -1706,6 +1723,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         meshRenderer.sharedMaterial = CardVisualResources.HandSelectionOutlineMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
+        ApplyUnlitRendererProbeSettings(meshRenderer);
     }
 
     /// <summary>
@@ -1763,6 +1781,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         var meshRenderer = _shelfStatusOutlineObject.AddComponent<MeshRenderer>();
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
+        ApplyUnlitRendererProbeSettings(meshRenderer);
     }
 
     void ApplyShelfStatusOutlineMaterial(ShelfPlacementStatus status, Material overrideMaterial = null)
@@ -1935,6 +1954,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                 0f);
         }
 
+        CardGroundQuery.TrackShelfCard(this);
         RefreshRenderMode();
     }
 }

@@ -115,7 +115,8 @@ public class InteractionController : MonoBehaviour
             aimedCardDistance = cardDistance;
         }
 
-        if (aimedCard != null && InteractionOcclusion.IsOccluded(ray, aimedCardDistance, interactDistance))
+        if (aimedCard != null && InteractionOcclusion.IsOccluded(
+                ray, aimedCardDistance, interactDistance, recoverItemInsidePlant: true))
         {
             aimedCard = null;
             aimedCardDistance = float.MaxValue;
@@ -129,7 +130,8 @@ public class InteractionController : MonoBehaviour
             aimedPackDistance = packDistance;
         }
 
-        if (aimedPack != null && InteractionOcclusion.IsOccluded(ray, aimedPackDistance, interactDistance))
+        if (aimedPack != null && InteractionOcclusion.IsOccluded(
+                ray, aimedPackDistance, interactDistance, recoverItemInsidePlant: true))
         {
             aimedPack = null;
             aimedPackDistance = float.MaxValue;

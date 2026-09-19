@@ -33,6 +33,7 @@ public static class CardGroundStack
     static readonly HashSet<WorldCard> RelayoutSeen = new HashSet<WorldCard>();
     static readonly List<WorldCard> LandingColliderScratch = new List<WorldCard>(32);
     static readonly Dictionary<long, List<WorldCard>> SpatialBuckets = new Dictionary<long, List<WorldCard>>(512);
+    static readonly Dictionary<WorldCard, long> SpatialCellByCard = new Dictionary<WorldCard, long>(512);
     static readonly Dictionary<WorldCard, int> LandingColliderRefCounts = new Dictionary<WorldCard, int>(64);
     static readonly Dictionary<int, HashSet<WorldCard>> LandingColliderScopes = new Dictionary<int, HashSet<WorldCard>>(8);
     static readonly HashSet<WorldCard> LandingCandidateSet = new HashSet<WorldCard>();
@@ -86,6 +87,7 @@ public static class CardGroundStack
 
         Vector3 removedPos = card.transform.position;
         RemoveFromList(card);
+        RemoveFromSpatialBucket(card);
 
         if (GroundCards.Count >= BulkFlatStackThreshold)
             RefreshCellAt(removedPos);
@@ -112,6 +114,7 @@ public static class CardGroundStack
         GroundCards.Clear();
         GroundCardSet.Clear();
         SpatialBuckets.Clear();
+        SpatialCellByCard.Clear();
     }
 
     static readonly HashSet<WorldCard> RayCandidateSeen = new HashSet<WorldCard>();
@@ -216,6 +219,7 @@ public static class CardGroundStack
     static void RebuildSpatialBuckets()
     {
         SpatialBuckets.Clear();
+        SpatialCellByCard.Clear();
         float cellSize = SpatialCellSize;
 
         for (int i = 0; i < GroundCards.Count; i++)
@@ -235,6 +239,7 @@ public static class CardGroundStack
             }
 
             bucket.Add(card);
+            SpatialCellByCard[card] = key;
         }
     }
 
@@ -648,6 +653,9 @@ public static class CardGroundStack
             return;
 
         long key = CellKey(card.transform.position, SpatialCellSize);
+        if (SpatialCellByCard.TryGetValue(card, out long previousKey) && previousKey != key)
+            RemoveFromSpatialBucket(card);
+
         if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
         {
             bucket = new List<WorldCard>(8);
@@ -656,6 +664,23 @@ public static class CardGroundStack
 
         if (!bucket.Contains(card))
             bucket.Add(card);
+        SpatialCellByCard[card] = key;
+    }
+
+    static void RemoveFromSpatialBucket(WorldCard card)
+    {
+        if (!SpatialCellByCard.TryGetValue(card, out long key))
+            return;
+
+        SpatialCellByCard.Remove(card);
+        if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
+            return;
+
+        // An emptied cell has no remaining pile to trigger RefreshCellAt's rebuild.
+        // Remove its old entry immediately, even if the card has already moved away.
+        bucket.Remove(card);
+        if (bucket.Count == 0)
+            SpatialBuckets.Remove(key);
     }
 
     public static void RefreshCluster(WorldCard seed, WorldCard forceOnTop = null)
