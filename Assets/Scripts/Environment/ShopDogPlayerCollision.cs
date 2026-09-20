@@ -97,16 +97,15 @@ public sealed class ShopDogPlayerCollision : MonoBehaviour
         Vector3 fromCapsuleAxis = toPlayer - bodyForward * alongBody;
         float margin = ContactMargin + (alreadyYielding ? YieldHysteresis : 0f);
         float contactDistance = bodyRadius + playerRadius + margin;
-        // An existing overlap counts even behind the dog; it should not keep
-        // sliding its kinematic body into a player already touching the torso.
-        if (fromCapsuleAxis.sqrMagnitude <= contactDistance * contactDistance) return true;
-
         Vector3 direction = steeringTarget - _root.position;
         direction.y = 0f;
         float cornerDistance = direction.magnitude;
         if (cornerDistance <= 0.01f) return false;
         direction /= cornerDistance;
         float forwardDistance = Vector3.Dot(toPlayer, direction);
+        // Let a touching dog retreat instead of permanently pinning it in the yield state.
+        if (fromCapsuleAxis.sqrMagnitude <= contactDistance * contactDistance)
+            return forwardDistance >= -0.05f;
         if (forwardDistance <= 0f) return false;
 
         // Account for the body's current yaw while it turns toward its next
@@ -128,6 +127,34 @@ public sealed class ShopDogPlayerCollision : MonoBehaviour
         // about to turn away. This check follows only the current straight leg.
         stopDistance = Mathf.Min(stopDistance, cornerDistance + playerRadius + 0.12f);
         return forwardDistance <= stopDistance;
+    }
+
+    public bool TryFindPlayerDetour(float walkSpeed, out Vector3 destination)
+    {
+        destination = default;
+        if (!_initialized || !_playerTransform || !_agent || !_agent.isOnNavMesh) return false;
+        Vector3 away = _root.position - _playerTransform.TransformPoint(_player.center);
+        away.y = 0f;
+        if (away.sqrMagnitude < 0.001f) away = -_root.forward;
+        away.Normalize();
+        // Bounded local queries, only when blocked. Direct NavMesh legs avoid walls,
+        // glass and floor edges without a scene scan or a player-carved NavMesh.
+        for (int i = 0; i < 14; i++)
+        {
+            int side = i % 7;
+            float angle = side == 0 ? 0f : (side % 2 == 0 ? -1f : 1f) * ((side + 1) / 2) * 30f;
+            Vector3 direction = Quaternion.Euler(0f, angle, 0f) * away;
+            Vector3 requested = _root.position + direction * (i < 7 ? 2.2f : 1.2f);
+            var filter = new NavMeshQueryFilter { agentTypeID = _agent.agentTypeID, areaMask = _agent.areaMask };
+            if (!NavMesh.SamplePosition(requested, out NavMeshHit sample, 0.45f, filter)) continue;
+            Vector3 displacement = sample.position - _root.position;
+            if (Mathf.Abs(displacement.y) > 0.8f || displacement.sqrMagnitude < 1f) continue;
+            if (_agent.Raycast(sample.position, out _)) continue;
+            if (ShouldYieldToPlayer(sample.position, walkSpeed, false)) continue;
+            destination = sample.position;
+            return true;
+        }
+        return false;
     }
 
     void OnEnable()

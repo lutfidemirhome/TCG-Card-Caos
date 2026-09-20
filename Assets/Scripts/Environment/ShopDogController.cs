@@ -29,7 +29,8 @@ public sealed class ShopDogController : MonoBehaviour
     private float _gaitElapsed, _safeRunTime, _walkCooldown, _animationScale = 1f;
     private int _journeyCount;
     private bool _yielding;
-    private float _playerCheckRemaining;
+    private float _playerCheckRemaining, _detourRetryRemaining;
+    private bool _takingDetour;
 
     public bool PrepareAnimations(Animation animation, AnimationClip[] clips)
     {
@@ -180,6 +181,8 @@ public sealed class ShopDogController : MonoBehaviour
         _yielding = false;
         _playerCheckRemaining = 0f;
 
+        _takingDetour = false;
+        _detourRetryRemaining = 0f;
         _canRest = false;
         _restedHere = false;
         _behaviour = Behaviour.Moving;
@@ -191,8 +194,7 @@ public sealed class ShopDogController : MonoBehaviour
 
     private void UpdateMovement(float delta)
     {
-        // Wait without throwing away the route or counting this as being stuck.
-        // The player can bump the stationary body; the dog must not push into them.
+        _detourRetryRemaining = Mathf.Max(0f, _detourRetryRemaining - delta);
         if (UpdatePlayerYield(delta)) return;
         _travelTime += delta;
         _withoutProgress += delta;
@@ -216,6 +218,12 @@ public sealed class ShopDogController : MonoBehaviour
         }
         if (_agent.remainingDistance <= _agent.stoppingDistance + 0.06f)
         {
+            if (_takingDetour)
+            {
+                _takingDetour = false;
+                BeginIdle(0.5f, 1f);
+                return;
+            }
             // Only successfully reached floor destinations may be used for sleeping.
             _area.ConfirmArrival(transform.position);
             _canRest = true;
@@ -245,6 +253,24 @@ public sealed class ShopDogController : MonoBehaviour
         // not shrink and repeatedly restart the dog in front of a standing player.
         bool wait = _playerCollision && _playerCollision.ShouldYieldToPlayer(
             _agent.steeringTarget, _preferRunning ? runSpeed : walkSpeed, _yielding);
+        if (wait && _detourRetryRemaining <= 0f)
+        {
+            _detourRetryRemaining = 1f;
+            if (_playerCollision.TryFindPlayerDetour(walkSpeed, out Vector3 destination)
+                && _agent.SetDestination(destination))
+            {
+                _takingDetour = true;
+                _preferRunning = false;
+                _yielding = false;
+                _running = false;
+                _agent.speed = walkSpeed;
+                _agent.isStopped = false;
+                _progressPosition = transform.position;
+                _withoutProgress = _travelTime = _safeRunTime = 0f;
+                Play(_walk, WrapMode.Loop);
+                return false;
+            }
+        }
         if (wait == _yielding) return _yielding;
 
         _yielding = wait;
