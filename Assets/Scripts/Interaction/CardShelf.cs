@@ -440,6 +440,45 @@ public class CardShelf : MonoBehaviour, IInteractable
         return false;
     }
 
+    public void CopyCompletedSkillRows(List<int> rows)
+    {
+        rows.Clear();
+        EnsureSlotCache(refreshInEditor: true);
+        foreach (CardShelfSlot slot in _slots)
+            if (slot != null && !rows.Contains(slot.RowIndex)) rows.Add(slot.RowIndex);
+        for (int i = rows.Count - 1; i >= 0; i--)
+        {
+            bool landed = true;
+            foreach (CardShelfSlot slot in _slots)
+                if (slot != null && slot.RowIndex == rows[i] && slot.OccupiedCard != null && slot.OccupiedCard.IsFlyingToShelf)
+                    landed = false;
+            if (!landed || !IsSeriesRowComplete(rows[i], SlotsPerRow)) rows.RemoveAt(i);
+        }
+    }
+
+    public bool TryFindSkillSlot(WorldCard card, out CardShelfSlot result)
+    {
+        result = null;
+        if (card == null || card.UsesPsaSlab || !AcceptsDefinition(card.Definition)) return false;
+        EnsureSlotCache(refreshInEditor: true);
+        foreach (CardShelfSlot slot in _slots)
+            if (slot != null && slot.gameObject.activeInHierarchy && slot.IsEmpty
+                && CanPlaceCardInSlot(card, slot) && IsCorrectPlacement(card, slot))
+            { result = slot; return true; }
+        return false;
+    }
+
+    public bool TryPlaceSkillCard(PlayerCardHand hand, WorldCard card)
+    {
+        if (hand == null || !card || !card.IsHeld || hand.IsHandInputLocked
+            || !TryFindSkillSlot(card, out CardShelfSlot slot)) return false;
+        if (!hand.TryTakeHeldCardForSkill(card)) return false;
+        // Occupy immediately, just like manual placement, so successive flights cannot share a slot.
+        slot.Occupy(card);
+        BeginShelfFlight(card, slot, true);
+        return true;
+    }
+
     bool IsSeriesRowComplete(int rowIndex, int needed)
     {
         int correct = 0;
@@ -675,10 +714,14 @@ public class CardShelf : MonoBehaviour, IInteractable
                     card.NotifyShelfPlacement(isCorrect);
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
                 GameSaveSignals.MarkDirty();
+                SkillProgress.NotifyShelfChanged(this);
                 if (IsComplete())
                     GameSaveSignals.NotifyMilestone();
                 CabinetSignCompleteOverlay.Refresh(this);
             });
+        // The occupied slot is already captured by saves, including during this flight.
+        // Pausing/exiting before landing must not leave that committed placement unsaved.
+        GameSaveDirtyTracker.MarkDirty();
     }
 
     void RemoveShelfFlight(WorldCard card)

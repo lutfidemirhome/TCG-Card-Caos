@@ -135,7 +135,7 @@ public class PlayerCardHand : MonoBehaviour
 
     void Update()
     {
-        if (Cursor.lockState != CursorLockMode.Locked)
+        if (Cursor.lockState != CursorLockMode.Locked || SkillPanelView.ConsumesPauseInput)
             return;
 
         if (IsHandInputLocked)
@@ -1121,6 +1121,44 @@ public class PlayerCardHand : MonoBehaviour
         };
     }
 
+    public bool TryTakeHeldCardForSkill(WorldCard card)
+    {
+        if (IsHandInputLocked || card == null || !card.IsHeld || !_cards.Contains(card)) return false;
+        _cards.Remove(card);
+        RemoveHandFanEntry(card);
+        ClampSelectionIndex();
+        ApplyFanLayout();
+        return true;
+    }
+
+    public bool SortHeldCardsForSkill()
+    {
+        if (IsHandInputLocked || _cards.Count < 2) return false;
+        foreach (WorldCard card in _cards) if (card == null || !card.IsHeld) return false;
+        foreach (WorldBoosterPack pack in _heldPacks) if (pack == null || !pack.IsHeld) return false;
+        int fanCards = 0;
+        foreach (HandFanEntry entry in _handFanOrder) if (entry.Card != null) fanCards++;
+        if (fanCards != _cards.Count) return false;
+        HandFanEntry selected = _selectedIndex >= 0 && _handFanOrder.Count > _selectedIndex ? _handFanOrder[_selectedIndex] : default;
+        _cards.Sort((a, b) =>
+        {
+            int left = a.UsesPsaSlab ? a.PsaSlotNumber : a.Definition != null ? a.Definition.ShelfSlotNumber : 0;
+            int right = b.UsesPsaSlab ? b.PsaSlotNumber : b.Definition != null ? b.Definition.ShelfSlotNumber : 0;
+            int number = left.CompareTo(right);
+            return number != 0 ? number : string.CompareOrdinal(a.Definition != null ? a.Definition.DefinitionId : "",
+                b.Definition != null ? b.Definition.DefinitionId : "");
+        });
+        int next = 0;
+        for (int i = 0; i < _handFanOrder.Count; i++)
+            if (_handFanOrder[i].Card != null) _handFanOrder[i] = new HandFanEntry { Card = _cards[next++] };
+        for (int i = 0; i < _handFanOrder.Count; i++)
+            if ((selected.Card != null && _handFanOrder[i].Card == selected.Card)
+                || (selected.Pack != null && _handFanOrder[i].Pack == selected.Pack)) _selectedIndex = i;
+        ApplyFanLayout();
+        GameSaveSignals.MarkDirty();
+        return true;
+    }
+
     public void CopyHeldCards(List<WorldCard> destination)
     {
         if (destination == null)
@@ -1210,6 +1248,38 @@ public class PlayerCardHand : MonoBehaviour
         ClampSelectionIndex();
         ApplyFanLayout();
         return true;
+    }
+
+    public string[] CaptureHandOrder()
+    {
+        var ids = new List<string>(_handFanOrder.Count);
+        foreach (HandFanEntry entry in _handFanOrder)
+        {
+            GameObject item = entry.Card != null ? entry.Card.gameObject : entry.Pack != null ? entry.Pack.gameObject : null;
+            if (item != null) ids.Add(PersistentId.GetOrCreate(item).Value);
+        }
+        return ids.ToArray();
+    }
+
+    public void RestoreHandOrder(string[] ids)
+    {
+        if (ids == null) return;
+        int next = 0;
+        foreach (string id in ids)
+        {
+            if (string.IsNullOrEmpty(id)) continue;
+            // At most ten entries. Moving only known entries also tolerates missing/older cards.
+            for (int i = next; i < _handFanOrder.Count; i++)
+            {
+                HandFanEntry entry = _handFanOrder[i];
+                GameObject item = entry.Card != null ? entry.Card.gameObject : entry.Pack != null ? entry.Pack.gameObject : null;
+                if (item == null || PersistentId.Resolve(item) != id) continue;
+                _handFanOrder.RemoveAt(i);
+                _handFanOrder.Insert(next++, entry);
+                break;
+            }
+        }
+        // RestoreSelectionIndex applies the final pose after this order has been restored.
     }
 
     public void RestoreSelectionIndex(int index)

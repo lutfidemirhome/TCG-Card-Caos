@@ -45,6 +45,8 @@ public class InteractionController : MonoBehaviour
     float _inspectPreviewTimer;
     Coroutine _promptPulseRoutine;
 
+    public CardShelf AimedSkillShelf { get; private set; }
+
     void Awake()
     {
         if (viewCamera == null)
@@ -65,7 +67,8 @@ public class InteractionController : MonoBehaviour
 
     void Update()
     {
-        if (GamePause.IsPaused)
+        AimedSkillShelf = null;
+        if (GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
         {
             _raycastAimedCard = null;
             ClearTarget();
@@ -154,6 +157,10 @@ public class InteractionController : MonoBehaviour
             aimedCardDistance,
             aimedPack,
             aimedPackDistance);
+
+        AimedSkillShelf = interactable as CardShelf;
+        if (AimedSkillShelf == null && interactable is WorldCard shelfCard)
+            AimedSkillShelf = shelfCard.GetComponentInParent<CardShelf>();
 
         if (interactable == null)
         {

@@ -100,7 +100,10 @@ public static class GameSaveRestore
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null)
+        {
+            hand.RestoreHandOrder(data.handOrder);
             hand.RestoreSelectionIndex(data.handSelectedIndex);
+        }
 
         GamePlayTime.BeginSession(data.playTimeSeconds);
         PersistentIdRegistry.RebuildWorldLookups();
@@ -108,6 +111,7 @@ public static class GameSaveRestore
             GameSaveDirtyTracker.MarkDirty();
         else
             GameSaveDirtyTracker.Clear();
+        SkillProgress.Restore(data.skills);
         LastRestoreSucceeded = true;
         GameProgressCounter.InvalidateCache();
         GameSaveEvents.RaiseLoadCompleted(slotId);

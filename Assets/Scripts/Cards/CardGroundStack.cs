@@ -24,6 +24,15 @@ public static class CardGroundStack
     /// <summary>Thickness of the footprint slab used for ground overlap tests.</summary>
     const float FootprintSlabHeight = 0.01f;
 
+    // Skills observe membership changes without invalidating the cabinet/HUD progress cache.
+    public static ulong MembershipRevision { get; private set; }
+
+    public static void CopyCardsForSkill(List<WorldCard> destination)
+    {
+        destination.Clear();
+        destination.AddRange(GroundCards);
+    }
+
     static readonly List<WorldCard> GroundCards = new List<WorldCard>(512);
     static readonly HashSet<WorldCard> GroundCardSet = new HashSet<WorldCard>();
     static readonly List<WorldCard> ClusterScratch = new List<WorldCard>(16);
@@ -78,6 +87,7 @@ public static class CardGroundStack
             return;
 
         GroundCards.Add(card);
+        MembershipRevision++;
     }
 
     /// <summary>Update a physical card's spatial entry without assigning a layer or changing its pose.</summary>
@@ -109,6 +119,7 @@ public static class CardGroundStack
         if (!GroundCardSet.Remove(card))
             return;
 
+        MembershipRevision++;
         Vector3 removedPos = card.transform.position;
         RemoveFromList(card);
         RemoveFromSpatialBucket(card);
@@ -135,6 +146,7 @@ public static class CardGroundStack
 
     public static void ClearAll()
     {
+        if (GroundCards.Count > 0) MembershipRevision++;
         GroundCards.Clear();
         GroundCardSet.Clear();
         SpatialBuckets.Clear();

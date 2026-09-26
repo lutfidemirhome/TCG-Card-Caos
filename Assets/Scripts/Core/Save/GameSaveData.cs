@@ -18,8 +18,11 @@ public class GameSaveData
     public int cabinetsCompleted;
     public int totalCabinets;
     public int handSelectedIndex;
+    // Optional in older saves; preserves mixed card/pack order after the Sort skill.
+    public string[] handOrder;
     // Null in older saves: retain the scene's normal spawn point.
     public PlayerSaveRecord player;
+    public SkillSaveRecord skills;
     public CardSaveRecord[] cards = Array.Empty<CardSaveRecord>();
     public PackSaveRecord[] packs = Array.Empty<PackSaveRecord>();
 

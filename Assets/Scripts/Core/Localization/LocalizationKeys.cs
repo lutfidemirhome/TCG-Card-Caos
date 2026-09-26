@@ -98,4 +98,36 @@ public static class LocalizationKeys
     public const string TutorialScroll = "tutorial.scroll";
     public const string TutorialArrange = "tutorial.arrange";
     public const string TutorialCrouch = "tutorial.crouch";
+
+    // Skill progression, tasks and modal
+    public const string SkillsTitle = "skills.title";
+    public const string SkillsPoints = "skills.points";
+    public const string SkillsInstructions = "skills.instructions";
+    public const string SkillsLevel = "skills.level";
+    public const string SkillsUpgrade = "skills.upgrade";
+    public const string SkillsMax = "skills.max";
+    public const string SkillsLocked = "skills.locked";
+    public const string SkillsReady = "skills.ready";
+    public const string SkillsCooldown = "skills.cooldown";
+    public const string SkillsActive = "skills.active";
+    public const string SkillsStats = "skills.stats";
+    public const string SkillsWait = "skills.wait";
+    public const string SkillsAmount = "skills.amount";
+    public const string SkillsNext = "skills.next";
+    public const string SkillsClose = "skills.close";
+    public const string SkillsOpen = "skills.open";
+    public const string SkillsTaskTitle = "skills.task_title";
+    public const string SkillsTaskRows = "skills.task_rows";
+    public const string SkillsTaskUpgrade = "skills.task_upgrade";
+    public const string SkillsTaskDone = "skills.task_done";
+    public const string SkillsAssembleName = "skills.assemble.name";
+    public const string SkillsSortName = "skills.sort.name";
+    public const string SkillsGuideName = "skills.guide.name";
+    public const string SkillsInsightName = "skills.insight.name";
+    public const string SkillsAutoshelfName = "skills.autoshelf.name";
+    public const string SkillsAssembleDescription = "skills.assemble.description";
+    public const string SkillsSortDescription = "skills.sort.description";
+    public const string SkillsGuideDescription = "skills.guide.description";
+    public const string SkillsInsightDescription = "skills.insight.description";
+    public const string SkillsAutoshelfDescription = "skills.autoshelf.description";
 }

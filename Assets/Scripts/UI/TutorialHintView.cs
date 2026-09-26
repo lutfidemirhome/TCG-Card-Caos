@@ -36,6 +36,19 @@ public class TutorialHintView : MonoBehaviour
     static bool _sessionDecided;
     static bool _usedCrouchBeforeHint;
 
+    /// <summary>
+    /// Introduce the skill menu alongside the matching-row tutorial. Continue/load
+    /// sessions skip onboarding, so their existing skill access remains available.
+    /// </summary>
+    public static bool CanShowSkillMenu
+    {
+        get
+        {
+            EnsureSession();
+            return !_showThisSession || _step >= Step.Arrange;
+        }
+    }
+
     TutorialHintFitter _fitter;
     LocalizedText _localized;
     string _laidOutText;

@@ -12,6 +12,19 @@ public class InGameHudView : MonoBehaviour
     [SerializeField] TMP_Text handValueText;
     const float RefreshInterval = 0.12f;
     float _refreshTimer;
+    CounterState _shelvesCounter, _cardsCounter, _handCounter;
+
+    struct CounterState
+    {
+        public TMP_Text Label;
+        public int Current, Maximum;
+        public bool Valid;
+    }
+
+    void OnEnable()
+    {
+        _shelvesCounter.Valid = _cardsCounter.Valid = _handCounter.Valid = false;
+    }
 
     void Awake()
     {
@@ -19,6 +32,7 @@ public class InGameHudView : MonoBehaviour
         if (GetComponent<SkillBarView>() == null)
             gameObject.AddComponent<SkillBarView>();
         Refresh();
+        SkillPanelView.Ensure(transform);
     }
 
     void LateUpdate()
@@ -50,19 +64,26 @@ public class InGameHudView : MonoBehaviour
     void Refresh()
     {
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
-        SetCounter(shelvesValueText, progress.shelvesCompleted, progress.totalShelves);
-        SetCounter(cardsValueText, progress.cardsPlaced, progress.totalCards);
+        SetCounter(shelvesValueText, progress.shelvesCompleted, progress.totalShelves, ref _shelvesCounter);
+        SetCounter(cardsValueText, progress.cardsPlaced, progress.totalCards, ref _cardsCounter);
 
         PlayerCardHand hand = PlayerCardHand.Instance;
         int held = hand != null ? hand.OccupiedHandSlots : 0;
-        SetCounter(handValueText, held, CardDimensions.MaxHandSize);
+        SetCounter(handValueText, held, CardDimensions.MaxHandSize, ref _handCounter);
     }
 
-    static void SetCounter(TMP_Text label, int current, int max)
+    static void SetCounter(TMP_Text label, int current, int max, ref CounterState state)
     {
         if (label == null)
             return;
 
+        // Keep the same display format, but allocate text only when its values change.
+        if (state.Valid && state.Label == label && state.Current == current && state.Maximum == max)
+            return;
         label.text = current + " / " + max;
+        state.Label = label;
+        state.Current = current;
+        state.Maximum = max;
+        state.Valid = true;
     }
 }

@@ -63,6 +63,7 @@ public class InGamePauseView : MonoBehaviour
 
     void Update()
     {
+        if (SkillPanelView.ConsumesPauseInput) return;
         if (GameSceneLoader.IsLoading)
             return;
 

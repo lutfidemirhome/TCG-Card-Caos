@@ -89,7 +89,9 @@ public static class GameSaveWorldCollector
             cabinetsCompleted = progress.cabinetsCompleted,
             totalCabinets = progress.totalCabinets,
             handSelectedIndex = hand != null ? hand.SelectedIndex : 0,
+            handOrder = hand != null ? hand.CaptureHandOrder() : null,
             player = player != null ? player.CaptureSaveState() : null,
+            skills = SkillProgress.Capture(),
             cards = CardScratch.ToArray(),
             packs = PackScratch.ToArray(),
         };

@@ -11,6 +11,8 @@ public class CrosshairUI : MonoBehaviour
     [SerializeField] bool hideWhenCursorUnlocked = true;
 
     Canvas _canvas;
+    Sprite _dotSprite;
+    Texture2D _dotTexture;
 
     void Awake()
     {
@@ -20,7 +22,11 @@ public class CrosshairUI : MonoBehaviour
     void LateUpdate()
     {
         if (_canvas != null && hideWhenCursorUnlocked)
-            _canvas.enabled = Cursor.lockState == CursorLockMode.Locked;
+        {
+            bool visible = Cursor.lockState == CursorLockMode.Locked;
+            if (_canvas.enabled != visible)
+                _canvas.enabled = visible;
+        }
     }
 
     void BuildCrosshair()
@@ -31,7 +37,9 @@ public class CrosshairUI : MonoBehaviour
         dotGo.transform.SetParent(_canvas.transform, false);
 
         var dot = dotGo.AddComponent<Image>();
-        dot.sprite = CreateDotSprite(32, color);
+        _dotSprite = CreateDotSprite(32, color);
+        _dotTexture = _dotSprite.texture;
+        dot.sprite = _dotSprite;
         dot.raycastTarget = false;
 
         RectTransform rect = dot.rectTransform;
@@ -40,6 +48,13 @@ public class CrosshairUI : MonoBehaviour
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = Vector2.zero;
         rect.sizeDelta = new Vector2(dotSize, dotSize);
+    }
+
+    void OnDestroy()
+    {
+        // These assets belong to this instance, not to the project or another canvas.
+        if (_dotSprite != null) Destroy(_dotSprite);
+        if (_dotTexture != null) Destroy(_dotTexture);
     }
 
     static Sprite CreateDotSprite(int textureSize, Color dotColor)
