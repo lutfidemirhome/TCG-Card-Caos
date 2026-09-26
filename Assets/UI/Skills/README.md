@@ -2,16 +2,49 @@
 
 Düzenlenebilir prefab: `Assets/Resources/UI/Skills/SkillUI.prefab`.
 
-- `Task`: sol üst sayaçların altındaki görev kutusu.
-- `Hotbar`: sol altta zıplama göstergesinin hemen sağından başlayan 2–6 yetenek kutuları. Jump ile aynı 108×108 boyut, 12 piksel aralık ve koyu arka plan; tuş numaraları ayrı `KeyHint` çocuklarıdır.
-- `Panel/Body`: Tab ile açılan büyük yetenek paneli. Prefab düzenlerken `Panel` nesnesini aç; oyunda başlangıçta otomatik kapanır.
-- `Art`: mevcut oyun UI görsellerinin bağımsız kopyaları. Görselleri aynı adla ezebilirsin; `.meta` dosyalarını koru.
-- `Materials/SkillTextNoOutline.mat`: bu paneldeki koyu renkli başlık, seviye ve düğme yazılarına özel kenarlıksız materyal. Ortak font materyali değiştirilmez.
+## Tek sayfalık skill pop-up
 
-Boyutları, renkleri ve görselleri düzenleyebilirsin. Kodun bulduğu nesne adlarını ve hiyerarşiyi koru. Modal küçük ekrana otomatik sığdırılır. Görev kutusunun konumu mevcut üst sol sayacın altına bağlanır.
+Prefab düzenlerken `Panel` nesnesini aç. Oyunda Tab ile açılır, Tab veya Esc ile kapanır.
 
-Yeni oyunda görev kutusu ve Tab ile panel erişimi, sağ tutorial'ın aynı başlıktaki kalan kartları bulup aynı rafa dizme aşamasında açılır. Sonraki aşamalarda açık kalır. Devam et/kayıt yükle akışında tutorial tekrar oynatılmadığı için panel erişimi korunur.
+- `Panel/Body/Title`, `Instructions`, `Points`: sol taraftaki başlık, ilerleme açıklaması ve yükseltme hakkı sayısı.
+- `Panel/Body/Nodes/Skill0` … `Skill4`: soldan sağa beş seçim düğmesi. Her birinde `Icon`, `Name`, `Level` ve açılmış yetenek için `Check` bulunur.
+- `Panel/Body/Details/IconFrame/Icon`: seçili yeteneğin büyük simgesi. Kod soldaki düğmenin simgesini buraya kopyalar; ayrı görsel atamana gerek yok.
+- `Panel/Body/Details/Name`, `Level`, `Description`: seçilen yeteneğin başlığı, seviyesi ve açıklaması.
+- `Panel/Body/Details/Next`, `Stats`: sonraki seviye başlığı ve **mevcut → sonraki** süre/miktar değerleri. Kilitli yetenekte mevcut değer `—`, en yüksek seviyede yalnız mevcut değer gösterilir.
+- `Panel/Body/Details/Upgrade`: seçilen yeteneğe 1 hak harcayan yükseltme düğmesi.
+- `Panel/Body/Close`: kapatma düğmesi.
 
-Oyuncu yazıları prefab örnek metninden değil `LocalizationTable.asset` içindeki `skills.*` anahtarlarından gelir. Dil desteğini korumak için yazıları oradan değiştir. Kullanılmayan Paver Layout Plan sekmesi yoktur.
+Tek pop-up içinde iki bilgi alanı vardır; kitap sayfası, Minor Magic veya Paver Layout Plan bölümü yoktur. Panel küçük ekrana bütün olarak sığdırılır. Seçim yalnız açıklamayı değiştirir; yükseltme ayrı düğmeyle yapılır.
 
-Kurallar ve PDF özeti: `Docs/SkillSystemPlan.md`.
+## Değiştirilebilir görseller
+
+Tüm skill paneli görselleri `Assets/UI/Skills/Art` altındaki bağımsız kopyalardır. PNG dosyalarını aynı adla ezebilirsin; **`.meta` dosyalarını koru**. Asıl oyun UI görselleri değiştirilmez. Simgeler geçici olarak mevcut oyun görsellerinden kopyalandı; her yeteneğin ayrı dosyası ve GUID'i vardır.
+
+| Dosya | Kullanım / kopyalanan kaynak |
+| --- | --- |
+| `skill_icon_assemble.png` | Assemble; HUD el/kart görseli |
+| `skill_icon_sort.png` | Sort; HUD el/kart görselinin ayrı kopyası |
+| `skill_icon_guide.png` | Shelf Guide; HUD dolap/kart görseli |
+| `skill_icon_insight.png` | Insight; mevcut pack açılışındaki ışıldama görseli |
+| `skill_icon_autoshelf.png` | Autoshelving; HUD dolap/kart görselinin ayrı kopyası |
+| `skill_node.png` | Sol seçim düğmeleri ve büyük simge çerçevesi |
+| `skill_details_panel.png` | Tek büyük pop-up'ın arka planı |
+| `skill_panel_bg.png` | Sağ bilgi alanının arka planı |
+| `skill_upgrade_button.png` | Yükseltme düğmesi |
+| `skill_close_hint.png` | Kapatma düğmesi |
+| `skill_unlocked_icon.png` | Açılmış yetenek işareti |
+| `skill_task_panel.png` | Sol üst görev kutusu |
+
+PNG değiştirmenin dışında boyut, renk ve konumları prefab'da düzenleyebilirsin. Kodun bulduğu nesne adlarını ve hiyerarşiyi koru. Yeni simgeler en fazla 256 px olarak içe aktarılır, en-boy oranı korunur.
+
+`Materials/SkillTextNoOutline.mat` bu pop-up'ın yazılarına özel kenarlıksız materyaldir. Ortak font materyali değiştirilmez. Görev ve alt gösterge yazıları kendi mevcut materyallerini korur.
+
+## Diğer HUD alanları
+
+- `Task`: sol üst sayaçların altındaki görev kutusu; konumu mevcut sayaca bağlanır.
+- `Hotbar`: sol alt köşeden sağa sıralanan 2–6 yetenek kutuları. Kutular 108×108, aralık 12 piksel; tuş numaraları `KeyHint` çocuklarıdır. Zıplama göstergesi yoktur.
+- Görev kutusu ve Tab erişimi oyun hazır olup welcome penceresi kapanınca açılır; tutorial aşamasını beklemez.
+
+Oyuncu metinleri prefab örnek metninden değil `LocalizationTable.asset` içindeki `skills.*` anahtarlarından gelir. Dil desteği için yazıları oradan değiştir. Yerleşim veya simge değişikliği yetenek seviyelerini/kayıtlarını değiştirmez.
+
+Kurallar: `Docs/SkillSystemPlan.md`. Steam kurulum adımları: `Docs/SteamSkillAchievements.md`; başarım listesi: `Docs/SteamSkillAchievements.csv`.

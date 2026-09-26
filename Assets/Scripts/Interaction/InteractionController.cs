@@ -44,8 +44,21 @@ public class InteractionController : MonoBehaviour
     IInteractable _pendingPackPromptTarget;
     float _inspectPreviewTimer;
     Coroutine _promptPulseRoutine;
+    Ray _skillAimRay;
+    int _cachedSkillRow = -2;
 
     public CardShelf AimedSkillShelf { get; private set; }
+    public int AimedSkillRow
+    {
+        get
+        {
+            // Resolve only when a skill needs it, not on every ordinary camera frame.
+            if (_cachedSkillRow == -2)
+                _cachedSkillRow = AimedSkillShelf != null && AimedSkillShelf.TryGetSkillAimRow(_skillAimRay, out int row) ? row : -1;
+            return _cachedSkillRow;
+        }
+    }
+    public PsaCabinet AimedSkillPsaCabinet { get; private set; }
 
     void Awake()
     {
@@ -68,6 +81,8 @@ public class InteractionController : MonoBehaviour
     void Update()
     {
         AimedSkillShelf = null;
+        _cachedSkillRow = -2;
+        AimedSkillPsaCabinet = null;
         if (GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
         {
             _raycastAimedCard = null;
@@ -161,6 +176,11 @@ public class InteractionController : MonoBehaviour
         AimedSkillShelf = interactable as CardShelf;
         if (AimedSkillShelf == null && interactable is WorldCard shelfCard)
             AimedSkillShelf = shelfCard.GetComponentInParent<CardShelf>();
+        _skillAimRay = ray;
+        if (interactable is PsaCabinetSlot skillPsaSlot)
+            AimedSkillPsaCabinet = skillPsaSlot.GetComponentInParent<PsaCabinet>();
+        else if (interactable is WorldCard skillPsaCard && skillPsaCard.UsesPsaSlab)
+            AimedSkillPsaCabinet = skillPsaCard.GetComponentInParent<PsaCabinet>();
 
         if (interactable == null)
         {

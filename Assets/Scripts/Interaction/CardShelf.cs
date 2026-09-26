@@ -456,22 +456,56 @@ public class CardShelf : MonoBehaviour, IInteractable
         }
     }
 
-    public bool TryFindSkillSlot(WorldCard card, out CardShelfSlot result)
+    public bool TryGetCompletedSkillSeries(int rowIndex, out string series)
+    {
+        series = null;
+        EnsureSlotCache();
+        if (!IsSeriesRowComplete(rowIndex, SlotsPerRow)) return false;
+        foreach (CardShelfSlot slot in _slots)
+            if (slot != null && slot.RowIndex == rowIndex && slot.OccupiedCard != null)
+                return CardShelfSeries.TryGetSeriesId(slot.OccupiedCard.Definition, out series);
+        return false;
+    }
+
+    public void SetSkillRowCompletionLock(int rowIndex, bool locked)
+    {
+        EnsureSlotCache();
+        foreach (CardShelfSlot slot in _slots)
+            if (slot != null && slot.RowIndex == rowIndex && slot.OccupiedCard != null)
+                slot.OccupiedCard.SetSkillCompletionLocked(locked);
+    }
+
+    public bool TryGetSkillAimRow(Ray ray, out int rowIndex)
+    {
+        EnsureSlotCache();
+        CardShelfSlot slot = FindClosestSlotToAim(includeOccupied: true, ray, useRay: true);
+        rowIndex = slot != null ? slot.RowIndex : -1;
+        return slot != null;
+    }
+
+    public bool TryFindSkillSlot(WorldCard card, out CardShelfSlot result) =>
+        TryFindSkillSlot(card, -1, out result);
+
+    public bool TryFindSkillSlot(WorldCard card, int rowIndex, out CardShelfSlot result)
     {
         result = null;
         if (card == null || card.UsesPsaSlab || !AcceptsDefinition(card.Definition)) return false;
         EnsureSlotCache(refreshInEditor: true);
         foreach (CardShelfSlot slot in _slots)
-            if (slot != null && slot.gameObject.activeInHierarchy && slot.IsEmpty
+            if (slot != null && (rowIndex < 0 || slot.RowIndex == rowIndex)
+                && slot.gameObject.activeInHierarchy && slot.IsEmpty
                 && CanPlaceCardInSlot(card, slot) && IsCorrectPlacement(card, slot))
             { result = slot; return true; }
         return false;
     }
 
-    public bool TryPlaceSkillCard(PlayerCardHand hand, WorldCard card)
+    public bool TryPlaceSkillCard(PlayerCardHand hand, WorldCard card) =>
+        TryPlaceSkillCard(hand, card, -1);
+
+    public bool TryPlaceSkillCard(PlayerCardHand hand, WorldCard card, int rowIndex)
     {
         if (hand == null || !card || !card.IsHeld || hand.IsHandInputLocked
-            || !TryFindSkillSlot(card, out CardShelfSlot slot)) return false;
+            || !TryFindSkillSlot(card, rowIndex, out CardShelfSlot slot)) return false;
         if (!hand.TryTakeHeldCardForSkill(card)) return false;
         // Occupy immediately, just like manual placement, so successive flights cannot share a slot.
         slot.Occupy(card);

@@ -11,14 +11,15 @@ public sealed class SkillPanelView : MonoBehaviour
     public bool IsOpen => _panel != null && _panel.activeSelf;
     GameObject _panel, _task, _bar;
     TMP_Text _title, _points, _instructions, _name, _description, _stats, _next, _taskTitle, _taskText;
-    TMP_Text _closeText, _upgradeText, _openText;
+    TMP_Text _closeText, _upgradeText, _openText, _selectedLevel;
     Button _upgrade;
+    Image _selectedIcon;
     [SerializeField] Color activeHotbarColor = new Color(0.22f, 0.42f, 0.28f, 0.92f);
     readonly TMP_Text[] _names = new TMP_Text[5], _levels = new TMP_Text[5], _barLabels = new TMP_Text[5];
     readonly Image[] _nodes = new Image[5];
+    readonly Image[] _icons = new Image[5];
     readonly Image[] _barBackgrounds = new Image[5];
     readonly Color[] _barIdleColors = new Color[5];
-    readonly Image[][] _ranks = new Image[5][];
     readonly GameObject[] _checks = new GameObject[5];
     readonly Vector3[] _corners = new Vector3[4];
     RectTransform _hudStats, _root, _body, _taskRect;
@@ -58,6 +59,8 @@ public sealed class SkillPanelView : MonoBehaviour
         _title = TextAt(body + "Title"); _points = TextAt(body + "Points");
         _instructions = TextAt(body + "Instructions");
         _name = TextAt(body + "Details/Name"); _description = TextAt(body + "Details/Description");
+        _selectedLevel = TextAt(body + "Details/Level");
+        _selectedIcon = transform.Find(body + "Details/IconFrame/Icon").GetComponent<Image>();
         _stats = TextAt(body + "Details/Stats"); _next = TextAt(body + "Details/Next");
         _upgrade = ButtonAt(body + "Details/Upgrade"); _upgradeText = TextAt(body + "Details/Upgrade/Label");
         _closeText = TextAt(body + "Close/Label");
@@ -71,16 +74,15 @@ public sealed class SkillPanelView : MonoBehaviour
             string path = body + "Nodes/Skill" + i;
             _names[i] = TextAt(path + "/Name"); _levels[i] = TextAt(path + "/Level");
             _nodes[i] = transform.Find(path).GetComponent<Image>();
+            _icons[i] = transform.Find(path + "/Icon").GetComponent<Image>();
             _checks[i] = transform.Find(path + "/Check").gameObject;
-            _ranks[i] = new Image[SkillCatalog.MaxLevel(i)];
-            for (int j = 0; j < _ranks[i].Length; j++) _ranks[i][j] = transform.Find(path + "/Rank" + j).GetComponent<Image>();
             ButtonAt(path).onClick.AddListener(() => { _selected = skill; Refresh(); });
             _barLabels[i] = TextAt("Hotbar/Skill" + i + "/Label");
             _barBackgrounds[i] = transform.Find("Hotbar/Skill" + i).GetComponent<Image>();
             _barIdleColors[i] = _barBackgrounds[i].color;
         }
         foreach (TMP_Text text in GetComponentsInChildren<TMP_Text>(true)) UiMenuFont.Apply(text);
-        _hudStats = transform.parent.Find("Panel_TopLeft") as RectTransform;
+        _hudStats = transform.parent != null ? transform.parent.Find("Panel_TopLeft") as RectTransform : null;
         _panel.SetActive(false);
         _task.SetActive(false);
         _bar.SetActive(false);
@@ -93,12 +95,10 @@ public sealed class SkillPanelView : MonoBehaviour
     {
         bool gameplay = SkillProgress.Ready && CardInstancedRenderManager.IsGameplayReady && !GameSceneLoader.IsLoading && !WelcomePopupView.IsWaitingForStart;
         if (!gameplay) { Close(); SetVisible(_task, false); SetVisible(_bar, false); return; }
-        bool menuAvailable = SkillProgress.IsTestingAllSkills || TutorialHintView.CanShowSkillMenu;
-        if (!menuAvailable) Close();
         if (IsOpen && (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab))) Close();
-        else if (menuAvailable && !GamePause.IsPaused && Input.GetKeyDown(KeyCode.Tab)) Open();
+        else if (!GamePause.IsPaused && Input.GetKeyDown(KeyCode.Tab)) Open();
         bool hudVisible = !GamePause.IsPaused;
-        SetVisible(_task, hudVisible && menuAvailable); SetVisible(_bar, hudVisible);
+        SetVisible(_task, hudVisible); SetVisible(_bar, hudVisible);
         _refresh -= Time.unscaledDeltaTime;
         if (_revision != SkillProgress.Revision || _refresh <= 0f)
         {
@@ -112,8 +112,7 @@ public sealed class SkillPanelView : MonoBehaviour
     public void Open()
     {
         if (IsOpen || GamePause.IsPaused || !SkillProgress.Ready || GameSceneLoader.IsLoading
-            || !CardInstancedRenderManager.IsGameplayReady || WelcomePopupView.IsWaitingForStart
-            || (!SkillProgress.IsTestingAllSkills && !TutorialHintView.CanShowSkillMenu)) return;
+            || !CardInstancedRenderManager.IsGameplayReady || WelcomePopupView.IsWaitingForStart) return;
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null && (hand.IsHandInputLocked || hand.IsAwaitingRevealCollect)) return;
         _previousLock = Cursor.lockState; _previousVisible = Cursor.visible;
@@ -156,16 +155,18 @@ public sealed class SkillPanelView : MonoBehaviour
             Set(_levels[i], Localization.Format(LocalizationKeys.SkillsLevel, level, SkillCatalog.MaxLevel(i)));
             _nodes[i].color = i == _selected ? new Color(1f, 0.9f, 0.55f) : level > 0 ? new Color(0.72f,1f,0.72f) : Color.white;
             SetVisible(_checks[i], level > 0);
-            for (int j = 0; j < _ranks[i].Length; j++)
-                _ranks[i][j].color = j < level ? new Color(0.35f,1f,0.45f) : new Color(0.4f,0.4f,0.45f);
-
         }
         int current = SkillProgress.Level(_selected), maximum = SkillCatalog.MaxLevel(_selected);
         string key = "skills." + SkillCatalog.Keys[_selected];
         Set(_name, Localization.Get(key + ".name"));
+        Set(_selectedLevel, Localization.Format(LocalizationKeys.SkillsLevel, current, maximum));
+        _selectedIcon.sprite = _icons[_selected].sprite;
+        _selectedIcon.color = _icons[_selected].color;
         Set(_description, Localization.Get(key + ".description"));
-        Set(_stats, current == 0 ? Localization.Get(LocalizationKeys.SkillsLocked) : Stats(_selected, current));
-        Set(_next, current >= maximum ? Localization.Get(LocalizationKeys.SkillsMax) : Localization.Get(LocalizationKeys.SkillsNext) + "\n" + Stats(_selected, current + 1));
+        Set(_stats, Stats(_selected, current));
+        Set(_next, current >= maximum ? Localization.Get(LocalizationKeys.SkillsMax)
+            : current == 0 ? Localization.Get(LocalizationKeys.SkillsLocked) + " / " + Localization.Get(LocalizationKeys.SkillsNext)
+            : Localization.Get(LocalizationKeys.SkillsNext) + " (" + current + " \u2192 " + (current + 1) + ")");
         Set(_upgradeText, Localization.Get(current >= maximum ? LocalizationKeys.SkillsMax : LocalizationKeys.SkillsUpgrade));
         _upgrade.interactable = points > 0 && current < maximum;
         RefreshHotbar(true);
@@ -187,10 +188,17 @@ public sealed class SkillPanelView : MonoBehaviour
     }
     static string Stats(int skill, int level)
     {
-        int cooldown = SkillCatalog.Cooldown(skill, level), effect = SkillCatalog.Effect(skill, level);
-        if (skill >= 2) return Localization.Format(LocalizationKeys.SkillsStats, cooldown, effect);
+        bool hasNext = level < SkillCatalog.MaxLevel(skill);
+        string cooldown = StatValue(SkillCatalog.Cooldown(skill, level), SkillCatalog.Cooldown(skill, level + 1), level == 0, hasNext);
+        string effect = StatValue(SkillCatalog.Effect(skill, level), SkillCatalog.Effect(skill, level + 1), level == 0, hasNext);
+        if (skill >= 2) return Localization.Format(LocalizationKeys.SkillsStats, cooldown, effect).Replace(" / ", "\n");
         string text = Localization.Format(LocalizationKeys.SkillsWait, cooldown);
         return skill == 0 ? text + "\n" + Localization.Format(LocalizationKeys.SkillsAmount, effect) : text;
+    }
+    static string StatValue(int current, int next, bool locked, bool hasNext)
+    {
+        if (!hasNext) return current.ToString();
+        return (locked ? "\u2014" : current.ToString()) + " \u2192 " + next;
     }
     void PositionTask()
     {

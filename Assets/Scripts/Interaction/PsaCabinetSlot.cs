@@ -855,6 +855,16 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         BeginPlacementFlight(card);
     }
 
+    public bool TryPlaceSkillCard(PlayerCardHand hand, WorldCard card)
+    {
+        if (!hand || !card || !card.IsHeld || hand.IsHandInputLocked
+            || !CanPlaceHeldCard(card) || !IsCorrectPlacement(card)) return false;
+        if (!hand.TryTakeHeldCardForSkill(card)) return false;
+        Occupy(card);
+        BeginPlacementFlight(card);
+        return true;
+    }
+
     void RefreshAimPreview()
     {
         PlayerCardHand hand = PlayerCardHand.Instance;
@@ -929,9 +939,14 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
                 GameSaveSignals.MarkDirty();
                 PsaCabinet cabinet = GetComponentInParent<PsaCabinet>();
-                if (cabinet != null && cabinet.IsComplete())
-                    GameSaveSignals.NotifyMilestone();
+                if (cabinet != null)
+                {
+                    SkillProgress.NotifyPsaCabinetChanged(cabinet);
+                    if (cabinet.IsComplete()) GameSaveSignals.NotifyMilestone();
+                }
             });
+        // Occupancy is committed before landing, including saves made while paused in flight.
+        GameSaveDirtyTracker.MarkDirty();
     }
 
     void UpdatePlacementFlights()

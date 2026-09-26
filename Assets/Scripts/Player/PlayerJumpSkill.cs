@@ -1,13 +1,10 @@
 /// <summary>
-/// Armed by the in-game Double Jump skill button. Space still jumps the same way;
-/// only the height scale changes while the skill is on.
+/// The existing enhanced jump is always available through Space.
+/// It is independent of the upgrade system and has no hotbar toggle.
 /// </summary>
 public static class PlayerJumpSkill
 {
     public const float DoubleJumpHeightMultiplier = 5f;
 
-    public static bool DoubleJumpArmed { get; set; }
-
-    public static float HeightMultiplier =>
-        SkillBarView.JumpSkillEnabled && DoubleJumpArmed ? DoubleJumpHeightMultiplier : 1f;
+    public static float HeightMultiplier => DoubleJumpHeightMultiplier;
 }

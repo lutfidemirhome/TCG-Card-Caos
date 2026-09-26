@@ -83,6 +83,7 @@ public class PlayerCardHand : MonoBehaviour
     public int AvailableSlots => Mathf.Max(0, CardDimensions.MaxHandSize - OccupiedHandSlots);
     public int SelectedIndex => _selectedIndex;
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
+    public float SkillPickupFlightDuration => Mathf.Max(0f, pickupFlightDuration);
     public bool HasHeldPack => CountOccupiedPackSlots() > 0;
     public bool IsPackSelected => GetSelectedHeldPack() != null;
     public WorldBoosterPack SelectedHeldPack => GetSelectedHeldPack();
@@ -1133,30 +1134,41 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool SortHeldCardsForSkill()
     {
-        if (IsHandInputLocked || _cards.Count < 2) return false;
+        if (IsHandInputLocked || _cards.Count == 0 || _cards.Count + _heldPacks.Count < 2) return false;
         foreach (WorldCard card in _cards) if (card == null || !card.IsHeld) return false;
         foreach (WorldBoosterPack pack in _heldPacks) if (pack == null || !pack.IsHeld) return false;
         int fanCards = 0;
         foreach (HandFanEntry entry in _handFanOrder) if (entry.Card != null) fanCards++;
         if (fanCards != _cards.Count) return false;
         HandFanEntry selected = _selectedIndex >= 0 && _handFanOrder.Count > _selectedIndex ? _handFanOrder[_selectedIndex] : default;
-        _cards.Sort((a, b) =>
-        {
-            int left = a.UsesPsaSlab ? a.PsaSlotNumber : a.Definition != null ? a.Definition.ShelfSlotNumber : 0;
-            int right = b.UsesPsaSlab ? b.PsaSlotNumber : b.Definition != null ? b.Definition.ShelfSlotNumber : 0;
-            int number = left.CompareTo(right);
-            return number != 0 ? number : string.CompareOrdinal(a.Definition != null ? a.Definition.DefinitionId : "",
-                b.Definition != null ? b.Definition.DefinitionId : "");
-        });
-        int next = 0;
-        for (int i = 0; i < _handFanOrder.Count; i++)
-            if (_handFanOrder[i].Card != null) _handFanOrder[i] = new HandFanEntry { Card = _cards[next++] };
+        _cards.Sort(CompareCardsForSkill);
+        // Keep packs in their existing relative order, after every normal/PSA card.
+        _handFanOrder.RemoveAll(entry => entry.Card != null);
+        for (int i = 0; i < _cards.Count; i++)
+            _handFanOrder.Insert(i, new HandFanEntry { Card = _cards[i] });
         for (int i = 0; i < _handFanOrder.Count; i++)
             if ((selected.Card != null && _handFanOrder[i].Card == selected.Card)
                 || (selected.Pack != null && _handFanOrder[i].Pack == selected.Pack)) _selectedIndex = i;
         ApplyFanLayout();
         GameSaveSignals.MarkDirty();
         return true;
+    }
+
+    public static int CompareCardsForSkill(WorldCard a, WorldCard b)
+    {
+        int left = a.UsesPsaSlab ? a.PsaSlotNumber : a.ShelfSlotNumber;
+        int right = b.UsesPsaSlab ? b.PsaSlotNumber : b.ShelfSlotNumber;
+        int result = left.CompareTo(right);
+        if (result == 0) result = a.UsesPsaSlab.CompareTo(b.UsesPsaSlab);
+        if (result == 0 && a.UsesPsaSlab)
+        {
+            result = ((int)a.PsaSet).CompareTo((int)b.PsaSet);
+            if (result == 0) result = a.PsaVariantIndex.CompareTo(b.PsaVariantIndex);
+        }
+        if (result == 0)
+            result = string.CompareOrdinal(a.Definition != null ? a.Definition.DefinitionId : "",
+                b.Definition != null ? b.Definition.DefinitionId : "");
+        return result != 0 ? result : string.CompareOrdinal(PersistentId.Resolve(a), PersistentId.Resolve(b));
     }
 
     public void CopyHeldCards(List<WorldCard> destination)

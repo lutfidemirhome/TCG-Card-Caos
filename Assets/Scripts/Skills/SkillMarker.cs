@@ -1,12 +1,16 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-/// <summary>Temporary visual only. No collider, material instance or per-frame callback.</summary>
+/// <summary>Temporary visuals only. No collider or per-frame scene search.</summary>
 public sealed class SkillMarker : MonoBehaviour
 {
     static Mesh _insightBeamMesh;
     static int _beamUsers;
     Mesh _ownedBeamMesh;
+    Material _cabinetMask, _cabinetFill;
+    readonly Dictionary<Mesh, Mesh> _outlineMeshes = new Dictionary<Mesh, Mesh>();
+    readonly List<Mesh> _ownedOutlineMeshes = new List<Mesh>(2);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetBeamMesh()
@@ -65,6 +69,12 @@ public sealed class SkillMarker : MonoBehaviour
 
     void OnDestroy()
     {
+        if (_cabinetMask != null) Object.Destroy(_cabinetMask);
+        if (_cabinetFill != null) Object.Destroy(_cabinetFill);
+        foreach (Mesh mesh in _ownedOutlineMeshes)
+            if (mesh != null) Object.Destroy(mesh);
+        _ownedOutlineMeshes.Clear();
+        _outlineMeshes.Clear();
         if (_ownedBeamMesh == null || _ownedBeamMesh != _insightBeamMesh) return;
         _beamUsers--;
         if (_beamUsers > 0) return;
@@ -74,20 +84,144 @@ public sealed class SkillMarker : MonoBehaviour
     }
     public static SkillMarker ForShelf(CardShelf shelf)
     {
-        var bounds = new Bounds(Vector3.zero, Vector3.one * 0.1f);
-        bool found = false;
-        foreach (Renderer renderer in shelf.GetComponentsInChildren<Renderer>())
+        return CreateCabinetOutline(shelf.transform, false);
+    }
+
+    public static SkillMarker ForPsaCabinet(PsaCabinet cabinet)
+    {
+        return CreateCabinetOutline(cabinet.transform, true);
+    }
+
+    static SkillMarker CreateCabinetOutline(Transform cabinet, bool psa)
+    {
+        Material mask = Resources.Load<Material>("Materials/OutlineMask");
+        Material fill = Resources.Load<Material>("Materials/OutlineFill");
+        if (mask == null || fill == null) return null;
+
+        // Use the actual exterior mesh, not a wire box. Separate render-only children
+        // leave cabinet materials, card hover outlines and shared source meshes untouched.
+        var obj = new GameObject("SkillCabinetOutline");
+        obj.layer = 2;
+        obj.transform.SetParent(cabinet, false);
+        SkillMarker marker = obj.AddComponent<SkillMarker>();
+        marker._cabinetMask = new Material(mask) { hideFlags = HideFlags.HideAndDontSave };
+        marker._cabinetFill = new Material(fill) { hideFlags = HideFlags.HideAndDontSave };
+        marker._cabinetMask.SetFloat("_ZTest", (float)CompareFunction.Always);
+        marker._cabinetFill.SetFloat("_ZTest", (float)CompareFunction.Always);
+        marker._cabinetFill.SetColor("_OutlineColor", CardOutlineSettings.GetPaletteOrDefaults().shelfCorrect);
+        marker._cabinetFill.SetFloat("_OutlineWidth", 4f);
+
+        var copies = new Dictionary<Transform, Transform> { { cabinet, obj.transform } };
+        foreach (MeshRenderer renderer in cabinet.GetComponentsInChildren<MeshRenderer>())
         {
-            if (renderer is LineRenderer || !renderer.enabled || renderer.GetComponentInParent<SkillMarker>() != null) continue;
-            Bounds world = renderer.bounds;
-            for (int i = 0; i < 8; i++)
+            if (!renderer.enabled || renderer.GetComponentInParent<SkillMarker>() != null
+                || renderer.GetComponentInParent<WorldCard>() != null) continue;
+            if (!IsCabinetExterior(renderer, cabinet, psa)) continue;
+            MeshFilter filter = renderer.GetComponent<MeshFilter>();
+            if (filter == null || filter.sharedMesh == null) continue;
+            Transform parent = CopyVisualTransform(renderer.transform, copies);
+            Mesh mesh = marker.GetOutlineMesh(filter.sharedMesh, psa);
+            AddOutlinePass(parent, mesh, marker._cabinetMask, "OutlineMask");
+            AddOutlinePass(parent, mesh, marker._cabinetFill, "OutlineFill");
+        }
+        return marker;
+    }
+
+    Mesh GetOutlineMesh(Mesh source, bool psa)
+    {
+        if (_outlineMeshes.TryGetValue(source, out Mesh mesh)) return mesh;
+        // These small render-only meshes are baked in the editor, so imported cabinet
+        // meshes can keep Read/Write disabled in builds. Never destroy the shared bake.
+        Mesh baked = Resources.Load<Mesh>(psa ? "UI/Skills/PsaCabinetOutline" : "UI/Skills/CabinetOutline");
+        // The baked asset uses its filename; identify the original exterior separately.
+        string expectedSourceName = psa ? "Counter_attlsv" : "Shelf_kicg9f";
+        if (baked != null && source.name == expectedSourceName && baked.vertexCount == source.vertexCount
+            && baked.bounds.center == source.bounds.center && baked.bounds.size == source.bounds.size)
+        {
+            _outlineMeshes.Add(source, baked);
+            return baked;
+        }
+        if (!source.isReadable)
+        {
+            _outlineMeshes.Add(source, source);
+            return source;
+        }
+        mesh = new Mesh { name = source.name + " Skill Outline", hideFlags = HideFlags.HideAndDontSave,
+            indexFormat = source.indexFormat };
+        mesh.vertices = source.vertices;
+        mesh.normals = source.normals;
+        mesh.triangles = source.triangles;
+        if (mesh.normals.Length != mesh.vertexCount) mesh.RecalculateNormals();
+        SetSmoothOutlineNormals(mesh);
+        mesh.bounds = source.bounds;
+        mesh.UploadMeshData(true);
+        _outlineMeshes.Add(source, mesh);
+        _ownedOutlineMeshes.Add(mesh);
+        return mesh;
+    }
+
+    // Match QuickOutline's coincident-vertex smoothing, on an owned mesh only.
+    public static void SetSmoothOutlineNormals(Mesh mesh)
+    {
+        Vector3[] vertices = mesh.vertices;
+        Vector3[] normals = mesh.normals;
+        var sums = new Dictionary<Vector3, Vector3>(vertices.Length);
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            sums.TryGetValue(vertices[i], out Vector3 sum);
+            sums[vertices[i]] = sum + normals[i];
+        }
+        var smooth = new List<Vector3>(vertices.Length);
+        for (int i = 0; i < vertices.Length; i++) smooth.Add(sums[vertices[i]].normalized);
+        mesh.SetUVs(3, smooth);
+    }
+
+    static bool IsCabinetExterior(MeshRenderer renderer, Transform cabinet, bool psa)
+    {
+        for (Transform part = renderer.transform; part != null && part != cabinet; part = part.parent)
+        {
+            // PSA holder seats and their card labels must not be outlined individually.
+            if (psa && (part.name == "Counter_attlsv" || part.name == "Table_Visual")) return true;
+            if (!psa && (part.name == "Shelf_kicg9f" || part.name == "BottomKickPlate"))
             {
-                Vector3 point = shelf.transform.InverseTransformPoint(world.center + Vector3.Scale(world.extents,
-                    new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1)));
-                if (!found) { bounds = new Bounds(point, Vector3.zero); found = true; } else bounds.Encapsulate(point);
+                // Shelf boards are children of the body in some cabinet prefabs.
+                for (Transform child = renderer.transform; child != part; child = child.parent)
+                    if (child.name.StartsWith("Shelf_kicg9f_shelf", System.StringComparison.Ordinal)) return false;
+                return renderer.GetComponentInParent<CardShelfSlot>() == null;
             }
         }
-        return Create(shelf.transform, bounds, 0.025f);
+        return false;
+    }
+
+    static Transform CopyVisualTransform(Transform source, Dictionary<Transform, Transform> copies)
+    {
+        if (copies.TryGetValue(source, out Transform copy)) return copy;
+        Transform parent = CopyVisualTransform(source.parent, copies);
+        copy = new GameObject(source.name).transform;
+        copy.gameObject.layer = 2;
+        copy.SetParent(parent, false);
+        copy.localPosition = source.localPosition;
+        copy.localRotation = source.localRotation;
+        copy.localScale = source.localScale;
+        copies.Add(source, copy);
+        return copy;
+    }
+
+    static void AddOutlinePass(Transform parent, Mesh mesh, Material material, string name)
+    {
+        var obj = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        obj.layer = 2;
+        obj.transform.SetParent(parent, false);
+        obj.GetComponent<MeshFilter>().sharedMesh = mesh;
+        MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
+        var materials = new Material[mesh.subMeshCount];
+        for (int i = 0; i < materials.Length; i++) materials[i] = material;
+        renderer.sharedMaterials = materials;
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        renderer.lightProbeUsage = LightProbeUsage.Off;
+        renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+        renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
     }
     static SkillMarker Create(Transform parent, Bounds bounds, float width)
     {
