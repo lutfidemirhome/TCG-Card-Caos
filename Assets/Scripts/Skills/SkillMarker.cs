@@ -107,9 +107,10 @@ public sealed class SkillMarker : MonoBehaviour
         marker._cabinetMask = new Material(mask) { hideFlags = HideFlags.HideAndDontSave };
         marker._cabinetFill = new Material(fill) { hideFlags = HideFlags.HideAndDontSave };
         marker._cabinetMask.SetFloat("_ZTest", (float)CompareFunction.Always);
-        marker._cabinetFill.SetFloat("_ZTest", (float)CompareFunction.Always);
+        // Match OutlineVisible: keep the silhouette mask, but let scene depth hide occluded edges.
+        marker._cabinetFill.SetFloat("_ZTest", (float)CompareFunction.LessEqual);
         marker._cabinetFill.SetColor("_OutlineColor", CardOutlineSettings.GetPaletteOrDefaults().shelfCorrect);
-        marker._cabinetFill.SetFloat("_OutlineWidth", 4f);
+        marker._cabinetFill.SetFloat("_OutlineWidth", 6f);
 
         var copies = new Dictionary<Transform, Transform> { { cabinet, obj.transform } };
         foreach (MeshRenderer renderer in cabinet.GetComponentsInChildren<MeshRenderer>())

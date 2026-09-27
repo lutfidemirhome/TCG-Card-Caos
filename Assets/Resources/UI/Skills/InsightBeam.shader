@@ -44,8 +44,8 @@ Shader "TCG/Insight Beam"
                 float2 uv = input.uv;
                 float time = _Time.y;
                 float x = abs(uv.x - 0.5) * 2;
-                float taper = 1 - smoothstep(0.25, 1, uv.y);
-                float beam = pow(saturate(1 - x), 3) * taper;
+                float taper = 1 - smoothstep(0.4, 1, uv.y);
+                float beam = pow(saturate(1 - x), 2) * taper;
                 float stream = 0.85 + 0.15 * sin(uv.y * 22 - time * 3 + input.phase * 6.28);
                 float sparkles = 0;
                 [unroll]
@@ -55,13 +55,13 @@ Shader "TCG/Insight Beam"
                     float y = frac(time * (0.16 + i * 0.012) + seed);
                     float sx = 0.5 + 0.29 * sin(seed * 19.1 + time * 0.7);
                     float2 d = abs(uv - float2(sx, y));
-                    float core = saturate(1 - length(d / float2(0.028, 0.01)));
+                    float core = saturate(1 - length(d / float2(0.038, 0.014)));
                     float star = saturate(1 - d.x / 0.01 - d.y / 0.035)
                         + saturate(1 - d.x / 0.075 - d.y / 0.004);
                     float fade = smoothstep(0, 0.12, y) * (1 - smoothstep(0.72, 1, y));
-                    sparkles += (core + star * 0.8) * fade;
+                    sparkles += (core + star * 1.1) * fade;
                 }
-                float opacity = saturate(beam * stream * 0.42 + sparkles * 0.95);
+                float opacity = saturate(beam * stream * 0.72 + sparkles * 1.2);
                 half3 color = lerp(_BaseColor.rgb, half3(0.9, 1, 0.85), saturate(sparkles));
                 return half4(color, opacity * _BaseColor.a);
             }

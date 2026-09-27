@@ -41,6 +41,7 @@ public class InteractionController : MonoBehaviour
     WorldBoosterPack _packInspectPreviewTarget;
     IInteractable _pendingCardPromptTarget;
     PlayerCardHand _playerHand;
+    CardSkillController _skillController;
     IInteractable _pendingPackPromptTarget;
     float _inspectPreviewTimer;
     Coroutine _promptPulseRoutine;
@@ -576,6 +577,12 @@ public class InteractionController : MonoBehaviour
 
                 return;
             }
+        }
+
+        if (Input.GetKeyDown(interactKey) && SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
+        {
+            if (_skillController == null) _skillController = FindFirstObjectByType<CardSkillController>();
+            if (_skillController != null && _skillController.TryStartAutoshelvingFromInteract()) return;
         }
 
         if (WasInteractPressedThisFrame() && ShouldUseCurrentTargetForInteract())

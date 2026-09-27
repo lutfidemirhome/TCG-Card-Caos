@@ -42,7 +42,7 @@ PNG değiştirmenin dışında boyut, renk ve konumları prefab'da düzenleyebil
 ## Diğer HUD alanları
 
 - `Task`: sol üst sayaçların altındaki görev kutusu; konumu mevcut sayaca bağlanır.
-- `Hotbar`: sol alt köşeden sağa sıralanan 2–6 yetenek kutuları. Kutular 108×108, aralık 12 piksel; tuş numaraları `KeyHint` çocuklarıdır. Zıplama göstergesi yoktur.
+- `Hotbar`: sol alt köşeden sağa sıralanan 1–5 yetenek kutuları. Kutular 108×108, aralık 12 piksel; tuş numaraları `KeyHint` çocuklarıdır. Zıplama göstergesi yoktur.
 - Görev kutusu ve Tab erişimi oyun hazır olup welcome penceresi kapanınca açılır; tutorial aşamasını beklemez.
 
 Oyuncu metinleri prefab örnek metninden değil `LocalizationTable.asset` içindeki `skills.*` anahtarlarından gelir. Dil desteği için yazıları oradan değiştir. Yerleşim veya simge değişikliği yetenek seviyelerini/kayıtlarını değiştirmez.

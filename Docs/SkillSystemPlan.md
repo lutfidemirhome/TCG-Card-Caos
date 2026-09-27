@@ -6,7 +6,7 @@ Bu belge önceki PDF aktarımını ve son geri bildirimlerle değişen kurallar�
 
 - Oyuna başlayıp welcome penceresini kapattığın anda skill görev kutusu, alt skill göstergeleri ve Tab paneli kullanılabilir. Tutorial aşaması beklenmez. Panel kendiliğinden açılmaz; Tab ile açılır.
 - Space mevcut güçlendirilmiş zıplamayı sürekli kullanır. Önceki Double Jump düğmesini 1 ile açma/kapatma kaldırıldı. Bu, mevcut yüksek zıplamadır; yeni bir havada ikinci sıçrama mekaniği eklenmedi.
-- Zıplama alt UI'da yer almaz. Beş kart skill'i sol alt köşeden sağa doğru sıralanır. 1 boş, mevcut 2–6 kısayolları korunur.
+- Zıplama alt UI'da yer almaz. Beş kart skill'i sol alt köşeden sağa doğru sıralanır. Kullanım tuşları sırasıyla 1–5 (üst sayı tuşları ve numpad).
 - Görev kutusu bir sonraki raf hedefi ile toplam ilerlemeyi gösterir. Harcanmamış yükseltme hakkı varsa ayrıca görünür; hedef metni kaybolmaz.
 - Tab paneli tek sayfalık bir pop-up'tır: solda beş yetenek simgesi, seviyeler ve yükseltme hakları; sağda seçilen yeteneğin büyük simgesi, adı, seviyesi, açıklaması, mevcut → sonraki değerleri ve ayrı yükseltme düğmesi vardır. Minor Magic veya ikinci plan sekmesi yoktur. Seçim yapmak hak harcamaz. Simge dosyalarının tamamı ayrı kopyalardır; değiştirme rehberi `Assets/UI/Skills/README.md` içindedir.
 - Yeni/yenilenen oyuncu metinleri mevcut 12 dilde güncellendi. Skill görselleri `Assets/UI/Skills/Art` altındaki bağımsız kopyalardır; orijinal UI görselleri değiştirilmedi. `Assets/Resources/UI/Skills/SkillUI.prefab` düzenlenebilir.
@@ -35,33 +35,33 @@ Hepsi gerçek yeni oyunda seviye 0/kilitli başlar. Seviye 1 açar; yükseltmele
 | Autoshelving - Otomatik yerleştirme | 10 | 100,90,80,70,60,50,40,30,20,10 | 10,15,20,25,30,35,40,45,50,55 saniye |
 
 
-### 2 — Assemble
+### 1 — Assemble
 
 Elde seçili kartın grubuna ait yerdeki kartları yakından uzağa ele toplar. Normal kartlarda grup aynı kart serisidir. PSA'da grup aynı dil/set ve aynı PSA numarasıdır (örneğin İngilizce PSA 7); varyantlar bu grubun içindedir. El kapasitesi, eldeki paketlerin kapladığı yerler dahil korunur. Raflardaki, kilitli, açılma gösterimindeki veya hâlen hareketli kartlar toplanmaz. Toplama uçuşu tamamlandıktan sonra bekleme başlar. En üst seviye PDF'deki gibi 9 karttır.
 
-### 3 — Sort
+### 2 — Sort
 
 Normal ve PSA kartlarını küçük numaradan büyüğe sıralar. Kartların önceliği seri/kategori/nadirlik değil, numaradır. Paketler kendi aralarındaki sırayı koruyarak en sona gider. Seçili nesne korunur.
 
 Örnek: `X8 – Paket A – Y2 – PSA7 – X1 – Paket B` → `X1 – Y2 – PSA7 – X8 – Paket A – Paket B`.
 
-Aynı numarada normal/PSA türü, PSA dili-varyantı, kart içerik kimliği ve son olarak kalıcı nesne kimliği sabit bir sıra sağlar. Bu ek sıralama numara önceliğini değiştirmez; eşit numaralı kartların her kullanımda rastgele yer değiştirmesini önler. Test: farklı serilerden 8, 2, 5 numaralarıyla iki paket al, 3'e bas; kartlar 2,5,8 ve ardından paketler olmalı. Yalnız paket varsa skill çalışmaz. Sıralama işlemi anlıktır, ardından bekleme başlar.
+Aynı numarada normal/PSA türü, PSA dili-varyantı, kart içerik kimliği ve son olarak kalıcı nesne kimliği sabit bir sıra sağlar. Bu ek sıralama numara önceliğini değiştirmez; eşit numaralı kartların her kullanımda rastgele yer değiştirmesini önler. Test: farklı serilerden 8, 2, 5 numaralarıyla iki paket al, 2'ye bas; kartlar 2,5,8 ve ardından paketler olmalı. Yalnız paket varsa skill çalışmaz. Sıralama işlemi anlıktır, ardından bekleme başlar.
 
-### 4 — Shelf Guide
+### 3 — Shelf Guide
 
-Seçili normal veya PSA kartına uygun en yakın dolabın yalnız dış gövdesi yeşil outline ile gösterilir. İç raflar, tutucular, kartlar ve etiketler tek tek çerçevelenmez. Gerçek dolap dış gövdesinden önceden hazırlanmış ayrı mesh kullanılır; köşe normalleri düzeltilmiştir. Eski tel kutu görünümü kaldırıldı. Kaynak model ve importer ayarları değişmez. Yeniden hazırlama menüsü: TCG Card Chaos → Skills → Bake Cabinet Exterior Outlines. Kartın yeri dolu olsa da ait olduğu dolabı gösterebilir. Etki sırasında seçili kart değişirse rehber güncellenir.
+Seçili normal veya PSA kartına uygun tüm dolapların yalnız dış gövdeleri yeşil outline ile gösterilir. İç raflar, tutucular, kartlar ve etiketler tek tek çerçevelenmez. Gerçek dolap dış gövdesinden önceden hazırlanmış ayrı mesh kullanılır; köşe normalleri düzeltilmiştir. Eski tel kutu görünümü kaldırıldı. Kaynak model ve importer ayarları değişmez. Yeniden hazırlama menüsü: TCG Card Chaos → Skills → Bake Cabinet Exterior Outlines. Kartın yeri dolu olsa da ait olduğu dolabı gösterebilir. Etki sırasında seçili kart değişirse rehber güncellenir.
 
-### 5 — Insight
+### 4 — Insight
 
 Seçili normal serinin veya PSA dil/numara grubunun yerdeki kartlarını yeşil işaret ve yukarı yükselen ışık/ışıltıyla gösterir. Etki sırasında yere düşen uygun kartlar da takip edilir. Pack'ler ve raflara yerleşmiş kartlar dahil değildir. Seçili kart değişirse gösterilen grup güncellenir.
 
-### 6 — Autoshelving
+### 5 — Autoshelving
 
-Elde seçili X serisi kart ve nişangâhın hedeflediği uygun raf gerekir. Dolaba genel olarak bakmak yeterli değildir; mevcut hedefleme mesafesi içinde rafın slot bölgesine bakılmalıdır. Etkinleştirme sırasında X serisi ve o fiziksel raf sabitlenir. X kartları numara sırasıyla yalnız doğru, boş slotlara gider. Elde Y serisi olsa, X bitince seçim Y'ye geçse veya aynı dolabın başka rafına bakılsa Y otomatik yerleştirilmez.
+Elde seçili X serisi kart ve nişangâhın hedeflediği uygun raf gerekir. Dolaba genel olarak bakmak yeterli değildir; mevcut hedefleme mesafesi içinde rafın slot bölgesine bakılmalıdır. 5 tuşu yeteneği etkinleştirir; yalnız bakmak kart taşımaz. Etki açıkken rafa bakıp E’ye basıldığında o anda seçili X serisi ve o fiziksel raf sabitlenir. Tek E basışı bu grubun sıralı yerleştirmesini başlatır; normal tek kart yerleştirme aynı basışta ayrıca çalışmaz. X kartları numara sırasıyla yalnız doğru, boş slotlara gider. Elde Y serisi olsa, X bitince seçim Y'ye geçse veya aynı dolabın başka rafına bakılsa Y otomatik yerleştirilmez.
 
 PSA'da seçilen dil/numara grubu ve hedeflenen PSA dolabı sabitlenir; aynı gruptaki kartlar uygun boş tutuculara gider. Başka dolaba gönderilmez. Bakışı hedeften ayırmak yerleştirmeyi duraklatır; kalan etki süresi işlemeye devam eder. Yeniden aynı hedefe bakınca devam eder. Kartları 0,16 saniye arayla mevcut yerleştirme uçuşuna verir. Slot, uçuş başladığında rezerve edilir ve kayıt güncellenir.
 
-Hedef raf/dolap ve seçilen grup yeni kayıtlarda saklanır. Eski kayıtta aktif süre olup hedef bilgisi yoksa hedef tahmin edilmez; kalan süre boyunca otomatik taşıma yapılmaz, ardından bekleme işler.
+Hedef raf/dolap ve seçilen grup yeni kayıtlarda saklanır. Yükleme sonrasında aktif süre korunur ancak yeniden E’ye basmadan taşıma başlamaz. Etki sürerken başka bir grup/raf için yeniden E’ye basarak yeni bir yerleştirme başlatılabilir; yalnız bakmak hedefi değiştirmez.
 
 ## Süreler, kayıt ve yeni oyun
 
@@ -113,13 +113,17 @@ Periyodik autosave korunur. 2–18 arasındaki yeni raf tamamlamalarında, sonra
 
 Yalnız Unity Editor/Development Build'de P beş skill'i geçici en yüksek seviyeye açar; yeniden P kapatır. Gerçek seviyeler, puan harcaması ve süreler test değerleriyle ezilmez. Yeni oyun/yükleme test modunu kapatır. P panel açıkken de kullanılabilir. P'ye basmak tek başına Steam başarımı açmaz. P açıkken gerçekten raf tamamlarsan bu dünya değişikliği ve ilerleme yine oyun kaydına girer; sonraki gerçek oyun yüklemesinde Steam'e eşleşebilir.
 
+## O ile iki raf doldurma
+
+Yalnız Unity Editor/Development Build'de oyun açık ve menüler kapalıyken O'ya bir kez basmak, tek bir normal dolabın iki boş rafını yerdeki mevcut kartlarla doğru doldurur. İki farklı, daha önce ilerleme kazandırmamış tam seri ve uygun raflar önceden bulunur; bulunamazsa hiçbir kart değiştirilmez. Kart üretilmez, eldeki veya paket içindeki kartlar alınmaz. Tamamlanan raflar normal şekilde kilitlenir, ilerleme ve kayıt güncellenir. Yeni oyunda ilk iki raf 1 yükseltme hakkı verir; devam eden oyunda mevcut hedef tablosu geçerlidir. P test modu yükseltme satın almayı kapattığından gerçek yükseltmeyi denemek için P modu kapalı olmalıdır. Bu kısayolun yaptığı gerçek raf değişiklikleri kayda ve normal başarım ilerlemesine dahildir.
+
 ## Kontrol durumu
 
 Unity 6000.0.80f1'de oyun çekirdeği, Editor assembly'si ve gerçek Steamworks.NET bağımlılığıyla Steam sağlayıcısı derlendi. İlerleme/kayıt/süre/tekrar-ödül mantığı bağımsız C# kontrollerinden geçti; Steam tekrar-deneme akışı sahte servisle kontrol edildi. Gerçek Steam hesabında başarım açılmadı. Bu skill değişiklikleri için Play Mode veya tam build testi yapılmadı; oyun ve görsel kontrol kullanıcıya bırakıldı.
 
 Kısa oyun kontrolü:
 
-1. Yeni Oyun: görev kutusu hemen gelsin; Space güçlü zıplasın; 1 ve Jump kutusu olmasın. 2–6 ve Tab normal çalışsın.
+1. Yeni Oyun: görev kutusu hemen gelsin; Space güçlü zıplasın; Jump kutusu olmasın. Skill tuşları 1–5 ve Tab normal çalışsın.
 2. Bir normal rafı, ardından tam bir PSA dolabını doğru doldur: toplam 2 ilerleme ve 1 hak gör; tamamlanan kartları geri almaya çalış, alınmamalı.
 3. P ile skilleri dene: normal ve PSA'da toplama/ışıltı/dış dolap outline'ı; karışık elde Sort paketleri sona atsın. Autoshelving sadece seçilen X grubunu hedef rafa koysun.
 4. Süreli bir skill kullan: önce etki, sonra bekleme. Etki sürerken kaydet/yükle; hedef, süre, dolu raf kilidi ve ilerleme korunsun.
