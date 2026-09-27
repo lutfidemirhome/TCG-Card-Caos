@@ -78,28 +78,7 @@ public sealed class CardSkillController : MonoBehaviour
     {
         if (!SkillProgress.Ready || GameSceneLoader.IsLoading || !CardInstancedRenderManager.IsGameplayReady) return;
         if (WelcomePopupView.IsWaitingForStart) return;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        bool skillPanelOpen = SkillPanelView.Instance != null && SkillPanelView.Instance.IsOpen;
-        if (Input.GetKeyDown(KeyCode.P) && (skillPanelOpen || (!GamePause.IsPaused && Cursor.lockState == CursorLockMode.Locked)))
-        {
-            SkillProgress.ToggleAllSkillsForTesting();
-            ClearMarkers();
-            _selected = null;
-            _guideVisible = _insightVisible = false;
-            _effectRefresh = _autoPlace = 0f;
-            _autoStarted = false;
-            _boundAutoContext = null;
-            _autoShelf = null;
-            _autoPsaCabinet = null;
-        }
-#endif
         if (GamePause.IsPaused) return;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (Input.GetKeyDown(KeyCode.O) && Cursor.lockState == CursorLockMode.Locked
-            && !SkillPanelView.ConsumesPauseInput && PlayerCardHand.Instance != null
-            && !PlayerCardHand.Instance.IsHandInputLocked && !PlayerCardHand.Instance.IsAwaitingRevealCollect)
-            SkillRowDebugFill.FillTwoRows(_shelves);
-#endif
         SkillProgress.Tick(Time.deltaTime);
         if (Cursor.lockState == CursorLockMode.Locked && !SkillPanelView.ConsumesPauseInput)
             for (int i = 0; i < SkillCatalog.Count; i++)
@@ -226,8 +205,8 @@ public sealed class CardSkillController : MonoBehaviour
             psaSet = _autoGroup.set, psaNumber = _autoGroup.number
         };
         SkillProgress.SetAutoshelfContext(context);
-        _boundAutoContext = SkillProgress.IsTestingAllSkills ? context : SkillProgress.AutoshelfContext;
-        if (!SkillProgress.IsTestingAllSkills) GameSaveDirtyTracker.MarkDirty();
+        _boundAutoContext = SkillProgress.AutoshelfContext;
+        GameSaveDirtyTracker.MarkDirty();
         _autoPlace = 0f;
         _autoStarted = true;
         return true;
@@ -273,7 +252,6 @@ public sealed class CardSkillController : MonoBehaviour
 
     void RestoreAutoshelfContextIfNeeded()
     {
-        if (SkillProgress.IsTestingAllSkills) return;
         SkillAutoshelfContext context = SkillProgress.AutoshelfContext;
         if (ReferenceEquals(context, _boundAutoContext)) return;
         _boundAutoContext = context;

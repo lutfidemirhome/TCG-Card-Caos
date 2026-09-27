@@ -109,14 +109,6 @@ Steamworks.NET 2025.164.1 projeye eklenmiştir. Oyun bağlantısı, hesabın do�
 
 Periyodik autosave korunur. 2–18 arasındaki yeni raf tamamlamalarında, sonraki yükseltme eşiklerinde ve yükseltme satın alırken ek otomatik kayıt istenir; mevcut kayıt kuyruğu istekleri birleştirir.
 
-## P test modu
-
-Yalnız Unity Editor/Development Build'de P beş skill'i geçici en yüksek seviyeye açar; yeniden P kapatır. Gerçek seviyeler, puan harcaması ve süreler test değerleriyle ezilmez. Yeni oyun/yükleme test modunu kapatır. P panel açıkken de kullanılabilir. P'ye basmak tek başına Steam başarımı açmaz. P açıkken gerçekten raf tamamlarsan bu dünya değişikliği ve ilerleme yine oyun kaydına girer; sonraki gerçek oyun yüklemesinde Steam'e eşleşebilir.
-
-## O ile iki raf doldurma
-
-Yalnız Unity Editor/Development Build'de oyun açık ve menüler kapalıyken O'ya bir kez basmak, tek bir normal dolabın iki boş rafını yerdeki mevcut kartlarla doğru doldurur. İki farklı, daha önce ilerleme kazandırmamış tam seri ve uygun raflar önceden bulunur; bulunamazsa hiçbir kart değiştirilmez. Kart üretilmez, eldeki veya paket içindeki kartlar alınmaz. Tamamlanan raflar normal şekilde kilitlenir, ilerleme ve kayıt güncellenir. Yeni oyunda ilk iki raf 1 yükseltme hakkı verir; devam eden oyunda mevcut hedef tablosu geçerlidir. P test modu yükseltme satın almayı kapattığından gerçek yükseltmeyi denemek için P modu kapalı olmalıdır. Bu kısayolun yaptığı gerçek raf değişiklikleri kayda ve normal başarım ilerlemesine dahildir.
-
 ## Kontrol durumu
 
 Unity 6000.0.80f1'de oyun çekirdeği, Editor assembly'si ve gerçek Steamworks.NET bağımlılığıyla Steam sağlayıcısı derlendi. İlerleme/kayıt/süre/tekrar-ödül mantığı bağımsız C# kontrollerinden geçti; Steam tekrar-deneme akışı sahte servisle kontrol edildi. Gerçek Steam hesabında başarım açılmadı. Bu skill değişiklikleri için Play Mode veya tam build testi yapılmadı; oyun ve görsel kontrol kullanıcıya bırakıldı.
@@ -125,6 +117,6 @@ Kısa oyun kontrolü:
 
 1. Yeni Oyun: görev kutusu hemen gelsin; Space güçlü zıplasın; Jump kutusu olmasın. Skill tuşları 1–5 ve Tab normal çalışsın.
 2. Bir normal rafı, ardından tam bir PSA dolabını doğru doldur: toplam 2 ilerleme ve 1 hak gör; tamamlanan kartları geri almaya çalış, alınmamalı.
-3. P ile skilleri dene: normal ve PSA'da toplama/ışıltı/dış dolap outline'ı; karışık elde Sort paketleri sona atsın. Autoshelving sadece seçilen X grubunu hedef rafa koysun.
+3. Kazanılan yükseltme haklarıyla açılan skilleri dene: normal ve PSA'da toplama/ışıltı/dış dolap outline'ı; karışık elde Sort paketleri sona atsın. Autoshelving sadece seçilen X grubunu hedef rafa koysun.
 4. Süreli bir skill kullan: önce etki, sonra bekleme. Etki sürerken kaydet/yükle; hedef, süre, dolu raf kilidi ve ilerleme korunsun.
 5. Yeni Oyun aç: önceki seviyeler/puanlar/süreler gelmesin. Steam testi için ayrı rehberdeki gerçek build akışını izle.

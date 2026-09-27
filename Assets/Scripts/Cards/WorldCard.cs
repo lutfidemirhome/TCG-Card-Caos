@@ -329,6 +329,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         CardGroundStack.UntrackPhysicsCard(this);
         CardGroundQuery.UntrackShelfCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
+        _psaController?.ReleaseOwnedMaterials();
     }
 
     public Matrix4x4 GetInstancedDrawMatrix()

@@ -145,38 +145,43 @@ public class GameSceneLoader : MonoBehaviour
         TutorialHintView.CaptureFromLoadedMenu();
 
         ThreadPriority previousPriority = Application.backgroundLoadingPriority;
-        Application.backgroundLoadingPriority = ThreadPriority.Low;
+        // The loading overlay is already visible. Low throttles the whole scene import;
+        // use the normal loading budget and restore the caller's setting afterward.
+        Application.backgroundLoadingPriority = ThreadPriority.Normal;
+        bool sceneLoaded = false;
+        // Defer before new scene OnEnable, not only in the later sceneLoaded callback.
+        CardInstancedRenderManager.BeginBulkGroundLoad();
+        try
+        {
+            bool reloadActiveGame = GameScenes.IsActiveGameScene();
+            AsyncOperation loadOperation = SceneManager.LoadSceneAsync(GameScenes.Game, LoadSceneMode.Single);
+            if (loadOperation == null)
+            {
+                Debug.LogError("GameSceneLoader: Failed to start loading " + GameScenes.Game + ".");
+                if (loadingScreen != null)
+                    loadingScreen.Hide();
+                _isLoading = false;
+                yield break;
+            }
 
-        bool reloadActiveGame = GameScenes.IsActiveGameScene();
-        AsyncOperation loadOperation = SceneManager.LoadSceneAsync(GameScenes.Game, LoadSceneMode.Single);
-        if (loadOperation == null)
+            // Reloading the scene you are already in deadlocks if activation is held at 0.9.
+            if (!reloadActiveGame)
+            {
+                loadOperation.allowSceneActivation = false;
+                while (loadOperation.progress < 0.9f)
+                    yield return null;
+            }
+            loadOperation.allowSceneActivation = true;
+            while (!loadOperation.isDone)
+                yield return null;
+            sceneLoaded = true;
+        }
+        finally
         {
             Application.backgroundLoadingPriority = previousPriority;
-            Debug.LogError("GameSceneLoader: Failed to start loading " + GameScenes.Game + ".");
-            if (loadingScreen != null)
-                loadingScreen.Hide();
-            _isLoading = false;
-            yield break;
+            if (!sceneLoaded)
+                CardInstancedRenderManager.EndBulkGroundLoad();
         }
-
-        // Reloading the scene you are already in deadlocks if activation is held at 0.9.
-        if (reloadActiveGame)
-        {
-            loadOperation.allowSceneActivation = true;
-        }
-        else
-        {
-            loadOperation.allowSceneActivation = false;
-            while (loadOperation.progress < 0.9f)
-                yield return null;
-
-            loadOperation.allowSceneActivation = true;
-        }
-
-        while (!loadOperation.isDone)
-            yield return null;
-
-        Application.backgroundLoadingPriority = previousPriority;
 
         while (!CardInstancedRenderManager.IsGameplayReady)
             yield return null;

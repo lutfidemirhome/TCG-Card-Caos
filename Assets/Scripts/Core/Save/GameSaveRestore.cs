@@ -19,6 +19,85 @@ public static class GameSaveRestore
     static bool _remappedIds;
     public static bool LastRestoreSucceeded { get; private set; }
 
+    // These scene references live only for one restore. In particular, PSA paths
+    // must not require a full scene search and hierarchy-string build per card.
+    sealed class RestoreLookups : System.IDisposable
+    {
+        readonly Dictionary<string, CardShelf> _shelvesByPath = new Dictionary<string, CardShelf>();
+        readonly Dictionary<string, CardShelf> _shelvesByName = new Dictionary<string, CardShelf>();
+        readonly Dictionary<string, PsaCabinetSlot> _psaSlotsByPath = new Dictionary<string, PsaCabinetSlot>();
+        PsaCabinetSlot[] _psaSlots;
+        bool _shelvesLoaded;
+
+        public CardShelf FindFallbackShelf(string shelfId)
+        {
+            if (!_shelvesLoaded)
+            {
+                _shelvesLoaded = true;
+                CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
+                    FindObjectsInactive.Include, FindObjectsSortMode.None);
+                for (int i = 0; i < shelves.Length; i++)
+                {
+                    CardShelf shelf = shelves[i];
+                    if (shelf == null)
+                        continue;
+
+                    string path = PersistentId.BuildPathFallback(shelf.transform);
+                    // Legacy fallback selected the first matching shelf in this order.
+                    _shelvesByPath.TryAdd(path, shelf);
+                    _shelvesByName.TryAdd(shelf.gameObject.name, shelf);
+                }
+            }
+
+            if (_shelvesByPath.TryGetValue(shelfId, out CardShelf byPath))
+                return byPath;
+
+            string objectName = ShelfObjectName(shelfId);
+            return !string.IsNullOrEmpty(objectName)
+                && _shelvesByName.TryGetValue(objectName, out CardShelf byName) ? byName : null;
+        }
+
+        public PsaCabinetSlot[] PsaSlots
+        {
+            get
+            {
+                if (_psaSlots != null)
+                    return _psaSlots;
+
+                _psaSlots = Object.FindObjectsByType<PsaCabinetSlot>(
+                    FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                for (int i = 0; i < _psaSlots.Length; i++)
+                {
+                    PsaCabinetSlot slot = _psaSlots[i];
+                    if (slot == null)
+                        continue;
+
+                    string path = PersistentId.BuildPathFallback(slot.transform);
+                    // Preserve the original ambiguity rejection: duplicate paths
+                    // must never silently move a saved card to a different seat.
+                    if (!_psaSlotsByPath.TryAdd(path, slot))
+                        _psaSlotsByPath[path] = null;
+                }
+                return _psaSlots;
+            }
+        }
+
+        public PsaCabinetSlot FindPsaSlotByPath(string path)
+        {
+            _ = PsaSlots;
+            _psaSlotsByPath.TryGetValue(path, out PsaCabinetSlot slot);
+            return slot;
+        }
+
+        public void Dispose()
+        {
+            _shelvesByPath.Clear();
+            _shelvesByName.Clear();
+            _psaSlotsByPath.Clear();
+            _psaSlots = null;
+        }
+    }
+
     public static IEnumerator RestoreRoutine(string slotId)
     {
         ClearPendingPhysics();
@@ -49,27 +128,30 @@ public static class GameSaveRestore
         _remappedIds = false;
 
         int processed = 0;
-        if (data.cards != null)
+        using (var lookups = new RestoreLookups())
         {
-            for (int i = 0; i < data.cards.Length; i++)
+            if (data.cards != null)
             {
-                CardSaveRecord record = data.cards[i];
-                bool retiredFloorCopy = record != null && record.psaSlot == 0
-                    && !string.IsNullOrEmpty(record.id) && removedPackDuplicates.Contains(record.id);
-                if (retiredFloorCopy && record.location == CardRuntimeLocation.World)
+                for (int i = 0; i < data.cards.Length; i++)
                 {
-                    // One-time migration of the removed authored floor copies. Do not
-                    // filter by definition: a player can drop a legitimate pack card.
-                    _remappedIds = true;
-                }
-                else
-                {
-                    RestoreCard(record, scatterRoot, demoRoot, retiredFloorCopy);
-                }
-                processed++;
-                if (processed % EntitiesPerFrame == 0)
-                {
-                    yield return null;
+                    CardSaveRecord record = data.cards[i];
+                    bool retiredFloorCopy = record != null && record.psaSlot == 0
+                        && !string.IsNullOrEmpty(record.id) && removedPackDuplicates.Contains(record.id);
+                    if (retiredFloorCopy && record.location == CardRuntimeLocation.World)
+                    {
+                        // One-time migration of the removed authored floor copies. Do not
+                        // filter by definition: a player can drop a legitimate pack card.
+                        _remappedIds = true;
+                    }
+                    else
+                    {
+                        RestoreCard(record, scatterRoot, demoRoot, retiredFloorCopy, lookups);
+                    }
+                    processed++;
+                    if (processed % EntitiesPerFrame == 0)
+                    {
+                        yield return null;
+                    }
                 }
             }
         }
@@ -192,7 +274,8 @@ public static class GameSaveRestore
         return generated;
     }
 
-    static void RestoreCard(CardSaveRecord record, Transform scatterRoot, Transform demoRoot, bool retiredFloorCopy)
+    static void RestoreCard(CardSaveRecord record, Transform scatterRoot, Transform demoRoot,
+        bool retiredFloorCopy, RestoreLookups lookups)
     {
         if (record == null)
             return;
@@ -224,11 +307,11 @@ public static class GameSaveRestore
         switch (record.location)
         {
             case CardRuntimeLocation.Shelf:
-                if (!TryRestoreShelfCard(card, record))
+                if (!TryRestoreShelfCard(card, record, lookups))
                     PlaceWorldCard(card, record, scatterRoot);
                 break;
             case CardRuntimeLocation.PsaCabinet:
-                if (!TryRestorePsaCard(card, record))
+                if (!TryRestorePsaCard(card, record, lookups))
                     PlaceWorldCard(card, record, scatterRoot);
                 break;
             case CardRuntimeLocation.Held:
@@ -279,10 +362,10 @@ public static class GameSaveRestore
             PendingCardPhysics.Add(new KeyValuePair<WorldCard, ThrownPhysicsSaveState>(card, record.physics));
     }
 
-    static bool TryRestoreShelfCard(WorldCard card, CardSaveRecord record)
+    static bool TryRestoreShelfCard(WorldCard card, CardSaveRecord record, RestoreLookups lookups)
     {
         CardArtLibrary.EnsureLoaded();
-        CardShelfSlot slot = FindShelfSlot(record);
+        CardShelfSlot slot = FindShelfSlot(record, lookups);
         if (slot == null)
         {
             Debug.LogWarning(
@@ -312,9 +395,9 @@ public static class GameSaveRestore
         }
     }
 
-    static CardShelfSlot FindShelfSlot(CardSaveRecord record)
+    static CardShelfSlot FindShelfSlot(CardSaveRecord record, RestoreLookups lookups)
     {
-        CardShelf shelf = FindShelf(record.shelfId);
+        CardShelf shelf = FindShelf(record.shelfId, lookups);
         if (shelf == null)
             return null;
 
@@ -391,7 +474,7 @@ public static class GameSaveRestore
         }
     }
 
-    static CardShelf FindShelf(string shelfId)
+    static CardShelf FindShelf(string shelfId, RestoreLookups lookups)
     {
         if (string.IsNullOrEmpty(shelfId))
             return null;
@@ -399,32 +482,7 @@ public static class GameSaveRestore
         if (PersistentIdRegistry.TryGetShelf(shelfId, out CardShelf shelf) && shelf != null)
             return shelf;
 
-        CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < shelves.Length; i++)
-        {
-            CardShelf candidate = shelves[i];
-            if (candidate == null)
-                continue;
-
-            string path = PersistentId.BuildPathFallback(candidate.transform);
-            if (path == shelfId)
-                return candidate;
-        }
-
-        string objectName = ShelfObjectName(shelfId);
-        if (string.IsNullOrEmpty(objectName))
-            return null;
-
-        for (int i = 0; i < shelves.Length; i++)
-        {
-            CardShelf candidate = shelves[i];
-            if (candidate != null && candidate.gameObject.name == objectName)
-                return candidate;
-        }
-
-        return null;
+        return lookups.FindFallbackShelf(shelfId);
     }
 
     static string ShelfObjectName(string shelfId)
@@ -438,13 +496,13 @@ public static class GameSaveRestore
             : shelfId;
     }
 
-    static bool TryRestorePsaCard(WorldCard card, CardSaveRecord record)
+    static bool TryRestorePsaCard(WorldCard card, CardSaveRecord record, RestoreLookups lookups)
     {
         int slotNumber = record.psaCabinetSlot > 0
             ? record.psaCabinetSlot
             : record.psaSlot;
 
-        PsaCabinetSlot slot = FindPsaSlot(record, slotNumber);
+        PsaCabinetSlot slot = FindPsaSlot(record, slotNumber, lookups);
         if (slot == null)
         {
             Debug.LogWarning(
@@ -456,27 +514,11 @@ public static class GameSaveRestore
         return slot.RestoreOccupiedCard(card, playPlacementFeedback: false);
     }
 
-    static PsaCabinetSlot FindPsaSlot(CardSaveRecord record, int slotNumber)
+    static PsaCabinetSlot FindPsaSlot(CardSaveRecord record, int slotNumber, RestoreLookups lookups)
     {
-        PsaCabinetSlot[] slots = UnityEngine.Object.FindObjectsByType<PsaCabinetSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-
         if (!string.IsNullOrEmpty(record.psaSlotPath))
         {
-            PsaCabinetSlot exact = null;
-            for (int i = 0; i < slots.Length; i++)
-            {
-                PsaCabinetSlot slot = slots[i];
-                if (slot == null || PersistentId.BuildPathFallback(slot.transform) != record.psaSlotPath)
-                    continue;
-
-                // Ambiguous hierarchy names must not silently select a different seat.
-                if (exact != null)
-                    return null;
-                exact = slot;
-            }
-
+            PsaCabinetSlot exact = lookups.FindPsaSlotByPath(record.psaSlotPath);
             return exact != null && exact.IsEmpty ? exact : null;
         }
 
@@ -488,6 +530,7 @@ public static class GameSaveRestore
         float bestDistanceSq = MaxLegacySeatDistance * MaxLegacySeatDistance;
         PsaCabinetSlot nearest = null;
         bool ambiguous = false;
+        PsaCabinetSlot[] slots = lookups.PsaSlots;
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -201,7 +202,8 @@ public static class PsaArtLibrary
         ApplySlabMaterials(modelRoot, slotNumber, variantIndex, PsaCardSet.English);
     }
 
-    public static void ApplySlabMaterials(Transform modelRoot, int slotNumber, int variantIndex, PsaCardSet cardSet)
+    public static void ApplySlabMaterials(Transform modelRoot, int slotNumber, int variantIndex, PsaCardSet cardSet,
+        List<Material> ownedMaterials = null)
     {
         if (modelRoot == null)
             return;
@@ -229,6 +231,8 @@ public static class PsaArtLibrary
                 if (IsCardDiffuseMaterial(sourceMaterial))
                 {
                     materials[m] = new Material(sourceMaterial);
+                    // Only these copies belong to this visual. Other slots still use prefab assets.
+                    ownedMaterials?.Add(materials[m]);
                     ApplyCardTexture(materials[m], texture);
                     CardArtLibrary.ConfigureHandDetailMaterial(materials[m]);
                 }

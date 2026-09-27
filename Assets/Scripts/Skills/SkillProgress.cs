@@ -26,23 +26,18 @@ public static class SkillProgress
     static readonly int[] Levels = new int[SkillCatalog.Count];
     static readonly float[] Cooldowns = new float[SkillCatalog.Count];
     static readonly float[] Active = new float[SkillCatalog.Count];
-    static readonly float[] TestCooldowns = new float[SkillCatalog.Count];
-    static readonly float[] TestActive = new float[SkillCatalog.Count];
-    public static bool IsTestingAllSkills { get; private set; }
-    static float[] CurrentCooldowns => IsTestingAllSkills ? TestCooldowns : Cooldowns;
-    static float[] CurrentActive => IsTestingAllSkills ? TestActive : Active;
     public static bool Ready { get; private set; }
     public static SkillAutoshelfContext AutoshelfContext { get; private set; }
 
     public static void SetAutoshelfContext(SkillAutoshelfContext context)
     {
-        if (!IsTestingAllSkills) AutoshelfContext = context;
+        AutoshelfContext = context;
     }
     public static int Revision { get; private set; }
     public static int CompletedRows => Completed.Count;
-    public static int Level(int skill) => IsTestingAllSkills ? SkillCatalog.MaxLevel(skill) : Levels[skill];
-    public static float Cooldown(int skill) => CurrentCooldowns[skill];
-    public static float ActiveTime(int skill) => CurrentActive[skill];
+    public static int Level(int skill) => Levels[skill];
+    public static float Cooldown(int skill) => Cooldowns[skill];
+    public static float ActiveTime(int skill) => Active[skill];
     public static int Points
     {
         get
@@ -63,24 +58,10 @@ public static class SkillProgress
     static void Reset()
     {
         Ready = false; Completed.Clear(); CompletedSeries.Clear(); Rows.Clear(); PsaKeys.Clear();
-        IsTestingAllSkills = false;
         AutoshelfContext = null;
         Array.Clear(Levels, 0, Levels.Length); Array.Clear(Cooldowns, 0, Cooldowns.Length); Array.Clear(Active, 0, Active.Length);
-        Array.Clear(TestCooldowns, 0, TestCooldowns.Length); Array.Clear(TestActive, 0, TestActive.Length);
         Revision++;
     }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    /// <summary>Temporary preview only; Capture always uses the real levels and timers.</summary>
-    public static void ToggleAllSkillsForTesting()
-    {
-        if (!Ready) return;
-        IsTestingAllSkills = !IsTestingAllSkills;
-        Array.Clear(TestCooldowns, 0, TestCooldowns.Length);
-        Array.Clear(TestActive, 0, TestActive.Length);
-        Revision++;
-    }
-#endif
 
     public static void Restore(SkillSaveRecord saved, bool isNewGame = false)
     {
@@ -197,14 +178,14 @@ public static class SkillProgress
     {
         Revision++;
         GameSaveDirtyTracker.MarkDirty();
-        if (!IsTestingAllSkills) SteamSkillAchievements.NotifyProgress(CompletedRows);
+        SteamSkillAchievements.NotifyProgress(CompletedRows);
         if ((Completed.Count >= 2 && Completed.Count <= 18 && Completed.Count != oldCount) || Points > oldPoints)
             GameSaveManager.RequestMilestoneAutosave();
     }
 
     public static bool Upgrade(int skill)
     {
-        if (!Ready || IsTestingAllSkills || skill < 0 || skill >= SkillCatalog.Count || Points < 1 || Levels[skill] >= SkillCatalog.MaxLevel(skill)) return false;
+        if (!Ready || skill < 0 || skill >= SkillCatalog.Count || Points < 1 || Levels[skill] >= SkillCatalog.MaxLevel(skill)) return false;
         Levels[skill]++;
         Revision++;
         GameSaveDirtyTracker.MarkDirty();
@@ -215,17 +196,17 @@ public static class SkillProgress
         && Level(skill) > 0 && Cooldown(skill) <= 0f && ActiveTime(skill) <= 0f;
     public static void Used(int skill, float effectDurationOverride = -1f)
     {
-        CurrentCooldowns[skill] = SkillCatalog.Cooldown(skill, Level(skill));
-        CurrentActive[skill] = skill >= 2 ? SkillCatalog.Effect(skill, Level(skill)) : 0f;
+        Cooldowns[skill] = SkillCatalog.Cooldown(skill, Level(skill));
+        Active[skill] = skill >= 2 ? SkillCatalog.Effect(skill, Level(skill)) : 0f;
         if (skill == (int)CardSkill.Assemble && effectDurationOverride >= 0f)
-            CurrentActive[skill] = SafeTime(effectDurationOverride, MaxPickupEffectSeconds);
+            Active[skill] = SafeTime(effectDurationOverride, MaxPickupEffectSeconds);
         Revision++;
-        if (!IsTestingAllSkills) GameSaveDirtyTracker.MarkDirty();
+        GameSaveDirtyTracker.MarkDirty();
     }
     public static void Tick(float delta)
     {
         if (!Ready || delta <= 0f) return;
-        float[] cooldowns = CurrentCooldowns, active = CurrentActive;
+        float[] cooldowns = Cooldowns, active = Active;
         bool changedSecond = false;
         for (int i = 0; i < SkillCatalog.Count; i++)
         {
@@ -236,7 +217,7 @@ public static class SkillProgress
             cooldowns[i] = Mathf.Max(0f, cooldowns[i] - cooldownDelta);
             changedSecond |= cooldownBefore != Mathf.CeilToInt(cooldowns[i]) || activeBefore != Mathf.CeilToInt(active[i]);
         }
-        if (changedSecond && !IsTestingAllSkills) GameSaveDirtyTracker.MarkDirty();
+        if (changedSecond) GameSaveDirtyTracker.MarkDirty();
     }
     public static SkillSaveRecord Capture() => Ready ? new SkillSaveRecord {
         version = SaveVersion, levels = (int[])Levels.Clone(), completedRows = ToSortedArray(Completed),

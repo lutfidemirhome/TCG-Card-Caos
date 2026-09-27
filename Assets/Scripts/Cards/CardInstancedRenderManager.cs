@@ -50,6 +50,11 @@ public class CardInstancedRenderManager : MonoBehaviour
         DeferGroundRegistration = true;
     }
 
+    public static void EndBulkGroundLoad()
+    {
+        DeferGroundRegistration = false;
+    }
+
     public void SchedulePlayModeSetup()
     {
         if (_playModeSetupRoutine != null)
@@ -105,7 +110,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         }
 
         GameSceneLoader.ClearPendingLoad();
-        DeferGroundRegistration = false;
+        EndBulkGroundLoad();
         yield return RegisterAllGroundCardsRoutine();
         yield return CardGroundStack.RebuildAllAsync();
         // Re-apply shelf/PSA poses AFTER ground rebuild — ApplyPileLayers used to snap Y to floor.
@@ -217,6 +222,12 @@ public class CardInstancedRenderManager : MonoBehaviour
                 if (card == null || card.IsInHand)
                     continue;
                 if (IsDemoAreaItem(card) != demoPass)
+                    continue;
+
+                // Restored display cards already belong to a shelf. Tracking them as ground
+                // would rebuild their piles, then untrack/rebuild again in the final visual pass.
+                if (card.GetComponentInParent<CardShelfSlot>() != null
+                    || card.GetComponentInParent<PsaCabinetSlot>() != null)
                     continue;
 
                 card.RegisterForInstancedGround();

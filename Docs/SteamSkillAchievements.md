@@ -8,7 +8,7 @@ Oyun içindeki bağlantı kodu eklendi, **Steamworks.NET 2025.164.1 kuruldu ve S
 - Oyun içindeki hedeflerle aynı eşikler kullanılır: **2–18 arasındaki her sayı**, sonra **21, 24, 27, 31, 35, 39, 44, 49, 55, 61, 68, 75, 83, 91, 100, 109, 119, 129, 140, 152, 165, 179, 194, 214, 239, 269, 309, 359, 409, 459, 509**.
 - Toplam **48 başarım** vardır. API adları `SKILL_ROWS_002` … `SKILL_ROWS_509` biçimindedir; yalnız listelenen eşikler tanımlanır. Tam liste ve önerilen Türkçe/İngilizce adlar [SteamSkillAchievements.csv](SteamSkillAchievements.csv) içindedir.
 - 13, 15 ve 17 raf görevleri de başarım açar; bu üç hedef ayrıca yükseltme puanı vermez. Yükseltme puanları `SkillCatalog.Milestones` tablosunu izlemeye devam eder.
-- Skill satın almak, kullanmak veya P ile tüm seviyeleri önizlemek tek başına başarım açmaz. Başarımın kaynağı kaydedilen gerçek raf/dolap tamamlamalarıdır. Test skill'leriyle gerçek raf tamamlarsan bu normal oyun ilerlemesidir.
+- Skill satın almak veya kullanmak tek başına başarım açmaz. Başarımın kaynağı kaydedilen gerçek raf/dolap tamamlamalarıdır.
 - Yeni Oyun, Steam hesabında kazanılmış başarımları geri almaz. Oyunun yeni kaydındaki görev ilerlemesi yine sıfırdan başlar. Eski kayıt yüklenince tamamlanmış hedefler Steam'e tekrar bildirilir; Steam'de zaten açık olanlar tekrar ödül oluşturmaz.
 
 ## Projede tamamlanan bağlantı kurulumu

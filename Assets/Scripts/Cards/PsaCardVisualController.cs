@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -13,6 +14,7 @@ public sealed class PsaCardVisualController
     const float FootprintWidthFitMultiplier = 1.06f;
 
     readonly WorldCard _owner;
+    readonly List<Material> _ownedMaterials = new List<Material>(2);
     int _slotNumber = PsaArtLibrary.MinCabinetSlotNumber;
     int _variantIndex = 1;
     PsaCardSet _cardSet = PsaCardSet.English;
@@ -84,6 +86,23 @@ public sealed class PsaCardVisualController
 
         _psaModel = null;
         _cardRef = null;
+        _modelOutline = null;
+        ReleaseOwnedMaterials();
+    }
+
+    // Destroying a renderer does not destroy the materials cloned for it. This also
+    // runs when the whole card/scene is destroyed, without touching shared assets.
+    public void ReleaseOwnedMaterials()
+    {
+        foreach (Material material in _ownedMaterials)
+        {
+            if (material == null) continue;
+            if (Application.isPlaying)
+                Object.Destroy(material);
+            else
+                Object.DestroyImmediate(material);
+        }
+        _ownedMaterials.Clear();
     }
 
     public void ApplyHandOrientation()
@@ -317,7 +336,7 @@ public sealed class PsaCardVisualController
         instance.name = PsaModelChildName;
         _psaModel = instance.transform;
         _visualBaseScale = Vector3.one;
-        PsaArtLibrary.ApplySlabMaterials(_psaModel, _slotNumber, _variantIndex, _cardSet);
+        PsaArtLibrary.ApplySlabMaterials(_psaModel, _slotNumber, _variantIndex, _cardSet, _ownedMaterials);
         StripVisualColliders(_psaModel);
     }
 
@@ -338,7 +357,9 @@ public sealed class PsaCardVisualController
         {
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
-            renderer.sharedMaterial = PsaArtLibrary.CreateSlabMaterial(_slotNumber, _variantIndex, _cardSet);
+            Material material = PsaArtLibrary.CreateSlabMaterial(_slotNumber, _variantIndex, _cardSet);
+            _ownedMaterials.Add(material);
+            renderer.sharedMaterial = material;
         }
 
         StripVisualColliders(visualGo.transform);
