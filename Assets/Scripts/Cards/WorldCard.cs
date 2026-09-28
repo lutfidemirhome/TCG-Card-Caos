@@ -48,6 +48,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Collider _collider;
     PsaCardVisualController _psaController;
     Rigidbody _rigidbody;
+    Coroutine _thrownPhysicsRoutine;
+    int _thrownLandingScope;
     [SerializeField] Transform _cardVisual;
     bool _handSelected;
     GameObject _outlineObject;
@@ -78,11 +80,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Vector3 _psaCabinetLocalPosition;
     Quaternion _psaCabinetLocalRotation;
     Vector3 _psaCabinetLocalScale = Vector3.one * CardDimensions.GroundCardScale;
-    float _scaleFrom = 1f;
-    float _scaleTo = 1f;
-    float _scaleTransitionElapsed;
-    float _scaleTransitionDuration;
-    bool _scaleTransitionActive;
     int _groundStackLayer;
     bool _worldColliderRequested;
     bool _landingSurfaceRequested;
@@ -96,9 +93,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool IsShelfRowCompleteLocked => _shelfRowCompleteRoutine != null;
 
     /// <summary>
-    /// True only while the solver is still moving the card. A settled card keeps a frozen (kinematic)
-    /// body as its solid surface, so <see cref="HasActivePhysics"/> alone cannot tell "still flying"
-    /// from "already at rest" — stack layering and settle math need this distinction.
+    /// True for a dynamic physics card, including a sleeping card in a pile. Sleeping bodies
+    /// remain dynamic so contacts and removal of their support can wake them naturally.
     /// </summary>
     public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
     public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
@@ -124,7 +120,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         Application.isPlaying
         && !UsesPsaSlab
         && _handState == HandState.World
-        && !_scaleTransitionActive
         && _rigidbody == null
         && _cardVisual == null
         && !_interactionHighlighted
@@ -137,7 +132,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         Application.isPlaying
         && !UsesPsaSlab
         && _handState == HandState.World
-        && !_scaleTransitionActive
         && _rigidbody == null
         && _cardVisual == null
         && !_interactionHighlighted
@@ -288,6 +282,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnEnable()
     {
+        if (_handState == HandState.World && IsPhysicsSimulating)
+            StartThrownPhysicsMonitor(_rigidbody);
+
         if (CardInstancedRenderManager.DeferGroundRegistration)
             return;
 
@@ -296,46 +293,16 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
+        StopThrownPhysicsMonitor();
+        CardGroundStack.UntrackPhysicsCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
     }
 
     void OnDestroy()
     {
+        StopThrownPhysicsMonitor();
+        CardGroundStack.UntrackPhysicsCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
-    }
-
-    void BeginScaleTransition(float fromScale, float toScale, float duration)
-    {
-        _scaleFrom = fromScale;
-        _scaleTo = toScale;
-        _scaleTransitionDuration = Mathf.Max(0.01f, duration);
-        _scaleTransitionElapsed = 0f;
-        _scaleTransitionActive = true;
-        transform.localScale = Vector3.one * fromScale;
-        StartCoroutine(ScaleTransitionRoutine());
-    }
-
-    System.Collections.IEnumerator ScaleTransitionRoutine()
-    {
-        while (_scaleTransitionActive
-               && _handState != HandState.FlyingToHand
-               && _handState != HandState.FlyingToShelf
-               && _handState != HandState.Held)
-        {
-            _scaleTransitionElapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(_scaleTransitionElapsed / _scaleTransitionDuration);
-            float smoothT = Mathf.SmoothStep(0f, 1f, t);
-            transform.localScale = Vector3.one * Mathf.Lerp(_scaleFrom, _scaleTo, smoothT);
-
-            if (t >= 1f)
-            {
-                _scaleTransitionActive = false;
-                RefreshRenderMode();
-                yield break;
-            }
-
-            yield return null;
-        }
     }
 
     public Matrix4x4 GetInstancedDrawMatrix()
@@ -470,6 +437,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         ClearShelfPlacementStatus();
         CardInteractionFocus.ClearFocus();
         CardGroundQuery.UntrackShelfCard(this);
+        // Ground registration can disable an authored support collider before RemovePhysics.
+        CardThrownPhysics.WakeSupportedBodies(_collider);
         CardInstancedRenderManager.ReleaseFromGround(this);
         CardGroundStack.UntrackPhysicsCard(this);
 
@@ -723,6 +692,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         ConvertHandVisualToWorldRoot();
         transform.SetParent(null, true);
 
+        // Set the final size before fitting the collider and starting physics. Growing a
+        // collider during flight can force it through cards already touching its surface.
+        transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
         ApplyFlatWorldCollider();
 
         if (_collider is BoxCollider boxCollider)
@@ -737,32 +709,64 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             _worldColliderRequested = true;
         }
 
-        IgnorePlayerCollision();
-
-        BeginScaleTransition(transform.localScale.x, CardDimensions.GroundCardScale, worldScaleTransitionDuration);
-
         EnsureRigidbody();
         RefreshRenderMode();
         CardCollisionUtility.LaunchThrownBody(_rigidbody, velocity);
+        IgnorePlayerCollision();
         if (_collider is BoxCollider thrownBox)
             CardCollisionUtility.UnstickThrownSpawnOverlap(transform, thrownBox, this, _rigidbody);
 
-        CardGroundStack.TrackPhysicsCard(this);
-        StartCoroutine(MonitorThrownCardRoutine());
+        StartThrownPhysicsMonitor(_rigidbody);
     }
 
-    IEnumerator MonitorThrownCardRoutine()
+    void StartThrownPhysicsMonitor(Rigidbody body)
+    {
+        StopThrownPhysicsMonitor();
+        if (!isActiveAndEnabled || _handState != HandState.World || body == null || body.isKinematic)
+            return;
+
+        CardGroundStack.TrackPhysicsCard(this);
+        _thrownLandingScope = CardGroundStack.BeginLandingColliderScope();
+        _thrownPhysicsRoutine = StartCoroutine(MonitorThrownCardRoutine(body, _thrownLandingScope));
+    }
+
+    void StopThrownPhysicsMonitor()
+    {
+        Coroutine routine = _thrownPhysicsRoutine;
+        int landingScope = _thrownLandingScope;
+        _thrownPhysicsRoutine = null;
+        _thrownLandingScope = 0;
+        if (routine != null)
+            StopCoroutine(routine);
+        if (landingScope != 0)
+            CardGroundStack.EndLandingColliderScope(landingScope);
+    }
+
+    IEnumerator MonitorThrownCardRoutine(Rigidbody body, int landingScope)
     {
         var boxCollider = _collider as BoxCollider;
 
-        yield return CardThrownPhysics.Monitor(
-            transform,
-            _rigidbody,
-            boxCollider,
-            () => _handState == HandState.World && _rigidbody != null,
-            onSettled: attempt => CardSettlePlacement.TrySettle(this, boxCollider, _rigidbody, attempt));
+        try
+        {
+            yield return CardThrownPhysics.Monitor(
+                transform,
+                body,
+                boxCollider,
+                () => isActiveAndEnabled && _handState == HandState.World && body != null && _rigidbody == body,
+                onSettled: () => CardSettlePlacement.RegisterSleepingPose(this),
+                landingScopeId: landingScope);
+        }
+        finally
+        {
+            CardGroundStack.EndLandingColliderScope(landingScope);
+            if (_thrownLandingScope == landingScope)
+            {
+                _thrownLandingScope = 0;
+                _thrownPhysicsRoutine = null;
+            }
+        }
 
-        if (_handState != HandState.World || _rigidbody == null)
+        if (_handState != HandState.World || body == null || _rigidbody != body)
             yield break;
 
         SetInteractionHighlight(false);
@@ -796,10 +800,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void RestoreGroundCollider()
     {
+        _landingSurfaceRequested = false;
         if (IsInHand || _rigidbody != null)
             return;
-
-        _landingSurfaceRequested = false;
 
         if (_collider is BoxCollider boxCollider)
             boxCollider.isTrigger = true;
@@ -935,6 +938,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void RemovePhysics()
     {
+        CardThrownPhysics.WakeSupportedBodies(_collider);
+        StopThrownPhysicsMonitor();
+        CardGroundStack.UntrackPhysicsCard(this);
         Rigidbody rb = _rigidbody != null ? _rigidbody : GetComponent<Rigidbody>();
         if (rb == null)
         {
@@ -945,7 +951,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         // Destroy() is deferred — raycast skips cards with a Rigidbody, so clear it now.
         DestroyImmediate(rb);
         _rigidbody = null;
-        CardGroundStack.UntrackPhysicsCard(this);
     }
 
     void EnsureRigidbody()
@@ -1729,7 +1734,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         SetInteractionHighlight(false);
         SetHandSelected(false);
         RemovePhysics();
-        _scaleTransitionActive = false;
 
         EnsureCardVisual();
         ConvertHandVisualToWorldRoot();
@@ -1768,7 +1772,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         SetInteractionHighlight(false);
         SetHandSelected(false);
         RemovePhysics();
-        _scaleTransitionActive = false;
 
         if (_collider != null)
             _collider.enabled = false;
@@ -1800,7 +1803,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         SetInteractionHighlight(false);
         SetHandSelected(false);
         RemovePhysics();
-        _scaleTransitionActive = false;
 
         CardInstancedRenderManager.ReleaseFromGround(this);
 

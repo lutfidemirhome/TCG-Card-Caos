@@ -30,6 +30,7 @@ public static class CardGroundStack
     static readonly HashSet<WorldCard> RelayoutSeen = new HashSet<WorldCard>();
     static readonly List<WorldCard> LandingColliderScratch = new List<WorldCard>(32);
     static readonly Dictionary<long, List<WorldCard>> SpatialBuckets = new Dictionary<long, List<WorldCard>>(512);
+    static readonly Dictionary<WorldCard, long> SpatialCellByCard = new Dictionary<WorldCard, long>(512);
     static readonly Dictionary<WorldCard, int> LandingColliderRefCounts = new Dictionary<WorldCard, int>(64);
     static readonly Dictionary<int, HashSet<WorldCard>> LandingColliderScopes = new Dictionary<int, HashSet<WorldCard>>(8);
     static readonly HashSet<WorldCard> LandingCandidateSet = new HashSet<WorldCard>();
@@ -76,13 +77,38 @@ public static class CardGroundStack
         GroundCards.Add(card);
     }
 
+    /// <summary>Update a physical card's spatial entry without assigning a layer or changing its pose.</summary>
+    public static void TrackPhysicsPose(WorldCard card)
+    {
+        if (card == null || card.IsInHand)
+            return;
+        Track(card);
+        EnsureSpatialBucketsBuilt();
+        InsertIntoSpatialBucket(card);
+    }
+
     public static void Untrack(WorldCard card)
     {
-        if (card == null || !GroundCardSet.Remove(card))
+        if (card == null)
+            return;
+
+        // ClearAll can empty GroundCardSet before deferred destruction reaches OnDisable.
+        // Release support references independently so those old cards cannot remain in piles.
+        if (LandingColliderRefCounts.ContainsKey(card))
+        {
+            foreach (HashSet<WorldCard> scope in LandingColliderScopes.Values)
+            {
+                if (scope.Remove(card))
+                    ReleaseLandingColliderRef(card);
+            }
+        }
+
+        if (!GroundCardSet.Remove(card))
             return;
 
         Vector3 removedPos = card.transform.position;
         RemoveFromList(card);
+        RemoveFromSpatialBucket(card);
 
         if (GroundCards.Count >= BulkFlatStackThreshold)
             RefreshCellAt(removedPos);
@@ -109,6 +135,7 @@ public static class CardGroundStack
         GroundCards.Clear();
         GroundCardSet.Clear();
         SpatialBuckets.Clear();
+        SpatialCellByCard.Clear();
     }
 
     static readonly HashSet<WorldCard> RayCandidateSeen = new HashSet<WorldCard>();
@@ -215,6 +242,7 @@ public static class CardGroundStack
     static void RebuildSpatialBuckets()
     {
         SpatialBuckets.Clear();
+        SpatialCellByCard.Clear();
         float cellSize = SpatialCellSize;
 
         for (int i = 0; i < GroundCards.Count; i++)
@@ -234,6 +262,7 @@ public static class CardGroundStack
             }
 
             bucket.Add(card);
+            SpatialCellByCard[card] = key;
         }
     }
 
@@ -318,7 +347,7 @@ public static class CardGroundStack
         }
     }
 
-    /// <summary>Turn nearby flat ground cards into solid surfaces while an item is in flight.</summary>
+    /// <summary>Keep local authored cards solid while a physical item can rest on them, including sleep.</summary>
     public static int BeginLandingColliderScope()
     {
         int scopeId = _nextLandingScopeId++;
@@ -643,6 +672,9 @@ public static class CardGroundStack
             return;
 
         long key = CellKey(card.transform.position, SpatialCellSize);
+        if (SpatialCellByCard.TryGetValue(card, out long previousKey) && previousKey != key)
+            RemoveFromSpatialBucket(card);
+
         if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
         {
             bucket = new List<WorldCard>(8);
@@ -651,6 +683,23 @@ public static class CardGroundStack
 
         if (!bucket.Contains(card))
             bucket.Add(card);
+        SpatialCellByCard[card] = key;
+    }
+
+    static void RemoveFromSpatialBucket(WorldCard card)
+    {
+        if (!SpatialCellByCard.TryGetValue(card, out long key))
+            return;
+
+        SpatialCellByCard.Remove(card);
+        if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
+            return;
+
+        // An emptied cell has no remaining pile to trigger RefreshCellAt's rebuild.
+        // Remove its old entry immediately, even if the card has already moved away.
+        bucket.Remove(card);
+        if (bucket.Count == 0)
+            SpatialBuckets.Remove(key);
     }
 
     public static void RefreshCluster(WorldCard seed, WorldCard forceOnTop = null)
@@ -791,8 +840,13 @@ public static class CardGroundStack
     public static int TrackedPackCount => GroundPacks.Count;
 
     public static WorldBoosterPack TrackedPackAt(int index) => GroundPacks[index];
+    public static bool IsTrackedPack(WorldBoosterPack pack) =>
+        pack != null && GroundPackSet.Contains(pack);
 
     public static int PhysicsPackCount => PhysicsPacks.Count;
+    public static int PhysicsCardCount => PhysicsCards.Count;
+    public static WorldCard PhysicsCardAt(int index) => PhysicsCards[index];
+    public static WorldBoosterPack PhysicsPackAt(int index) => PhysicsPacks[index];
 
     public static void TrackPack(WorldBoosterPack pack)
     {
