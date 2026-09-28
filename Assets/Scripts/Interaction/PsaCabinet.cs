@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -7,6 +8,9 @@ using UnityEngine;
 public class PsaCabinet : MonoBehaviour
 {
     [SerializeField] PsaCabinetSlot[] slots;
+    readonly List<PsaCabinetSlot> _slotScratch = new List<PsaCabinetSlot>(4);
+    static readonly System.Comparison<PsaCabinetSlot> SlotNumberComparison =
+        (a, b) => a.SlotNumber.CompareTo(b.SlotNumber);
 
     public PsaCabinetSlot[] Slots => slots;
 
@@ -80,8 +84,12 @@ public class PsaCabinet : MonoBehaviour
 
     public void CollectSlots()
     {
-        slots = GetComponentsInChildren<PsaCabinetSlot>(true);
-        System.Array.Sort(slots, (a, b) => a.SlotNumber.CompareTo(b.SlotNumber));
+        // Keep every scan live, including inactive descendants, while reusing its storage.
+        GetComponentsInChildren(true, _slotScratch);
+        if (slots == null || slots.Length != _slotScratch.Count)
+            slots = new PsaCabinetSlot[_slotScratch.Count];
+        _slotScratch.CopyTo(slots);
+        System.Array.Sort(slots, SlotNumberComparison);
     }
 
     public PsaCabinetSlot FindSlot(int slotNumber)

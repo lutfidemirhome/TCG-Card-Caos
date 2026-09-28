@@ -290,13 +290,17 @@ public static class CardGroundStack
         }
 
         RelayoutSeen.Clear();
+        bool spatialBucketsRebuilt = false;
         for (int i = 0; i < CellSeedScratch.Count; i++)
         {
             WorldCard seed = CellSeedScratch[i];
             if (seed == null || RelayoutSeen.Contains(seed))
                 continue;
 
-            BuildLocalPile(seed, ClusterScratch);
+            // Layer assignment does not move cards. All local piles can share one
+            // current spatial snapshot for this pickup instead of rebuilding it per pile.
+            BuildLocalPile(seed, ClusterScratch, rebuildSpatialBuckets: !spatialBucketsRebuilt);
+            spatialBucketsRebuilt = true;
             if (ClusterScratch.Count == 0)
                 continue;
 
@@ -760,13 +764,14 @@ public static class CardGroundStack
     /// <summary>
     /// Flood-fill overlapping cards in neighboring cells only — not the whole floor.
     /// </summary>
-    static void BuildLocalPile(WorldCard seed, List<WorldCard> results)
+    static void BuildLocalPile(WorldCard seed, List<WorldCard> results, bool rebuildSpatialBuckets = true)
     {
         results.Clear();
         if (seed == null || seed.IsInHand)
             return;
 
-        RebuildSpatialBuckets();
+        if (rebuildSpatialBuckets)
+            RebuildSpatialBuckets();
         CollectNeighborhood(seed.transform.position, CellScratch);
         for (int i = CellScratch.Count - 1; i >= 0; i--)
         {

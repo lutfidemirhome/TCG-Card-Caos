@@ -38,6 +38,7 @@ public class TutorialHintView : MonoBehaviour
 
     TutorialHintFitter _fitter;
     LocalizedText _localized;
+    TMP_SpriteAsset _keySprites;
     string _laidOutText;
     float _stepShownAt;
 
@@ -220,7 +221,8 @@ public class TutorialHintView : MonoBehaviour
             if (label != null && _localized == null)
                 _localized = label.GetComponent<LocalizedText>();
 
-            _fitter = root.GetComponent<TutorialHintFitter>();
+            if (_fitter == null || _fitter.gameObject != root)
+                _fitter = root.GetComponent<TutorialHintFitter>();
         }
 
         BindKeySprites();
@@ -259,13 +261,19 @@ public class TutorialHintView : MonoBehaviour
         if (label == null)
             return;
 
-        TMP_SpriteAsset sprites = Resources.Load<TMP_SpriteAsset>(SpriteResourcePath);
-        if (sprites == null)
-            return;
+        if (_keySprites == null)
+        {
+            _keySprites = Resources.Load<TMP_SpriteAsset>(SpriteResourcePath);
+            if (_keySprites == null)
+                return;
 
-        sprites.UpdateLookupTables();
-        label.spriteAsset = sprites;
-        label.richText = true;
+            _keySprites.UpdateLookupTables();
+        }
+
+        if (label.spriteAsset != _keySprites)
+            label.spriteAsset = _keySprites;
+        if (!label.richText)
+            label.richText = true;
     }
 
     void Show()
@@ -279,7 +287,6 @@ public class TutorialHintView : MonoBehaviour
         if (!root.activeSelf)
         {
             root.SetActive(true);
-            BindKeySprites();
             UiMenuFont.Apply(label);
             _stepShownAt = Time.realtimeSinceStartup;
             _laidOutText = null;

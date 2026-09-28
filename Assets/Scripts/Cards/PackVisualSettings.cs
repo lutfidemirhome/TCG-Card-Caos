@@ -8,6 +8,29 @@ using UnityEngine;
 public class PackVisualSettings : ScriptableObject
 {
     public const string ResourcePath = "Settings/PackVisualSettings";
+    static PackVisualSettings _cachedSettings;
+    static bool _settingsLoaded;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetCache()
+    {
+        _cachedSettings = null;
+        _settingsLoaded = false;
+    }
+
+    static PackVisualSettings ResolveSettings()
+    {
+        // Cache the asset, not its values, so live Inspector tuning still works.
+        if (!Application.isPlaying)
+            return Resources.Load<PackVisualSettings>(ResourcePath);
+        if (!_settingsLoaded)
+        {
+            _cachedSettings = Resources.Load<PackVisualSettings>(ResourcePath);
+            _settingsLoaded = true;
+        }
+        return _cachedSettings;
+    }
+
     const float DefaultThicknessFitMultiplier = 3.5f;
     const float DefaultHeldThicknessFitMultiplier = 1f;
     const string DefaultMeshChildName = "Trading_Card";
@@ -51,8 +74,7 @@ public class PackVisualSettings : ScriptableObject
     public Vector3 MeshLocalRotationEuler => meshLocalRotationEuler;
     public Vector3 MeshLocalScale => meshLocalScale;
 
-    public static PackVisualSettings LoadOrNull() =>
-        Resources.Load<PackVisualSettings>(ResourcePath);
+    public static PackVisualSettings LoadOrNull() => ResolveSettings();
 
     public static float GetThicknessFitMultiplierOrDefault()
     {

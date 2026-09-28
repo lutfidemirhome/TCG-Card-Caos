@@ -107,15 +107,15 @@ public class PackInspectPreview : MonoBehaviour
             return;
 
         int variantIndex = pack.PackVariantIndex;
+        if (variantIndex == _shownVariantIndex && _packImage.texture != null)
+            return;
+
         Texture texture = PackArtLibrary.GetVariantPreview(variantIndex);
         if (texture == null)
         {
             Hide();
             return;
         }
-
-        if (variantIndex == _shownVariantIndex && _packImage.texture == texture)
-            return;
 
         _packImage.texture = texture;
         _packImage.uvRect = new Rect(0f, 0f, 1f, 1f);

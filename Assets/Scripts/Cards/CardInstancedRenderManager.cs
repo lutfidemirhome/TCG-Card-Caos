@@ -374,9 +374,8 @@ public class CardInstancedRenderManager : MonoBehaviour
                 continue;
 
             bool backFace = batchKey == BackBatchKey;
-            Material material = ResolveBatchMaterial(batchKey);
             Mesh mesh = backFace ? backMesh : frontMesh;
-            if (material == null || mesh == null)
+            if (mesh == null)
                 continue;
 
             _drawSortScratch.Clear();
@@ -393,6 +392,11 @@ public class CardInstancedRenderManager : MonoBehaviour
             }
 
             if (_drawSortScratch.Count == 0)
+                continue;
+
+            // Resolve textures/materials only after at least one card is visible.
+            Material material = ResolveBatchMaterial(batchKey);
+            if (material == null)
                 continue;
 
             if (_drawSortScratch.Count <= 256)

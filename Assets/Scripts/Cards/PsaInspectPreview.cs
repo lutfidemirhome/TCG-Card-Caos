@@ -13,7 +13,8 @@ public class PsaInspectPreview : MonoBehaviour
     Canvas _canvas;
     RectTransform _previewRoot;
     RawImage _previewImage;
-    string _shownKey;
+    int _shownSlotNumber;
+    int _shownVariantIndex;
 
     public static PsaInspectPreview EnsureOn(Camera camera)
     {
@@ -50,7 +51,8 @@ public class PsaInspectPreview : MonoBehaviour
 
     public void Hide()
     {
-        _shownKey = null;
+        _shownSlotNumber = 0;
+        _shownVariantIndex = 0;
         if (_previewRoot != null)
             _previewRoot.gameObject.SetActive(false);
     }
@@ -108,7 +110,12 @@ public class PsaInspectPreview : MonoBehaviour
 
         int slotNumber = card.PsaSlotNumber;
         int variantIndex = card.PsaVariantIndex;
-        string key = slotNumber + ":" + variantIndex;
+        if (slotNumber == _shownSlotNumber && variantIndex == _shownVariantIndex
+            && _previewImage.texture != null)
+        {
+            return;
+        }
+
         Texture texture = PsaArtLibrary.GetVariantPreview(slotNumber, variantIndex);
         if (texture == null)
         {
@@ -116,11 +123,9 @@ public class PsaInspectPreview : MonoBehaviour
             return;
         }
 
-        if (key == _shownKey && _previewImage.texture == texture)
-            return;
-
         _previewImage.texture = texture;
         _previewImage.uvRect = new Rect(0f, 0f, 1f, 1f);
-        _shownKey = key;
+        _shownSlotNumber = slotNumber;
+        _shownVariantIndex = variantIndex;
     }
 }

@@ -234,8 +234,6 @@ public sealed class GameSaveManager : MonoBehaviour
     {
         if (!GameScenes.IsActiveGameScene() || !_sessionStarted)
             return;
-        if (!GameSaveDirtyTracker.IsDirty && !HasAnyCompatibleSave())
-            return;
         if (!GameSaveDirtyTracker.IsDirty)
             return;
         if (_saveInProgress)

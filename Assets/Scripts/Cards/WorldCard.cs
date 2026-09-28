@@ -300,6 +300,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDestroy()
     {
+        CardGroundQuery.UntrackShelfCard(this);
         StopThrownPhysicsMonitor();
         CardGroundStack.UntrackPhysicsCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
@@ -360,6 +361,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         _interactionHighlighted = highlighted && !IsInHand;
+        if (_authoredPhysicsItem && !UsesPsaSlab && _cardVisual != null
+            && _handState == HandState.World)
+        {
+            // Authored cards keep their mesh whether highlighted or not. A hover
+            // only changes the border; do not reassign materials or the card pose.
+            RefreshInteractionOutline();
+            return;
+        }
         RefreshRenderMode();
     }
 

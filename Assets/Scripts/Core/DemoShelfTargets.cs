@@ -20,13 +20,38 @@ public static class DemoShelfTargets
     static readonly HashSet<string> NameSet = new HashSet<string>(ObjectNames);
     static readonly List<CardShelf> Shelves = new List<CardShelf>(8);
     static readonly List<PsaCabinet> Cabinets = new List<PsaCabinet>(2);
+    static readonly Dictionary<string, Transform> NamedTargets = new Dictionary<string, Transform>(8);
     static int _cachedSceneHandle = int.MinValue;
+    static bool _sceneHooksRegistered;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
     {
-        ClearCache();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        _sceneHooksRegistered = false;
+        InvalidateCache();
     }
+
+    public static void InvalidateCache()
+    {
+        ClearProgressCache();
+        NamedTargets.Clear();
+    }
+
+    static void EnsureSceneHooks()
+    {
+        if (_sceneHooksRegistered || !Application.isPlaying)
+            return;
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.sceneUnloaded += OnSceneUnloaded;
+        _sceneHooksRegistered = true;
+    }
+
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => InvalidateCache();
+
+    static void OnSceneUnloaded(Scene scene) => InvalidateCache();
 
     public static bool AreAllComplete()
     {
@@ -95,11 +120,12 @@ public static class DemoShelfTargets
 
     static void ResolveTargets()
     {
+        EnsureSceneHooks();
         Scene active = SceneManager.GetActiveScene();
         if (_cachedSceneHandle == active.handle && (Shelves.Count > 0 || Cabinets.Count > 0))
             return;
 
-        ClearCache();
+        ClearProgressCache();
         _cachedSceneHandle = active.handle;
 
         CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
@@ -136,7 +162,7 @@ public static class DemoShelfTargets
         return false;
     }
 
-    static void ClearCache()
+    static void ClearProgressCache()
     {
         Shelves.Clear();
         Cabinets.Clear();
@@ -145,6 +171,18 @@ public static class DemoShelfTargets
 
     static Transform FindNamed(string objectName)
     {
+        if (objectName == null)
+            return null;
+
+        EnsureSceneHooks();
+        if (Application.isPlaying && NamedTargets.TryGetValue(objectName, out Transform cached))
+        {
+            if (cached != null && cached.name == objectName && cached.gameObject.scene.isLoaded)
+                return cached;
+
+            NamedTargets.Remove(objectName);
+        }
+
         for (int i = 0; i < SceneManager.sceneCount; i++)
         {
             Scene scene = SceneManager.GetSceneAt(i);
@@ -156,7 +194,13 @@ public static class DemoShelfTargets
             {
                 Transform found = FindRecursive(roots[r].transform, objectName);
                 if (found != null)
+                {
+                    // Keep the original first-match and inactive-object lookup rules.
+                    // Missing/destroyed targets are retried so they cannot complete the demo.
+                    if (Application.isPlaying)
+                        NamedTargets[objectName] = found;
                     return found;
+                }
             }
         }
 

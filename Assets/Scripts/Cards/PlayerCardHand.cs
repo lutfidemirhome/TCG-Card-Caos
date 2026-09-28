@@ -969,6 +969,7 @@ public class PlayerCardHand : MonoBehaviour
         bool packSelected = selectedPack != null;
         WorldCard selectedCard = packSelected ? null : GetSelectedHeldCard();
         int fanIndex = 0;
+        int siblingIndex = 0;
 
         for (int i = 0; i < _handFanOrder.Count; i++)
         {
@@ -984,8 +985,12 @@ public class PlayerCardHand : MonoBehaviour
 
                 bool isSelected = !packSelected && selectedCard != null && card == selectedCard;
                 card.ApplyFanPose(fanIndex, fanCount, layout, isSelected);
-                card.SetHandSelected(isSelected);
-                card.transform.SetSiblingIndex(fanIndex);
+                if (!isSelected)
+                {
+                    if (card.transform.GetSiblingIndex() != siblingIndex)
+                        card.transform.SetSiblingIndex(siblingIndex);
+                    siblingIndex++;
+                }
                 fanIndex++;
                 continue;
             }
@@ -1004,13 +1009,19 @@ public class PlayerCardHand : MonoBehaviour
             HandCardPose packPose = HandFanLayout.GetPose(fanIndex, fanCount, packLayout, isPackSelected);
             pack.ApplyHeldPose(packPose.LocalPosition, packPose.LocalRotation, packPose.Scale);
             pack.SetHandSelected(isPackSelected);
-            pack.transform.SetSiblingIndex(fanIndex);
+            if (!isPackSelected)
+            {
+                if (pack.transform.GetSiblingIndex() != siblingIndex)
+                    pack.transform.SetSiblingIndex(siblingIndex);
+                siblingIndex++;
+            }
             fanIndex++;
         }
 
-        if (selectedCard != null)
+        // Keep the selected item last without moving it away and back every frame.
+        if (selectedCard != null && selectedCard.transform.GetSiblingIndex() != _handAnchor.childCount - 1)
             selectedCard.transform.SetAsLastSibling();
-        else if (selectedPack != null)
+        else if (selectedPack != null && selectedPack.transform.GetSiblingIndex() != _handAnchor.childCount - 1)
             selectedPack.transform.SetAsLastSibling();
     }
 

@@ -25,6 +25,10 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     readonly List<CardShelfSlot> _slots = new List<CardShelfSlot>(32);
     readonly Dictionary<CardShelfSlot, int> _resolvedSlotNumbers = new Dictionary<CardShelfSlot, int>(32);
+    readonly Dictionary<int, List<CardShelfSlot>> _slotsByRow = new Dictionary<int, List<CardShelfSlot>>(8);
+    readonly List<List<CardShelfSlot>> _rowSlotLists = new List<List<CardShelfSlot>>(8);
+    System.Comparison<CardShelfSlot> _compareSlotPositions;
+    Vector3 _slotSortRight;
 
     struct ShelfFlightEntry
     {
@@ -117,20 +121,33 @@ public class CardShelf : MonoBehaviour, IInteractable
     void RebuildResolvedSlotNumbers()
     {
         _resolvedSlotNumbers.Clear();
+        _slotsByRow.Clear();
+        // Reuse storage, but always rebuild membership and numbering from the fresh scan.
+        // Clear even unused rows so removed slots are not retained after a layout change.
+        for (int i = 0; i < _rowSlotLists.Count; i++)
+            _rowSlotLists[i].Clear();
         if (_slots.Count == 0)
             return;
 
-        var slotsByRow = new Dictionary<int, List<CardShelfSlot>>(8);
+        int usedRowLists = 0;
         for (int i = 0; i < _slots.Count; i++)
         {
             CardShelfSlot slot = _slots[i];
             if (slot == null || !slot.gameObject.activeInHierarchy)
                 continue;
 
-            if (!slotsByRow.TryGetValue(slot.RowIndex, out List<CardShelfSlot> rowSlots))
+            if (!_slotsByRow.TryGetValue(slot.RowIndex, out List<CardShelfSlot> rowSlots))
             {
-                rowSlots = new List<CardShelfSlot>(8);
-                slotsByRow.Add(slot.RowIndex, rowSlots);
+                if (usedRowLists < _rowSlotLists.Count)
+                    rowSlots = _rowSlotLists[usedRowLists];
+                else
+                {
+                    rowSlots = new List<CardShelfSlot>(8);
+                    _rowSlotLists.Add(rowSlots);
+                }
+
+                usedRowLists++;
+                _slotsByRow.Add(slot.RowIndex, rowSlots);
             }
 
             rowSlots.Add(slot);
@@ -148,21 +165,27 @@ public class CardShelf : MonoBehaviour, IInteractable
             return;
         right.Normalize();
 
+        _slotSortRight = right;
+        if (_compareSlotPositions == null)
+            _compareSlotPositions = CompareSlotPositions;
+
         int slotsPerRow = SlotsPerRow;
-        foreach (KeyValuePair<int, List<CardShelfSlot>> entry in slotsByRow)
+        foreach (KeyValuePair<int, List<CardShelfSlot>> entry in _slotsByRow)
         {
             List<CardShelfSlot> rowSlots = entry.Value;
-            rowSlots.Sort((a, b) =>
-            {
-                float aDot = Vector3.Dot(a.transform.position, right);
-                float bDot = Vector3.Dot(b.transform.position, right);
-                return aDot.CompareTo(bDot);
-            });
+            rowSlots.Sort(_compareSlotPositions);
 
             int numberedSlots = Mathf.Min(rowSlots.Count, slotsPerRow);
             for (int i = 0; i < numberedSlots; i++)
                 _resolvedSlotNumbers[rowSlots[i]] = i + 1;
         }
+    }
+
+    int CompareSlotPositions(CardShelfSlot a, CardShelfSlot b)
+    {
+        float aDot = Vector3.Dot(a.transform.position, _slotSortRight);
+        float bDot = Vector3.Dot(b.transform.position, _slotSortRight);
+        return aDot.CompareTo(bDot);
     }
 
     /// <summary>Horizontal direction customers face when reading cards on this shelf.</summary>
