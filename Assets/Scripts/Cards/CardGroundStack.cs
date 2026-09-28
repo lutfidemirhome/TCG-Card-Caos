@@ -17,6 +17,9 @@ public static class CardGroundStack
     const float UniqueDepthBiasRange = 0.0004f;
     const int UniqueDepthBiasSteps = 4096;
     const int BulkFlatStackThreshold = 256;
+    // Pile processing only assigns layer numbers; avoid hundreds of frame waits
+    // when initializing a full scene. Placement/order calculations stay the same.
+    const int PilesPerLoadFrame = 1024;
 
     /// <summary>Thickness of the footprint slab used for ground overlap tests.</summary>
     const float FootprintSlabHeight = 0.01f;
@@ -224,7 +227,7 @@ public static class CardGroundStack
         {
             ApplyPileLayers(piles[i]);
             processed++;
-            if (processed % 24 == 0)
+            if (processed % PilesPerLoadFrame == 0)
                 yield return null;
         }
     }

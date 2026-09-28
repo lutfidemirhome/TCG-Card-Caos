@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Low-res gameplay preview. Failure never invalidates the save.
@@ -44,61 +45,111 @@ public static class GameSaveThumbnail
 
         yield return new WaitForEndOfFrame();
 
-        Texture2D screenshot = null;
-        Texture2D scaled = null;
+        RenderTexture screenshot = null;
+        RenderTexture thumbnail = null;
+        Texture2D pixels = null;
+        AsyncGPUReadbackRequest request = default;
+        bool requestStarted = false;
         try
         {
-            screenshot = ScreenCapture.CaptureScreenshotAsTexture();
-            if (screenshot == null)
-                yield break;
-
-            scaled = ScaleTexture(screenshot, settings.ThumbnailWidth, settings.ThumbnailHeight);
-            byte[] png = scaled.EncodeToPNG();
-            if (png == null || png.Length == 0)
-                yield break;
-
-            if (!SaveFileIO.TryWriteThumbnail(slotId, png, out string error))
+            // Downsample on the GPU. Never read a full-resolution screen into
+            // CPU memory merely to create a 256x144 save preview.
+            bool captured = false;
+            try
             {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning("[Save] Thumbnail write failed for " + slotId + ": " + error);
-#endif
+                screenshot = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
+                thumbnail = RenderTexture.GetTemporary(settings.ThumbnailWidth, settings.ThumbnailHeight, 0, RenderTextureFormat.ARGB32);
+                ScreenCapture.CaptureScreenshotIntoRenderTexture(screenshot);
+                Graphics.Blit(screenshot, thumbnail);
+                if (SystemInfo.supportsAsyncGPUReadback)
+                {
+                    request = AsyncGPUReadback.Request(thumbnail, 0, TextureFormat.RGBA32);
+                    requestStarted = true;
+                }
+                captured = true;
+            }
+            catch (System.Exception exception)
+            {
+                LogCaptureFailure(exception.Message);
+            }
+            if (!captured)
                 yield break;
+
+            if (requestStarted)
+            {
+                while (!request.done)
+                    yield return null;
+                if (request.hasError)
+                {
+                    LogCaptureFailure("GPU readback failed.");
+                    yield break;
+                }
             }
 
-            if (SaveFileIO.TryLoadMetadata(slotId, out SaveSlotMetadata metadata))
+            try
             {
-                metadata.thumbnailAvailable = true;
-                SaveFileIO.TryWriteAtomic(
-                    SaveFileIO.GetMetaPath(slotId),
-                    JsonUtility.ToJson(metadata, false),
-                    out _);
+                pixels = new Texture2D(settings.ThumbnailWidth, settings.ThumbnailHeight, TextureFormat.RGBA32, false);
+                if (requestStarted)
+                {
+                    pixels.LoadRawTextureData(request.GetData<byte>());
+                }
+                else
+                {
+                    // Compatibility fallback reads only the already-small preview.
+                    RenderTexture previous = RenderTexture.active;
+                    try
+                    {
+                        RenderTexture.active = thumbnail;
+                        pixels.ReadPixels(new Rect(0, 0, pixels.width, pixels.height), 0, 0, false);
+                    }
+                    finally
+                    {
+                        RenderTexture.active = previous;
+                    }
+                }
+
+                byte[] png = pixels.EncodeToPNG();
+                if (png != null && png.Length > 0)
+                    WriteThumbnail(slotId, png);
             }
-        }
-        catch (System.Exception exception)
-        {
-            if (Debug.isDebugBuild)
-                Debug.LogWarning("[Save] Thumbnail capture failed: " + exception.Message);
+            catch (System.Exception exception)
+            {
+                LogCaptureFailure(exception.Message);
+            }
         }
         finally
         {
+            // Cancellation/scene exit must not release a texture still in use
+            // by a readback. Normal capture finishes asynchronously above.
+            if (requestStarted && !request.done)
+                request.WaitForCompletion();
             if (screenshot != null)
-                Object.Destroy(screenshot);
-            if (scaled != null)
-                Object.Destroy(scaled);
+                RenderTexture.ReleaseTemporary(screenshot);
+            if (thumbnail != null)
+                RenderTexture.ReleaseTemporary(thumbnail);
+            if (pixels != null)
+                Object.Destroy(pixels);
         }
     }
 
-    static Texture2D ScaleTexture(Texture2D source, int width, int height)
+    static void LogCaptureFailure(string message)
     {
-        RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
-        Graphics.Blit(source, rt);
-        RenderTexture previous = RenderTexture.active;
-        RenderTexture.active = rt;
-        var result = new Texture2D(width, height, TextureFormat.RGB24, false);
-        result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-        result.Apply(false, false);
-        RenderTexture.active = previous;
-        RenderTexture.ReleaseTemporary(rt);
-        return result;
+        if (Debug.isDebugBuild)
+            Debug.LogWarning("[Save] Thumbnail capture failed: " + message);
+    }
+
+    static void WriteThumbnail(string slotId, byte[] png)
+    {
+        if (!SaveFileIO.TryWriteThumbnail(slotId, png, out string error))
+        {
+            LogCaptureFailure(error);
+            return;
+        }
+        if (SaveFileIO.TryLoadMetadata(slotId, out SaveSlotMetadata metadata))
+        {
+            metadata.thumbnailAvailable = true;
+            SaveFileIO.TryWriteAtomic(SaveFileIO.GetMetaPath(slotId),
+                JsonUtility.ToJson(metadata, false), out _);
+        }
     }
 }

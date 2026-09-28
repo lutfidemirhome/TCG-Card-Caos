@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// O(1) lookup for persistent entities. Rebuilt at save/load, not every frame.
+/// O(1) lookup for persistent entities. Full lookups are rebuilt during load;
+/// saves only refresh the small PSA cabinet fallback lookup.
 /// </summary>
 public static class PersistentIdRegistry
 {
@@ -50,7 +51,6 @@ public static class PersistentIdRegistry
         Packs.Clear();
         Shelves.Clear();
         UniqueShelves.Clear();
-        PsaCabinets.Clear();
 
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < cards.Length; i++)
@@ -91,6 +91,12 @@ public static class PersistentIdRegistry
                 Shelves[pathId] = shelf;
         }
 
+        RebuildPsaCabinetLookups();
+    }
+
+    public static void RebuildPsaCabinetLookups()
+    {
+        PsaCabinets.Clear();
         PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         for (int i = 0; i < cabinets.Length; i++)
         {

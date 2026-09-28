@@ -19,7 +19,8 @@ public static class GameSaveWorldCollector
 
     public static GameSaveData Collect(string slotId, SaveSlotType slotType, int slotIndex)
     {
-        PersistentIdRegistry.RebuildWorldLookups();
+        // Collection scans live entities below; only the PSA fallback needs a lookup refresh.
+        PersistentIdRegistry.RebuildPsaCabinetLookups();
 
         CardScratch.Clear();
         PackScratch.Clear();
@@ -65,6 +66,7 @@ public static class GameSaveWorldCollector
         }
 
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
+        FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
 
         var data = new GameSaveData
         {
@@ -83,6 +85,8 @@ public static class GameSaveWorldCollector
             cabinetsCompleted = progress.cabinetsCompleted,
             totalCabinets = progress.totalCabinets,
             handSelectedIndex = hand != null ? hand.SelectedIndex : 0,
+            hasPlayerState = player != null,
+            player = player != null ? player.CaptureSaveState() : null,
             cards = CardScratch.ToArray(),
             packs = PackScratch.ToArray(),
         };
@@ -95,10 +99,10 @@ public static class GameSaveWorldCollector
         if (card == null)
             return null;
 
-        PersistentId.GetOrCreate(card.gameObject);
+        PersistentId persistent = PersistentId.GetOrCreate(card.gameObject);
         var record = new CardSaveRecord
         {
-            id = PersistentId.Resolve(card),
+            id = persistent.Value,
             definitionId = card.Definition != null ? card.Definition.DefinitionId : string.Empty,
             psaSlot = card.PsaSlotNumber,
             psaVariant = card.PsaVariantIndex,
@@ -106,8 +110,9 @@ public static class GameSaveWorldCollector
             faceDown = card.IsGroundFaceDown,
             stackLayer = card.GroundStackLayer,
         };
-        record.SetPosition(card.transform.position);
-        record.SetRotation(card.transform.rotation);
+        Transform cardTransform = card.transform;
+        record.SetPosition(cardTransform.position);
+        record.SetRotation(cardTransform.rotation);
 
         if (heldCards.Contains(card) || card.IsInHand)
         {
@@ -142,6 +147,9 @@ public static class GameSaveWorldCollector
         }
 
         record.location = CardRuntimeLocation.World;
+        record.physics = ThrownPhysicsSaveState.Capture(card.PhysicsBody);
+        if (record.physics != null)
+            record.faceDown = card.GroundVisualShowsBack;
         return record;
     }
 
@@ -150,7 +158,7 @@ public static class GameSaveWorldCollector
         if (pack == null || pack.State == WorldBoosterPack.PackState.Opening)
             return null;
 
-        PersistentId.GetOrCreate(pack.gameObject);
+        PersistentId persistent = PersistentId.GetOrCreate(pack.gameObject);
         IReadOnlyList<CardDefinition> contents = pack.PeekPreRolledContents();
         string[] ids = System.Array.Empty<string>();
         if (contents != null && contents.Count > 0)
@@ -162,15 +170,18 @@ public static class GameSaveWorldCollector
 
         var record = new PackSaveRecord
         {
-            id = PersistentId.Resolve(pack),
+            id = persistent.Value,
             variant = pack.PackVariantIndex,
             held = heldPacks.Contains(pack) || pack.IsInHand,
             faceDown = pack.GroundShowsBack,
             stackLayer = pack.GroundStackLayer,
             contents = ids,
         };
-        record.SetPosition(pack.transform.position);
-        record.SetRotation(pack.transform.rotation);
+        Transform packTransform = pack.transform;
+        record.SetPosition(packTransform.position);
+        record.SetRotation(packTransform.rotation);
+        if (!record.held)
+            record.physics = ThrownPhysicsSaveState.Capture(pack.PhysicsBody);
         return record;
     }
 
@@ -294,8 +305,14 @@ public static class GameSaveWorldCollector
             PersistentId.GetOrCreate(cabinet.gameObject);
 
         record.location = CardRuntimeLocation.PsaCabinet;
-        record.psaCabinetId = cabinet != null ? PersistentId.Resolve(cabinet) : string.Empty;
+        record.psaCabinetId = cabinet != null ? PersistentId.BuildPathFallback(cabinet.transform) : string.Empty;
         record.psaCabinetSlot = psaSlot.SlotNumber;
+        // Grade numbers repeat within and across cabinets. Save the actual seat.
+        record.psaSlotPath = PersistentId.BuildPathFallback(psaSlot.transform);
+        // A save may happen while the card is still flying from the hand.
+        psaSlot.GetPlacementPose(out Vector3 position, out Quaternion rotation);
+        record.SetPosition(position);
+        record.SetRotation(rotation);
     }
 
     static void ApplyShelfRecord(CardSaveRecord record, WorldCard card, CardShelfSlot shelfSlot)

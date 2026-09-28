@@ -16,6 +16,7 @@ public class PackSaveRecord
     public float rw = 1f;
     public bool faceDown;
     public int stackLayer;
+    public ThrownPhysicsSaveState physics;
     public string[] contents;
 
     public void SetPosition(Vector3 position)

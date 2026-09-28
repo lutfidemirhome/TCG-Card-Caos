@@ -15,6 +15,37 @@ public static class InGameHudUIBuilder
     const string HudArtFolder = "Assets/UI/ingame/Hud";
     const string CanvasRootName = "InGameHudCanvas";
 
+    [MenuItem("TCG Card Chaos/UI/Refresh Existing HUD Counters")]
+    public static void RefreshExistingHudCounters()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
+        Transform canvas = FindHudCanvas();
+        InGameHudView view = canvas != null ? canvas.GetComponent<InGameHudView>() : null;
+        TMP_Text shelves = canvas != null ? canvas.Find("Panel_TopLeft/ShelvesValue")?.GetComponent<TMP_Text>() : null;
+        TMP_Text cards = canvas != null ? canvas.Find("Panel_TopLeft/CardsValue")?.GetComponent<TMP_Text>() : null;
+        if (view == null || shelves == null || cards == null)
+        {
+            Debug.LogError("Open the gameplay scene with its existing HUD to refresh counters.");
+            return;
+        }
+
+        GameProgressCounter.ClearLockedTotal();
+        GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
+        Undo.RecordObjects(new Object[] { view, shelves, cards }, "Refresh Existing HUD Counters");
+        var serialized = new SerializedObject(view);
+        serialized.FindProperty("maxShelves").intValue = progress.totalShelves;
+        serialized.ApplyModifiedProperties();
+        shelves.text = progress.shelvesCompleted + " / " + progress.totalShelves;
+        cards.text = progress.cardsPlaced + " / " + progress.totalCards;
+        EditorUtility.SetDirty(view);
+        EditorUtility.SetDirty(shelves);
+        EditorUtility.SetDirty(cards);
+        EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+        Debug.Log("Demo HUD targets refreshed: " + progress.totalShelves + " cabinets, " + progress.totalCards + " cards.");
+    }
+
     [MenuItem("TCG Card Chaos/UI/Add In-Game HUD")]
     public static void AddInGameHud()
     {

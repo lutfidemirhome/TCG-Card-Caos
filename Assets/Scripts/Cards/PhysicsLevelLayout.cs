@@ -10,6 +10,8 @@ public class PhysicsLevelLayout : MonoBehaviour
     public const string DemoAreaName = "Demo_Area";
     public const string DemoCardsName = "Demo_Cards";
     public const string DemoVolumeName = "Demo_SpawnVolume";
+    public const string DemoJapaneseCardsName = "Demo_Japanese_Cards";
+    public const string DemoJapaneseVolumeName = "Demo_Japanese_SpawnVolume";
     public const string MainLevelName = "Main_Level";
     public const string MainVolumeName = "Main_SpawnVolume";
     public const string BatchPrefix = "Batch_";
@@ -19,6 +21,7 @@ public class PhysicsLevelLayout : MonoBehaviour
 
     [Header("Demo")]
     [SerializeField] int demoRegularCount = 235;
+    [SerializeField] int demoJapaneseRegularCount = 0;
     [SerializeField] int demoPsaCount = 4;
     [SerializeField] int demoPackCount = 5;
 
@@ -40,6 +43,7 @@ public class PhysicsLevelLayout : MonoBehaviour
     [SerializeField] Transform mainLevelRoot;
 
     public int DemoRegularCount { get => demoRegularCount; set => demoRegularCount = Mathf.Max(0, value); }
+    public int DemoJapaneseRegularCount { get => demoJapaneseRegularCount; set => demoJapaneseRegularCount = Mathf.Max(0, value); }
     public int DemoPsaCount { get => demoPsaCount; set => demoPsaCount = Mathf.Max(0, value); }
     public int DemoPackCount { get => demoPackCount; set => demoPackCount = Mathf.Max(0, value); }
     public int MainBatchSize { get => mainBatchSize; set => mainBatchSize = Mathf.Max(1, value); }
@@ -64,11 +68,11 @@ public class PhysicsLevelLayout : MonoBehaviour
     public Transform DemoCardsRoot => demoCardsRoot;
     public Transform MainLevelRoot => mainLevelRoot;
 
-    public int DemoConfiguredTotal => demoRegularCount + demoPsaCount + demoPackCount;
+    public int DemoConfiguredTotal => demoRegularCount + demoJapaneseRegularCount + demoPsaCount + demoPackCount;
 
     /// <summary>HUD / save denominator: floor cards + PSA + unopened pack contents.</summary>
     public int DemoOwnedCardTotal =>
-        DemoRegularCount + DemoPsaCount + DemoPackCount * CardDimensions.CardsPerBoosterPack;
+        DemoRegularCount + DemoJapaneseRegularCount + DemoPsaCount + DemoPackCount * CardDimensions.CardsPerBoosterPack;
 
     public void BindHierarchy(
         PhysicsCardSpawnVolume demo,

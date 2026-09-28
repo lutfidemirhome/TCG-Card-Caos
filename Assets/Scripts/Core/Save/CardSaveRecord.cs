@@ -19,6 +19,8 @@ public class CardSaveRecord
     public float rw = 1f;
     public bool faceDown;
     public int stackLayer;
+    // Optional: older pose-only saves and untouched authored cards remain static.
+    public ThrownPhysicsSaveState physics;
     public string shelfId = string.Empty;
     public int slotRow;
     public int slotColumn;
@@ -26,6 +28,7 @@ public class CardSaveRecord
     public string shelfSlotPath = string.Empty;
     public string psaCabinetId = string.Empty;
     public int psaCabinetSlot;
+    public string psaSlotPath = string.Empty;
 
     public void SetPosition(Vector3 position)
     {

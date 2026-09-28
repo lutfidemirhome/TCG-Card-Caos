@@ -5,11 +5,13 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// GPU-instanced draws for static world cards that share mesh/material batches.
-/// Definition-art cards batch by <see cref="CardDefinition.DefinitionId"/>; face-down cards share one back batch.
+/// Definition-art cards batch by <see cref="CardDefinition.DefinitionId"/>;
+/// English and Japanese face-down cards use separate back batches.
 /// </summary>
 public class CardInstancedRenderManager : MonoBehaviour
 {
     public const string BackBatchKey = "__back__";
+    public const string JapaneseBackBatchKey = "__back_japan__";
     public const string PaletteBatchPrefix = "palette:";
 
     const int MaxInstancesPerBatch = 1023;
@@ -44,7 +46,13 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     public static void BeginBulkGroundLoad()
     {
+        GameSaveRestore.ClearPendingPhysics();
         DeferGroundRegistration = true;
+    }
+
+    public static void EndBulkGroundLoad()
+    {
+        DeferGroundRegistration = false;
     }
 
     public void SchedulePlayModeSetup()
@@ -62,6 +70,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         CardArtLibrary.EnsureLoaded();
         CardCatalog.EnsureLoaded();
         GameSaveManager.EnsureExists();
+        yield return GameSoundEffects.PreloadRoutine();
 
         GameLoadMode loadMode = GameSceneLoader.PendingLoadMode;
         string pendingSlotId = GameSceneLoader.PendingSlotId;
@@ -77,7 +86,6 @@ public class CardInstancedRenderManager : MonoBehaviour
 
             if (!string.IsNullOrEmpty(pendingSlotId))
             {
-                Debug.Log("[Save] Restoring " + pendingSlotId + "...");
                 yield return GameSaveRestore.RestoreRoutine(pendingSlotId);
                 if (GameSaveRestore.LastRestoreSucceeded)
                     GameSaveManager.NotifySaveRestored();
@@ -102,7 +110,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         }
 
         GameSceneLoader.ClearPendingLoad();
-        DeferGroundRegistration = false;
+        EndBulkGroundLoad();
         yield return RegisterAllGroundCardsRoutine();
         yield return CardGroundStack.RebuildAllAsync();
         // Re-apply shelf/PSA poses AFTER ground rebuild — ApplyPileLayers used to snap Y to floor.
@@ -112,6 +120,7 @@ public class CardInstancedRenderManager : MonoBehaviour
 
         IsGameplayReady = true;
         GameProgressCounter.LockTotalFromWorld();
+        GameSaveRestore.ResumePendingPhysics();
         _playModeSetupRoutine = null;
     }
 
@@ -211,6 +220,12 @@ public class CardInstancedRenderManager : MonoBehaviour
                 if (card == null || card.IsInHand)
                     continue;
                 if (IsDemoAreaItem(card) != demoPass)
+                    continue;
+
+                // Restored display cards already belong to a shelf. Tracking them as ground
+                // would rebuild their piles, then untrack/rebuild again in the final visual pass.
+                if (card.GetComponentInParent<CardShelfSlot>() != null
+                    || card.GetComponentInParent<PsaCabinetSlot>() != null)
                     continue;
 
                 card.RegisterForInstancedGround();
@@ -373,7 +388,7 @@ public class CardInstancedRenderManager : MonoBehaviour
             if (!_cardsByBatchKey.TryGetValue(batchKey, out HashSet<WorldCard> cards))
                 continue;
 
-            bool backFace = batchKey == BackBatchKey;
+            bool backFace = batchKey == BackBatchKey || batchKey == JapaneseBackBatchKey;
             Mesh mesh = backFace ? backMesh : frontMesh;
             if (mesh == null)
                 continue;
@@ -420,6 +435,9 @@ public class CardInstancedRenderManager : MonoBehaviour
 
     static Material ResolveBatchMaterial(string batchKey)
     {
+        if (batchKey == JapaneseBackBatchKey)
+            return CardArtLibrary.GetInstancedGroundBackMaterial(japanese: true);
+
         if (batchKey == BackBatchKey)
             return CardArtLibrary.GetInstancedGroundBackMaterial();
 

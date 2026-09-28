@@ -40,6 +40,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Rigidbody _rigidbody;
     Coroutine _thrownPhysicsRoutine;
     int _thrownLandingScope;
+    bool _preserveRestoredPhysicsPose;
     bool _restoreGroundTrackingOnEnable;
     BoxCollider _collider;
     bool _interactionHighlighted;
@@ -125,15 +126,16 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     /// Re-applies a saved world pose without the flat-floor visual lift that would shift a leaning
     /// pack (e.g. against glass) along its local up and push it through walls on load.
     /// </summary>
-    public void RestoreSavedWorldPose(bool faceDown, int stackLayer)
+    public void RestoreSavedWorldPose(bool faceDown, int stackLayer, bool preservePhysicsPose = false)
     {
         _state = PackState.World;
+        _preserveRestoredPhysicsPose = preservePhysicsPose;
         _groundShowsBack = faceDown;
         SetGroundStackLayer(stackLayer);
 
-        // Flat packs match scatter/spawn (ground mesh lift). Tilted packs match post-throw settle
-        // (physics visual, mesh centred on root) — see CardSettlePlacement.FlatUpDot.
-        bool upright = CardSettlePlacement.IsFlatOnFloor(transform);
+        // Physical saves keep the same proxy basis even if the solver left the root flat.
+        // Older pose-only saves retain their original ground-pose interpretation.
+        bool upright = !preservePhysicsPose && CardSettlePlacement.IsFlatOnFloor(transform);
         ApplyWorldVisualOrientation(alignPackModelToGround: upright);
 
         if (_collider != null)
@@ -158,7 +160,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         EnsureVisual();
         CaptureExistingVisualLayout();
         ApplyPackBodyCollider();
-        LiftMeshAboveFloor();
+        if (!_preserveRestoredPhysicsPose)
+            LiftMeshAboveFloor();
         EnsureContentsPreRolled();
         CardGroundStack.TrackPack(this);
         SetGroundModelVisible(true);
@@ -221,14 +224,24 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public void Initialize(
         BoosterPackDefinition definition,
         int packVariantIndex = 1,
-        IReadOnlyList<CardDefinition> preRolledContents = null)
+        IReadOnlyList<CardDefinition> preRolledContents = null,
+        bool preserveExistingVisualLayout = false)
     {
         packDefinition = definition;
+        _preserveRestoredPhysicsPose = false;
         this.packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
         if (preRolledContents != null && preRolledContents.Count > 0)
             this.preRolledContents = new List<CardDefinition>(preRolledContents);
         EnsureVisual();
-        RefreshPackModelLayout();
+        if (preserveExistingVisualLayout)
+        {
+            CaptureExistingVisualLayout();
+            RefreshPackModelBounds();
+        }
+        else
+        {
+            RefreshPackModelLayout();
+        }
         ApplyWorldVisualOrientation();
         ApplyPackModelShadowSettings();
     }
@@ -758,6 +771,11 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _packModelCenterOffset = Vector3.zero;
         }
 
+        RefreshPackModelBounds();
+    }
+
+    void RefreshPackModelBounds()
+    {
         RefreshPackModelGroundOffset(faceDown: false, out _packModelGroundOffsetYFaceUp);
         RefreshPackModelGroundOffset(faceDown: true, out _packModelGroundOffsetYFaceDown);
         RefreshPackOutlineBoundsFromLayout();
@@ -1530,6 +1548,25 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         StartThrownPhysicsMonitor(_rigidbody);
     }
 
+    public void ResumeSavedPhysics(ThrownPhysicsSaveState state)
+    {
+        if (state == null || !state.isSimulating || _state != PackState.World || HasActivePhysics)
+            return;
+
+        EnsureRigidbody();
+        ApplyWorldVisualOrientation(alignPackModelToGround: false);
+        ApplyPackBodyCollider();
+        if (_collider != null)
+        {
+            _collider.enabled = true;
+            _collider.isTrigger = false;
+        }
+        IgnorePlayerCollision();
+        state.Apply(_rigidbody);
+        _preserveRestoredPhysicsPose = false;
+        StartThrownPhysicsMonitor(_rigidbody);
+    }
+
     void StartThrownPhysicsMonitor(Rigidbody body)
     {
         StopThrownPhysicsMonitor();
@@ -1729,7 +1766,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         for (int i = 0; i < all.Count; i++)
         {
             CardDefinition definition = all[i];
-            if (definition == null)
+            if (definition == null || definition.IsJapanese)
                 continue;
             if (!CardScatterUtility.IsLiveGroundCategory(definition.ShelfCategoryId))
                 continue;

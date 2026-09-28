@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -35,6 +36,56 @@ public class GameSoundEffects : MonoBehaviour
     readonly HashSet<string> _warnedMissing = new HashSet<string>();
     AudioSource[] _sources;
     int _nextSourceIndex;
+
+    static readonly string[] GameplayClipPaths =
+    {
+        ResourceFolder + "/" + Id.CardPickup,
+        ResourceFolder + "/" + Id.CardShelfPlace,
+        ResourceFolder + "/" + Id.CardThrow,
+        ResourceFolder + "/" + Id.CardHandScroll,
+        PackSoundsFolder + "/" + PackId.PackOpen,
+        PackSoundsFolder + "/" + PackId.CardRotation,
+        PackSoundsFolder + "/" + PackId.InCardLayout,
+        PackSoundsFolder + "/" + PackId.WhileGathering,
+    };
+
+    /// <summary>Prepare first-use sounds while the loading overlay is still visible.</summary>
+    public static IEnumerator PreloadRoutine()
+    {
+        GameSoundEffects instance = EnsureExists();
+        var requests = new ResourceRequest[GameplayClipPaths.Length];
+        for (int i = 0; i < requests.Length; i++)
+        {
+            if (!instance._clips.ContainsKey(GameplayClipPaths[i]))
+                requests[i] = Resources.LoadAsync<AudioClip>(GameplayClipPaths[i]);
+        }
+
+        for (int i = 0; i < requests.Length; i++)
+        {
+            ResourceRequest request = requests[i];
+            if (request == null)
+                continue;
+            if (!request.isDone)
+                yield return request;
+            if (instance == null)
+                yield break;
+
+            AudioClip clip = request.asset as AudioClip;
+            instance._clips[GameplayClipPaths[i]] = clip;
+            if (clip == null)
+            {
+                instance.WarnMissingOnce(GameplayClipPaths[i]);
+                continue;
+            }
+
+            // Pack clips disable importer preloading, so loading the asset alone
+            // would still leave audio-data loading until the first PlayOneShot.
+            if (clip.loadState == AudioDataLoadState.Unloaded)
+                clip.LoadAudioData();
+            while (clip != null && clip.loadState == AudioDataLoadState.Loading)
+                yield return null;
+        }
+    }
 
     public static GameSoundEffects EnsureExists()
     {

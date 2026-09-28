@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// The six Hierarchy objects that count as "demo complete". Other cabinets in MainScene are ignored.
+/// The ten Hierarchy objects that count as "demo complete". Other cabinets in MainScene are ignored.
 /// </summary>
 public static class DemoShelfTargets
 {
@@ -15,6 +15,10 @@ public static class DemoShelfTargets
         "Cabinets_GrassRare",
         "Cabinets_GrassUncommon (1)",
         "KartTutucu_1",
+        "Cabinets_DragonEpicJapan",
+        "Cabinets_FireMythicGoldJapan",
+        "Cabinets_GroundMasterArtJapan",
+        "Cabinets_IcePrismEliteJapan",
     };
 
     static readonly HashSet<string> NameSet = new HashSet<string>(ObjectNames);

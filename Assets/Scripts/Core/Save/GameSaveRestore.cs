@@ -3,21 +3,105 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Physics-safe world restore. Spawns cards settled; does not wake Rigidbodies.
+/// Restores settled poses first; saved throws resume only after the whole world is ready.
 /// </summary>
 public static class GameSaveRestore
 {
-    const int EntitiesPerFrame = 24;
+    // Bound both the amount of work and elapsed time: fast restores do not pay
+    // a rendered frame for every 24 records, while slower devices keep the overlay responsive.
+    const int EntitiesPerFrame = 512;
+    const double BatchBudgetMilliseconds = 8d;
 
     static readonly HashSet<string> RestoredIds = new HashSet<string>();
+    static readonly List<KeyValuePair<WorldCard, ThrownPhysicsSaveState>> PendingCardPhysics =
+        new List<KeyValuePair<WorldCard, ThrownPhysicsSaveState>>();
+    static readonly List<KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>> PendingPackPhysics =
+        new List<KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>>();
     static bool _remappedIds;
-    static int _shelfRestored;
-    static int _shelfFailed;
-    static int _psaRestored;
     public static bool LastRestoreSucceeded { get; private set; }
+
+    // These scene references live only for one restore. In particular, PSA paths
+    // must not require a full scene search and hierarchy-string build per card.
+    sealed class RestoreLookups : System.IDisposable
+    {
+        readonly Dictionary<string, CardShelf> _shelvesByPath = new Dictionary<string, CardShelf>();
+        readonly Dictionary<string, CardShelf> _shelvesByName = new Dictionary<string, CardShelf>();
+        readonly Dictionary<string, PsaCabinetSlot> _psaSlotsByPath = new Dictionary<string, PsaCabinetSlot>();
+        PsaCabinetSlot[] _psaSlots;
+        bool _shelvesLoaded;
+
+        public CardShelf FindFallbackShelf(string shelfId)
+        {
+            if (!_shelvesLoaded)
+            {
+                _shelvesLoaded = true;
+                CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
+                    FindObjectsInactive.Include, FindObjectsSortMode.None);
+                for (int i = 0; i < shelves.Length; i++)
+                {
+                    CardShelf shelf = shelves[i];
+                    if (shelf == null)
+                        continue;
+
+                    string path = PersistentId.BuildPathFallback(shelf.transform);
+                    // Legacy fallback selected the first matching shelf in this order.
+                    _shelvesByPath.TryAdd(path, shelf);
+                    _shelvesByName.TryAdd(shelf.gameObject.name, shelf);
+                }
+            }
+
+            if (_shelvesByPath.TryGetValue(shelfId, out CardShelf byPath))
+                return byPath;
+
+            string objectName = ShelfObjectName(shelfId);
+            return !string.IsNullOrEmpty(objectName)
+                && _shelvesByName.TryGetValue(objectName, out CardShelf byName) ? byName : null;
+        }
+
+        public PsaCabinetSlot[] PsaSlots
+        {
+            get
+            {
+                if (_psaSlots != null)
+                    return _psaSlots;
+
+                _psaSlots = Object.FindObjectsByType<PsaCabinetSlot>(
+                    FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                for (int i = 0; i < _psaSlots.Length; i++)
+                {
+                    PsaCabinetSlot slot = _psaSlots[i];
+                    if (slot == null)
+                        continue;
+
+                    string path = PersistentId.BuildPathFallback(slot.transform);
+                    // Preserve the original ambiguity rejection: duplicate paths
+                    // must never silently move a saved card to a different seat.
+                    if (!_psaSlotsByPath.TryAdd(path, slot))
+                        _psaSlotsByPath[path] = null;
+                }
+                return _psaSlots;
+            }
+        }
+
+        public PsaCabinetSlot FindPsaSlotByPath(string path)
+        {
+            _ = PsaSlots;
+            _psaSlotsByPath.TryGetValue(path, out PsaCabinetSlot slot);
+            return slot;
+        }
+
+        public void Dispose()
+        {
+            _shelvesByPath.Clear();
+            _shelvesByName.Clear();
+            _psaSlotsByPath.Clear();
+            _psaSlots = null;
+        }
+    }
 
     public static IEnumerator RestoreRoutine(string slotId)
     {
+        ClearPendingPhysics();
         LastRestoreSucceeded = false;
         GameSaveEvents.RaiseLoadStarted(slotId);
 
@@ -34,21 +118,30 @@ public static class GameSaveRestore
         PersistentIdRegistry.RebuildWorldLookups();
         PrepareShelvesForRestore();
         Transform scatterRoot = CardScatterUtility.GetOrCreateScatterRoot();
+        // The authored demo root is stable throughout this restore. Resolve it once,
+        // rather than searching every scene object again for each card and pack.
+        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
+        Transform demoRoot = layout != null ? layout.DemoCardsRoot : null;
         RestoredIds.Clear();
         _remappedIds = false;
-        _shelfRestored = 0;
-        _shelfFailed = 0;
-        _psaRestored = 0;
 
         int processed = 0;
-        if (data.cards != null)
+        var batchTimer = System.Diagnostics.Stopwatch.StartNew();
+        using (var lookups = new RestoreLookups())
         {
-            for (int i = 0; i < data.cards.Length; i++)
+            if (data.cards != null)
             {
-                RestoreCard(data.cards[i], scatterRoot);
-                processed++;
-                if (processed % EntitiesPerFrame == 0)
-                    yield return null;
+                for (int i = 0; i < data.cards.Length; i++)
+                {
+                    RestoreCard(data.cards[i], scatterRoot, demoRoot, lookups);
+                    processed++;
+                    if (processed >= EntitiesPerFrame || batchTimer.Elapsed.TotalMilliseconds >= BatchBudgetMilliseconds)
+                    {
+                        yield return null;
+                        processed = 0;
+                        batchTimer.Restart();
+                    }
+                }
             }
         }
 
@@ -56,10 +149,14 @@ public static class GameSaveRestore
         {
             for (int i = 0; i < data.packs.Length; i++)
             {
-                RestorePack(data.packs[i], scatterRoot);
+                RestorePack(data.packs[i], scatterRoot, demoRoot);
                 processed++;
-                if (processed % EntitiesPerFrame == 0)
+                if (processed >= EntitiesPerFrame || batchTimer.Elapsed.TotalMilliseconds >= BatchBudgetMilliseconds)
+                {
                     yield return null;
+                    processed = 0;
+                    batchTimer.Restart();
+                }
             }
         }
 
@@ -67,9 +164,18 @@ public static class GameSaveRestore
         FinalizePsaRestores();
         yield return null;
 
+        if (data.hasPlayerState && data.player != null)
+        {
+            FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
+            if (player != null)
+                player.RestoreSaveState(data.player);
+        }
+
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (hand != null)
+        {
             hand.RestoreSelectionIndex(data.handSelectedIndex);
+        }
 
         GamePlayTime.BeginSession(data.playTimeSeconds);
         PersistentIdRegistry.RebuildWorldLookups();
@@ -79,33 +185,70 @@ public static class GameSaveRestore
             GameSaveDirtyTracker.Clear();
         LastRestoreSucceeded = true;
         GameSaveEvents.RaiseLoadCompleted(slotId);
-        LogRestore(slotId, data);
     }
 
-    static void LogRestore(string slotId, GameSaveData data)
+    public static void ClearPendingPhysics()
     {
-        int shelfCards = 0;
-        int psaCards = 0;
-        if (data != null && data.cards != null)
+        PendingCardPhysics.Clear();
+        PendingPackPhysics.Clear();
+    }
+
+    public static void ResumePendingPhysics()
+    {
+        bool hasPendingMotion = false;
+        // Rebuild sleeping supports before any moving item's monitor can inspect its surroundings.
+        // Both passes are synchronous: no fixed step can run with only part of the pile restored.
+        for (int pass = 0; pass < 2; pass++)
         {
-            for (int i = 0; i < data.cards.Length; i++)
+            bool restoreSleeping = pass == 0;
+            for (int i = 0; i < PendingCardPhysics.Count; i++)
             {
-                CardSaveRecord card = data.cards[i];
-                if (card == null)
+                var pending = PendingCardPhysics[i];
+                if (pending.Key == null || pending.Value == null
+                    || pending.Value.isSleeping != restoreSleeping)
                     continue;
-                if (card.location == CardRuntimeLocation.Shelf)
-                    shelfCards++;
-                else if (card.location == CardRuntimeLocation.PsaCabinet)
-                    psaCards++;
+
+                pending.Key.ResumeSavedPhysics(pending.Value);
+                hasPendingMotion |= !restoreSleeping;
+            }
+            for (int i = 0; i < PendingPackPhysics.Count; i++)
+            {
+                var pending = PendingPackPhysics[i];
+                if (pending.Key == null || pending.Value == null
+                    || pending.Value.isSleeping != restoreSleeping)
+                    continue;
+
+                pending.Key.ResumeSavedPhysics(pending.Value);
+                hasPendingMotion |= !restoreSleeping;
             }
         }
 
-        Debug.Log(
-            "[Save] Restored " + slotId
-            + " shelf=" + _shelfRestored + "/" + shelfCards
-            + (_shelfFailed > 0 ? " missing=" + _shelfFailed : string.Empty)
-            + " psa=" + _psaRestored + "/" + psaCards
-            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0));
+        // Collider construction and landing-surface activation may wake an earlier support.
+        // Restore the saved sleep state once the complete pile exists; real contacts can wake it
+        // naturally from the next physics step onward.
+        for (int i = 0; i < PendingCardPhysics.Count; i++)
+        {
+            var pending = PendingCardPhysics[i];
+            if (pending.Key != null && pending.Value != null && pending.Value.isSleeping)
+            {
+                Rigidbody body = pending.Key.PhysicsBody;
+                if (body != null && !body.isKinematic)
+                    body.Sleep();
+            }
+        }
+        for (int i = 0; i < PendingPackPhysics.Count; i++)
+        {
+            var pending = PendingPackPhysics[i];
+            if (pending.Key != null && pending.Value != null && pending.Value.isSleeping)
+            {
+                Rigidbody body = pending.Key.PhysicsBody;
+                if (body != null && !body.isKinematic)
+                    body.Sleep();
+            }
+        }
+        ClearPendingPhysics();
+        if (hasPendingMotion)
+            GameSaveDirtyTracker.MarkDirty();
     }
 
     static string AllocateRestoreId(string savedId)
@@ -119,7 +262,8 @@ public static class GameSaveRestore
         return generated;
     }
 
-    static void RestoreCard(CardSaveRecord record, Transform scatterRoot)
+    static void RestoreCard(CardSaveRecord record, Transform scatterRoot, Transform demoRoot,
+        RestoreLookups lookups)
     {
         if (record == null)
             return;
@@ -129,8 +273,11 @@ public static class GameSaveRestore
         WorldCard card;
         if (PersistentIdRegistry.TryGetCard(restoreId, out WorldCard existing) && existing != null)
         {
-            bool demoAuthored = IsDemoAuthored(existing);
-            if (demoAuthored && record.location == CardRuntimeLocation.World)
+            bool demoAuthored = IsDemoAuthored(existing, demoRoot);
+            // Old authored records keep their demo scene pose. Explicit physics snapshots
+            // identify cards that the player has thrown and must restore that saved pile.
+            if (demoAuthored && record.location == CardRuntimeLocation.World
+                && (record.physics == null || !record.physics.isSimulating))
                 return;
 
             card = existing;
@@ -149,18 +296,11 @@ public static class GameSaveRestore
         switch (record.location)
         {
             case CardRuntimeLocation.Shelf:
-                if (TryRestoreShelfCard(card, record))
-                    _shelfRestored++;
-                else
-                {
-                    _shelfFailed++;
+                if (!TryRestoreShelfCard(card, record, lookups))
                     PlaceWorldCard(card, record, scatterRoot);
-                }
                 break;
             case CardRuntimeLocation.PsaCabinet:
-                if (TryRestorePsaCard(card, record))
-                    _psaRestored++;
-                else
+                if (!TryRestorePsaCard(card, record, lookups))
                     PlaceWorldCard(card, record, scatterRoot);
                 break;
             case CardRuntimeLocation.Held:
@@ -206,12 +346,14 @@ public static class GameSaveRestore
         card.transform.localScale = Vector3.one * CardDimensions.GroundCardScale;
         card.SetGroundShowsBack(record.faceDown);
         card.SetGroundStackLayer(record.stackLayer);
+        if (record.location == CardRuntimeLocation.World && record.physics != null && record.physics.isSimulating)
+            PendingCardPhysics.Add(new KeyValuePair<WorldCard, ThrownPhysicsSaveState>(card, record.physics));
     }
 
-    static bool TryRestoreShelfCard(WorldCard card, CardSaveRecord record)
+    static bool TryRestoreShelfCard(WorldCard card, CardSaveRecord record, RestoreLookups lookups)
     {
         CardArtLibrary.EnsureLoaded();
-        CardShelfSlot slot = FindShelfSlot(record);
+        CardShelfSlot slot = FindShelfSlot(record, lookups);
         if (slot == null)
         {
             Debug.LogWarning(
@@ -241,9 +383,9 @@ public static class GameSaveRestore
         }
     }
 
-    static CardShelfSlot FindShelfSlot(CardSaveRecord record)
+    static CardShelfSlot FindShelfSlot(CardSaveRecord record, RestoreLookups lookups)
     {
-        CardShelf shelf = FindShelf(record.shelfId);
+        CardShelf shelf = FindShelf(record.shelfId, lookups);
         if (shelf == null)
             return null;
 
@@ -320,7 +462,7 @@ public static class GameSaveRestore
         }
     }
 
-    static CardShelf FindShelf(string shelfId)
+    static CardShelf FindShelf(string shelfId, RestoreLookups lookups)
     {
         if (string.IsNullOrEmpty(shelfId))
             return null;
@@ -328,32 +470,7 @@ public static class GameSaveRestore
         if (PersistentIdRegistry.TryGetShelf(shelfId, out CardShelf shelf) && shelf != null)
             return shelf;
 
-        CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
-        for (int i = 0; i < shelves.Length; i++)
-        {
-            CardShelf candidate = shelves[i];
-            if (candidate == null)
-                continue;
-
-            string path = PersistentId.BuildPathFallback(candidate.transform);
-            if (path == shelfId)
-                return candidate;
-        }
-
-        string objectName = ShelfObjectName(shelfId);
-        if (string.IsNullOrEmpty(objectName))
-            return null;
-
-        for (int i = 0; i < shelves.Length; i++)
-        {
-            CardShelf candidate = shelves[i];
-            if (candidate != null && candidate.gameObject.name == objectName)
-                return candidate;
-        }
-
-        return null;
+        return lookups.FindFallbackShelf(shelfId);
     }
 
     static string ShelfObjectName(string shelfId)
@@ -367,13 +484,13 @@ public static class GameSaveRestore
             : shelfId;
     }
 
-    static bool TryRestorePsaCard(WorldCard card, CardSaveRecord record)
+    static bool TryRestorePsaCard(WorldCard card, CardSaveRecord record, RestoreLookups lookups)
     {
         int slotNumber = record.psaCabinetSlot > 0
             ? record.psaCabinetSlot
             : record.psaSlot;
 
-        PsaCabinetSlot slot = FindPsaSlot(record.psaCabinetId, slotNumber);
+        PsaCabinetSlot slot = FindPsaSlot(record, slotNumber, lookups);
         if (slot == null)
         {
             Debug.LogWarning(
@@ -385,45 +502,45 @@ public static class GameSaveRestore
         return slot.RestoreOccupiedCard(card, playPlacementFeedback: false);
     }
 
-    static PsaCabinetSlot FindPsaSlot(string cabinetId, int slotNumber)
+    static PsaCabinetSlot FindPsaSlot(CardSaveRecord record, int slotNumber, RestoreLookups lookups)
     {
-        if (!string.IsNullOrEmpty(cabinetId)
-            && PersistentIdRegistry.TryGetPsaCabinet(cabinetId, out PsaCabinet cabinet)
-            && cabinet != null)
+        if (!string.IsNullOrEmpty(record.psaSlotPath))
         {
-            PsaCabinetSlot slot = cabinet.FindSlot(slotNumber);
-            if (slot != null)
-                return slot;
+            PsaCabinetSlot exact = lookups.FindPsaSlotByPath(record.psaSlotPath);
+            return exact != null && exact.IsEmpty ? exact : null;
         }
 
-        foreach (PsaCabinet candidate in PersistentIdRegistry.AllPsaCabinets)
-        {
-            if (candidate == null)
-                continue;
-
-            PsaCabinetSlot slot = candidate.FindSlot(slotNumber);
-            if (slot != null)
-                return slot;
-        }
-
-        PsaCabinetSlot[] slots = UnityEngine.Object.FindObjectsByType<PsaCabinetSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-        PsaCabinetSlot occupiedFallback = null;
+        // Legacy saves have only a grade and a possibly shared prefab cabinet ID.
+        // Recover from the saved world position, never the first matching grade.
+        // If the old position cannot identify a nearby seat, keep the card in the
+        // world at its saved position instead of moving it to an unrelated cabinet.
+        const float MaxLegacySeatDistance = 0.5f;
+        float bestDistanceSq = MaxLegacySeatDistance * MaxLegacySeatDistance;
+        PsaCabinetSlot nearest = null;
+        bool ambiguous = false;
+        PsaCabinetSlot[] slots = lookups.PsaSlots;
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];
             if (slot == null || slot.SlotNumber != slotNumber)
                 continue;
 
-            if (slot.IsEmpty)
-                return slot;
+            slot.GetPlacementPose(out Vector3 position, out _);
+            float distanceSq = (position - record.Position).sqrMagnitude;
+            if (nearest != null && Mathf.Abs(distanceSq - bestDistanceSq) < 0.000001f)
+            {
+                ambiguous = true;
+                continue;
+            }
+            if (distanceSq >= bestDistanceSq)
+                continue;
 
-            if (occupiedFallback == null)
-                occupiedFallback = slot;
+            bestDistanceSq = distanceSq;
+            nearest = slot;
+            ambiguous = false;
         }
 
-        return occupiedFallback;
+        return !ambiguous && nearest != null && nearest.IsEmpty ? nearest : null;
     }
 
     static bool TryRestoreHeldCard(WorldCard card)
@@ -435,7 +552,7 @@ public static class GameSaveRestore
         return hand.RestoreHeldCard(card);
     }
 
-    static bool IsDemoAuthored(Component component)
+    static bool IsDemoAuthored(Component component, Transform demoRoot)
     {
         if (component == null)
             return false;
@@ -444,8 +561,6 @@ public static class GameSaveRestore
         if (item != null && item.Area == PhysicsLevelItem.AreaKind.Demo)
             return true;
 
-        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
-        Transform demoRoot = layout != null ? layout.DemoCardsRoot : null;
         return demoRoot != null && component.transform.IsChildOf(demoRoot);
     }
 
@@ -459,7 +574,7 @@ public static class GameSaveRestore
             transform.gameObject.SetActive(true);
     }
 
-    static void RestorePack(PackSaveRecord record, Transform scatterRoot)
+    static void RestorePack(PackSaveRecord record, Transform scatterRoot, Transform demoRoot)
     {
         if (record == null)
             return;
@@ -470,15 +585,16 @@ public static class GameSaveRestore
         WorldBoosterPack pack;
         if (PersistentIdRegistry.TryGetPack(restoreId, out WorldBoosterPack existing) && existing != null)
         {
-            bool demoAuthored = IsDemoAuthored(existing);
-            if (demoAuthored && !record.held)
+            bool demoAuthored = IsDemoAuthored(existing, demoRoot);
+            if (demoAuthored && !record.held
+                && (record.physics == null || !record.physics.isSimulating))
                 return;
 
             pack = existing;
             if (!demoAuthored)
             {
                 WakeRestoredObject(pack.transform);
-                pack.Initialize(null, record.variant, contents);
+                pack.Initialize(null, record.variant, contents, preserveExistingVisualLayout: true);
             }
         }
         else
@@ -498,8 +614,11 @@ public static class GameSaveRestore
 
         pack.transform.SetParent(scatterRoot, true);
         pack.transform.SetPositionAndRotation(record.Position, record.Rotation);
-        pack.RestoreSavedWorldPose(record.faceDown, record.stackLayer);
+        pack.RestoreSavedWorldPose(record.faceDown, record.stackLayer,
+            preservePhysicsPose: !record.held && record.physics != null && record.physics.isSimulating);
         CardGroundStack.TrackPack(pack);
+        if (!record.held && record.physics != null && record.physics.isSimulating)
+            PendingPackPhysics.Add(new KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>(pack, record.physics));
     }
 
     static List<CardDefinition> ResolvePackContents(string[] ids)

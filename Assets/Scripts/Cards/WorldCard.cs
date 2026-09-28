@@ -107,6 +107,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     internal Transform RootTransform => transform;
     internal Collider PhysCollider => _collider;
     internal Rigidbody PhysicsBody => _rigidbody;
+    internal bool GroundVisualShowsBack => groundShowsBack;
     public CardDefinition Definition => definition;
     public bool HasShelfRules => definition != null;
     public string ShelfCategoryId => definition != null ? definition.ShelfCategoryId : string.Empty;
@@ -161,7 +162,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public string GetInstancedBatchKey()
     {
         if (CanUseInstancedBackRendering)
-            return CardInstancedRenderManager.BackBatchKey;
+        {
+            return definition != null && definition.IsJapanese
+                ? CardInstancedRenderManager.JapaneseBackBatchKey
+                : CardInstancedRenderManager.BackBatchKey;
+        }
 
         if (UsesDefinitionFrontArt && definition != null)
             return definition.DefinitionId;
@@ -725,6 +730,25 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_collider is BoxCollider thrownBox)
             CardCollisionUtility.UnstickThrownSpawnOverlap(transform, thrownBox, this, _rigidbody);
 
+        StartThrownPhysicsMonitor(_rigidbody);
+    }
+
+    public void ResumeSavedPhysics(ThrownPhysicsSaveState state)
+    {
+        if (state == null || !state.isSimulating || _handState != HandState.World || HasActivePhysics)
+            return;
+
+        EnsureRigidbody();
+        RefreshRenderMode();
+        ApplyFlatWorldCollider();
+        if (_collider != null)
+        {
+            _collider.enabled = true;
+            _collider.isTrigger = false;
+            _worldColliderRequested = true;
+        }
+        IgnorePlayerCollision();
+        state.Apply(_rigidbody);
         StartThrownPhysicsMonitor(_rigidbody);
     }
 

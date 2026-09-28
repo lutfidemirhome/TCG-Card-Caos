@@ -532,6 +532,20 @@ MonoBehaviour:
     - "\u30BB\u30FC\u30D6\u3057\u307E\u3057\u305F"
     - "\uC800\uC7A5\uB428"
     - "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E"
+  - key: save.failed
+    values:
+    - Save failed. Please try again.
+    - "Kayıt yapılamadı. Lütfen tekrar deneyin."
+    - "Échec de la sauvegarde. Veuillez réessayer."
+    - Salvataggio non riuscito. Riprova.
+    - Speichern fehlgeschlagen. Bitte erneut versuchen.
+    - No se pudo guardar. Inténtalo de nuevo.
+    - Falha ao salvar. Tente novamente.
+    - "保存失败，请重试。"
+    - "儲存失敗，請重試。"
+    - "保存に失敗しました。もう一度お試しください。"
+    - "저장하지 못했습니다. 다시 시도해 주세요."
+    - "Не удалось сохранить. Повторите попытку."
   - key: save.auto_name
     values:
     - Auto Save {0}

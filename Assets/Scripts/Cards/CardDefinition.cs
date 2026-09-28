@@ -23,6 +23,7 @@ public class CardDefinition : ScriptableObject
     public int ShelfSlotNumber => CardCatalog.NormalizeSlotNumber(shelfSlotNumber);
     public Texture2D FrontTexture => frontTexture;
     public Sprite CategorySymbol => categorySymbol;
+    public bool IsJapanese => CardShelfCategories.IsJapanese(shelfCategoryId);
 
 #if UNITY_EDITOR
     void OnValidate()

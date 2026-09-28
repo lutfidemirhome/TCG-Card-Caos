@@ -156,6 +156,8 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUILayout.Space(8);
         DrawDemo(layout);
         EditorGUILayout.Space(10);
+        DrawDemoJapanese(layout);
+        EditorGUILayout.Space(10);
         DrawMain(layout);
         EditorGUILayout.Space(10);
         DrawMixBatches(layout);
@@ -218,6 +220,326 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.EndVertical();
+    }
+
+    static readonly string[] DemoJapaneseCategories =
+    {
+        CardShelfCategories.DragonEpicJapan,
+        CardShelfCategories.FireMythicGoldJapan,
+        CardShelfCategories.GroundMasterArtJapan,
+        CardShelfCategories.IcePrismEliteJapan,
+    };
+
+    [MenuItem("TCG Card Chaos/Demo Japanese Cards/Create 160 Normal Cards")]
+    public static void CreateDemoJapaneseFromMenu()
+    {
+        GetWindow<PhysicsCardLevelBuilderWindow>().CreateDemoJapanese(PhysicsLevelLayout.FindExisting());
+    }
+
+    [MenuItem("TCG Card Chaos/Demo Japanese Cards/Reshuffle Above Demo - 90 Percent Face Up")]
+    public static void ReshuffleDemoJapaneseFromMenu()
+    {
+        GetWindow<PhysicsCardLevelBuilderWindow>().ReshuffleDemoJapanese(PhysicsLevelLayout.FindExisting());
+    }
+
+    [MenuItem("TCG Card Chaos/Demo Japanese Cards/Grabbit Fall Japanese Only")]
+    public static void DropDemoJapaneseFromMenu()
+    {
+        PhysicsLevelLayout layout = PhysicsLevelLayout.FindExisting();
+        if (layout == null || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+        GetWindow<PhysicsCardLevelBuilderWindow>().ScheduleDrop(
+            layout, FindDemoJapaneseVolume(layout), FindDemoJapaneseFolder(layout));
+    }
+
+    [MenuItem("TCG Card Chaos/Demo Japanese Cards/Bake Japanese Only")]
+    public static void BakeDemoJapaneseFromMenu()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+        GetWindow<PhysicsCardLevelBuilderWindow>().BakeFolder(
+            FindDemoJapaneseFolder(PhysicsLevelLayout.FindExisting()), "Bake Demo Japanese Cards");
+    }
+
+    static Transform FindDemoJapaneseFolder(PhysicsLevelLayout layout)
+    {
+        return layout != null && layout.DemoCardsRoot != null
+            ? layout.DemoCardsRoot.Find(PhysicsLevelLayout.DemoJapaneseCardsName) : null;
+    }
+
+    static PhysicsCardSpawnVolume FindDemoJapaneseVolume(PhysicsLevelLayout layout)
+    {
+        Transform area = layout != null && layout.DemoCardsRoot != null ? layout.DemoCardsRoot.parent : null;
+        Transform volume = area != null ? area.Find(PhysicsLevelLayout.DemoJapaneseVolumeName) : null;
+        return volume != null ? volume.GetComponent<PhysicsCardSpawnVolume>() : null;
+    }
+
+    void DrawDemoJapanese(PhysicsLevelLayout layout)
+    {
+        Transform folder = FindDemoJapaneseFolder(layout);
+        EditorGUILayout.LabelField("Demo Japanese Cards — 160 Normal Cards", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.HelpBox(
+            "Dragon 50 + Fire 30 + Ground 30 + Ice 50. No Psychic, packs or PSA. "
+            + "Create only adds missing cards; existing card positions stay as they are. "
+            + "Reshuffle lifts only this group to random positions: 144 face up, 16 face down. "
+            + "Fall Japanese Only → Scene view: hold Left Shift → stop Grabbit → Bake Japanese Only → save Scene.",
+            MessageType.Info);
+        EditorGUILayout.LabelField("Japanese cards in group", folder != null ? folder.childCount.ToString() : "0");
+        using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
+        {
+            if (GUILayout.Button("Create 160 Japanese Normal Cards", GUILayout.Height(24)))
+                CreateDemoJapanese(layout);
+            using (new EditorGUI.DisabledScope(folder == null || folder.childCount == 0))
+            {
+                if (GUILayout.Button("Reshuffle Above Demo — 90% Face Up"))
+                    ReshuffleDemoJapanese(layout);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Select Japanese Cards"))
+                    SelectChildren(folder);
+                if (GUILayout.Button("Grabbit Fall Japanese Only"))
+                    ScheduleDrop(layout, FindDemoJapaneseVolume(layout), folder);
+                EditorGUILayout.EndHorizontal();
+                if (GUILayout.Button("Bake Japanese Only"))
+                    BakeFolder(folder, "Bake Demo Japanese Cards");
+            }
+        }
+        EditorGUILayout.EndVertical();
+    }
+
+    void CreateDemoJapanese(PhysicsLevelLayout layout)
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode || layout == null
+            || layout.DemoCardsRoot == null || layout.DemoCardsRoot.parent == null)
+        {
+            Debug.LogError("Open the demo scene in Edit mode with its existing Demo_Cards hierarchy.");
+            return;
+        }
+
+        // Validate the complete set before adding anything. Never take the English pack pool.
+        var definitions = new List<CardDefinition>(160);
+        var ids = new HashSet<string>();
+        foreach (string category in DemoJapaneseCategories)
+        {
+            CardDefinition[] loaded = Resources.LoadAll<CardDefinition>("Cards/Definitions/Japanese/" + category);
+            int expected = CardShelfCategories.GetDefaultSlotsPerRow(category) * 10;
+            if (loaded.Length != expected)
+            {
+                Debug.LogError("Japanese demo set is incomplete: " + category + " expected " + expected + " cards.");
+                return;
+            }
+            foreach (CardDefinition definition in loaded)
+            {
+                if (definition == null || definition.ShelfCategoryId != category
+                    || string.IsNullOrWhiteSpace(definition.DefinitionId) || !ids.Add(definition.DefinitionId))
+                {
+                    Debug.LogError("Japanese demo card definitions have an invalid or repeated ID.");
+                    return;
+                }
+                definitions.Add(definition);
+            }
+        }
+        definitions.Sort((a, b) => string.CompareOrdinal(a.DefinitionId, b.DefinitionId));
+        var present = new HashSet<string>();
+        WorldCard[] existing = layout.DemoCardsRoot.GetComponentsInChildren<WorldCard>(true);
+        foreach (WorldCard card in existing)
+        {
+            if (card.Definition == null || !ids.Contains(card.Definition.DefinitionId))
+                continue;
+            if (card.UsesPsaSlab || !present.Add(card.Definition.DefinitionId))
+            {
+                Debug.LogError("Japanese demo contains duplicate IDs or a PSA using a normal card definition. Nothing added.");
+                return;
+            }
+        }
+
+        Undo.IncrementCurrentGroup();
+        int undo = Undo.GetCurrentGroup();
+        Undo.SetCurrentGroupName("Add Demo Japanese Normal Cards");
+        Random.State randomState = Random.state;
+        try
+        {
+            CardArtLibrary.EnsureLoaded();
+            Transform folder = FindDemoJapaneseFolder(layout);
+            if (folder == null)
+                folder = CreateChild(layout.DemoCardsRoot, PhysicsLevelLayout.DemoJapaneseCardsName);
+            PhysicsCardSpawnVolume volume = FindDemoJapaneseVolume(layout);
+            if (volume == null)
+            {
+                Transform root = CreateChild(layout.DemoCardsRoot.parent, PhysicsLevelLayout.DemoJapaneseVolumeName);
+                volume = Undo.AddComponent<PhysicsCardSpawnVolume>(root.gameObject);
+                // Audited open space inside the demo glass, clear of cabinets and the balcony.
+                root.SetPositionAndRotation(new Vector3(8.5f, 1.9f, -7.75f), Quaternion.identity);
+                root.localScale = Vector3.one;
+                volume.Box.center = Vector3.zero;
+                volume.Box.size = new Vector3(4f, 1.4f, 5.5f);
+            }
+
+            Random.InitState(unchecked((int)System.DateTime.UtcNow.Ticks));
+            for (int i = definitions.Count - 1; i > 0; i--)
+            {
+                int swap = Random.Range(0, i + 1);
+                CardDefinition temp = definitions[i];
+                definitions[i] = definitions[swap];
+                definitions[swap] = temp;
+            }
+            BuildDemoJapanesePoses(volume.Box.bounds, definitions.Count,
+                out Vector3[] positions, out Quaternion[] rotations);
+            int added = 0;
+            for (int i = 0; i < definitions.Count; i++)
+            {
+                CardDefinition definition = definitions[i];
+                if (present.Contains(definition.DefinitionId))
+                    continue;
+                WorldCard card = CardFactory.CreateWorldCard(positions[i], rotations[i], definition, 0,
+                    "Card_" + definition.DefinitionId, ensureArtLoaded: false);
+                FinishCard(card, folder, PhysicsLevelItem.AreaKind.Demo, batchIndex: 0);
+                added++;
+            }
+            Undo.RecordObject(layout, "Count Demo Japanese Cards");
+            layout.DemoJapaneseRegularCount = definitions.Count;
+            MarkDirty(layout);
+            Undo.CollapseUndoOperations(undo);
+            SelectChildren(folder);
+            Debug.Log("Demo Japanese cards ready: " + added + " added, 160 total. "
+                + "Dragon 50 / Fire 30 / Ground 30 / Ice 50; no Psychic, packs or PSA. "
+                + "Use Grabbit Fall Japanese Only, then stop Grabbit, Bake Japanese Only and save the Scene.");
+        }
+        catch (System.Exception error)
+        {
+            Undo.RevertAllDownToGroup(undo);
+            Debug.LogException(error);
+        }
+        finally
+        {
+            Random.state = randomState;
+        }
+    }
+
+    // Random points in three dimensions allow irregular piles after falling, while the
+    // conservative sphere clearance prevents cards starting inside one another.
+    static void BuildDemoJapanesePoses(Bounds bounds, int count,
+        out Vector3[] positions, out Quaternion[] rotations)
+    {
+        float diameter = CardArtLibrary.FlatSize.magnitude * CardDimensions.GroundCardScale + 0.025f;
+        float margin = diameter * 0.5f;
+        Vector3 min = bounds.min + Vector3.one * margin;
+        Vector3 max = bounds.max - Vector3.one * margin;
+        if (min.x >= max.x || min.y >= max.y || min.z >= max.z)
+            throw new System.InvalidOperationException("Japanese spawn volume is too small for safe card placement.");
+
+        positions = new Vector3[count];
+        rotations = new Quaternion[count];
+        int faceDownCount = Mathf.RoundToInt(count * 0.1f);
+        float minSq = diameter * diameter;
+        for (int i = 0; i < count; i++)
+        {
+            bool found = false;
+            for (int attempt = 0; attempt < 2000 && !found; attempt++)
+            {
+                Vector3 point = new Vector3(Random.Range(min.x, max.x), Random.Range(min.y, max.y), Random.Range(min.z, max.z));
+                found = true;
+                for (int j = 0; j < i; j++)
+                {
+                    if ((point - positions[j]).sqrMagnitude < minSq)
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+                if (found)
+                    positions[i] = point;
+            }
+            if (!found)
+                throw new System.InvalidOperationException("Not enough clear space in the Japanese spawn volume; no cards moved.");
+
+            // Low tilt helps preserve the requested face during the user's physics drop.
+            rotations[i] = Quaternion.Euler((i < faceDownCount ? 180f : 0f) + Random.Range(-3f, 3f),
+                Random.Range(0f, 360f), Random.Range(-3f, 3f));
+        }
+    }
+
+    void ReshuffleDemoJapanese(PhysicsLevelLayout layout)
+    {
+        Transform folder = FindDemoJapaneseFolder(layout);
+        PhysicsCardSpawnVolume volume = FindDemoJapaneseVolume(layout);
+        if (EditorApplication.isPlayingOrWillChangePlaymode || folder == null || volume == null)
+        {
+            Debug.LogError("Open the demo scene in Edit mode with its Japanese card group and spawn volume.");
+            return;
+        }
+
+        var cards = new List<WorldCard>(160);
+        var ids = new HashSet<string>();
+        for (int i = 0; i < folder.childCount; i++)
+        {
+            WorldCard card = folder.GetChild(i).GetComponent<WorldCard>();
+            if (card == null || card.UsesPsaSlab || card.Definition == null
+                || System.Array.IndexOf(DemoJapaneseCategories, card.ShelfCategoryId) < 0
+                || card.GetComponent<PhysicsLevelItem>() == null || !ids.Add(card.Definition.DefinitionId))
+            {
+                Debug.LogError("Japanese group must contain only the 160 unique normal cards; nothing moved.");
+                return;
+            }
+            cards.Add(card);
+        }
+        if (cards.Count != 160)
+        {
+            Debug.LogError("Japanese group must contain all 160 cards before reshuffling; nothing moved.");
+            return;
+        }
+
+        Random.State randomState = Random.state;
+        try
+        {
+            Random.InitState(unchecked((int)System.DateTime.UtcNow.Ticks));
+            for (int i = cards.Count - 1; i > 0; i--)
+            {
+                int swap = Random.Range(0, i + 1);
+                WorldCard temp = cards[i];
+                cards[i] = cards[swap];
+                cards[swap] = temp;
+            }
+            BuildDemoJapanesePoses(volume.Box.bounds, cards.Count, out Vector3[] positions, out Quaternion[] rotations);
+            GrabbitSettings settings = GrabbitEditor.GetOrFetchSettings();
+            if (settings != null && settings.IsGrabbitActive)
+                GetWindow<GrabbitEditor>().ExitTool();
+            StopFloorGuard();
+            DestroyAuthoringFloor();
+            Undo.IncrementCurrentGroup();
+            Undo.SetCurrentGroupName("Reshuffle Demo Japanese Cards");
+            Undo.RegisterFullObjectHierarchyUndo(folder.gameObject, "Reshuffle Demo Japanese Cards");
+            for (int i = 0; i < cards.Count; i++)
+            {
+                WorldCard card = cards[i];
+                StripGrabbitRuntime(card.gameObject);
+                card.StripEditorRigidbody();
+                card.SetGroundShowsBack(false);
+                card.PrepareEditorPhysicsPlacement();
+                Transform visual = card.transform.Find("CardVisual");
+                if (visual != null)
+                {
+                    // Existing baked visuals can carry an old flip independently of the root.
+                    visual.localRotation = CardArtLibrary.WorldVisualRotation;
+                    visual.localScale = CardArtLibrary.WorldVisualScale;
+                }
+                card.transform.SetPositionAndRotation(positions[i], rotations[i]);
+                card.GetComponent<PhysicsLevelItem>().Configure(PhysicsLevelItem.AreaKind.Demo, 0, isBaked: false);
+                EditorUtility.SetDirty(card);
+            }
+            MarkDirty(layout);
+            SelectChildren(folder);
+            Debug.Log("Japanese group reshuffled above the demo: 160 existing cards, 144 face up / 16 face down. "
+                + "Card identities preserved. Ready for Grabbit Fall Japanese Only.");
+        }
+        catch (System.Exception error)
+        {
+            Debug.LogException(error);
+        }
+        finally
+        {
+            Random.state = randomState;
+        }
     }
 
     void DrawMain(PhysicsLevelLayout layout)
@@ -1477,6 +1799,9 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         {
             CardDefinition definition = catalog[i];
             if (definition == null || string.IsNullOrWhiteSpace(definition.DefinitionId))
+                continue;
+            // This plan also fills the existing English packs. Japanese cards have their own set.
+            if (definition.IsJapanese)
                 continue;
             if (demoCardIds.Contains(definition.DefinitionId))
                 continue;

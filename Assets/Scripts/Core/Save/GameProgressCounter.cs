@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Demo HUD and save metadata. Counts only the six demo cabinets, not Mix shelves.
+/// Demo HUD and save metadata. Counts only the ten demo targets, not Mix shelves.
 /// </summary>
 public static class GameProgressCounter
 {

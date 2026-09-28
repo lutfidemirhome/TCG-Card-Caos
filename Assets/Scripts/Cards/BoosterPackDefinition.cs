@@ -7,7 +7,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "BoosterPackDefinition", menuName = "TCG Card Chaos/Booster Pack Definition")]
 public class BoosterPackDefinition : ScriptableObject
 {
-    [Tooltip("When set, only cards from this shelf category can appear. Empty = any catalog card.")]
+    [Tooltip("When set, only English cards from this shelf category can appear. Empty = the English catalog pool.")]
     [SerializeField] string shelfCategoryId;
 
     public string ShelfCategoryId => shelfCategoryId;
@@ -21,7 +21,7 @@ public class BoosterPackDefinition : ScriptableObject
         for (int i = 0; i < all.Count; i++)
         {
             CardDefinition definition = all[i];
-            if (definition == null)
+            if (definition == null || definition.IsJapanese)
                 continue;
 
             if (!string.IsNullOrWhiteSpace(shelfCategoryId))

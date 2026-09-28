@@ -2,6 +2,50 @@ using System;
 using System.Collections;
 using UnityEngine;
 
+[Serializable]
+public sealed class ThrownPhysicsSaveState
+{
+    public bool isSimulating;
+    public bool isSleeping;
+    public Vector3 linearVelocity;
+    public Vector3 angularVelocity;
+
+    public static ThrownPhysicsSaveState Capture(Rigidbody body)
+    {
+        if (body == null || body.isKinematic)
+            return null;
+        bool sleeping = body.IsSleeping();
+        return new ThrownPhysicsSaveState
+        {
+            isSimulating = true,
+            isSleeping = sleeping,
+            linearVelocity = sleeping ? Vector3.zero : body.linearVelocity,
+            angularVelocity = sleeping ? Vector3.zero : body.angularVelocity,
+        };
+    }
+
+    public void Apply(Rigidbody body)
+    {
+        body.isKinematic = false;
+        body.useGravity = true;
+        body.constraints = RigidbodyConstraints.None;
+        CardCollisionUtility.ConfigureThrownBody(body);
+        body.position = body.transform.position;
+        body.rotation = body.transform.rotation;
+        body.linearVelocity = IsFinite(linearVelocity) ? linearVelocity : Vector3.zero;
+        body.angularVelocity = IsFinite(angularVelocity) ? angularVelocity : Vector3.zero;
+        if (isSleeping)
+            body.Sleep();
+        else
+            body.WakeUp();
+    }
+
+    static bool IsFinite(Vector3 value) =>
+        !float.IsNaN(value.x) && !float.IsInfinity(value.x)
+        && !float.IsNaN(value.y) && !float.IsInfinity(value.y)
+        && !float.IsNaN(value.z) && !float.IsInfinity(value.z);
+}
+
 /// <summary>
 /// Preserves the solver's pose, including tilted and elevated piles. Resting bodies sleep naturally
 /// so new impacts and removal of their support can wake them again. Their local support colliders
@@ -45,8 +89,9 @@ public static class CardThrownPhysics
 
         try
         {
-            // Prime supports before the first simulation, but register sleeping poses only
-            // after a physics step so the support colliders are ready first.
+            // Prime supports before the first simulation, but register sleep only after a physics
+            // step. Save restore creates all bodies and restores their sleep states synchronously;
+            // wait for that batch to end before recording the pile's resting poses.
             lastLandingPosition = body.IsSleeping()
                 ? itemTransform.position
                 : itemTransform.position + body.linearVelocity * LandingLookaheadSeconds;

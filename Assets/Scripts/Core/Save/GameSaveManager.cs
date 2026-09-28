@@ -27,10 +27,60 @@ public sealed class GameSaveManager : MonoBehaviour
     float _periodicTimer;
     bool _saveInProgress;
     bool _sessionStarted;
+    bool _finishingSceneSaves;
+    IEnumerator _saveRoutine;
+    Task _activeWriteTask;
     Coroutine _thumbnailRoutine;
+    IEnumerator _thumbnailCapture;
     string _activeThumbnailSlot;
 
     public static GameSaveManager Instance => _instance;
+
+    bool CanCaptureWorld => _sessionStarted && GameScenes.IsActiveGameScene()
+        && (!GameSceneLoader.IsLoading || _finishingSceneSaves)
+        && CardInstancedRenderManager.IsGameplayReady;
+
+    public static void NotifySceneLoadStarting()
+    {
+        if (_instance == null)
+            return;
+        // The old world is still intact here. Finish an already requested manual
+        // save before unloading it; never carry that request into the next world.
+        _instance._finishingSceneSaves = _instance.CanCaptureWorld;
+        _autosaveQueued = false;
+        _milestoneQueued = false;
+        _instance.StopThumbnail();
+    }
+
+    public static IEnumerator PrepareForSceneLoadRoutine()
+    {
+        if (_instance == null)
+            yield break;
+
+        GameSaveManager manager = _instance;
+        manager._periodicTimer = 0f;
+        if (!manager._saveInProgress)
+            manager.DrainQueue();
+        // Finish writes and queued manual requests while the complete old world
+        // still exists, before the loader resets readiness or activates any scene.
+        while (manager != null && manager._saveInProgress)
+            yield return null;
+        if (manager != null)
+        {
+            manager._finishingSceneSaves = false;
+            manager._sessionStarted = false;
+            manager.StopThumbnail();
+        }
+        ClearQueuedSaves();
+    }
+
+    static void ClearQueuedSaves()
+    {
+        _milestoneQueued = false;
+        _autosaveQueued = false;
+        _manualQueued = false;
+        _queuedManualSlotId = null;
+    }
 
     public static GameSaveManager EnsureExists()
     {
@@ -78,13 +128,14 @@ public sealed class GameSaveManager : MonoBehaviour
 
     void OnDestroy()
     {
+        StopThumbnail();
         if (_instance == this)
             _instance = null;
     }
 
     void Update()
     {
-        if (!GameScenes.IsActiveGameScene())
+        if (GameSceneLoader.IsLoading || !CanCaptureWorld)
             return;
 
         if (Time.timeScale > 0f)
@@ -164,7 +215,7 @@ public sealed class GameSaveManager : MonoBehaviour
 
     public void RequestAutosave(SaveRequestKind kind)
     {
-        if (!GameScenes.IsActiveGameScene())
+        if (GameSceneLoader.IsLoading || !CanCaptureWorld)
             return;
 
         if (_saveInProgress)
@@ -185,14 +236,14 @@ public sealed class GameSaveManager : MonoBehaviour
         if (kind != SaveRequestKind.Manual && kind != SaveRequestKind.Exit && !GameSaveDirtyTracker.IsDirty)
             return;
 
-        StartCoroutine(CommitRoutine(kind, manualSlotId: null));
+        StartCommitRoutine(kind, manualSlotId: null);
     }
 
     public void ForceAutosaveNow()
     {
-        if (!GameScenes.IsActiveGameScene())
+        if (GameSceneLoader.IsLoading || !CanCaptureWorld)
         {
-            Debug.LogWarning("[Save] Autosave skipped: MainScene is not active.");
+            Debug.LogWarning("[Save] Autosave skipped: gameplay is not ready.");
             return;
         }
 
@@ -200,7 +251,6 @@ public sealed class GameSaveManager : MonoBehaviour
         if (_saveInProgress)
         {
             _autosaveQueued = true;
-            Debug.Log("[Save] Autosave queued; wait a moment.");
             return;
         }
 
@@ -209,6 +259,12 @@ public sealed class GameSaveManager : MonoBehaviour
 
     public void SaveManual(string slotId = null)
     {
+        if (!CanCaptureWorld)
+        {
+            GameSaveEvents.RaiseSaveFailed("Gameplay is not ready to save.");
+            return;
+        }
+
         if (_saveInProgress)
         {
             _manualQueued = true;
@@ -216,7 +272,7 @@ public sealed class GameSaveManager : MonoBehaviour
             return;
         }
 
-        StartCoroutine(CommitRoutine(SaveRequestKind.Manual, slotId));
+        StartCommitRoutine(SaveRequestKind.Manual, slotId);
     }
 
     public void SaveAndQuit()
@@ -232,107 +288,178 @@ public sealed class GameSaveManager : MonoBehaviour
 
     void TryExitSave()
     {
-        if (!GameScenes.IsActiveGameScene() || !_sessionStarted)
+        bool canCapture = CanCaptureWorld;
+
+        StopThumbnail();
+        // A queued coroutine cannot capture gameplay after the scene/app exits.
+        // Finish its disk operation first so the final snapshot never races the
+        // previous writer (including when both target the same autosave file).
+        bool interruptedSave = FinishActiveWriteForExit();
+        ClearQueuedSaves();
+        if (!canCapture)
             return;
-        if (!GameSaveDirtyTracker.IsDirty)
+        if (!GameSaveDirtyTracker.IsDirty && !interruptedSave)
             return;
-        if (_saveInProgress)
-        {
-            _autosaveQueued = true;
-            return;
-        }
 
         CommitSynchronous(SaveRequestKind.Exit, null);
     }
 
+    bool FinishActiveWriteForExit()
+    {
+        if (_saveRoutine == null && _activeWriteTask == null)
+            return false;
+
+        if (_saveRoutine != null)
+        {
+            StopCoroutine(_saveRoutine);
+            _saveRoutine = null;
+        }
+
+        try
+        {
+            // The worker serializes detached DTOs and performs file I/O; it never
+            // waits for the Unity thread. Only the explicit leave/quit path blocks.
+            if (_activeWriteTask != null)
+                _activeWriteTask.GetAwaiter().GetResult();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning("[Save] Previous write failed before exit: " + exception.Message);
+        }
+        finally
+        {
+            _activeWriteTask = null;
+            _saveInProgress = false;
+        }
+
+        // Its completion callback was stopped, so retain dirty state and save a
+        // fresh snapshot even if that worker happened to finish before this call.
+        return true;
+    }
+
+    void StartCommitRoutine(SaveRequestKind kind, string manualSlotId)
+    {
+        _saveRoutine = CommitRoutine(kind, manualSlotId);
+        StartCoroutine(_saveRoutine);
+    }
+
     IEnumerator CommitRoutine(SaveRequestKind kind, string manualSlotId)
     {
+        if (!CanCaptureWorld)
+        {
+            _saveRoutine = null;
+            yield break;
+        }
+
         _saveInProgress = true;
-        float collectMs = 0f;
-        float serializeMs = 0f;
-        float writeMs = 0f;
         string error = null;
         GameSaveData data = null;
         SaveSlotMetadata metadata = null;
 
-        ResolveSlot(kind, manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex);
-        GameSaveEvents.RaiseSaveStarted(slotId);
-
-        float start = Time.realtimeSinceStartup;
-        data = GameSaveWorldCollector.Collect(slotId, slotType, slotIndex);
-        collectMs = (Time.realtimeSinceStartup - start) * 1000f;
-
-        start = Time.realtimeSinceStartup;
-        string json = JsonUtility.ToJson(data, false);
-        metadata = data.ToMetadata(false);
-        string metaJson = JsonUtility.ToJson(metadata, false);
-        serializeMs = (Time.realtimeSinceStartup - start) * 1000f;
-
-        SaveFileIO.CacheRootOnMainThread();
-        string savePath = SaveFileIO.GetSavePath(data.slotId);
-        string metaPath = SaveFileIO.GetMetaPath(data.slotId);
-
-        bool writeOk = false;
-        Task writeTask = Task.Run(() =>
+        if (!TryResolveSlot(kind, manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex))
         {
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            writeOk = SaveFileIO.TryWriteAtomic(savePath, json, out error);
+            _saveInProgress = false;
+            _saveRoutine = null;
+            GameSaveEvents.RaiseSaveFailed("All manual save slots are full. Select an existing slot to overwrite it.");
+            DrainQueue();
+            yield break;
+        }
+        try
+        {
+            // A previous preview must not write metadata over the new snapshot
+            // while this save's background writer is running.
+            StopThumbnail();
+            GameSaveEvents.RaiseSaveStarted(slotId);
+
+            ulong savedRevision = GameSaveDirtyTracker.Revision;
+            data = GameSaveWorldCollector.Collect(slotId, slotType, slotIndex);
+
+            metadata = data.ToMetadata(false);
+
+            SaveFileIO.CacheRootOnMainThread();
+            string savePath = SaveFileIO.GetSavePath(data.slotId);
+            string metaPath = SaveFileIO.GetMetaPath(data.slotId);
+
+            bool writeOk = false;
+            Task writeTask = Task.Run(() =>
+            {
+                // Collect produced a detached snapshot of strings, values and arrays.
+                // JsonUtility supports background threads; nothing may mutate these
+                // DTOs until this task completes. Live Unity objects stay on the main thread.
+                string json = JsonUtility.ToJson(data, false);
+                string metaJson = JsonUtility.ToJson(metadata, false);
+
+                writeOk = SaveFileIO.TryWriteAtomic(savePath, json, out error);
+                if (writeOk)
+                    SaveFileIO.TryWriteAtomic(metaPath, metaJson, out _);
+            });
+            _activeWriteTask = writeTask;
+
+            while (!writeTask.IsCompleted)
+                yield return null;
+            _activeWriteTask = null;
+
+            if (writeTask.IsFaulted)
+            {
+                error = writeTask.Exception != null
+                    ? writeTask.Exception.GetBaseException().Message
+                    : "Save task failed.";
+                writeOk = false;
+            }
+
             if (writeOk)
-                SaveFileIO.TryWriteAtomic(metaPath, metaJson, out _);
-            watch.Stop();
-            writeMs = (float)watch.Elapsed.TotalMilliseconds;
-        });
+            {
+                // Gameplay continues while the worker writes. Changes after Collect
+                // (including a pack becoming five cards) still need their own save.
+                GameSaveDirtyTracker.ClearIfUnchanged(savedRevision);
+                if (kind == SaveRequestKind.Autosave || kind == SaveRequestKind.Milestone || kind == SaveRequestKind.Exit)
+                    AdvanceAutosaveIndex(slotIndex);
 
-        while (!writeTask.IsCompleted)
-            yield return null;
-
-        if (writeTask.IsFaulted)
-        {
-            error = writeTask.Exception != null
-                ? writeTask.Exception.GetBaseException().Message
-                : "Save task failed.";
-            writeOk = false;
-        }
-
-        if (writeOk)
-        {
-            GameSaveDirtyTracker.Clear();
-            if (kind == SaveRequestKind.Autosave || kind == SaveRequestKind.Milestone || kind == SaveRequestKind.Exit)
-                AdvanceAutosaveIndex(slotIndex);
-
-            GameSaveEvents.RaiseSaveCompleted(metadata);
-            LogSave(kind, slotId, data, collectMs, serializeMs, writeMs);
-            BeginThumbnail(slotId);
-        }
-        else
-        {
-            GameSaveEvents.RaiseSaveFailed(error ?? "Save failed.");
+                GameSaveEvents.RaiseSaveCompleted(metadata);
+                if (!GameSceneLoader.IsLoading && CanCaptureWorld)
+                    BeginThumbnail(slotId);
+            }
+            else
+            {
+                GameSaveEvents.RaiseSaveFailed(error ?? "Save failed.");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[Save] Failed (" + kind + "): " + error);
+                Debug.LogWarning("[Save] Failed (" + kind + "): " + error);
 #endif
+            }
         }
-
-        _saveInProgress = false;
+        finally
+        {
+            // Scene loading must never wait forever after a snapshot/callback error.
+            _saveInProgress = false;
+            _saveRoutine = null;
+        }
         DrainQueue();
     }
 
     void CommitSynchronous(SaveRequestKind kind, string manualSlotId)
     {
+        if (!CanCaptureWorld)
+            return;
+        if (!TryResolveSlot(kind, manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex))
+        {
+            GameSaveEvents.RaiseSaveFailed("All manual save slots are full. Select an existing slot to overwrite it.");
+            return;
+        }
         _saveInProgress = true;
-        ResolveSlot(kind, manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex);
+        StopThumbnail();
         GameSaveEvents.RaiseSaveStarted(slotId);
 
         try
         {
+            ulong savedRevision = GameSaveDirtyTracker.Revision;
             GameSaveData data = GameSaveWorldCollector.Collect(slotId, slotType, slotIndex);
             SaveSlotMetadata metadata = data.ToMetadata(false);
             if (SaveFileIO.TryWriteSaveAndMeta(data, metadata, out string error))
             {
-                GameSaveDirtyTracker.Clear();
+                GameSaveDirtyTracker.ClearIfUnchanged(savedRevision);
                 if (kind != SaveRequestKind.Manual)
                     AdvanceAutosaveIndex(slotIndex);
                 GameSaveEvents.RaiseSaveCompleted(metadata);
-                LogSave(kind, slotId, data, 0f, 0f, 0f);
             }
             else
             {
@@ -351,6 +478,11 @@ public sealed class GameSaveManager : MonoBehaviour
 
     void DrainQueue()
     {
+        if (!CanCaptureWorld)
+        {
+            ClearQueuedSaves();
+            return;
+        }
         if (_manualQueued)
         {
             _manualQueued = false;
@@ -369,7 +501,7 @@ public sealed class GameSaveManager : MonoBehaviour
         }
     }
 
-    void ResolveSlot(SaveRequestKind kind, string manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex)
+    bool TryResolveSlot(SaveRequestKind kind, string manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex)
     {
         if (kind == SaveRequestKind.Manual)
         {
@@ -380,19 +512,20 @@ public sealed class GameSaveManager : MonoBehaviour
                 slotType = manualSlotId.StartsWith("autosave_", StringComparison.Ordinal)
                     ? SaveSlotType.Auto
                     : SaveSlotType.Manual;
-                return;
+                return true;
             }
 
             slotType = SaveSlotType.Manual;
 
             slotIndex = NextManualIndex();
-            slotId = SaveFileIO.ManualSlotId(slotIndex);
-            return;
+            slotId = slotIndex >= 0 ? SaveFileIO.ManualSlotId(slotIndex) : null;
+            return slotIndex >= 0;
         }
 
         slotType = SaveSlotType.Auto;
         slotIndex = Mathf.Clamp(SaveFileIO.LoadManifest().nextAutosaveIndex, 0, GameSaveSettings.AutosaveSlotCount - 1);
         slotId = SaveFileIO.AutosaveSlotId(slotIndex);
+        return true;
     }
 
     static int ParseIndex(string slotId)
@@ -405,15 +538,25 @@ public sealed class GameSaveManager : MonoBehaviour
 
     int NextManualIndex()
     {
-        List<SaveSlotMetadata> slots = SaveFileIO.ListCompatibleSlots();
-        int used = 0;
-        for (int i = 0; i < slots.Count; i++)
+        for (int i = 0; i < _settings.MaxManualSlots; i++)
         {
-            if (slots[i].slotType == SaveSlotType.Manual)
-                used = Mathf.Max(used, slots[i].slotIndex + 1);
+            if (!SaveFileIO.HasSlotFiles(SaveFileIO.ManualSlotId(i)))
+                return i;
         }
 
-        return used % Mathf.Max(1, _settings.MaxManualSlots);
+        return -1;
+    }
+
+    public static int GetAvailableManualSlotCount()
+    {
+        int available = 0;
+        int limit = GameSaveSettings.LoadOrDefault().MaxManualSlots;
+        for (int i = 0; i < limit; i++)
+        {
+            if (!SaveFileIO.HasSlotFiles(SaveFileIO.ManualSlotId(i)))
+                available++;
+        }
+        return available;
     }
 
     static void AdvanceAutosaveIndex(int writtenIndex)
@@ -425,46 +568,39 @@ public sealed class GameSaveManager : MonoBehaviour
 
     void BeginThumbnail(string slotId)
     {
-        if (_thumbnailRoutine != null && _activeThumbnailSlot == slotId)
-            StopCoroutine(_thumbnailRoutine);
+        // Keep a single tracked capture so leaving gameplay can cancel all
+        // preview/metadata writes before committing the final save.
+        StopThumbnail();
 
         _activeThumbnailSlot = slotId;
         _thumbnailRoutine = StartCoroutine(ThumbnailWrapper(slotId));
     }
 
+    void StopThumbnail()
+    {
+        if (_thumbnailRoutine != null)
+            StopCoroutine(_thumbnailRoutine);
+        _thumbnailRoutine = null;
+        _activeThumbnailSlot = null;
+        // Unity stops coroutines without disposing their iterators. Explicitly
+        // release the capture so its finally can finish a readback and free both RTs.
+        IEnumerator capture = _thumbnailCapture;
+        _thumbnailCapture = null;
+        (capture as IDisposable)?.Dispose();
+    }
+
     IEnumerator ThumbnailWrapper(string slotId)
     {
-        yield return GameSaveThumbnail.CaptureRoutine(slotId, _settings);
+        IEnumerator capture = GameSaveThumbnail.CaptureRoutine(slotId, _settings);
+        _thumbnailCapture = capture;
+        yield return capture;
+        if (_thumbnailCapture == capture)
+            _thumbnailCapture = null;
         if (_activeThumbnailSlot == slotId)
         {
             _activeThumbnailSlot = null;
             _thumbnailRoutine = null;
         }
-    }
-
-    void LogSave(SaveRequestKind kind, string slotId, GameSaveData data, float collectMs, float serializeMs, float writeMs)
-    {
-        int shelfCards = 0;
-        int psaCards = 0;
-        if (data != null && data.cards != null)
-        {
-            for (int i = 0; i < data.cards.Length; i++)
-            {
-                CardSaveRecord card = data.cards[i];
-                if (card == null)
-                    continue;
-                if (card.location == CardRuntimeLocation.Shelf)
-                    shelfCards++;
-                else if (card.location == CardRuntimeLocation.PsaCabinet)
-                    psaCards++;
-            }
-        }
-
-        Debug.Log(
-            "[Save] Completed " + kind + " " + slotId
-            + " shelf=" + shelfCards
-            + " psa=" + psaCards
-            + " total=" + (data != null && data.cards != null ? data.cards.Length : 0));
     }
 
     void LoadLatestFromGameplay()
