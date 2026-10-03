@@ -286,6 +286,7 @@ public static class PackOpenSequence
             }
 
             card.SetRevealVisualFlip(1f);
+            AssemblePickupTrail.PlayReveal(card);
 
             if (i < revealSparkles.Count && revealSparkles[i] != null)
                 revealSparkles[i].Show();

@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-/// <summary>Small, scene-owned effect pool; only cards currently flying for Assemble use it.</summary>
+/// <summary>Bounded, scene-owned pool for Assemble trails and card reveal/arrival flashes.</summary>
 [DefaultExecutionOrder(110)]
 public sealed class AssemblePickupTrail : MonoBehaviour
 {
@@ -20,8 +20,22 @@ public sealed class AssemblePickupTrail : MonoBehaviour
 
     public static Emitter Begin(Transform source)
     {
+        return EnsurePool(source) ? _instance.Take(source.position, source.gameObject.layer, true) : null;
+    }
+
+    public static void PlayReveal(WorldCard card)
+    {
+        if (card == null || !card.IsPackReveal || !card.isActiveAndEnabled || !EnsurePool(card.transform))
+            return;
+
+        Emitter effect = _instance.Take(card.transform.position, card.gameObject.layer, false);
+        effect?.PlayGlow(card, true);
+    }
+
+    static bool EnsurePool(Transform source)
+    {
         if (source == null || !source.gameObject.scene.IsValid())
-            return null;
+            return false;
 
         if (_instance == null)
         {
@@ -32,7 +46,7 @@ public sealed class AssemblePickupTrail : MonoBehaviour
             _instance._sparkMaterial = Resources.Load<Material>("UI/Skills/AssembleSpark");
             _instance._arrivalMaterial = Resources.Load<Material>("UI/Skills/AssembleArrival");
         }
-        return _instance.Take(source.position, source.gameObject.layer);
+        return true;
     }
 
     public static void CancelArrival(WorldCard card)
@@ -41,9 +55,9 @@ public sealed class AssemblePickupTrail : MonoBehaviour
         foreach (Emitter emitter in _instance._emitters) emitter.CancelArrival(card);
     }
 
-    Emitter Take(Vector3 position, int layer)
+    Emitter Take(Vector3 position, int layer, bool trail)
     {
-        if (_ribbonMaterial == null || _sparkMaterial == null)
+        if (_ribbonMaterial == null || _sparkMaterial == null || (!trail && _arrivalMaterial == null))
             return null;
 
         Emitter available = null;
@@ -64,7 +78,7 @@ public sealed class AssemblePickupTrail : MonoBehaviour
         // Fast repeated uses may shorten an old fade, but never steal a live card's effect.
         if (available == null) available = fading;
         if (available == null) return null;
-        available.Start(position, layer);
+        available.Start(position, layer, trail);
         enabled = true;
         return available;
     }
@@ -126,6 +140,7 @@ public sealed class AssemblePickupTrail : MonoBehaviour
         Vector3 _arrivalLocalPosition;
         Vector3 _arrivalLocalScale;
         float _arrivalStarted;
+        bool _revealGlow;
 
         internal Emitter(Transform parent, Material ribbonMaterial, Material sparkMaterial,
             Material arrivalMaterial, Mesh arrivalMesh, uint seed)
@@ -193,7 +208,7 @@ public sealed class AssemblePickupTrail : MonoBehaviour
             Glow.SetActive(false);
         }
 
-        internal void Start(Vector3 position, int layer)
+        internal void Start(Vector3 position, int layer, bool trail)
         {
             Finish(true);
             Root.layer = layer;
@@ -202,9 +217,9 @@ public sealed class AssemblePickupTrail : MonoBehaviour
             Root.transform.position = position;
             Root.SetActive(true);
             Ribbon.Clear();
-            Ribbon.emitting = true;
-            Sparks.Play(false);
-            Following = true;
+            Ribbon.emitting = trail;
+            if (trail) Sparks.Play(false);
+            Following = trail;
         }
 
         public void Follow(Vector3 position)
@@ -229,13 +244,20 @@ public sealed class AssemblePickupTrail : MonoBehaviour
 
         public void PlayArrival(WorldCard card)
         {
-            if (Root == null || !Root.activeSelf || card == null || !card.IsHeld || !card.isActiveAndEnabled
+            PlayGlow(card, false);
+        }
+
+        internal void PlayGlow(WorldCard card, bool reveal)
+        {
+            if (Root == null || !Root.activeSelf || card == null || !card.isActiveAndEnabled
+                || (reveal ? !card.IsPackReveal : !card.IsHeld)
                 || GlowRenderer.sharedMaterial == null
                 || !card.TryGetSkillArrivalGlowSurface(out Transform visual, out Bounds bounds))
                 return;
 
             // Cache the surface once. Never replace a card's material or rescan its model each frame.
             _arrivalCard = card;
+            _revealGlow = reveal;
             _arrivalVisual = visual;
             _arrivalLocalPosition = new Vector3(bounds.center.x, bounds.center.y, bounds.max.z + 0.001f);
             _arrivalLocalScale = new Vector3(bounds.size.x * 1.06f, bounds.size.y * 1.06f, 1f);
@@ -249,7 +271,8 @@ public sealed class AssemblePickupTrail : MonoBehaviour
         {
             if (Glow == null || !Glow.activeSelf) return;
             float age = (Time.time - _arrivalStarted) / ArrivalDuration;
-            if (_arrivalCard == null || !_arrivalCard.IsHeld || !_arrivalCard.isActiveAndEnabled
+            if (_arrivalCard == null || !_arrivalCard.isActiveAndEnabled
+                || (_revealGlow ? !_arrivalCard.IsPackReveal : !_arrivalCard.IsHeld)
                 || _arrivalVisual == null || age >= 1f)
             {
                 ClearArrival();
