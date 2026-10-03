@@ -86,6 +86,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     bool _skillPickupSettling;
     Vector3 _skillPickupArrivalPosition;
     Quaternion _skillPickupArrivalRotation;
+    AssemblePickupTrail.Emitter _skillPickupTrail;
     Transform _shelfFlightSlot;
     float _shelfFlightSurfacePadding;
     System.Action _onShelfFlightComplete;
@@ -327,6 +328,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
+        StopSkillPickupTrail(true);
         ReleaseFullDetailTexture();
         StopThrownPhysicsMonitor();
         CardGroundStack.UntrackPhysicsCard(this);
@@ -335,6 +337,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDestroy()
     {
+        StopSkillPickupTrail(true);
         ReleaseFullDetailTexture();
         StopThrownPhysicsMonitor();
         CardGroundStack.UntrackPhysicsCard(this);
@@ -526,6 +529,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void CompletePickupFlight()
     {
+        AssemblePickupTrail.Emitter arrivalEffect = _skillPickupTrail;
+        // End the world-space trail before parenting into the hand changes local coordinates.
+        StopSkillPickupTrail(false);
         if (_skillPickupView != null && _handAnchor != null && _skillPickupSettleDuration > 0f)
         {
             _skillPickupArrivalPosition = _handAnchor.InverseTransformPoint(transform.position);
@@ -543,6 +549,20 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         System.Action callback = _onPickupFlightComplete;
         _onPickupFlightComplete = null;
         callback?.Invoke();
+        arrivalEffect?.PlayArrival(this);
+    }
+
+    public bool TryGetSkillArrivalGlowSurface(out Transform visual, out Bounds bounds)
+    {
+        visual = _cardVisual;
+        bounds = default;
+        if (visual == null) return false;
+        if (UsesPsaSlab)
+            return _psaController != null && _psaController.TryGetHandFrontBounds(out bounds);
+        Mesh mesh = CardArtLibrary.HandCardMesh;
+        if (mesh == null) return false;
+        bounds = mesh.bounds;
+        return true;
     }
 
     void AdvanceSkillPickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
@@ -550,6 +570,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _flightElapsed += Time.deltaTime;
         if (_flightElapsed <= 0f)
             return;
+
+        if (_skillPickupTrail == null && Time.deltaTime > 0f && isActiveAndEnabled)
+            _skillPickupTrail = AssemblePickupTrail.Begin(transform);
 
         float t = Mathf.Clamp01(_flightElapsed / _flightDuration);
         Transform view = _skillPickupView;
@@ -585,6 +608,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.SetPositionAndRotation(position, rotation);
         transform.localScale = Vector3.one * Mathf.Lerp(_flightStartWorldScale, _flightTargetHandScale,
             Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / gatherFraction)));
+        _skillPickupTrail?.Follow(position - transform.up * 0.018f);
     }
 
     static Vector3 PickupBezier(Vector3 start, Vector3 a, Vector3 b, Vector3 end, float t)
@@ -596,10 +620,18 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void ClearSkillPickupMotion()
     {
+        StopSkillPickupTrail(true);
         if (_skillPickupView != null || _skillPickupSettling)
             _onPickupFlightComplete = null;
         _skillPickupView = null;
         _skillPickupSettling = false;
+    }
+
+    void StopSkillPickupTrail(bool immediate)
+    {
+        if (immediate) AssemblePickupTrail.CancelArrival(this);
+        _skillPickupTrail?.Finish(immediate);
+        _skillPickupTrail = null;
     }
 
     public void RestoreIntoHand(Transform handAnchor, float targetHandScale)

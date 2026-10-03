@@ -36,6 +36,16 @@ public sealed class PsaCardVisualController
 
     public Transform PsaModel => _psaModel;
 
+    public bool TryGetHandFrontBounds(out Bounds bounds)
+    {
+        bounds = default;
+        if (_cardRef == null || _psaModel == null
+            || !TryMeasureMeshBoundsInLocalSpace(_cardRef, _psaModel, out Vector3 min, out Vector3 max))
+            return false;
+        bounds.SetMinMax(min, max);
+        return true;
+    }
+
     public float GroundRestLift
     {
         get
