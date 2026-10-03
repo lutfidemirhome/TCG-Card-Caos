@@ -55,6 +55,7 @@ public static class GameSaveThumbnail
             // Downsample on the GPU. Never read a full-resolution screen into
             // CPU memory merely to create a 256x144 save preview.
             bool captured = false;
+            RenderTexture previousTarget = RenderTexture.active;
             try
             {
                 screenshot = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
@@ -71,6 +72,12 @@ public static class GameSaveThumbnail
             catch (System.Exception exception)
             {
                 LogCaptureFailure(exception.Message);
+            }
+            finally
+            {
+                // Blit changes the active target. Restore it before yielding to the
+                // next game frame while an asynchronous thumbnail readback completes.
+                RenderTexture.active = previousTarget;
             }
             if (!captured)
                 yield break;

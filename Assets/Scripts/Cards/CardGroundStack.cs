@@ -31,6 +31,15 @@ public static class CardGroundStack
     {
         destination.Clear();
         destination.AddRange(GroundCards);
+        // A newly thrown card enters the physical registry immediately, but does not
+        // rejoin GroundCards until its first sleep. Skills must also find it while
+        // settling; do not alter its physics pose or ground/spatial registration.
+        for (int i = 0; i < PhysicsCards.Count; i++)
+        {
+            WorldCard card = PhysicsCards[i];
+            if (card != null && !GroundCardSet.Contains(card))
+                destination.Add(card);
+        }
     }
 
     static readonly List<WorldCard> GroundCards = new List<WorldCard>(512);
@@ -927,6 +936,8 @@ public static class CardGroundStack
             return;
 
         PhysicsCards.Add(card);
+        if (!GroundCardSet.Contains(card))
+            MembershipRevision++;
     }
 
     public static void UntrackPhysicsCard(WorldCard card)
@@ -934,6 +945,8 @@ public static class CardGroundStack
         if (card == null || !PhysicsCardSet.Remove(card))
             return;
 
+        if (!GroundCardSet.Contains(card))
+            MembershipRevision++;
         for (int i = PhysicsCards.Count - 1; i >= 0; i--)
         {
             if (PhysicsCards[i] == card)

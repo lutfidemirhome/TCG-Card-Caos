@@ -29,7 +29,7 @@ Hepsi gerçek yeni oyunda seviye 0/kilitli başlar. Seviye 1 açar; yükseltmele
 | Yetenek | Maksimum seviye | Bekleme süreleri | Etki / miktar |
 | --- | --- | --- | --- |
 | Assemble - Kart toplama | 10 | 120,110,100,90,80,70,60,40,30,10 | 1,2,3,4,5,6,7,8,9,9 kart |
-| Sort - Sıralama | 5 | 30,25,20,10,5 | Eldeki kartları numara sırasına dizer |
+| Sort - Sıralama | 5 | 30,25,20,10,5 | Eldeki kartları gruplar; her grubu kendi içinde sıralar |
 | Shelf Guide - Raf rehberi | 10 | 60,50,40,30,30,25,25,20,10,5 | 15,20,25,30,35,40,45,50,55,60 saniye |
 | Insight - Yerdeki kartları gösterme | 10 | 60,55,50,50,40,40,30,30,20,20 | 7,10,12,17,20,23,27,30,35,40 saniye |
 | Autoshelving - Otomatik yerleştirme | 10 | 100,90,80,70,60,50,40,30,20,10 | 10,15,20,25,30,35,40,45,50,55 saniye |
@@ -41,11 +41,11 @@ Elde seçili kartın grubuna ait yerdeki kartları yakından uzağa ele toplar. 
 
 ### 2 — Sort
 
-Normal ve PSA kartlarını küçük numaradan büyüğe sıralar. Kartların önceliği seri/kategori/nadirlik değil, numaradır. Paketler kendi aralarındaki sırayı koruyarak en sona gider. Seçili nesne korunur.
+Normal kartları aynı seridekiler yan yana kalacak şekilde gruplar; her serinin içinde kart numarasını küçükten büyüğe sıralar. Başka serinin kartları bu grubun arasına girmez. PSA kartlarını aynı dil/set ve aynı PSA numarasına göre gruplar; her grubun içinde varyant sırasına dizer. Normal kartlar önce, PSA grupları sonra gelir. Paketler kendi aralarındaki sırayı koruyarak en sona gider. Seçim, önceden seçili kartın grubundaki elde bulunan en küçük numaralı karta geçer; PSA'da aynı dil/numara grubunun ilk varyantı seçilir. Örneğin B5 seçiliyken elde B2 ve B5 varsa Sort sonrasında B2 seçilir. Paket seçiliyken kullanılırsa aynı paket seçili kalır.
 
-Örnek: `X8 – Paket A – Y2 – PSA7 – X1 – Paket B` → `X1 – Y2 – PSA7 – X8 – Paket A – Paket B`.
+Örnek: `A8 – Paket A – B2 – A1 – B5 – Paket B` → `A1 – A8 – B2 – B5 – Paket A – Paket B`. PSA örneği: İngilizce PSA 7 varyant 3 ve varyant 1 yan yana, `varyant 1 – varyant 3` sırasıyla durur; İngilizce PSA 8 veya Japonca PSA 7 bu grubun arasına girmez.
 
-Aynı numarada normal/PSA türü, PSA dili-varyantı, kart içerik kimliği ve son olarak kalıcı nesne kimliği sabit bir sıra sağlar. Bu ek sıralama numara önceliğini değiştirmez; eşit numaralı kartların her kullanımda rastgele yer değiştirmesini önler. Test: farklı serilerden 8, 2, 5 numaralarıyla iki paket al, 2'ye bas; kartlar 2,5,8 ve ardından paketler olmalı. Yalnız paket varsa skill çalışmaz. Sıralama işlemi anlıktır, ardından bekleme başlar.
+Gruplar arasında sabit bir sıra kullanılır. Aynı grupta aynı numarayı taşıyan kartların içerik ve kalıcı nesne kimlikleri eşitliği bozar; tekrar kullanımda rastgele yer değişmezler. Test: farklı serilerden A8, B2, A1, B5 ve iki paket al, 2'ye bas; A1–A8 ve B2–B5 ayrı, kesintisiz gruplar olmalı; paketler sonda kalmalı. Yalnız paket varsa skill çalışmaz. Sıralama işlemi anlıktır, ardından bekleme başlar.
 
 ### 3 — Shelf Guide
 

@@ -81,11 +81,27 @@ public sealed class CardSkillController : MonoBehaviour
         if (GamePause.IsPaused) return;
         SkillProgress.Tick(Time.deltaTime);
         if (Cursor.lockState == CursorLockMode.Locked && !SkillPanelView.ConsumesPauseInput)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (Input.GetKeyDown(KeyCode.P))
+            {
+                SkillProgress.EnableMaxSkillsForTesting();
+                _autoStarted = false;
+                _boundAutoContext = null;
+                _autoShelf = null;
+                _autoPsaCabinet = null;
+                _autoRow = -1;
+                _autoGroup = default;
+                _autoPlace = 0f;
+                _effectRefresh = 0f;
+            }
+#endif
             for (int i = 0; i < SkillCatalog.Count; i++)
             {
                 if (!Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + i)) && !Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + i))) continue;
                 Activate(i);
             }
+        }
         if (SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
         {
             RestoreAutoshelfContextIfNeeded();
@@ -147,7 +163,9 @@ public sealed class CardSkillController : MonoBehaviour
         foreach (WorldCard card in _matching)
         {
             if (collected >= limit || hand.AvailableSlots <= 0) break;
-            if (card.IsPhysicsSimulating && card.PhysicsBody != null && !card.PhysicsBody.IsSleeping()) continue;
+            // Picking up a support wakes its neighbours immediately. Do not let that
+            // change this skill's eligible cards halfway through the same batch.
+            // TryPickup safely stops a moving card's physics, just like manual pickup.
             if (hand.TryPickup(card, collected == 0)) collected++;
         }
         return collected > 0;
@@ -214,6 +232,8 @@ public sealed class CardSkillController : MonoBehaviour
 
     bool TryAutoshelf(bool place)
     {
+        if (_interaction == null)
+            _interaction = FindFirstObjectByType<InteractionController>();
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (_interaction == null || hand == null || hand.IsHandInputLocked || hand.IsAwaitingRevealCollect) return false;
         if (!place)

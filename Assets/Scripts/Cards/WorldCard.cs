@@ -53,6 +53,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     int _thrownLandingScope;
     [SerializeField] Transform _cardVisual;
     bool _cardVisualBound;
+    Texture2D _fullDetailTexture;
     bool _handSelected;
     GameObject _outlineObject;
     // Only one hover target is active. Keep one spare border between targets
@@ -318,6 +319,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
+        ReleaseFullDetailTexture();
         StopThrownPhysicsMonitor();
         CardGroundStack.UntrackPhysicsCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
@@ -325,6 +327,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDestroy()
     {
+        ReleaseFullDetailTexture();
         StopThrownPhysicsMonitor();
         CardGroundStack.UntrackPhysicsCard(this);
         CardGroundQuery.UntrackShelfCard(this);
@@ -1314,6 +1317,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void RefreshRenderMode()
     {
+        RefreshFullDetailTexture();
         CardInstancedRenderManager.Instance?.Unregister(this);
 
         if (CanUseInstancedRendering || CanUseInstancedBackRendering)
@@ -1349,6 +1353,23 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         ApplyActiveVisualOrientation();
 
         RefreshInteractionOutline();
+    }
+
+    void RefreshFullDetailTexture()
+    {
+        Texture2D texture = isActiveAndEnabled && !UsesPsaSlab && (IsInHand || IsPackReveal)
+            && definition != null ? definition.FrontTexture : null;
+        if (texture != null && !texture.streamingMipmaps) texture = null;
+        if (ReferenceEquals(_fullDetailTexture, texture)) return;
+        ReleaseFullDetailTexture();
+        _fullDetailTexture = texture;
+        CardTextureStreaming.AcquireFullDetail(texture);
+    }
+
+    void ReleaseFullDetailTexture()
+    {
+        CardTextureStreaming.ReleaseFullDetail(_fullDetailTexture);
+        _fullDetailTexture = null;
     }
 
     void ApplyActiveVisualOrientation()

@@ -28,6 +28,23 @@ public class CardShelf : MonoBehaviour, IInteractable
     readonly List<CardShelfSlot> _slots = new List<CardShelfSlot>(32);
     readonly Dictionary<CardShelfSlot, int> _resolvedSlotNumbers = new Dictionary<CardShelfSlot, int>(32);
     bool _slotCacheValid;
+    readonly List<ProgressSlotState> _progressSlots = new List<ProgressSlotState>(100);
+    bool _progressCacheValid, _progressComplete;
+    int _progressCorrectCount, _progressSlotsPerRow;
+    string _progressCategory;
+
+    struct ProgressSlotState
+    {
+        public CardShelfSlot Slot;
+        public WorldCard Card;
+        public string DefinitionId, Category;
+        public int RequiredNumber, Row, Number;
+
+        public bool Matches(ProgressSlotState other) =>
+            ReferenceEquals(Slot, other.Slot) && ReferenceEquals(Card, other.Card)
+            && DefinitionId == other.DefinitionId && Category == other.Category
+            && RequiredNumber == other.RequiredNumber && Row == other.Row && Number == other.Number;
+    }
 
     struct ShelfFlightEntry
     {
@@ -97,6 +114,7 @@ public class CardShelf : MonoBehaviour, IInteractable
     public void RefreshSlotCache()
     {
         _slotCacheValid = false;
+        _progressCacheValid = false;
         _slots.Clear();
         _resolvedSlotNumbers.Clear();
         GetComponentsInChildren(true, _slots);
@@ -378,10 +396,48 @@ public class CardShelf : MonoBehaviour, IInteractable
         return complete;
     }
 
-    /// <summary>Single slot scan for HUD / save progress.</summary>
+    /// <summary>Reuse this cabinet's validated counts while its exact occupancy is unchanged.</summary>
     public void CollectHudProgress(out int correctlyPlaced, out bool complete)
     {
         EnsureSlotCache(refreshInEditor: true);
+        // The global HUD cache is invalidated by any pickup/placement in the shop. Series
+        // validation scans a cabinet for each card, so repeating it for every already-filled
+        // cabinet makes later placements increasingly expensive. A cheap exact snapshot
+        // detects changes here without relying on every restore/removal path firing an event.
+        bool changed = !_progressCacheValid || _progressCategory != CategoryId
+            || _progressSlotsPerRow != SlotsPerRow || _progressSlots.Count != _slots.Count;
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            WorldCard card = slot != null && !slot.IsEmpty ? slot.OccupiedCard : null;
+            CardDefinition definition = card != null ? card.Definition : null;
+            var state = new ProgressSlotState
+            {
+                Slot = slot != null ? slot : null,
+                Card = card != null ? card : null,
+                DefinitionId = definition != null ? definition.DefinitionId : null,
+                Category = definition != null ? definition.ShelfCategoryId : null,
+                RequiredNumber = definition != null ? definition.ShelfSlotNumber : 0,
+                Row = card != null ? slot.RowIndex : -1,
+                Number = card != null ? ResolveSlotNumber(slot) : 0,
+            };
+            if (i >= _progressSlots.Count)
+                _progressSlots.Add(state);
+            else
+            {
+                changed |= !_progressSlots[i].Matches(state);
+                _progressSlots[i] = state;
+            }
+        }
+        if (_progressSlots.Count > _slots.Count)
+            _progressSlots.RemoveRange(_slots.Count, _progressSlots.Count - _slots.Count);
+        if (!changed)
+        {
+            correctlyPlaced = _progressCorrectCount;
+            complete = _progressComplete;
+            return;
+        }
+
         correctlyPlaced = 0;
         complete = _slots.Count > 0;
 
@@ -400,6 +456,11 @@ public class CardShelf : MonoBehaviour, IInteractable
             else
                 complete = false;
         }
+        _progressCorrectCount = correctlyPlaced;
+        _progressComplete = complete;
+        _progressCategory = CategoryId;
+        _progressSlotsPerRow = SlotsPerRow;
+        _progressCacheValid = true;
     }
 
     /// <summary>

@@ -1141,7 +1141,14 @@ public class PlayerCardHand : MonoBehaviour
         foreach (HandFanEntry entry in _handFanOrder) if (entry.Card != null) fanCards++;
         if (fanCards != _cards.Count) return false;
         HandFanEntry selected = _selectedIndex >= 0 && _handFanOrder.Count > _selectedIndex ? _handFanOrder[_selectedIndex] : default;
-        _cards.Sort(CompareCardsForSkill);
+        _cards.Sort(CompareCardGroupsForHandSort);
+        if (selected.Card != null)
+            foreach (WorldCard card in _cards)
+                if (CompareHandSortGroups(card, selected.Card) == 0)
+                {
+                    selected = new HandFanEntry { Card = card };
+                    break;
+                }
         // Keep packs in their existing relative order, after every normal/PSA card.
         _handFanOrder.RemoveAll(entry => entry.Card != null);
         for (int i = 0; i < _cards.Count; i++)
@@ -1152,6 +1159,32 @@ public class PlayerCardHand : MonoBehaviour
         ApplyFanLayout();
         GameSaveSignals.MarkDirty();
         return true;
+    }
+
+    // Keep each shelf series together in the hand; numbering only orders that group.
+    // Autoshelving retains its existing numeric comparison below.
+    static int CompareCardGroupsForHandSort(WorldCard a, WorldCard b)
+    {
+        int result = CompareHandSortGroups(a, b);
+        return result != 0 ? result : CompareCardsForSkill(a, b);
+    }
+
+    static int CompareHandSortGroups(WorldCard a, WorldCard b)
+    {
+        int result = a.UsesPsaSlab.CompareTo(b.UsesPsaSlab);
+        if (result != 0) return result;
+        if (a.UsesPsaSlab)
+        {
+            result = ((int)a.PsaSet).CompareTo((int)b.PsaSet);
+            if (result == 0) result = a.PsaSlotNumber.CompareTo(b.PsaSlotNumber);
+        }
+        else
+        {
+            CardShelfSeries.TryGetSeriesId(a.Definition, out string leftSeries);
+            CardShelfSeries.TryGetSeriesId(b.Definition, out string rightSeries);
+            result = string.CompareOrdinal(leftSeries, rightSeries);
+        }
+        return result;
     }
 
     public static int CompareCardsForSkill(WorldCard a, WorldCard b)

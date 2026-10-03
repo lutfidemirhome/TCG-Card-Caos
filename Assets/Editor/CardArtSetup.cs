@@ -172,10 +172,10 @@ public static class CardArtSetup
             return null;
         }
 
-        if (AssetDatabase.LoadAssetAtPath<Texture2D>(destinationAssetPath) != null)
-            AssetDatabase.DeleteAsset(destinationAssetPath);
-
-        if (!AssetDatabase.CopyAsset(sourceAssetPath, destinationAssetPath))
+        // Refresh the image in place so scenes/materials keep the existing texture GUID.
+        if (File.Exists(destinationAssetPath))
+            File.Copy(sourceAssetPath, destinationAssetPath, overwrite: true);
+        else if (!AssetDatabase.CopyAsset(sourceAssetPath, destinationAssetPath))
         {
             Debug.LogError("TCG Card Chaos: Failed to copy texture " + sourceAssetPath);
             return null;
@@ -213,7 +213,11 @@ public static class CardArtSetup
     {
         var material = new Material(template) { name = materialName };
         if (texture != null)
+        {
             material.SetTexture("_BaseMap", texture);
+            if (material.HasProperty("_MainTex"))
+                material.SetTexture("_MainTex", texture);
+        }
 
         if (materialName.StartsWith("CardBack"))
             CardArtLibrary.ApplyBackTextureUFlip(material);
@@ -232,10 +236,23 @@ public static class CardArtSetup
 
     static void SaveMaterialAsset(Material material, string assetPath)
     {
-        if (AssetDatabase.LoadAssetAtPath<Material>(assetPath) != null)
-            AssetDatabase.DeleteAsset(assetPath);
+        Material existing = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
+        if (existing == null)
+        {
+            AssetDatabase.CreateAsset(material, assetPath);
+            return;
+        }
 
-        AssetDatabase.CreateAsset(material, assetPath);
+        // Preserve the material asset and its importer metadata/subassets on refresh.
+        try
+        {
+            EditorUtility.CopySerialized(material, existing);
+            EditorUtility.SetDirty(existing);
+        }
+        finally
+        {
+            Object.DestroyImmediate(material);
+        }
     }
 
     static void EnsureFolder(string path)

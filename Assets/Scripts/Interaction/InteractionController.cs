@@ -183,6 +183,9 @@ public class InteractionController : MonoBehaviour
         else if (interactable is WorldCard skillPsaCard && skillPsaCard.UsesPsaSlab)
             AimedSkillPsaCabinet = skillPsaCard.GetComponentInParent<PsaCabinet>();
 
+        if (SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
+            ResolveAutoshelfAim(ray, HitBuffer, hitCount, aimedCard, aimedCardDistance);
+
         if (interactable == null)
         {
             _raycastAimedPack = null;
@@ -252,6 +255,50 @@ public class InteractionController : MonoBehaviour
 
         _pendingCardPromptTarget = null;
         ShowPrompt(interactable, prompt);
+    }
+
+    void ResolveAutoshelfAim(Ray ray, RaycastHit[] hits, int hitCount, WorldCard aimedCard, float aimedCardDistance)
+    {
+        // A batch targets a row/cabinet, not the individual empty seat used by manual
+        // placement. Filling the aimed holder must not lose the rest of that cabinet.
+        CardShelf shelf = null;
+        PsaCabinet psaCabinet = null;
+        float nearestDistance = float.MaxValue;
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider collider = hits[i].collider;
+            float distance = hits[i].distance;
+            if (collider == null || distance > interactDistance || distance >= nearestDistance)
+                continue;
+
+            PsaCabinet candidatePsa = collider.GetComponentInParent<PsaCabinet>();
+            CardShelf candidateShelf = candidatePsa == null ? collider.GetComponentInParent<CardShelf>() : null;
+            if (candidatePsa == null && candidateShelf == null)
+                continue;
+
+            nearestDistance = distance;
+            shelf = candidateShelf;
+            psaCabinet = candidatePsa;
+        }
+
+        if (aimedCard != null && aimedCardDistance <= interactDistance && aimedCardDistance < nearestDistance)
+        {
+            PsaCabinet cardCabinet = aimedCard.GetComponentInParent<PsaCabinet>();
+            CardShelf cardShelf = cardCabinet == null ? aimedCard.GetComponentInParent<CardShelf>() : null;
+            if (cardCabinet != null || cardShelf != null)
+            {
+                nearestDistance = aimedCardDistance;
+                shelf = cardShelf;
+                psaCabinet = cardCabinet;
+            }
+        }
+
+        // Use the same range and blockers as ordinary placement, including glass/walls.
+        bool visible = nearestDistance < float.MaxValue
+            && !InteractionOcclusion.IsOccluded(ray, nearestDistance, interactDistance);
+        AimedSkillShelf = visible ? shelf : null;
+        AimedSkillPsaCabinet = visible ? psaCabinet : null;
+        _cachedSkillRow = -2;
     }
 
     void HandleGroundCardTarget(WorldCard worldCard)
