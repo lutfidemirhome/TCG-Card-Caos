@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-/// <summary>Bounded, scene-owned pool for Assemble trails and card reveal/arrival flashes.</summary>
+/// <summary>Bounded, scene-owned pool for Assemble trails and card reveal/arrival/placement flashes.</summary>
 [DefaultExecutionOrder(110)]
 public sealed class AssemblePickupTrail : MonoBehaviour
 {
@@ -14,6 +14,8 @@ public sealed class AssemblePickupTrail : MonoBehaviour
     Material _sparkMaterial;
     Material _arrivalMaterial;
     Mesh _arrivalMesh;
+
+    internal enum GlowKind { Hand, Reveal, ShelfPlacement }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => _instance = null;
@@ -29,7 +31,36 @@ public sealed class AssemblePickupTrail : MonoBehaviour
             return;
 
         Emitter effect = _instance.Take(card.transform.position, card.gameObject.layer, false);
-        effect?.PlayGlow(card, true);
+        effect?.PlayGlow(card, GlowKind.Reveal);
+    }
+
+    /// <summary>One arrival-style flash after a correct placement has physically landed.</summary>
+    public static void PlayShelfPlacement(WorldCard card)
+    {
+        if (card == null || !card.isActiveAndEnabled || card.IsInHand || card.IsFlyingToShelf
+            || card.IsPackReveal || card.HasActivePhysics)
+            return;
+
+        CardShelfSlot shelfSlot = null;
+        PsaCabinetSlot psaSlot = null;
+        if (card.UsesPsaSlab)
+        {
+            psaSlot = card.GetComponentInParent<PsaCabinetSlot>();
+            if (psaSlot == null || psaSlot.OccupiedCard != card || !psaSlot.IsCorrectPlacement(card))
+                return;
+        }
+        else
+        {
+            shelfSlot = card.GetComponentInParent<CardShelfSlot>();
+            CardShelf shelf = shelfSlot != null ? shelfSlot.GetComponentInParent<CardShelf>() : null;
+            if (shelf == null || shelfSlot.OccupiedCard != card || !shelf.IsCorrectPlacement(card, shelfSlot))
+                return;
+        }
+
+        if (!EnsurePool(card.transform)) return;
+        CancelArrival(card);
+        Emitter effect = _instance.Take(card.transform.position, card.gameObject.layer, false);
+        effect?.PlayGlow(card, GlowKind.ShelfPlacement, shelfSlot, psaSlot);
     }
 
     static bool EnsurePool(Transform source)
@@ -140,7 +171,10 @@ public sealed class AssemblePickupTrail : MonoBehaviour
         Vector3 _arrivalLocalPosition;
         Vector3 _arrivalLocalScale;
         float _arrivalStarted;
-        bool _revealGlow;
+        GlowKind _glowKind;
+        Transform _arrivalParent;
+        CardShelfSlot _arrivalShelfSlot;
+        PsaCabinetSlot _arrivalPsaSlot;
 
         internal Emitter(Transform parent, Material ribbonMaterial, Material sparkMaterial,
             Material arrivalMaterial, Mesh arrivalMesh, uint seed)
@@ -244,21 +278,28 @@ public sealed class AssemblePickupTrail : MonoBehaviour
 
         public void PlayArrival(WorldCard card)
         {
-            PlayGlow(card, false);
+            PlayGlow(card, GlowKind.Hand);
         }
 
-        internal void PlayGlow(WorldCard card, bool reveal)
+        internal void PlayGlow(WorldCard card, GlowKind kind,
+            CardShelfSlot shelfSlot = null, PsaCabinetSlot psaSlot = null)
         {
             if (Root == null || !Root.activeSelf || card == null || !card.isActiveAndEnabled
-                || (reveal ? !card.IsPackReveal : !card.IsHeld)
+                || (kind == GlowKind.Reveal && !card.IsPackReveal)
+                || (kind == GlowKind.Hand && !card.IsHeld)
+                || (kind == GlowKind.ShelfPlacement && (card.IsInHand || card.IsFlyingToShelf
+                    || card.IsPackReveal || card.HasActivePhysics || (shelfSlot == null && psaSlot == null)))
                 || GlowRenderer.sharedMaterial == null
                 || !card.TryGetSkillArrivalGlowSurface(out Transform visual, out Bounds bounds))
                 return;
 
             // Cache the surface once. Never replace a card's material or rescan its model each frame.
             _arrivalCard = card;
-            _revealGlow = reveal;
+            _glowKind = kind;
             _arrivalVisual = visual;
+            _arrivalParent = card.transform.parent;
+            _arrivalShelfSlot = shelfSlot;
+            _arrivalPsaSlot = psaSlot;
             _arrivalLocalPosition = new Vector3(bounds.center.x, bounds.center.y, bounds.max.z + 0.001f);
             _arrivalLocalScale = new Vector3(bounds.size.x * 1.06f, bounds.size.y * 1.06f, 1f);
             _arrivalStarted = Time.time;
@@ -272,7 +313,7 @@ public sealed class AssemblePickupTrail : MonoBehaviour
             if (Glow == null || !Glow.activeSelf) return;
             float age = (Time.time - _arrivalStarted) / ArrivalDuration;
             if (_arrivalCard == null || !_arrivalCard.isActiveAndEnabled
-                || (_revealGlow ? !_arrivalCard.IsPackReveal : !_arrivalCard.IsHeld)
+                || !HasValidGlowOwner()
                 || _arrivalVisual == null || age >= 1f)
             {
                 ClearArrival();
@@ -284,10 +325,24 @@ public sealed class AssemblePickupTrail : MonoBehaviour
             GlowRenderer.SetPropertyBlock(_arrivalProperties);
         }
 
+        bool HasValidGlowOwner()
+        {
+            if (_glowKind == GlowKind.Reveal) return _arrivalCard.IsPackReveal;
+            if (_glowKind == GlowKind.Hand) return _arrivalCard.IsHeld;
+            return !_arrivalCard.IsInHand && !_arrivalCard.IsFlyingToShelf
+                && !_arrivalCard.IsPackReveal && !_arrivalCard.HasActivePhysics
+                && _arrivalCard.transform.parent == _arrivalParent
+                && ((_arrivalShelfSlot != null && _arrivalShelfSlot.OccupiedCard == _arrivalCard)
+                    || (_arrivalPsaSlot != null && _arrivalPsaSlot.OccupiedCard == _arrivalCard));
+        }
+
         void ClearArrival()
         {
             _arrivalCard = null;
             _arrivalVisual = null;
+            _arrivalParent = null;
+            _arrivalShelfSlot = null;
+            _arrivalPsaSlot = null;
             if (Glow != null) Glow.SetActive(false);
         }
 

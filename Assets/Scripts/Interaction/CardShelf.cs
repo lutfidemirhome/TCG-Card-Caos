@@ -56,6 +56,7 @@ public class CardShelf : MonoBehaviour, IInteractable
     readonly List<ShelfFlightEntry> _shelfFlights = new List<ShelfFlightEntry>(4);
     // Visual feedback only. Saves and skill progression keep their existing completion rules.
     readonly HashSet<int> _celebratedRows = new HashSet<int>();
+    bool _celebratedCabinet;
 
     Vector3 _aimWorldPoint;
     bool _hasAimPoint;
@@ -89,8 +90,11 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     void OnDestroy()
     {
+        CabinetCompletionEffect.Cancel(transform);
         DestroyPlacementOutline();
     }
+
+    void OnDisable() => CabinetCompletionEffect.Cancel(transform);
 
     void LateUpdate()
     {
@@ -644,6 +648,21 @@ public class CardShelf : MonoBehaviour, IInteractable
         }
     }
 
+    bool TryPlayCabinetCompleteFeedback()
+    {
+        if (_celebratedCabinet || !IsComplete()) return false;
+        foreach (CardShelfSlot slot in _slots)
+        {
+            WorldCard card = slot != null ? slot.OccupiedCard : null;
+            if (!card || !card.isActiveAndEnabled || card.IsFlyingToShelf) return false;
+        }
+        CabinetSignCompleteOverlay.Refresh(this);
+        if (!CabinetCompletionEffect.Play(this)) return false;
+        _celebratedCabinet = true;
+        foreach (CardShelfSlot slot in _slots) _celebratedRows.Add(slot.RowIndex);
+        return true;
+    }
+
     public float SurfacePadding => surfacePadding;
 
     public bool TryRestoreCard(WorldCard card, int rowIndex, int columnIndex)
@@ -826,10 +845,17 @@ public class CardShelf : MonoBehaviour, IInteractable
             () =>
             {
                 RemoveShelfFlight(card);
-                if (IsRowReadyForCompletionFeedback(slot.RowIndex))
+                if (TryPlayCabinetCompleteFeedback())
+                { /* The whole cabinet supersedes the last row's separate pulse. */ }
+                else if (IsRowReadyForCompletionFeedback(slot.RowIndex))
                     PlayRowCompleteFeedback(slot.RowIndex);
+                else if (isCorrect)
+                {
+                    card.ClearShelfPlacementStatus();
+                    AssemblePickupTrail.PlayShelfPlacement(card);
+                }
                 else
-                    card.NotifyShelfPlacement(isCorrect);
+                    card.NotifyShelfPlacement(false);
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
                 GameSaveSignals.MarkDirty();
                 SkillProgress.NotifyShelfChanged(this);

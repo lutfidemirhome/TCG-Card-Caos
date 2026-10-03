@@ -935,10 +935,20 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             () =>
             {
                 RemovePlacementFlight(card);
-                card.NotifyShelfPlacement(IsCorrectPlacement(card));
+                // The slot was reserved while the card was still held; refresh now that it is seated.
+                RefreshLabel();
+                PsaCabinet cabinet = GetComponentInParent<PsaCabinet>();
+                if (cabinet == null || !cabinet.TryPlayCompletionFeedback())
+                {
+                    if (IsCorrectPlacement(card))
+                    {
+                        card.ClearShelfPlacementStatus();
+                        AssemblePickupTrail.PlayShelfPlacement(card);
+                    }
+                    else card.NotifyShelfPlacement(false);
+                }
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
                 GameSaveSignals.MarkDirty();
-                PsaCabinet cabinet = GetComponentInParent<PsaCabinet>();
                 if (cabinet != null)
                 {
                     SkillProgress.NotifyPsaCabinetChanged(cabinet);

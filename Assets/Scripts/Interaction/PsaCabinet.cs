@@ -9,6 +9,23 @@ public class PsaCabinet : MonoBehaviour
     [SerializeField] PsaCabinetSlot[] slots;
 
     bool _slotCacheValid;
+    bool _celebratedCabinet;
+
+    void OnDisable() => CabinetCompletionEffect.Cancel(transform);
+
+    /// <summary>Called only by a real placement landing, never by save restoration.</summary>
+    public bool TryPlayCompletionFeedback()
+    {
+        if (_celebratedCabinet || !IsComplete()) return false;
+        foreach (PsaCabinetSlot slot in slots)
+        {
+            WorldCard card = slot != null ? slot.OccupiedCard : null;
+            if (!card || !card.isActiveAndEnabled || card.IsFlyingToShelf) return false;
+        }
+        if (!CabinetCompletionEffect.Play(this)) return false;
+        _celebratedCabinet = true;
+        return true;
+    }
 
     public PsaCabinetSlot[] Slots { get { EnsureSlotCache(); return slots; } }
 

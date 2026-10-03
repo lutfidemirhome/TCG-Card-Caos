@@ -6,6 +6,16 @@ public enum CardSkill { Assemble, Sort, ShelfGuide, Insight, Autoshelving }
 public static class SkillCatalog
 {
     public const int Count = 5;
+    // Display/shortcut order is independent of the permanent skill IDs used in saves.
+    public static CardSkill HotbarSkill(int slot) => slot switch
+    {
+        0 => CardSkill.Sort,
+        1 => CardSkill.ShelfGuide,
+        2 => CardSkill.Insight,
+        3 => CardSkill.Autoshelving,
+        4 => CardSkill.Assemble,
+        _ => throw new System.ArgumentOutOfRangeException(nameof(slot))
+    };
     public static readonly string[] Keys = { "assemble", "sort", "guide", "insight", "autoshelf" };
     static readonly int[][] Cooldowns = {
         new[] { 0,120,110,100,90,80,70,60,40,30,10 },

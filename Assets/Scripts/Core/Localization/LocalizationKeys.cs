@@ -109,6 +109,7 @@ public static class LocalizationKeys
     public const string SkillsLocked = "skills.locked";
     public const string SkillsReady = "skills.ready";
     public const string SkillsCooldown = "skills.cooldown";
+    public const string SkillsCooldownShort = "skills.cooldown_short";
     public const string SkillsActive = "skills.active";
     public const string SkillsStats = "skills.stats";
     public const string SkillsWait = "skills.wait";

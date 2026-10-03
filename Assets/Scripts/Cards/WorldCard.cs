@@ -325,6 +325,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
+        CabinetCompletionEffect.CancelForCard(this);
         StopShelfRowCompleteFeedback();
         StopSkillPickupTrail(true);
         ReleaseFullDetailTexture();
@@ -620,6 +621,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     void ClearSkillPickupMotion()
     {
         // End the shelf's visual pop before a hand, reveal or world pose takes ownership.
+        CabinetCompletionEffect.CancelForCard(this);
         StopShelfRowCompleteFeedback();
         StopSkillPickupTrail(true);
         if (_skillPickupView != null || _skillPickupSettling)
@@ -1292,6 +1294,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         StopShelfRowCompleteFeedback();
+        AssemblePickupTrail.CancelArrival(this);
 
         if (_shelfPlacementFlashRoutine != null)
         {
@@ -1360,7 +1363,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void StopShelfRowCompleteFeedback()
     {
-        ShelfCompletionEffect.Cancel(this);
+        if (HasActiveShelfCompletionEffect) ShelfCompletionEffect.Cancel(this);
         _shelfRowCompleteEffect = null;
     }
 

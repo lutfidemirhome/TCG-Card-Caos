@@ -1223,6 +1223,20 @@ MonoBehaviour:
     - "\u3042\u3068{0}\u79d2"
     - "{0}\ucd08 \ud6c4 \uc0ac\uc6a9 \uac00\ub2a5"
     - "\u0413\u043e\u0442\u043e\u0432\u043e \u0447\u0435\u0440\u0435\u0437 {0} \u0441"
+  - key: skills.cooldown_short
+    values:
+    - "{0}s"
+    - "{0}sn"
+    - "{0}s"
+    - "{0}s"
+    - "{0}s"
+    - "{0}s"
+    - "{0}s"
+    - "{0}秒"
+    - "{0}秒"
+    - "{0}秒"
+    - "{0}초"
+    - "{0}с"
   - key: skills.active
     values:
     - "Active: {0}s"

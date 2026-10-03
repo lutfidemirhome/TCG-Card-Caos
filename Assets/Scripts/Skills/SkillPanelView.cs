@@ -14,12 +14,16 @@ public sealed class SkillPanelView : MonoBehaviour
     TMP_Text _closeText, _upgradeText, _openText, _selectedLevel;
     Button _upgrade;
     Image _selectedIcon;
-    [SerializeField] Color activeHotbarColor = new Color(0.22f, 0.42f, 0.28f, 0.92f);
+    [SerializeField] Sprite hotbarReadyBackground;
+    [SerializeField] Sprite hotbarPassiveBackground;
     readonly TMP_Text[] _names = new TMP_Text[5], _levels = new TMP_Text[5], _barLabels = new TMP_Text[5];
     readonly Image[] _nodes = new Image[5];
     readonly Image[] _icons = new Image[5];
     readonly Image[] _barBackgrounds = new Image[5];
-    readonly Color[] _barIdleColors = new Color[5];
+    readonly Image[] _barIcons = new Image[5], _barLocks = new Image[5], _barKeys = new Image[5], _barFills = new Image[5];
+    readonly GameObject[] _barTimers = new GameObject[5];
+    readonly float[] _barActiveDuration = new float[5];
+    readonly bool[] _barActive = new bool[5];
     readonly GameObject[] _checks = new GameObject[5];
     readonly Vector3[] _corners = new Vector3[4];
     RectTransform _hudStats, _root, _body, _taskRect;
@@ -79,7 +83,11 @@ public sealed class SkillPanelView : MonoBehaviour
             ButtonAt(path).onClick.AddListener(() => { _selected = skill; Refresh(); });
             _barLabels[i] = TextAt("Hotbar/Skill" + i + "/Label");
             _barBackgrounds[i] = transform.Find("Hotbar/Skill" + i).GetComponent<Image>();
-            _barIdleColors[i] = _barBackgrounds[i].color;
+            _barIcons[i] = transform.Find("Hotbar/Skill" + i + "/Icon").GetComponent<Image>();
+            _barLocks[i] = transform.Find("Hotbar/Skill" + i + "/LockIcon").GetComponent<Image>();
+            _barKeys[i] = transform.Find("Hotbar/Skill" + i + "/KeyHint").GetComponent<Image>();
+            _barTimers[i] = transform.Find("Hotbar/Skill" + i + "/BarBackground").gameObject;
+            _barFills[i] = transform.Find("Hotbar/Skill" + i + "/BarBackground/Fill").GetComponent<Image>();
         }
         foreach (TMP_Text text in GetComponentsInChildren<TMP_Text>(true)) UiMenuFont.Apply(text);
         _hudStats = transform.parent != null ? transform.parent.Find("Panel_TopLeft") as RectTransform : null;
@@ -107,6 +115,7 @@ public sealed class SkillPanelView : MonoBehaviour
             else RefreshHotbar(false);
             PositionTask();
         }
+        if (hudVisible) RefreshHotbarFills();
     }
     static void SetVisible(GameObject obj, bool visible) { if (obj != null && obj.activeSelf != visible) obj.SetActive(visible); }
     public void Open()
@@ -179,12 +188,31 @@ public sealed class SkillPanelView : MonoBehaviour
             int state = level | (cooldown << 5) | (active << 14);
             if (!force && _barState[i] == state) continue;
             _barState[i] = state;
-            string status = level == 0 ? Localization.Get(LocalizationKeys.SkillsLocked) : active > 0
-                ? Localization.Format(LocalizationKeys.SkillsActive, active) : cooldown > 0
-                ? Localization.Format(LocalizationKeys.SkillsCooldown, cooldown) : Localization.Get(LocalizationKeys.SkillsReady);
-            Set(_barLabels[i], Localization.Get("skills." + SkillCatalog.Keys[i] + ".name") + "\n" + status);
-            _barBackgrounds[i].color = active > 0 ? activeHotbarColor : _barIdleColors[i];
+            bool locked = level == 0, isActive = !locked && active > 0;
+            bool waiting = !locked && !isActive && cooldown > 0;
+            if (isActive && !_barActive[i])
+            {
+                // Assemble uses its real flight duration, not its card-count upgrade value.
+                float duration = i >= (int)CardSkill.ShelfGuide ? SkillCatalog.Effect(i, level) : 0f;
+                _barActiveDuration[i] = Mathf.Max(SkillProgress.ActiveTime(i), duration);
+            }
+            _barActive[i] = isActive;
+            if (!isActive) _barActiveDuration[i] = 0f;
+            SetVisible(_barIcons[i].gameObject, !locked && !waiting);
+            SetVisible(_barLocks[i].gameObject, locked);
+            SetVisible(_barLabels[i].gameObject, waiting);
+            SetVisible(_barTimers[i], isActive);
+            if (waiting) Set(_barLabels[i], Localization.Format(LocalizationKeys.SkillsCooldownShort, cooldown));
+            _barKeys[i].color = waiting ? new Color(1f, 1f, 1f, 0.3f) : Color.white;
+            _barBackgrounds[i].sprite = locked || waiting ? hotbarPassiveBackground : hotbarReadyBackground;
         }
+    }
+    void RefreshHotbarFills()
+    {
+        // Five cached images; only active bars change geometry, with no per-frame text work.
+        for (int i = 0; i < SkillCatalog.Count; i++)
+            if (_barActive[i])
+                _barFills[i].fillAmount = Mathf.Clamp01(SkillProgress.ActiveTime(i) / Mathf.Max(0.001f, _barActiveDuration[i]));
     }
     static string Stats(int skill, int level)
     {

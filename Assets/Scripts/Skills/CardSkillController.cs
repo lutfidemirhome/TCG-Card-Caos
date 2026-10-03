@@ -99,7 +99,7 @@ public sealed class CardSkillController : MonoBehaviour
             for (int i = 0; i < SkillCatalog.Count; i++)
             {
                 if (!Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + i)) && !Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + i))) continue;
-                Activate(i);
+                Activate((int)SkillCatalog.HotbarSkill(i));
             }
         }
         if (SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
