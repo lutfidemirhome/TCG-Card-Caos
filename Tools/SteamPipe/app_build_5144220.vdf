@@ -1,9 +1,9 @@
 "AppBuild"
 {
 	"AppID" "5144220"
-	"Desc" "Demo shop decoration update (ceiling, walls, fences, lamps)"
+	"Desc" "Demo update 2026-09-29 - Japanese cabinets and cards, dog, physics and save/load improvements"
 	"Preview" "0"
-	"ContentRoot" "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/Tools/SteamPipe/content"
+	"ContentRoot" "/Users/lutfidemir/Desktop/TCGCardChaos_Demo/TCG Card Chaos.exe"
 	"BuildOutput" "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/Tools/SteamPipe/output"
 	"verbose" "1"
 
