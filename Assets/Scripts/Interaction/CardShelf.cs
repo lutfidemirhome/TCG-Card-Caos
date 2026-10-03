@@ -54,6 +54,8 @@ public class CardShelf : MonoBehaviour, IInteractable
     }
 
     readonly List<ShelfFlightEntry> _shelfFlights = new List<ShelfFlightEntry>(4);
+    // Visual feedback only. Saves and skill progression keep their existing completion rules.
+    readonly HashSet<int> _celebratedRows = new HashSet<int>();
 
     Vector3 _aimWorldPoint;
     bool _hasAimPoint;
@@ -605,8 +607,29 @@ public class CardShelf : MonoBehaviour, IInteractable
         return seriesId != null && correct >= needed;
     }
 
+    bool IsRowReadyForCompletionFeedback(int rowIndex)
+    {
+        if (!IsSeriesRowComplete(rowIndex, SlotsPerRow))
+            return false;
+
+        // Slots are reserved before placement flights finish. Wait for the last arrival
+        // instead of flashing the whole row again on every card's landing callback.
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot != null && slot.RowIndex == rowIndex
+                && slot.OccupiedCard != null && slot.OccupiedCard.IsFlyingToShelf)
+                return false;
+        }
+
+        return true;
+    }
+
     void PlayRowCompleteFeedback(int rowIndex)
     {
+        if (!IsRowReadyForCompletionFeedback(rowIndex) || !_celebratedRows.Add(rowIndex))
+            return;
+
         for (int i = 0; i < _slots.Count; i++)
         {
             CardShelfSlot slot = _slots[i];
@@ -803,7 +826,7 @@ public class CardShelf : MonoBehaviour, IInteractable
             () =>
             {
                 RemoveShelfFlight(card);
-                if (IsSeriesRowComplete(slot.RowIndex, SlotsPerRow))
+                if (IsRowReadyForCompletionFeedback(slot.RowIndex))
                     PlayRowCompleteFeedback(slot.RowIndex);
                 else
                     card.NotifyShelfPlacement(isCorrect);
