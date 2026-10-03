@@ -33,10 +33,10 @@ public static class CompletionFillTest
         LastSummary =
             "Pack açıldı: " + packsOpened
             + "  |  Raf: " + shelfPlaced
-            + "  |  PSA: " + psaPlaced
+            + "  |  TCG: " + psaPlaced
             + "  |  Yerde kalan: " + leftover
             + "  |  Boş raf: " + emptyShelf
-            + "  |  Boş PSA: " + emptyPsa;
+            + "  |  Boş TCG: " + emptyPsa;
 
         Debug.Log("[CompletionFillTest] " + LastSummary);
     }

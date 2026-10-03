@@ -266,7 +266,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         psaSlotNumber = PsaArtLibrary.ClampCabinetSlotNumber(slotNumber);
         psaVariantIndex = Mathf.Max(1, variantIndex);
         psaCardSet = cardSet;
-        cardLabel = (cardSet == PsaCardSet.Japanese ? "JP PSA " : "PSA ")
+        cardLabel = (cardSet == PsaCardSet.Japanese ? "JP TCG " : "TCG ")
             + psaSlotNumber + "-" + psaVariantIndex;
         _psaController = new PsaCardVisualController(this);
         _psaController.Build(psaSlotNumber, psaVariantIndex, psaCardSet);
@@ -429,7 +429,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
             return definition.DisplayName;
         if (psaSlotNumber > 0)
-            return (psaCardSet == PsaCardSet.Japanese ? "JP PSA " : "PSA ")
+            return (psaCardSet == PsaCardSet.Japanese ? "JP TCG " : "TCG ")
                 + psaSlotNumber + "-" + psaVariantIndex;
         return string.IsNullOrWhiteSpace(cardLabel) ? "Card" : cardLabel;
     }

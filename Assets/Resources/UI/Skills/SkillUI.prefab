@@ -2285,7 +2285,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Complete rows to earn upgrades. A full PSA cabinet counts as one row."
+  m_text: "Complete rows to earn upgrades. A full TCG cabinet counts as one row."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 19133410948514086983d0026b2d8795, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: ac2161dcc78e4807a87e56b06dbc0f4c, type: 2}
