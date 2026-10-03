@@ -166,7 +166,7 @@ public sealed class CardSkillController : MonoBehaviour
             // Picking up a support wakes its neighbours immediately. Do not let that
             // change this skill's eligible cards halfway through the same batch.
             // TryPickup safely stops a moving card's physics, just like manual pickup.
-            if (hand.TryPickup(card, collected == 0)) collected++;
+            if (hand.TryPickupForSkill(card, collected)) collected++;
         }
         return collected > 0;
     }

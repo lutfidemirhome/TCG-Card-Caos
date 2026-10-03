@@ -78,6 +78,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Quaternion _flightStartWorldRot;
     float _flightArcHeight;
     System.Action _onPickupFlightComplete;
+    Transform _skillPickupView;
+    float _skillPickupSide;
+    float _skillPickupLane;
+    float _skillPickupSettleDuration;
+    float _skillPickupSettleStarted;
+    bool _skillPickupSettling;
+    Vector3 _skillPickupArrivalPosition;
+    Quaternion _skillPickupArrivalRotation;
     Transform _shelfFlightSlot;
     float _shelfFlightSurfacePadding;
     System.Action _onShelfFlightComplete;
@@ -443,6 +451,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         float arcHeight,
         System.Action onComplete = null)
     {
+        ClearSkillPickupMotion();
         _handState = HandState.FlyingToHand;
         _handAnchor = handAnchor;
         _flightTargetHandScale = targetHandScale;
@@ -487,12 +496,29 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         RefreshRenderMode();
     }
 
+    // Cosmetic only: ownership, capacity and save state were committed by BeginPickupFlight.
+    public void ConfigureSkillPickupFlight(Transform view, float delay, int sequenceIndex, float settleDuration)
+    {
+        if (_handState != HandState.FlyingToHand || view == null)
+            return;
+
+        _skillPickupView = view;
+        float side = view.InverseTransformPoint(_flightStartWorldPos).x;
+        _skillPickupSide = Mathf.Abs(side) > 0.05f ? Mathf.Sign(side) : (sequenceIndex % 2 == 0 ? -1f : 1f);
+        _skillPickupLane = sequenceIndex % 3;
+        _skillPickupSettleDuration = Mathf.Max(0f, settleDuration);
+        _flightElapsed = -Mathf.Max(0f, delay);
+    }
+
     public void UpdatePickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
     {
         if (_handState != HandState.FlyingToHand)
             return;
 
-        AdvanceFlightToward(targetWorldPos, targetWorldRot);
+        if (_skillPickupView != null)
+            AdvanceSkillPickupFlight(targetWorldPos, targetWorldRot);
+        else
+            AdvanceFlightToward(targetWorldPos, targetWorldRot);
 
         if (_flightElapsed >= _flightDuration)
             CompletePickupFlight();
@@ -500,6 +526,14 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void CompletePickupFlight()
     {
+        if (_skillPickupView != null && _handAnchor != null && _skillPickupSettleDuration > 0f)
+        {
+            _skillPickupArrivalPosition = _handAnchor.InverseTransformPoint(transform.position);
+            _skillPickupArrivalRotation = Quaternion.Inverse(_handAnchor.rotation) * transform.rotation;
+            _skillPickupSettleStarted = Time.time;
+            _skillPickupSettling = true;
+        }
+        _skillPickupView = null;
         _handState = HandState.Held;
         transform.SetParent(_handAnchor, false);
         EnsureCardVisual();
@@ -509,6 +543,63 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         System.Action callback = _onPickupFlightComplete;
         _onPickupFlightComplete = null;
         callback?.Invoke();
+    }
+
+    void AdvanceSkillPickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
+    {
+        _flightElapsed += Time.deltaTime;
+        if (_flightElapsed <= 0f)
+            return;
+
+        float t = Mathf.Clamp01(_flightElapsed / _flightDuration);
+        Transform view = _skillPickupView;
+        Vector3 front = view.TransformPoint(new Vector3(
+            _skillPickupSide * (0.12f + _skillPickupLane * 0.035f),
+            -0.025f + _skillPickupLane * 0.025f, 0.9f + _skillPickupLane * 0.025f));
+        Quaternion frontRotation = view.rotation
+            * Quaternion.Euler(0f, 0f, -_skillPickupSide * (12f + _skillPickupLane * 3f))
+            * Quaternion.FromToRotation(Vector3.up, -Vector3.forward);
+
+        const float gatherFraction = 0.58f;
+        Vector3 position;
+        Quaternion rotation;
+        if (t < gatherFraction)
+        {
+            float u = Mathf.SmoothStep(0f, 1f, t / gatherFraction);
+            // Approach around the player's side, then turn face-on in front of the camera.
+            float sweep = Mathf.Clamp(Vector3.Distance(_flightStartWorldPos, front) * 0.3f, 0.45f, 1.2f);
+            Vector3 a = _flightStartWorldPos + view.right * (_skillPickupSide * sweep) + view.up * 0.35f;
+            Vector3 b = front + view.forward * 0.5f + view.right * (_skillPickupSide * 0.3f) + view.up * 0.18f;
+            position = PickupBezier(_flightStartWorldPos, a, b, front, u);
+            rotation = Quaternion.Slerp(_flightStartWorldRot, frontRotation, u);
+        }
+        else
+        {
+            float u = Mathf.SmoothStep(0f, 1f, (t - gatherFraction) / (1f - gatherFraction));
+            Vector3 a = front - view.forward * 0.2f;
+            Vector3 b = targetWorldPos + view.forward * 0.12f + view.up * 0.045f;
+            position = PickupBezier(front, a, b, targetWorldPos, u);
+            rotation = Quaternion.Slerp(frontRotation, targetWorldRot, u);
+        }
+
+        transform.SetPositionAndRotation(position, rotation);
+        transform.localScale = Vector3.one * Mathf.Lerp(_flightStartWorldScale, _flightTargetHandScale,
+            Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / gatherFraction)));
+    }
+
+    static Vector3 PickupBezier(Vector3 start, Vector3 a, Vector3 b, Vector3 end, float t)
+    {
+        float inverse = 1f - t;
+        return inverse * inverse * inverse * start + 3f * inverse * inverse * t * a
+            + 3f * inverse * t * t * b + t * t * t * end;
+    }
+
+    void ClearSkillPickupMotion()
+    {
+        if (_skillPickupView != null || _skillPickupSettling)
+            _onPickupFlightComplete = null;
+        _skillPickupView = null;
+        _skillPickupSettling = false;
     }
 
     public void RestoreIntoHand(Transform handAnchor, float targetHandScale)
@@ -528,6 +619,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         float scale,
         bool showsBack = false)
     {
+        ClearSkillPickupMotion();
         _handState = HandState.PackReveal;
         _packRevealFlipT = showsBack ? 0f : 1f;
         _handAnchor = null;
@@ -635,6 +727,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (slot == null)
             return;
 
+        ClearSkillPickupMotion();
         _usePsaCabinetPlacement = false;
         _handState = HandState.FlyingToShelf;
         _handAnchor = null;
@@ -716,6 +809,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void DropWithPhysics(Vector3 velocity, float worldScaleTransitionDuration = 0.12f)
     {
+        ClearSkillPickupMotion();
         _handState = HandState.World;
         SetHandSelected(false);
         EnsureCardVisual();
@@ -1033,6 +1127,18 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         transform.localPosition = pose.LocalPosition;
         transform.localRotation = pose.LocalRotation;
         transform.localScale = Vector3.one * pose.Scale;
+        if (_skillPickupSettling)
+        {
+            float t = Mathf.Clamp01((Time.time - _skillPickupSettleStarted) / _skillPickupSettleDuration);
+            float smooth = Mathf.SmoothStep(0f, 1f, t);
+            float pulse = Mathf.Sin(t * Mathf.PI);
+            transform.localPosition = Vector3.Lerp(_skillPickupArrivalPosition, pose.LocalPosition, smooth)
+                + Vector3.up * (pulse * 0.008f);
+            transform.localRotation = Quaternion.Slerp(_skillPickupArrivalRotation, pose.LocalRotation, smooth);
+            transform.localScale *= 1f + pulse * 0.018f;
+            if (t >= 1f)
+                _skillPickupSettling = false;
+        }
         ApplyHandVisualOrientation();
         SetHandSelected(isSelected);
     }
@@ -1858,6 +1964,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// </summary>
     public void PlaceOnSurface(Transform parent, Vector3 worldPosition, Quaternion worldRotation)
     {
+        ClearSkillPickupMotion();
         _handState = HandState.World;
         ClearShelfPlacementStatus();
         SetInteractionHighlight(false);
@@ -1896,6 +2003,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (anchor == null)
             return;
 
+        ClearSkillPickupMotion();
         _psaCabinetPlaced = true;
         _handState = HandState.World;
         SetInteractionHighlight(false);
@@ -1928,6 +2036,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (slot == null)
             return;
 
+        ClearSkillPickupMotion();
         _handState = HandState.World;
         SetInteractionHighlight(false);
         SetHandSelected(false);

@@ -46,6 +46,11 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] float pickupFlightDuration = 0.4f;
     [SerializeField] float pickupFlightArcHeight = 0.22f;
 
+    [Header("Assemble pickup feel")]
+    [SerializeField, Min(0.1f)] float skillPickupFlightDuration = 0.66f;
+    [SerializeField, Min(0f)] float skillPickupStagger = 0.03f;
+    [SerializeField, Min(0f)] float skillPickupSettleDuration = 0.12f;
+
     [Header("Throw")]
     [SerializeField] float dropScaleTransitionDuration = 0.12f;
     [SerializeField] float throwSpeed = 4.5f;
@@ -75,6 +80,7 @@ public class PlayerCardHand : MonoBehaviour
     bool _revealCollectRequested;
     bool _packOpenMovementLocked;
     Coroutine _openPackRoutine;
+    float _skillPickupBatchDuration;
 
     public int Count => _cards.Count;
     public static PlayerCardHand Instance { get; private set; }
@@ -83,7 +89,7 @@ public class PlayerCardHand : MonoBehaviour
     public int AvailableSlots => Mathf.Max(0, CardDimensions.MaxHandSize - OccupiedHandSlots);
     public int SelectedIndex => _selectedIndex;
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
-    public float SkillPickupFlightDuration => Mathf.Max(0f, pickupFlightDuration);
+    public float SkillPickupFlightDuration => _skillPickupBatchDuration;
     public bool HasHeldPack => CountOccupiedPackSlots() > 0;
     public bool IsPackSelected => GetSelectedHeldPack() != null;
     public WorldBoosterPack SelectedHeldPack => GetSelectedHeldPack();
@@ -437,6 +443,16 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool TryPickup(WorldCard card, bool playSound)
     {
+        return TryPickup(card, playSound, -1);
+    }
+
+    public bool TryPickupForSkill(WorldCard card, int sequenceIndex)
+    {
+        return TryPickup(card, sequenceIndex == 0, Mathf.Max(0, sequenceIndex));
+    }
+
+    bool TryPickup(WorldCard card, bool playSound, int skillSequenceIndex)
+    {
         if (card == null || card.IsInHand || card.IsFlyingToShelf || card.IsShelfRowCompleteLocked || IsHandInputLocked)
             return false;
 
@@ -453,12 +469,24 @@ public class PlayerCardHand : MonoBehaviour
         if (GetHandFanCount() == 1)
             _selectedIndex = 0;
 
-        card.BeginPickupFlight(
-            _handAnchor,
-            EffectiveHeldScale,
-            pickupFlightDuration,
-            pickupFlightArcHeight,
-            () => OnCardPickupFlightComplete(newCardIndex));
+        if (skillSequenceIndex >= 0 && _camera != null)
+        {
+            float duration = Mathf.Max(0.1f, skillPickupFlightDuration);
+            float delay = skillSequenceIndex * Mathf.Max(0f, skillPickupStagger);
+            float settle = Mathf.Max(0f, skillPickupSettleDuration);
+            // Reserve the card and stop its physics now. Only its visual motion is delayed.
+            card.BeginPickupFlight(_handAnchor, EffectiveHeldScale, duration, pickupFlightArcHeight,
+                () => { if (card != null && card.IsHeld && _cards.Contains(card)) SelectRightmostFanEntry(); });
+            card.ConfigureSkillPickupFlight(_camera.transform, delay, skillSequenceIndex, settle);
+            _skillPickupBatchDuration = duration + delay + settle;
+        }
+        else
+        {
+            card.BeginPickupFlight(_handAnchor, EffectiveHeldScale, pickupFlightDuration, pickupFlightArcHeight,
+                () => OnCardPickupFlightComplete(newCardIndex));
+            if (skillSequenceIndex >= 0)
+                _skillPickupBatchDuration = Mathf.Max(0.05f, pickupFlightDuration);
+        }
         if (playSound)
             GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
         GameSaveSignals.MarkDirty();
@@ -1015,7 +1043,11 @@ public class PlayerCardHand : MonoBehaviour
             {
                 WorldCard card = entry.Card;
                 if (card.IsFlyingToHand)
+                {
+                    // Flying cards already own their slots, including during Assemble's stagger.
+                    fanIndex++;
                     continue;
+                }
 
                 bool isSelected = !packSelected && selectedCard != null && card == selectedCard;
                 card.ApplyFanPose(fanIndex, fanCount, layout, isSelected);
