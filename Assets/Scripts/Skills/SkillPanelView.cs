@@ -26,7 +26,7 @@ public sealed class SkillPanelView : MonoBehaviour
     readonly bool[] _barActive = new bool[5];
     readonly GameObject[] _checks = new GameObject[5];
     readonly Vector3[] _corners = new Vector3[4];
-    RectTransform _hudStats, _root, _body, _taskRect;
+    RectTransform _hudStats, _root, _body, _taskRect, _taskOpen;
     float _refresh;
     int _selected, _revision = -1;
     readonly int[] _barState = { -1,-1,-1,-1,-1 };
@@ -59,6 +59,7 @@ public sealed class SkillPanelView : MonoBehaviour
         _root = (RectTransform)transform;
         _body = (RectTransform)transform.Find("Panel/Body");
         _taskRect = (RectTransform)_task.transform;
+        _taskOpen = (RectTransform)transform.Find("Task/Open");
         const string body = "Panel/Body/";
         _title = TextAt(body + "Title"); _points = TextAt(body + "Points");
         _instructions = TextAt(body + "Instructions");
@@ -156,6 +157,7 @@ public sealed class SkillPanelView : MonoBehaviour
             : Localization.Get(LocalizationKeys.SkillsTaskDone);
         if (points > 0) taskText += "\n" + Localization.Format(LocalizationKeys.SkillsPoints, points);
         Set(_taskText, taskText);
+        LayoutTask();
         for (int i = 0; i < 5; i++)
         {
             int level = SkillProgress.Level(i);
@@ -228,6 +230,18 @@ public sealed class SkillPanelView : MonoBehaviour
         if (!hasNext) return current.ToString();
         return (locked ? "\u2014" : current.ToString()) + " \u2192 " + next;
     }
+    void LayoutTask()
+    {
+        // Relayout only when progress/language changes; keep readable text and grow downward.
+        RectTransform description = _taskText.rectTransform;
+        float textHeight = Mathf.Ceil(_taskText.GetPreferredValues(_taskText.text, description.rect.width, 0f).y);
+        if (description.rect.height != textHeight)
+            description.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, textHeight);
+        float buttonSpace = _taskOpen.anchoredPosition.y + _taskOpen.rect.height * (1f - _taskOpen.pivot.y);
+        float height = -description.anchoredPosition.y + textHeight + buttonSpace;
+        if (_taskRect.rect.height != height)
+            _taskRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+    }
     void PositionTask()
     {
         float fit = Mathf.Min(1f, Mathf.Min((_root.rect.width - 48f) / Mathf.Max(1f, _body.rect.width),
@@ -237,7 +251,8 @@ public sealed class SkillPanelView : MonoBehaviour
         if (_hudStats == null) return;
         _hudStats.GetWorldCorners(_corners);
         Vector3 bottomLeft = _root.InverseTransformPoint(_corners[0]);
-        Vector2 position = new Vector2(bottomLeft.x - _root.rect.xMin, bottomLeft.y - _root.rect.yMax - 12f);
+        // Keep the task background flush with the screen, independent of the stats text inset.
+        Vector2 position = new Vector2(0f, bottomLeft.y - _root.rect.yMax - 12f);
         if (_taskRect.anchoredPosition != position) _taskRect.anchoredPosition = position;
     }
 }
