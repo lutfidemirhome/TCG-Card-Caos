@@ -142,6 +142,7 @@ public static class CardGroundStack
     }
 
     static readonly HashSet<WorldCard> RayCandidateSeen = new HashSet<WorldCard>();
+    static readonly HashSet<long> RayCellSeen = new HashSet<long>();
 
     /// <summary>Collect ground cards near a view ray (spatial cells when many cards are tracked).</summary>
     public static void CollectRayCandidates(Ray ray, float maxDistance, List<WorldCard> results)
@@ -173,6 +174,7 @@ public static class CardGroundStack
         float step = Mathf.Max(cellSize * 0.75f, 0.08f);
         int steps = Mathf.CeilToInt(maxDistance / step);
         RayCandidateSeen.Clear();
+        RayCellSeen.Clear();
 
         for (int s = 0; s <= steps; s++)
         {
@@ -186,6 +188,10 @@ public static class CardGroundStack
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     long key = PackCell(cx + dx, cz + dz);
+                    // Adjacent ray samples overlap the same XZ cells, especially when
+                    // looking down. Visit each bucket once in its original first-hit order.
+                    if (!RayCellSeen.Add(key))
+                        continue;
                     if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
                         continue;
 

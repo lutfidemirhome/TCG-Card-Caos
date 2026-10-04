@@ -362,6 +362,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         // the aim target changes, which used to switch the collider off mid-flight and let a card thrown at
         // the very card the player is looking at pass straight through it and land underneath.
         _collider.enabled = _worldColliderRequested || _landingSurfaceRequested;
+
+        // Authored floor cards keep solid boxes for throw support. Enabling one on aim must
+        // not make the walking controller step onto it and lift the camera. Reapply after
+        // activation because pickup/disable can clear ignored pairs; card contacts stay solid.
+        if (Application.isPlaying && _collider.enabled && _collider.gameObject.activeInHierarchy)
+            CardCollisionUtility.IgnorePlayerCollision(_collider);
     }
 
     public void SetInteractionHighlight(bool highlighted)
