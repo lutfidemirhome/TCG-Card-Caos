@@ -944,7 +944,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
                 {
                     if (IsCorrectPlacement(card))
                     {
-                        card.ClearShelfPlacementStatus();
+                        card.NotifyShelfPlacement(true);
                         CardPlacementTrail.PlayShelfPlacement(card);
                     }
                     else
