@@ -798,7 +798,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_handState != HandState.FlyingToShelf)
             return;
 
+        // The same pooled trail follows both normal and graded cards, even on a wrong slot.
+        if (_skillPickupTrail == null && Time.deltaTime > 0f && isActiveAndEnabled)
+            _skillPickupTrail = AssemblePickupTrail.Begin(transform);
+
         AdvanceFlightToward(targetWorldPos, targetWorldRot);
+        _skillPickupTrail?.Follow(transform.position - transform.up * 0.018f);
 
         if (_flightElapsed >= _flightDuration)
             CompleteShelfFlight();
@@ -806,6 +811,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void CompleteShelfFlight()
     {
+        // Release before reparenting/landing feedback; the particles finish their short fade.
+        StopSkillPickupTrail(false);
         Transform slot = _shelfFlightSlot;
         float surfacePadding = _shelfFlightSurfacePadding;
         bool usePsaCabinetPlacement = _usePsaCabinetPlacement;
