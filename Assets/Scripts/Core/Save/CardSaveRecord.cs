@@ -27,6 +27,8 @@ public class CardSaveRecord
     public int slotColumn;
     public string shelfSlotName = string.Empty;
     public string shelfSlotPath = string.Empty;
+    // Optional for older saves: preserves which card first claimed a shelf row.
+    public long shelfPlacementOrder;
     public string psaCabinetId = string.Empty;
     public int psaCabinetSlot;
     public string psaSlotPath = string.Empty;

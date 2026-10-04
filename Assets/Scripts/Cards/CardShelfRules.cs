@@ -5,6 +5,27 @@ using System.Collections.Generic;
 /// </summary>
 public static class CardShelfRules
 {
+    struct RowClaimCandidate : System.IComparable<RowClaimCandidate>
+    {
+        public CardShelfSlot Slot;
+        public string SeriesId;
+        public long Order;
+        public int SlotIndex;
+
+        public int CompareTo(RowClaimCandidate other)
+        {
+            int order = Order.CompareTo(other.Order);
+            return order != 0 ? order : SlotIndex.CompareTo(other.SlotIndex);
+        }
+    }
+
+    // Validation runs synchronously on Unity's main thread and never invokes callbacks.
+    // Reuse scratch storage because progress and placement repeatedly inspect each cabinet.
+    static readonly List<RowClaimCandidate> ClaimCandidates = new List<RowClaimCandidate>(100);
+    static readonly Dictionary<int, string> SeriesByRow = new Dictionary<int, string>(10);
+    static readonly Dictionary<string, int> RowBySeries =
+        new Dictionary<string, int>(System.StringComparer.Ordinal);
+
     public static bool CategoriesMatch(string shelfCategoryId, string cardCategoryId)
     {
         if (string.IsNullOrWhiteSpace(shelfCategoryId) || string.IsNullOrWhiteSpace(cardCategoryId))
@@ -49,7 +70,8 @@ public static class CardShelfRules
         string shelfCategoryId,
         CardDefinition definition,
         CardShelfSlot slot,
-        IReadOnlyList<CardShelfSlot> occupiedSlots = null)
+        IReadOnlyList<CardShelfSlot> occupiedSlots = null,
+        CardShelf ownerShelf = null)
     {
         if (definition == null || slot == null)
             return false;
@@ -57,20 +79,21 @@ public static class CardShelfRules
         if (!CanPlaceInSlot(shelfCategoryId, definition, slot))
             return false;
 
-        return MatchesSeriesRow(definition, slot, occupiedSlots, null, shelfCategoryId);
+        return MatchesSeriesRow(definition, slot, occupiedSlots, null, shelfCategoryId, ownerShelf);
     }
 
     /// <summary>
-    /// First card of a series claims a row; later cards from that series must use the same row.
-    /// A row cannot mix cards from different series of this shelf category.
-    /// Off-category cards do not claim or block a row.
+    /// The first correctly numbered card claims its row for its series. Later foreign
+    /// cards do not invalidate that owner or claim another row for their own series.
+    /// Removing cards rebuilds ownership from the earliest remaining eligible placement.
     /// </summary>
     public static bool MatchesSeriesRow(
         CardDefinition definition,
         CardShelfSlot slot,
         IReadOnlyList<CardShelfSlot> occupiedSlots,
         CardShelfSlot excludeSlot,
-        string shelfCategoryId = null)
+        string shelfCategoryId = null,
+        CardShelf ownerShelf = null)
     {
         if (definition == null || slot == null)
             return false;
@@ -78,25 +101,30 @@ public static class CardShelfRules
         if (!CardShelfSeries.TryGetSeriesId(definition, out string seriesId))
             return true;
 
-        int? assignedRow = FindRowForSeries(seriesId, occupiedSlots, excludeSlot, shelfCategoryId);
-        if (assignedRow.HasValue && slot.RowIndex != assignedRow.Value)
+        RebuildRowClaims(occupiedSlots, excludeSlot, shelfCategoryId, ownerShelf);
+        if (RowBySeries.TryGetValue(seriesId, out int assignedRow) && slot.RowIndex != assignedRow)
             return false;
 
-        // Finding this series (including the card itself after placement) must not
-        // bypass the rule that every card on this row belongs to the same series.
-        return RowMatchesSeries(slot.RowIndex, seriesId, occupiedSlots, excludeSlot, shelfCategoryId);
+        return !SeriesByRow.TryGetValue(slot.RowIndex, out string rowSeries)
+            || string.Equals(rowSeries, seriesId, System.StringComparison.Ordinal);
     }
 
-    static int? FindRowForSeries(
-        string seriesId,
+    static void RebuildRowClaims(
         IReadOnlyList<CardShelfSlot> occupiedSlots,
         CardShelfSlot excludeSlot,
-        string shelfCategoryId)
+        string shelfCategoryId,
+        CardShelf ownerShelf)
     {
-        if (occupiedSlots == null || string.IsNullOrWhiteSpace(seriesId))
-            return null;
+        ClaimCandidates.Clear();
+        SeriesByRow.Clear();
+        RowBySeries.Clear();
+        if (occupiedSlots == null)
+            return;
 
-        int? foundRow = null;
+        // The caller already owns this slot list. Reuse its resolved numbering instead
+        // of searching the transform ancestry twice per card on every glow update.
+        int slotsPerRow = ownerShelf != null ? ownerShelf.SlotsPerRow : 0;
+
         for (int i = 0; i < occupiedSlots.Count; i++)
         {
             CardShelfSlot occupiedSlot = occupiedSlots[i];
@@ -104,61 +132,36 @@ public static class CardShelfRules
                 continue;
 
             WorldCard card = occupiedSlot.OccupiedCard;
-            if (!CountsForSeriesRow(card, shelfCategoryId))
+            if (card == null || card.Definition == null
+                || (!string.IsNullOrWhiteSpace(shelfCategoryId)
+                    && !CategoriesMatch(shelfCategoryId, card.Definition.ShelfCategoryId))
+                || !SlotMatches(ownerShelf != null ? ownerShelf.ResolveSlotNumber(occupiedSlot) : occupiedSlot.SlotNumber,
+                    card.Definition.ShelfSlotNumber,
+                    ownerShelf != null ? slotsPerRow : occupiedSlot.OwnerShelfSlotsPerRow)
+                || !CardShelfSeries.TryGetSeriesId(card.Definition, out string occupiedSeriesId))
                 continue;
 
-            if (!CardShelfSeries.TryGetSeriesId(card.Definition, out string occupiedSeriesId))
-                continue;
-
-            if (!string.Equals(occupiedSeriesId, seriesId, System.StringComparison.Ordinal))
-                continue;
-
-            if (!foundRow.HasValue)
-                foundRow = occupiedSlot.RowIndex;
-            else if (foundRow.Value != occupiedSlot.RowIndex)
-                return foundRow;
+            ClaimCandidates.Add(new RowClaimCandidate
+            {
+                Slot = occupiedSlot,
+                SeriesId = occupiedSeriesId,
+                Order = occupiedSlot.PlacementOrder,
+                SlotIndex = i,
+            });
         }
 
-        return foundRow;
-    }
-
-    static bool RowMatchesSeries(
-        int rowIndex,
-        string seriesId,
-        IReadOnlyList<CardShelfSlot> occupiedSlots,
-        CardShelfSlot excludeSlot,
-        string shelfCategoryId)
-    {
-        if (occupiedSlots == null)
-            return true;
-
-        for (int i = 0; i < occupiedSlots.Count; i++)
+        ClaimCandidates.Sort();
+        for (int i = 0; i < ClaimCandidates.Count; i++)
         {
-            CardShelfSlot occupiedSlot = occupiedSlots[i];
-            if (occupiedSlot == null
-                || occupiedSlot == excludeSlot
-                || occupiedSlot.IsEmpty
-                || occupiedSlot.RowIndex != rowIndex)
+            RowClaimCandidate candidate = ClaimCandidates[i];
+            int row = candidate.Slot.RowIndex;
+            // A card on another series' row is invalid, so it must not claim its
+            // own series elsewhere merely because it is present in the slot list.
+            if (SeriesByRow.ContainsKey(row) || RowBySeries.ContainsKey(candidate.SeriesId))
                 continue;
-
-            WorldCard card = occupiedSlot.OccupiedCard;
-            if (!CountsForSeriesRow(card, shelfCategoryId))
-                continue;
-
-            if (CardShelfSeries.TryGetSeriesId(card.Definition, out string occupiedSeriesId)
-                && !string.Equals(occupiedSeriesId, seriesId, System.StringComparison.Ordinal))
-                return false;
+            SeriesByRow.Add(row, candidate.SeriesId);
+            RowBySeries.Add(candidate.SeriesId, row);
         }
-
-        return true;
-    }
-
-    static bool CountsForSeriesRow(WorldCard card, string shelfCategoryId)
-    {
-        if (card == null || card.Definition == null)
-            return false;
-
-        return string.IsNullOrWhiteSpace(shelfCategoryId)
-            || CategoriesMatch(shelfCategoryId, card.Definition.ShelfCategoryId);
+        ClaimCandidates.Clear();
     }
 }

@@ -342,6 +342,7 @@ public static class GameSaveWorldCollector
         record.slotColumn = shelfSlot.ColumnIndex;
         record.shelfSlotName = shelfSlot.gameObject.name;
         record.shelfSlotPath = BuildChildPath(shelf != null ? shelf.transform : null, shelfSlot.transform);
+        record.shelfPlacementOrder = shelfSlot.PlacementOrder;
         SetShelfRecordPose(record, shelfSlot, shelf);
     }
 

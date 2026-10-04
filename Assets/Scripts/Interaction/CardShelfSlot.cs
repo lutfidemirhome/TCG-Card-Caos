@@ -20,6 +20,7 @@ public class CardShelfSlot : MonoBehaviour
     static Mesh _sharedCardPlaneMesh;
     static Material _sharedFillMaterial;
     static Material _sharedEdgeMaterial;
+    static long _nextPlacementOrder;
 
     [SerializeField] WorldCard occupiedCard;
     [SerializeField] int rowIndex;
@@ -30,16 +31,24 @@ public class CardShelfSlot : MonoBehaviour
     MeshRenderer _edgeRenderer;
     bool _previewDeferred;
     bool _previewHiddenForPlay;
+    long _placementOrder;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetPlacementOrder() => _nextPlacementOrder = 0;
 
     public bool IsEmpty
     {
         get
         {
             if (occupiedCard == null)
+            {
+                _placementOrder = 0;
                 return true;
+            }
             if (occupiedCard.IsInHand)
             {
                 occupiedCard = null;
+                _placementOrder = 0;
                 return true;
             }
 
@@ -48,6 +57,24 @@ public class CardShelfSlot : MonoBehaviour
     }
 
     public WorldCard OccupiedCard => occupiedCard;
+
+    /// <summary>Reservation order, used to preserve the first correctly placed series on a row.</summary>
+    public long PlacementOrder => _placementOrder;
+
+    /// <summary>Older saves pass zero and retain the deterministic order assigned during restore.</summary>
+    public void RestorePlacementOrder(long order)
+    {
+        if (occupiedCard == null)
+            return;
+        if (order > 0)
+        {
+            _placementOrder = order;
+            if (order > _nextPlacementOrder)
+                _nextPlacementOrder = order;
+        }
+        else if (_placementOrder == 0)
+            _placementOrder = ++_nextPlacementOrder;
+    }
 
     /// <summary>Row on the cabinet (0 = first ShelfSlots_Level).</summary>
     public int RowIndex => rowIndex;
@@ -120,6 +147,10 @@ public class CardShelfSlot : MonoBehaviour
 
     public void Occupy(WorldCard card)
     {
+        // Occupy is called at reservation and again when a flight settles. Only a new
+        // occupant gets a new order, so late arrivals cannot steal an established row.
+        if (occupiedCard != card || (card != null && _placementOrder == 0))
+            _placementOrder = card != null ? ++_nextPlacementOrder : 0;
         occupiedCard = card;
         RefreshPreviewVisibility();
     }
@@ -130,6 +161,7 @@ public class CardShelfSlot : MonoBehaviour
             return;
 
         occupiedCard = null;
+        _placementOrder = 0;
         CardGroundQuery.UntrackShelfCard(card);
         card?.SetPlayerAimFocus(false);
         RefreshPreviewVisibility();
@@ -142,7 +174,10 @@ public class CardShelfSlot : MonoBehaviour
     public void RefreshOccupancy()
     {
         if (occupiedCard != null && occupiedCard.IsInHand)
+        {
             occupiedCard = null;
+            _placementOrder = 0;
+        }
         RefreshPreviewVisibility();
     }
 

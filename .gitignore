@@ -12,6 +12,7 @@ Recordings/
 *.user
 *.userprefs
 unity-create.log
+mono_crash.*.json
 __pycache__/
 *.pyc
 

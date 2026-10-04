@@ -19,6 +19,7 @@ public sealed class CabinetCompletionEffect : MonoBehaviour
     readonly List<MeshRenderer> _suppressedOutlines = new List<MeshRenderer>(8);
     readonly List<WorldCard> _cards = new List<WorldCard>(100);
     readonly List<Transform> _cardParents = new List<Transform>(100);
+    readonly Dictionary<Mesh, Mesh> _mirroredDrawMeshes = new Dictionary<Mesh, Mesh>();
     Component _owner;
     Material _gold;
     int _partCount;
@@ -117,7 +118,7 @@ public sealed class CabinetCompletionEffect : MonoBehaviour
             if (_partCount == _parts.Count) _parts.Add(new Part());
             Part part = _parts[_partCount++];
             part.Source = source;
-            part.Mesh = filter.sharedMesh;
+            part.Mesh = GetDrawMesh(filter.sharedMesh, source.transform.localToWorldMatrix);
             part.Materials = materials;
             if (part.Original == null || part.Original.Length != materials.Length)
             {
@@ -157,6 +158,37 @@ public sealed class CabinetCompletionEffect : MonoBehaviour
         _scale = 1f;
         enabled = true;
         return true;
+    }
+
+    Mesh GetDrawMesh(Mesh source, Matrix4x4 matrix)
+    {
+        // Shelf art uses a negative X scale. MeshRenderer compensates its face culling,
+        // but Graphics.DrawMesh does not; without this, the celebration shows the back.
+        if (matrix.determinant >= 0f || !source.isReadable)
+            return source;
+        if (_mirroredDrawMeshes.TryGetValue(source, out Mesh mirrored) && mirrored)
+            return mirrored;
+
+        mirrored = Instantiate(source);
+        mirrored.name = source.name + " (cabinet mirrored draw)";
+        mirrored.hideFlags = HideFlags.DontSave;
+        for (int submesh = 0; submesh < source.subMeshCount; submesh++)
+        {
+            if (source.GetTopology(submesh) != MeshTopology.Triangles) continue;
+            int[] indices = source.GetIndices(submesh, applyBaseVertex: false);
+            for (int i = 0; i + 2 < indices.Length; i += 3)
+            {
+                int second = indices[i + 1];
+                indices[i + 1] = indices[i + 2];
+                indices[i + 2] = second;
+            }
+            mirrored.SetIndices(indices, MeshTopology.Triangles, submesh, calculateBounds: false,
+                baseVertex: (int)source.GetBaseVertex(submesh));
+        }
+        // Only winding changes. Keep authored geometry, art UVs and shading normals.
+        mirrored.UploadMeshData(true);
+        _mirroredDrawMeshes[source] = mirrored;
+        return mirrored;
     }
 
     void LateUpdate()
@@ -221,5 +253,16 @@ public sealed class CabinetCompletionEffect : MonoBehaviour
     }
 
     void OnDisable() => Stop();
-    void OnDestroy() { Stop(); Pool.Remove(this); }
+    void OnDestroy()
+    {
+        Stop();
+        Pool.Remove(this);
+        foreach (Mesh mesh in _mirroredDrawMeshes.Values)
+        {
+            if (!mesh) continue;
+            if (Application.isPlaying) Destroy(mesh);
+            else DestroyImmediate(mesh);
+        }
+        _mirroredDrawMeshes.Clear();
+    }
 }

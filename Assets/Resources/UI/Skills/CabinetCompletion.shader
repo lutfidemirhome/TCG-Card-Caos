@@ -16,7 +16,9 @@ Shader "TCG/Cabinet Completion"
             ZWrite Off
             ZTest LEqual
             Offset -1, -1
-            Cull Off
+            // Match the source surface: the biased gold pass must not draw the
+            // hidden back of a thin card over its visible front.
+            Cull Back
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag

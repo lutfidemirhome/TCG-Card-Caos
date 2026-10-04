@@ -380,7 +380,10 @@ public static class GameSaveRestore
         bool isCorrect = owner != null && owner.IsCorrectPlacement(card, slot);
         // Skip green/red flash on load — StartCoroutine during bulk restore is noisy and
         // RefreshRenderMode at flash end is unnecessary when we re-finalize visuals after.
-        return slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
+        bool restored = slot.RestoreOccupiedCard(card, padding, isCorrect, playPlacementFeedback: false);
+        if (restored)
+            slot.RestorePlacementOrder(record.shelfPlacementOrder);
+        return restored;
     }
 
     static void PrepareShelvesForRestore()

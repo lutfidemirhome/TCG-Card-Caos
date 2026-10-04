@@ -39,11 +39,13 @@ public class CardShelf : MonoBehaviour, IInteractable
         public WorldCard Card;
         public string DefinitionId, Category;
         public int RequiredNumber, Row, Number;
+        public long PlacementOrder;
 
         public bool Matches(ProgressSlotState other) =>
             ReferenceEquals(Slot, other.Slot) && ReferenceEquals(Card, other.Card)
             && DefinitionId == other.DefinitionId && Category == other.Category
-            && RequiredNumber == other.RequiredNumber && Row == other.Row && Number == other.Number;
+            && RequiredNumber == other.RequiredNumber && Row == other.Row && Number == other.Number
+            && PlacementOrder == other.PlacementOrder;
     }
 
     struct ShelfFlightEntry
@@ -278,7 +280,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         EnsureSlotCache();
 
-        return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot, _slots);
+        return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot, _slots, this);
     }
 
     public void SetAimHit(RaycastHit hit, Ray aimRay)
@@ -426,6 +428,7 @@ public class CardShelf : MonoBehaviour, IInteractable
                 RequiredNumber = definition != null ? definition.ShelfSlotNumber : 0,
                 Row = card != null ? slot.RowIndex : -1,
                 Number = card != null ? ResolveSlotNumber(slot) : 0,
+                PlacementOrder = card != null ? slot.PlacementOrder : 0,
             };
             if (i >= _progressSlots.Count)
                 _progressSlots.Add(state);
@@ -849,7 +852,7 @@ public class CardShelf : MonoBehaviour, IInteractable
                 { /* The whole cabinet supersedes the last row's separate pulse. */ }
                 else if (IsRowReadyForCompletionFeedback(slot.RowIndex))
                     PlayRowCompleteFeedback(slot.RowIndex);
-                else if (isCorrect)
+                else if (IsCorrectPlacement(card, slot))
                 {
                     card.NotifyShelfPlacement(true);
                     AssemblePickupTrail.PlayShelfPlacement(card);
