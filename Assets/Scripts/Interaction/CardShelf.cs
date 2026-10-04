@@ -40,11 +40,13 @@ public class CardShelf : MonoBehaviour, IInteractable
         public WorldCard Card;
         public string DefinitionId, Category;
         public int RequiredNumber, Row, Number;
+        public long PlacementOrder;
 
         public bool Matches(ProgressSlotState other) =>
             ReferenceEquals(Slot, other.Slot) && ReferenceEquals(Card, other.Card)
             && DefinitionId == other.DefinitionId && Category == other.Category
-            && RequiredNumber == other.RequiredNumber && Row == other.Row && Number == other.Number;
+            && RequiredNumber == other.RequiredNumber && Row == other.Row && Number == other.Number
+            && PlacementOrder == other.PlacementOrder;
     }
 
     struct ShelfFlightEntry
@@ -274,7 +276,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (_slots.Count == 0)
             RefreshSlotCache();
 
-        return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot, _slots);
+        return CardShelfRules.IsCorrectShelfPlacement(CategoryId, card.Definition, slot, _slots, this);
     }
 
     public void SetAimHit(RaycastHit hit)
@@ -408,6 +410,7 @@ public class CardShelf : MonoBehaviour, IInteractable
                 RequiredNumber = definition != null ? definition.ShelfSlotNumber : 0,
                 Row = card != null ? slot.RowIndex : -1,
                 Number = card != null ? ResolveSlotNumber(slot) : 0,
+                PlacementOrder = card != null ? slot.PlacementOrder : 0,
             };
             if (i >= _progressSlots.Count)
                 _progressSlots.Add(state);
