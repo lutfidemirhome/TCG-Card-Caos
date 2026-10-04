@@ -201,14 +201,22 @@ public class FirstPersonController : MonoBehaviour
         float crouchCameraY = _standingCameraLocalY * (crouchHeight / _standingHeight);
         float cameraY = Mathf.Lerp(_standingCameraLocalY, crouchCameraY, _crouchBlend);
 
-        _controller.height = height;
-        _controller.center = new Vector3(0f, centerY, 0f);
+        // Preserve every crouch transition value without repeatedly rewriting
+        // an unchanged native collision shape while standing or resting low.
+        if (_controller.height != height)
+            _controller.height = height;
+        Vector3 center = new Vector3(0f, centerY, 0f);
+        if (!_controller.center.Equals(center))
+            _controller.center = center;
 
         if (cameraTransform != null)
         {
             Vector3 localPos = cameraTransform.localPosition;
-            localPos.y = cameraY;
-            cameraTransform.localPosition = localPos;
+            if (localPos.y != cameraY)
+            {
+                localPos.y = cameraY;
+                cameraTransform.localPosition = localPos;
+            }
         }
     }
 

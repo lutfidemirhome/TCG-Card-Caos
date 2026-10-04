@@ -160,6 +160,7 @@ public static class PackOpenSequence
             }
 
             card.SetRevealVisualFlip(1f);
+            CardPlacementTrail.PlayPackRevealArrival(card);
 
             if (i < revealSparkles.Count && revealSparkles[i] != null)
                 revealSparkles[i].Show();

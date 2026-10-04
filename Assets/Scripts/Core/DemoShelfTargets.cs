@@ -68,6 +68,19 @@ public static class DemoShelfTargets
         return true;
     }
 
+    /// <summary>Let the last card land and its cabinet celebration finish before pausing the demo.</summary>
+    public static bool HasPendingCompletionFeedback()
+    {
+        ResolveTargets();
+        foreach (CardShelf shelf in Shelves)
+            if (shelf != null && shelf.HasPendingCompletionFeedback)
+                return true;
+        foreach (PsaCabinet cabinet in Cabinets)
+            if (cabinet != null && cabinet.HasPendingCompletionFeedback)
+                return true;
+        return false;
+    }
+
     public static bool IsComplete(string objectName)
     {
         Transform root = FindNamed(objectName);
@@ -102,8 +115,9 @@ public static class DemoShelfTargets
             if (shelf == null)
                 continue;
 
-            cardsPlaced += shelf.CountCorrectlyPlacedCards();
-            if (shelf.IsComplete())
+            shelf.CollectHudProgress(out int placed, out bool complete);
+            cardsPlaced += placed;
+            if (complete)
                 shelvesCompleted++;
         }
 

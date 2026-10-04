@@ -28,9 +28,6 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     const int ShelfPlacementFlashPulses = 2;
     const float ShelfPlacementFlashOnSeconds = 0.12f;
     const float ShelfPlacementFlashOffSeconds = 0.1f;
-    const float ShelfRowCompletePulseScale = 1.14f;
-    const float ShelfRowCompleteUpSeconds = 0.12f;
-    const float ShelfRowCompleteDownSeconds = 0.16f;
     /// <summary>
     /// Instanced ground draw is a one-sided quad. Only clearly face-up roots are safe;
     /// tilted / face-down cards keep a two-sided mesh so they stay visible.
@@ -51,14 +48,15 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Coroutine _thrownPhysicsRoutine;
     int _thrownLandingScope;
     [SerializeField] Transform _cardVisual;
+    Texture2D _fullDetailTexture;
     bool _handSelected;
     GameObject _outlineObject;
     GameObject _handSelectionOutlineObject;
     GameObject _shelfStatusOutlineObject;
     ShelfPlacementStatus _shelfPlacementStatus = ShelfPlacementStatus.None;
     Coroutine _shelfPlacementFlashRoutine;
-    Coroutine _shelfRowCompleteRoutine;
-    GameObject _shelfRowCompleteFill;
+    ShelfCompletionEffect.Handle _shelfRowCompleteEffect;
+    CardPlacementTrail.Emitter _placementTrail;
     HandState _handState = HandState.World;
     bool _authoredPhysicsItem;
     float _packRevealFlipT;
@@ -88,9 +86,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool IsHeld => _handState == HandState.Held;
     public bool IsFlyingToHand => _handState == HandState.FlyingToHand;
     public bool IsFlyingToShelf => _handState == HandState.FlyingToShelf;
+    public bool IsPackReveal => _handState == HandState.PackReveal;
     public bool IsInHand => _handState == HandState.Held || _handState == HandState.FlyingToHand;
     public bool HasActivePhysics => _rigidbody != null;
-    public bool IsShelfRowCompleteLocked => _shelfRowCompleteRoutine != null;
+    bool HasActiveShelfCompletionEffect => _shelfRowCompleteEffect != null && _shelfRowCompleteEffect.IsActiveFor(this);
+    public bool IsShelfRowCompleteLocked => HasActiveShelfCompletionEffect;
 
     /// <summary>
     /// True for a dynamic physics card, including a sleeping card in a pile. Sleeping bodies
@@ -115,7 +115,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool HasShelfPlacementFeedback =>
         _shelfPlacementStatus != ShelfPlacementStatus.None
         || _shelfPlacementFlashRoutine != null
-        || _shelfRowCompleteRoutine != null;
+        || HasActiveShelfCompletionEffect;
 
     public bool CanUseInstancedRendering =>
         Application.isPlaying
@@ -298,6 +298,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
+        ClearTransientVisualFeedback();
+        ReleaseFullDetailTexture();
         StopThrownPhysicsMonitor();
         CardGroundStack.UntrackPhysicsCard(this);
         CardInstancedRenderManager.ReleaseFromGround(this);
@@ -305,6 +307,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDestroy()
     {
+        ClearTransientVisualFeedback();
+        ReleaseFullDetailTexture();
         CardGroundQuery.UntrackShelfCard(this);
         StopThrownPhysicsMonitor();
         CardGroundStack.UntrackPhysicsCard(this);
@@ -427,6 +431,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         float arcHeight,
         System.Action onComplete = null)
     {
+        ClearTransientVisualFeedback();
         _handState = HandState.FlyingToHand;
         _handAnchor = handAnchor;
         _flightTargetHandScale = targetHandScale;
@@ -512,6 +517,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         float scale,
         bool showsBack = false)
     {
+        ClearTransientVisualFeedback();
         _handState = HandState.PackReveal;
         _packRevealFlipT = showsBack ? 0f : 1f;
         _handAnchor = null;
@@ -619,6 +625,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (slot == null)
             return;
 
+        ClearTransientVisualFeedback();
         _usePsaCabinetPlacement = false;
         _handState = HandState.FlyingToShelf;
         _handAnchor = null;
@@ -654,7 +661,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_handState != HandState.FlyingToShelf)
             return;
 
+        // Pooled visual feedback follows both normal and PSA cards, including wrong slots.
+        if (_placementTrail == null && Time.deltaTime > 0f && isActiveAndEnabled)
+            _placementTrail = CardPlacementTrail.Begin(transform);
+
         AdvanceFlightToward(targetWorldPos, targetWorldRot);
+        _placementTrail?.Follow(transform.position - transform.up * 0.018f);
 
         if (_flightElapsed >= _flightDuration)
             CompleteShelfFlight();
@@ -662,6 +674,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void CompleteShelfFlight()
     {
+        // Let emitted particles fade before the card is reparented into its slot.
+        StopPlacementTrail(false);
         Transform slot = _shelfFlightSlot;
         float surfacePadding = _shelfFlightSurfacePadding;
         bool usePsaCabinetPlacement = _usePsaCabinetPlacement;
@@ -700,6 +714,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void DropWithPhysics(Vector3 velocity, float worldScaleTransitionDuration = 0.12f)
     {
+        ClearTransientVisualFeedback();
         _handState = HandState.World;
         SetHandSelected(false);
         EnsureCardVisual();
@@ -1121,15 +1136,17 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     }
 
     /// <summary>
-    /// Whole-row celebrate: solid yellow fill and a short upward scale pulse.
+    /// Celebrates a completed row with a short gold light effect, keeping every card in its slot.
     /// Pickup and aim are locked until this finishes.
     /// </summary>
     public void PlayShelfRowCompleteFeedback()
     {
-        if (!isActiveAndEnabled)
+        if (!isActiveAndEnabled || UsesPsaSlab || _handState != HandState.World
+            || GetComponentInParent<CardShelfSlot>() == null)
             return;
 
-        StopShelfRowCompleteFeedback(restorePose: true);
+        StopShelfRowCompleteFeedback();
+        CardPlacementTrail.CancelArrival(this);
 
         if (_shelfPlacementFlashRoutine != null)
         {
@@ -1140,7 +1157,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _shelfPlacementStatus = ShelfPlacementStatus.None;
         ReleaseShelfStatusOutline();
         SetInteractionHighlight(false);
-        _shelfRowCompleteRoutine = StartCoroutine(ShelfRowCompleteRoutine());
+        EnsureCardVisual();
+        _shelfRowCompleteEffect = ShelfCompletionEffect.Play(this, _cardVisual, CardArtLibrary.CardMesh);
     }
 
     public void ClearShelfPlacementStatus()
@@ -1159,7 +1177,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             _shelfPlacementFlashRoutine = null;
         }
 
-        StopShelfRowCompleteFeedback(restorePose: true);
+        StopShelfRowCompleteFeedback();
         _shelfPlacementStatus = ShelfPlacementStatus.None;
         ReleaseShelfStatusOutline();
         RefreshRenderMode();
@@ -1189,105 +1207,42 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         RefreshRenderMode();
     }
 
-    System.Collections.IEnumerator ShelfRowCompleteRoutine()
+    void StopShelfRowCompleteFeedback()
     {
-        EnsureCardVisual();
-        EnsureShelfRowCompleteFill();
-        RefreshRenderMode();
-
-        float restScale = CardDimensions.WorldCardScale;
-        float peakScale = restScale * ShelfRowCompletePulseScale;
-        float padding = GetShelfSurfacePadding();
-        float elapsed = 0f;
-        float total = ShelfRowCompleteUpSeconds + ShelfRowCompleteDownSeconds;
-
-        while (elapsed < total && _handState == HandState.World)
-        {
-            elapsed += Time.deltaTime;
-            float t;
-            if (elapsed <= ShelfRowCompleteUpSeconds)
-                t = Mathf.Clamp01(elapsed / ShelfRowCompleteUpSeconds);
-            else
-                t = 1f - Mathf.Clamp01((elapsed - ShelfRowCompleteUpSeconds) / ShelfRowCompleteDownSeconds);
-
-            float scale = Mathf.Lerp(restScale, peakScale, Mathf.SmoothStep(0f, 1f, t));
-            ApplyShelfPulseScale(scale, padding);
-            yield return null;
-        }
-
-        ApplyShelfPulseScale(restScale, padding);
-        ReleaseShelfRowCompleteFill();
-        _shelfRowCompleteRoutine = null;
-        RefreshRenderMode();
+        if (HasActiveShelfCompletionEffect) ShelfCompletionEffect.Cancel(this);
+        _shelfRowCompleteEffect = null;
     }
 
-    void StopShelfRowCompleteFeedback(bool restorePose)
+    void ClearTransientVisualFeedback()
     {
-        if (_shelfRowCompleteRoutine != null)
-        {
-            StopCoroutine(_shelfRowCompleteRoutine);
-            _shelfRowCompleteRoutine = null;
-        }
-
-        ReleaseShelfRowCompleteFill();
-        if (restorePose && _handState == HandState.World && GetComponentInParent<CardShelfSlot>() != null)
-            ApplyShelfPulseScale(CardDimensions.WorldCardScale, GetShelfSurfacePadding());
+        CabinetCompletionEffect.CancelForCard(this);
+        StopShelfRowCompleteFeedback();
+        StopPlacementTrail(true);
     }
 
-    void ApplyShelfPulseScale(float scale, float padding)
+    void StopPlacementTrail(bool immediate)
     {
-        transform.localScale = Vector3.one * scale;
-        transform.localPosition = new Vector3(
-            0f,
-            CardDimensions.Height * 0.5f * scale + padding,
-            0f);
+        if (immediate) CardPlacementTrail.CancelArrival(this);
+        _placementTrail?.Finish(immediate);
+        _placementTrail = null;
     }
 
-    float GetShelfSurfacePadding()
+    public bool TryGetFeedbackGlowSurface(out Transform visual, out Bounds bounds)
     {
-        CardShelf shelf = GetComponentInParent<CardShelf>();
-        return shelf != null ? shelf.SurfacePadding : 0.003f;
-    }
-
-    void EnsureShelfRowCompleteFill()
-    {
-        if (_shelfRowCompleteFill != null)
-        {
-            _shelfRowCompleteFill.SetActive(true);
-            return;
-        }
-
-        CardArtLibrary.EnsureLoaded();
-        _shelfRowCompleteFill = new GameObject("ShelfRowCompleteFill");
-        _shelfRowCompleteFill.transform.SetParent(GetOutlineParent(), false);
-        _shelfRowCompleteFill.transform.localPosition = new Vector3(0f, 0f, 0.0012f);
-        _shelfRowCompleteFill.transform.localRotation = Quaternion.identity;
-        _shelfRowCompleteFill.transform.localScale = Vector3.one;
-
-        var meshFilter = _shelfRowCompleteFill.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = CardArtLibrary.CardMesh;
-
-        var meshRenderer = _shelfRowCompleteFill.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = CardVisualResources.ShelfRowCompleteFillMaterial;
-        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        meshRenderer.receiveShadows = false;
-    }
-
-    void ReleaseShelfRowCompleteFill()
-    {
-        if (_shelfRowCompleteFill == null)
-            return;
-
-        if (Application.isPlaying)
-            Destroy(_shelfRowCompleteFill);
-        else
-            DestroyImmediate(_shelfRowCompleteFill);
-
-        _shelfRowCompleteFill = null;
+        visual = _cardVisual;
+        bounds = default;
+        if (visual == null) return false;
+        if (UsesPsaSlab)
+            return _psaController != null && _psaController.TryGetHandFrontBounds(out bounds);
+        Mesh mesh = CardArtLibrary.HandCardMesh;
+        if (mesh == null) return false;
+        bounds = mesh.bounds;
+        return true;
     }
 
     void RefreshRenderMode()
     {
+        RefreshFullDetailTexture();
         CardInstancedRenderManager.Instance?.Unregister(this);
 
         if (CanUseInstancedRendering || CanUseInstancedBackRendering)
@@ -1323,6 +1278,23 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         ApplyActiveVisualOrientation();
 
         RefreshInteractionOutline();
+    }
+
+    void RefreshFullDetailTexture()
+    {
+        Texture2D texture = isActiveAndEnabled && !UsesPsaSlab && (IsInHand || _handState == HandState.PackReveal)
+            && definition != null ? definition.FrontTexture : null;
+        if (texture != null && !texture.streamingMipmaps) texture = null;
+        if (ReferenceEquals(_fullDetailTexture, texture)) return;
+        ReleaseFullDetailTexture();
+        _fullDetailTexture = texture;
+        CardTextureStreaming.AcquireFullDetail(texture);
+    }
+
+    void ReleaseFullDetailTexture()
+    {
+        CardTextureStreaming.ReleaseFullDetail(_fullDetailTexture);
+        _fullDetailTexture = null;
     }
 
     void ApplyActiveVisualOrientation()
@@ -1385,7 +1357,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void RefreshInteractionOutline()
     {
-        if (_shelfRowCompleteRoutine != null)
+        if (HasActiveShelfCompletionEffect)
         {
             ReleaseInteractionOutline();
             ReleaseHandSelectionOutline();
@@ -1762,6 +1734,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// </summary>
     public void PlaceOnSurface(Transform parent, Vector3 worldPosition, Quaternion worldRotation)
     {
+        ClearTransientVisualFeedback();
         _handState = HandState.World;
         ClearShelfPlacementStatus();
         SetInteractionHighlight(false);
@@ -1800,6 +1773,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (anchor == null)
             return;
 
+        ClearTransientVisualFeedback();
         _psaCabinetPlaced = true;
         _handState = HandState.World;
         SetInteractionHighlight(false);
@@ -1832,6 +1806,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (slot == null)
             return;
 
+        ClearTransientVisualFeedback();
+
         _handState = HandState.World;
         SetInteractionHighlight(false);
         SetHandSelected(false);
@@ -1863,6 +1839,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void RefreshShelfVisualAfterLoad()
     {
+        ClearTransientVisualFeedback();
         CardArtLibrary.EnsureLoaded();
         CardInstancedRenderManager.ReleaseFromGround(this);
         EnsureCardVisual();

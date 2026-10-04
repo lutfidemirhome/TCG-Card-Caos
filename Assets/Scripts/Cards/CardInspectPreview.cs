@@ -14,6 +14,7 @@ public class CardInspectPreview : MonoBehaviour
     RectTransform _previewRoot;
     RawImage _cardImage;
     string _shownDefinitionId;
+    Texture2D _requestedTexture;
 
     public static CardInspectPreview EnsureOn(Camera camera)
     {
@@ -51,8 +52,18 @@ public class CardInspectPreview : MonoBehaviour
     public void Hide()
     {
         _shownDefinitionId = null;
+        ReleaseTextureRequest();
         if (_previewRoot != null)
             _previewRoot.gameObject.SetActive(false);
+    }
+
+    void OnDisable() { Hide(); }
+    void OnDestroy() { ReleaseTextureRequest(); }
+
+    void ReleaseTextureRequest()
+    {
+        CardTextureStreaming.ReleaseFullDetail(_requestedTexture);
+        _requestedTexture = null;
     }
 
     void BuildPreviewUI()
@@ -127,6 +138,14 @@ public class CardInspectPreview : MonoBehaviour
             _cardImage.uvRect = new Rect(0f, 0f, 1f, 1f);
         }
 
+        // Screen-space UI has no MeshRenderer for automatic mip selection.
+        // Keep the inspected card sharp, and release the override when it closes.
+        ReleaseTextureRequest();
+        if (texture is Texture2D texture2D && texture2D.streamingMipmaps)
+        {
+            _requestedTexture = texture2D;
+            CardTextureStreaming.AcquireFullDetail(_requestedTexture);
+        }
         _cardImage.texture = texture;
         _shownDefinitionId = definitionId;
     }

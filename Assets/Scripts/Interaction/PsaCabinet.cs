@@ -11,6 +11,39 @@ public class PsaCabinet : MonoBehaviour
     readonly List<PsaCabinetSlot> _slotScratch = new List<PsaCabinetSlot>(4);
     static readonly System.Comparison<PsaCabinetSlot> SlotNumberComparison =
         (a, b) => a.SlotNumber.CompareTo(b.SlotNumber);
+    bool _celebratedCabinet;
+
+    public bool HasPendingCompletionFeedback
+    {
+        get
+        {
+            if (CabinetCompletionEffect.IsActiveFor(transform)) return true;
+            if (slots == null) return false;
+            foreach (PsaCabinetSlot slot in slots)
+                if (slot != null && slot.OccupiedCard != null && slot.OccupiedCard.IsFlyingToShelf)
+                    return true;
+            return false;
+        }
+    }
+
+    void OnDisable() => CabinetCompletionEffect.Cancel(transform);
+
+    // Called only when a real placement starts into a previously empty holder.
+    public void NotifyPlacementStarted() => _celebratedCabinet = false;
+
+    /// <summary>Real placement landings only; restored saves never trigger celebration.</summary>
+    public bool TryPlayCompletionFeedback()
+    {
+        if (_celebratedCabinet || !IsComplete()) return false;
+        foreach (PsaCabinetSlot slot in slots)
+        {
+            WorldCard card = slot != null ? slot.OccupiedCard : null;
+            if (!card || !card.isActiveAndEnabled || card.IsFlyingToShelf) return false;
+        }
+        if (!CabinetCompletionEffect.Play(this)) return false;
+        _celebratedCabinet = true;
+        return true;
+    }
 
     public PsaCabinetSlot[] Slots => slots;
 

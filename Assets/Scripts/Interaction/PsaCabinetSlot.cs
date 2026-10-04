@@ -913,6 +913,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         if (card == null)
             return;
 
+        GetComponentInParent<PsaCabinet>()?.NotifyPlacementStarted();
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
 
         _placementFlights.Add(new PlacementFlightEntry { Card = card });
@@ -936,10 +937,21 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             () =>
             {
                 RemovePlacementFlight(card);
-                card.NotifyShelfPlacement(IsCorrectPlacement(card));
+                // Refresh the reserved holder now that the card is seated.
+                RefreshLabel();
+                PsaCabinet cabinet = GetComponentInParent<PsaCabinet>();
+                if (cabinet == null || !cabinet.TryPlayCompletionFeedback())
+                {
+                    if (IsCorrectPlacement(card))
+                    {
+                        card.ClearShelfPlacementStatus();
+                        CardPlacementTrail.PlayShelfPlacement(card);
+                    }
+                    else
+                        card.NotifyShelfPlacement(false);
+                }
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
                 GameSaveSignals.MarkDirty();
-                PsaCabinet cabinet = GetComponentInParent<PsaCabinet>();
                 if (cabinet != null && cabinet.IsComplete())
                     GameSaveSignals.NotifyMilestone();
             });

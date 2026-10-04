@@ -115,6 +115,9 @@ public class DemoCompleteView : MonoBehaviour
         if (!DemoShelfTargets.AreAllComplete())
             return;
 
+        if (DemoShelfTargets.HasPendingCompletionFeedback())
+            return;
+
         Show();
     }
 

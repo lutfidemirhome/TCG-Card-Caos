@@ -29,6 +29,23 @@ public class CardShelf : MonoBehaviour, IInteractable
     readonly List<List<CardShelfSlot>> _rowSlotLists = new List<List<CardShelfSlot>>(8);
     System.Comparison<CardShelfSlot> _compareSlotPositions;
     Vector3 _slotSortRight;
+    readonly List<ProgressSlotState> _progressSlots = new List<ProgressSlotState>(100);
+    bool _progressCacheValid, _progressComplete;
+    int _progressCorrectCount, _progressSlotsPerRow;
+    string _progressCategory;
+
+    struct ProgressSlotState
+    {
+        public CardShelfSlot Slot;
+        public WorldCard Card;
+        public string DefinitionId, Category;
+        public int RequiredNumber, Row, Number;
+
+        public bool Matches(ProgressSlotState other) =>
+            ReferenceEquals(Slot, other.Slot) && ReferenceEquals(Card, other.Card)
+            && DefinitionId == other.DefinitionId && Category == other.Category
+            && RequiredNumber == other.RequiredNumber && Row == other.Row && Number == other.Number;
+    }
 
     struct ShelfFlightEntry
     {
@@ -38,6 +55,12 @@ public class CardShelf : MonoBehaviour, IInteractable
     }
 
     readonly List<ShelfFlightEntry> _shelfFlights = new List<ShelfFlightEntry>(4);
+    // Session-only visual feedback, independent of progress and save data.
+    readonly HashSet<int> _celebratedRows = new HashSet<int>();
+    bool _celebratedCabinet;
+
+    public bool HasPendingCompletionFeedback =>
+        _shelfFlights.Count > 0 || CabinetCompletionEffect.IsActiveFor(transform);
 
     Vector3 _aimWorldPoint;
     bool _hasAimPoint;
@@ -59,8 +82,11 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     void OnDestroy()
     {
+        CabinetCompletionEffect.Cancel(transform);
         DestroyPlacementOutline();
     }
+
+    void OnDisable() => CabinetCompletionEffect.Cancel(transform);
 
     void LateUpdate()
     {
@@ -349,36 +375,80 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     public int CountCorrectlyPlacedCards()
     {
-        RefreshSlotCache();
-        int count = 0;
-        for (int i = 0; i < _slots.Count; i++)
-        {
-            CardShelfSlot slot = _slots[i];
-            if (slot == null || slot.IsEmpty)
-                continue;
-
-            WorldCard card = slot.OccupiedCard;
-            if (card != null && !card.IsInHand && IsCorrectPlacement(card, slot))
-                count++;
-        }
-
-        return count;
+        CollectHudProgress(out int placed, out _);
+        return placed;
     }
 
     public bool IsComplete()
     {
-        RefreshSlotCache();
-        if (_slots.Count == 0)
-            return false;
+        CollectHudProgress(out _, out bool complete);
+        return complete;
+    }
 
+    /// <summary>Reuse validated counts while this cabinet's exact occupancy and numbering are unchanged.</summary>
+    public void CollectHudProgress(out int correctlyPlaced, out bool complete)
+    {
+        // Preserve the demo's fresh topology/numbering scan, including authoring changes
+        // and slots added, removed or disabled at runtime. The snapshot avoids repeating
+        // the expensive per-card series validation for every unchanged filled cabinet.
+        RefreshSlotCache();
+        bool changed = !_progressCacheValid || _progressCategory != CategoryId
+            || _progressSlotsPerRow != SlotsPerRow || _progressSlots.Count != _slots.Count;
         for (int i = 0; i < _slots.Count; i++)
         {
             CardShelfSlot slot = _slots[i];
-            if (slot == null || slot.IsEmpty || !IsCorrectPlacement(slot.OccupiedCard, slot))
-                return false;
+            WorldCard card = slot != null && !slot.IsEmpty ? slot.OccupiedCard : null;
+            CardDefinition definition = card != null ? card.Definition : null;
+            var state = new ProgressSlotState
+            {
+                Slot = slot != null ? slot : null,
+                Card = card != null ? card : null,
+                DefinitionId = definition != null ? definition.DefinitionId : null,
+                Category = definition != null ? definition.ShelfCategoryId : null,
+                RequiredNumber = definition != null ? definition.ShelfSlotNumber : 0,
+                Row = card != null ? slot.RowIndex : -1,
+                Number = card != null ? ResolveSlotNumber(slot) : 0,
+            };
+            if (i >= _progressSlots.Count)
+                _progressSlots.Add(state);
+            else
+            {
+                changed |= !_progressSlots[i].Matches(state);
+                _progressSlots[i] = state;
+            }
+        }
+        if (_progressSlots.Count > _slots.Count)
+            _progressSlots.RemoveRange(_slots.Count, _progressSlots.Count - _slots.Count);
+        if (!changed)
+        {
+            correctlyPlaced = _progressCorrectCount;
+            complete = _progressComplete;
+            return;
         }
 
-        return true;
+        correctlyPlaced = 0;
+        complete = _slots.Count > 0;
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot == null || slot.IsEmpty)
+            {
+                complete = false;
+                continue;
+            }
+
+            WorldCard card = slot.OccupiedCard;
+            if (card != null && !card.IsInHand && IsCorrectPlacement(card, slot))
+                correctlyPlaced++;
+            else
+                complete = false;
+        }
+
+        _progressCorrectCount = correctlyPlaced;
+        _progressComplete = complete;
+        _progressCategory = CategoryId;
+        _progressSlotsPerRow = SlotsPerRow;
+        _progressCacheValid = true;
     }
 
     /// <summary>
@@ -450,8 +520,31 @@ public class CardShelf : MonoBehaviour, IInteractable
         return seriesId != null && correct >= needed;
     }
 
+    bool IsRowReadyForCompletionFeedback(int rowIndex)
+    {
+        if (!isActiveAndEnabled || !IsSeriesRowComplete(rowIndex, SlotsPerRow))
+            return false;
+
+        // Reserving a slot does not mean its placement flight has landed yet.
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            CardShelfSlot slot = _slots[i];
+            if (slot != null && slot.RowIndex == rowIndex)
+            {
+                WorldCard card = slot.OccupiedCard;
+                if (card != null && (!card.isActiveAndEnabled || card.IsFlyingToShelf))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
     void PlayRowCompleteFeedback(int rowIndex)
     {
+        if (!IsRowReadyForCompletionFeedback(rowIndex) || !_celebratedRows.Add(rowIndex))
+            return;
+
         for (int i = 0; i < _slots.Count; i++)
         {
             CardShelfSlot slot = _slots[i];
@@ -464,6 +557,21 @@ public class CardShelf : MonoBehaviour, IInteractable
 
             card.PlayShelfRowCompleteFeedback();
         }
+    }
+
+    bool TryPlayCabinetCompleteFeedback()
+    {
+        if (_celebratedCabinet || !IsComplete()) return false;
+        foreach (CardShelfSlot slot in _slots)
+        {
+            WorldCard card = slot != null ? slot.OccupiedCard : null;
+            if (!card || !card.isActiveAndEnabled || card.IsFlyingToShelf) return false;
+        }
+        CabinetSignCompleteOverlay.Refresh(this);
+        if (!CabinetCompletionEffect.Play(this)) return false;
+        _celebratedCabinet = true;
+        foreach (CardShelfSlot slot in _slots) _celebratedRows.Add(slot.RowIndex);
+        return true;
     }
 
     public float SurfacePadding => surfacePadding;
@@ -621,6 +729,11 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (card == null || slot == null)
             return;
 
+        // A real placement reserves a previously empty seat. Re-arm only that
+        // row/cabinet, so removing and replacing cards can celebrate again.
+        _celebratedRows.Remove(slot.RowIndex);
+        _celebratedCabinet = false;
+
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
 
         _shelfFlights.Add(new ShelfFlightEntry
@@ -639,10 +752,17 @@ public class CardShelf : MonoBehaviour, IInteractable
             () =>
             {
                 RemoveShelfFlight(card);
-                if (IsSeriesRowComplete(slot.RowIndex, SlotsPerRow))
+                if (TryPlayCabinetCompleteFeedback())
+                { /* The whole-cabinet effect replaces the last row's separate pulse. */ }
+                else if (IsRowReadyForCompletionFeedback(slot.RowIndex))
                     PlayRowCompleteFeedback(slot.RowIndex);
+                else if (IsCorrectPlacement(card, slot))
+                {
+                    card.ClearShelfPlacementStatus();
+                    CardPlacementTrail.PlayShelfPlacement(card);
+                }
                 else
-                    card.NotifyShelfPlacement(isCorrect);
+                    card.NotifyShelfPlacement(false);
                 GameSoundEffects.Play(GameSoundEffects.Id.CardShelfPlace);
                 GameSaveSignals.MarkDirty();
                 if (IsComplete())
