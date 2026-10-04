@@ -182,7 +182,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             return;
 
         HideEditorPreviewForPlayMode();
-        enabled = _placementFlights.Count > 0;
+        enabled = _placementFlights.Count > 0 || IsHolderFlashActive;
     }
 
     void OnDestroy()
@@ -200,7 +200,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     {
         if (_placementFlights.Count == 0)
         {
-            if (Application.isPlaying)
+            if (Application.isPlaying && !IsHolderFlashActive)
                 enabled = false;
             return;
         }
@@ -942,7 +942,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
                 {
                     if (IsCorrectPlacement(card))
                     {
-                        card.ClearShelfPlacementStatus();
+                        card.NotifyShelfPlacement(true);
                         AssemblePickupTrail.PlayShelfPlacement(card);
                     }
                     else card.NotifyShelfPlacement(false);

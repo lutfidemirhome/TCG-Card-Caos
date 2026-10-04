@@ -851,7 +851,7 @@ public class CardShelf : MonoBehaviour, IInteractable
                     PlayRowCompleteFeedback(slot.RowIndex);
                 else if (isCorrect)
                 {
-                    card.ClearShelfPlacementStatus();
+                    card.NotifyShelfPlacement(true);
                     AssemblePickupTrail.PlayShelfPlacement(card);
                 }
                 else
