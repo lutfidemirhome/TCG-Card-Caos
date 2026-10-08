@@ -21,6 +21,13 @@ public static class GameSettings
         High = 2
     }
 
+    public enum FrameRateLimit
+    {
+        DisplayRefresh = 0,
+        Fps30 = 1,
+        Fps60 = 2
+    }
+
     public struct Snapshot
     {
         public GameLanguage language;
@@ -29,6 +36,7 @@ public static class GameSettings
         public int refreshHz;
         public bool fullscreen;
         public QualityTier quality;
+        public FrameRateLimit frameRateLimit;
         public float fov;
         public float sensitivity;
         public bool invertY;
@@ -61,6 +69,7 @@ public static class GameSettings
     static void ApplyOnBoot()
     {
         EnsureLoaded();
+        GameFramePacing.Ensure();
         if (!PlayerPrefs.HasKey(Prefix + "version"))
         {
             AudioListener.volume = _current.masterVolume;
@@ -83,6 +92,7 @@ public static class GameSettings
             refreshHz = Mathf.Max(1, Mathf.RoundToInt((float)current.refreshRateRatio.value)),
             fullscreen = Screen.fullScreen,
             quality = FromQualityLevel(QualitySettings.GetQualityLevel()),
+            frameRateLimit = FrameRateLimit.DisplayRefresh,
             fov = DefaultFov,
             sensitivity = DefaultSensitivity,
             invertY = false,
@@ -130,6 +140,7 @@ public static class GameSettings
         Localization.SetLanguage(snapshot.language);
         ApplyQualityIfNeeded(snapshot.quality);
         ApplyDisplayIfNeeded(snapshot);
+        GameFramePacing.Apply(snapshot.frameRateLimit);
         AudioListener.volume = snapshot.masterVolume;
         GameAudioSettings.SetMusicVolume(snapshot.musicVolume);
         GameAudioSettings.SetSfxVolume(snapshot.sfxVolume);
@@ -179,6 +190,7 @@ public static class GameSettings
             refreshHz = Mathf.Max(1, Mathf.RoundToInt((float)Screen.currentResolution.refreshRateRatio.value)),
             fullscreen = Screen.fullScreen,
             quality = FromQualityLevel(QualitySettings.GetQualityLevel()),
+            frameRateLimit = FrameRateLimit.DisplayRefresh,
             fov = DefaultFov,
             sensitivity = DefaultSensitivity,
             invertY = false,
@@ -202,6 +214,7 @@ public static class GameSettings
             refreshHz = PlayerPrefs.GetInt(Prefix + "refresh", hardware.refreshHz),
             fullscreen = PlayerPrefs.GetInt(Prefix + "fullscreen", hardware.fullscreen ? 1 : 0) == 1,
             quality = (QualityTier)PlayerPrefs.GetInt(Prefix + "quality", (int)hardware.quality),
+            frameRateLimit = (FrameRateLimit)PlayerPrefs.GetInt(Prefix + "frameRateLimit", (int)FrameRateLimit.DisplayRefresh),
             fov = PlayerPrefs.GetFloat(Prefix + "fov", hardware.fov),
             sensitivity = PlayerPrefs.GetFloat(Prefix + "sensitivity", hardware.sensitivity),
             invertY = PlayerPrefs.GetInt(Prefix + "invertY", 0) == 1,
@@ -221,6 +234,7 @@ public static class GameSettings
         PlayerPrefs.SetInt(Prefix + "refresh", snapshot.refreshHz);
         PlayerPrefs.SetInt(Prefix + "fullscreen", snapshot.fullscreen ? 1 : 0);
         PlayerPrefs.SetInt(Prefix + "quality", (int)snapshot.quality);
+        PlayerPrefs.SetInt(Prefix + "frameRateLimit", (int)snapshot.frameRateLimit);
         PlayerPrefs.SetFloat(Prefix + "fov", snapshot.fov);
         PlayerPrefs.SetFloat(Prefix + "sensitivity", snapshot.sensitivity);
         PlayerPrefs.SetInt(Prefix + "invertY", snapshot.invertY ? 1 : 0);
@@ -243,6 +257,8 @@ public static class GameSettings
         snapshot.sfxVolume = Mathf.Clamp01(snapshot.sfxVolume);
         if ((int)snapshot.quality < 0 || (int)snapshot.quality > 2)
             snapshot.quality = QualityTier.Medium;
+        if ((int)snapshot.frameRateLimit < 0 || (int)snapshot.frameRateLimit > 2)
+            snapshot.frameRateLimit = FrameRateLimit.DisplayRefresh;
         return snapshot;
     }
 
