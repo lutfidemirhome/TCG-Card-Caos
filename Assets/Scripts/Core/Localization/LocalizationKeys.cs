@@ -70,6 +70,10 @@ public static class LocalizationKeys
     public const string SettingsResolution = "settings.resolution";
     public const string SettingsFullscreen = "settings.fullscreen";
     public const string SettingsQuality = "settings.quality";
+    public const string SettingsFrameRateLimit = "settings.frame_rate_limit";
+    public const string SettingsFrameRateDisplayRefresh = "settings.frame_rate_display_refresh";
+    public const string SettingsFrameRate30 = "settings.frame_rate_30";
+    public const string SettingsFrameRate60 = "settings.frame_rate_60";
     public const string SettingsFov = "settings.fov";
     public const string SettingsSensitivity = "settings.sensitivity";
     public const string SettingsInvertY = "settings.invert_y";

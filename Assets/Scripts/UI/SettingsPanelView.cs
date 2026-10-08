@@ -34,6 +34,7 @@ public class SettingsPanelView : MonoBehaviour
     SettingsDropdown _languageDropdown;
     SettingsDropdown _resolutionDropdown;
     SettingsDropdown _qualityDropdown;
+    SettingsDropdown _frameRateDropdown;
     Toggle _fullscreenToggle;
     Toggle _invertYToggle;
     Toggle _invertXToggle;
@@ -81,13 +82,14 @@ public class SettingsPanelView : MonoBehaviour
         if (!IsOpen)
             return;
 
-        // Labels only — do not rebuild dropdowns or touch resolution / quality.
+        // Labels only — preserve the selected values while previewing a language.
         _qualityDropdown?.RefreshLabels(new[]
         {
             Localization.Get(LocalizationKeys.SettingsQualityLow),
             Localization.Get(LocalizationKeys.SettingsQualityMedium),
             Localization.Get(LocalizationKeys.SettingsQualityHigh)
         });
+        _frameRateDropdown?.RefreshLabels(FrameRateLabels());
     }
 
     public static SettingsPanelView Ensure(Transform parent)
@@ -261,6 +263,7 @@ public class SettingsPanelView : MonoBehaviour
         _resolutionDropdown = CreateDropdownRow(content, "Resolution", LocalizationKeys.SettingsResolution, SettingsArt.ResolutionDropdown, 335f);
         _fullscreenToggle = CreateToggleRow(content, "Fullscreen", LocalizationKeys.SettingsFullscreen, value => _draft.fullscreen = value);
         _qualityDropdown = CreateDropdownRow(content, "Quality", LocalizationKeys.SettingsQuality, SettingsArt.QualityDropdown, 240f);
+        _frameRateDropdown = BindFrameRateDropdown(content);
         _fovSlider = CreateSliderRow(content, "Fov", LocalizationKeys.SettingsFov, GameSettings.MinFov, GameSettings.MaxFov, whole: true, out _fovValue, value => _draft.fov = value);
         _sensitivitySlider = CreateSliderRow(content, "Sensitivity", LocalizationKeys.SettingsSensitivity, 0.01f, 1f, whole: false, out _sensitivityValue, value => _draft.sensitivity = value);
         _invertYToggle = CreateToggleRow(content, "InvertY", LocalizationKeys.SettingsInvertY, value => _draft.invertY = value);
@@ -287,6 +290,7 @@ public class SettingsPanelView : MonoBehaviour
         _languageDropdown?.SetExpandToFit(true);
         _resolutionDropdown = BindDropdown(content, "Resolution");
         _qualityDropdown = BindDropdown(content, "Quality");
+        _frameRateDropdown = BindFrameRateDropdown(content);
         _fullscreenToggle = BindToggle(content, "Fullscreen", value => _draft.fullscreen = value);
         _invertYToggle = BindToggle(content, "InvertY", value => _draft.invertY = value);
         _invertXToggle = BindToggle(content, "InvertX", value => _draft.invertX = value);
@@ -350,6 +354,7 @@ public class SettingsPanelView : MonoBehaviour
         ApplyControlAt("Panel/Content/Row_Language/Dropdown/Value");
         ApplyControlAt("Panel/Content/Row_Resolution/Dropdown/Value");
         ApplyControlAt("Panel/Content/Row_Quality/Dropdown/Value");
+        ApplyControlAt("Panel/Content/Row_FrameRate/Dropdown/Value");
         HideValueBoxImages();
     }
 
@@ -380,6 +385,54 @@ public class SettingsPanelView : MonoBehaviour
         RectTransform listContent = list != null ? list.Find("Content") as RectTransform : null;
         dropdown.Bind(button, label, list, listContent, CloseDropdowns);
         _dropdowns.Add(dropdown);
+        return dropdown;
+    }
+
+    SettingsDropdown BindFrameRateDropdown(Transform content)
+    {
+        const string rowName = "Row_FrameRate";
+        Transform row = content.Find(rowName);
+        if (row != null)
+            return BindDropdown(content, "FrameRate");
+
+        // Older authored menu / pause panels predate this control. Reuse their art and
+        // typography instead of rebuilding the panel. Twelve 54px rows fit its content.
+        Transform qualityRow = content.Find("Row_Quality");
+        Transform qualityList = _listOverlay != null ? _listOverlay.Find("QualityList") : null;
+        if (_listOverlay == null)
+            return null;
+
+        SettingsDropdown dropdown;
+        if (qualityRow != null && qualityList != null)
+        {
+            row = Instantiate(qualityRow.gameObject, content, false).transform;
+            row.name = rowName;
+            Transform list = Instantiate(qualityList.gameObject, _listOverlay, false).transform;
+            list.name = "FrameRateList";
+            list.gameObject.SetActive(false);
+            LocalizedText label = row.Find("Label")?.GetComponent<LocalizedText>();
+            if (label != null)
+            {
+                label.enabled = true;
+                label.SetKey(LocalizationKeys.SettingsFrameRateLimit);
+            }
+            dropdown = BindDropdown(content, "FrameRate");
+        }
+        else
+        {
+            dropdown = CreateDropdownRow(content, "FrameRate", LocalizationKeys.SettingsFrameRateLimit,
+                SettingsArt.QualityDropdown, 335f);
+            row = dropdown.transform.parent;
+        }
+
+        if (qualityRow != null)
+            row.SetSiblingIndex(qualityRow.GetSiblingIndex() + 1);
+        var header = row.Find("Dropdown") as RectTransform;
+        if (header != null)
+            header.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 335f);
+        TMP_Text value = row.Find("Dropdown/Value")?.GetComponent<TMP_Text>();
+        if (value != null)
+            value.fontSize = 22f;
         return dropdown;
     }
 
@@ -424,6 +477,7 @@ public class SettingsPanelView : MonoBehaviour
         BindLanguageOptions();
         BindResolutionOptions();
         BindQualityOptions();
+        BindFrameRateOptions();
 
         if (_fullscreenToggle != null)
             _fullscreenToggle.SetIsOnWithoutNotify(_draft.fullscreen);
@@ -453,6 +507,8 @@ public class SettingsPanelView : MonoBehaviour
 
         if (_qualityDropdown != null)
             _draft.quality = (GameSettings.QualityTier)_qualityDropdown.SelectedIndex;
+        if (_frameRateDropdown != null)
+            _draft.frameRateLimit = (GameSettings.FrameRateLimit)_frameRateDropdown.SelectedIndex;
         if (_fullscreenToggle != null)
             _draft.fullscreen = _fullscreenToggle.isOn;
         if (_invertYToggle != null)
@@ -495,6 +551,24 @@ public class SettingsPanelView : MonoBehaviour
         _qualityDropdown?.SetOptions(names, (int)_draft.quality, index =>
         {
             _draft.quality = (GameSettings.QualityTier)index;
+        });
+    }
+
+    static string[] FrameRateLabels()
+    {
+        return new[]
+        {
+            Localization.Get(LocalizationKeys.SettingsFrameRateDisplayRefresh),
+            Localization.Get(LocalizationKeys.SettingsFrameRate30),
+            Localization.Get(LocalizationKeys.SettingsFrameRate60)
+        };
+    }
+
+    void BindFrameRateOptions()
+    {
+        _frameRateDropdown?.SetOptions(FrameRateLabels(), (int)_draft.frameRateLimit, index =>
+        {
+            _draft.frameRateLimit = (GameSettings.FrameRateLimit)index;
         });
     }
 
