@@ -4,6 +4,7 @@ Shader "TCG/Card Color Preserving"
     {
         [MainTexture] _BaseMap("Texture", 2D) = "white" {}
         [HideInInspector] _CardBackMap("Card Back", 2D) = "white" {}
+        [HideInInspector] _CardAtlasRect("World Art UV", Vector) = (1, 1, 0, 0)
         [MainColor] _BaseColor("Color", Color) = (1, 1, 1, 1)
         _Cutoff("AlphaCutout", Range(0, 1)) = 0.5
         _Surface("__surface", Float) = 0
@@ -49,6 +50,7 @@ Shader "TCG/Card Color Preserving"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_instancing
             #pragma shader_feature_local _CARD_SINGLE_PASS
+            #pragma shader_feature_local _CARD_WORLD_ATLAS
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl"
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/UnlitInput.hlsl"

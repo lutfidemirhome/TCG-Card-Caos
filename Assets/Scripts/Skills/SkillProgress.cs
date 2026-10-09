@@ -30,14 +30,18 @@ public static class SkillProgress
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     // Temporary P-key preview. Real progress and pending effects remain saveable unchanged.
     static bool _testSkillsEnabled;
+    static int _testPoints;
+    static readonly int[] TestLevels = new int[SkillCatalog.Count];
     static readonly float[] TestCooldowns = new float[SkillCatalog.Count];
     static readonly float[] TestActive = new float[SkillCatalog.Count];
     static SkillAutoshelfContext _testAutoshelfContext;
 
-    public static void EnableMaxSkillsForTesting()
+    public static void EnableSkillPointsForTesting()
     {
         if (!Ready) return;
         _testSkillsEnabled = true;
+        _testPoints = 100;
+        Array.Copy(Levels, TestLevels, Levels.Length);
         Array.Clear(TestCooldowns, 0, TestCooldowns.Length);
         Array.Clear(TestActive, 0, TestActive.Length);
         _testAutoshelfContext = null;
@@ -96,13 +100,22 @@ public static class SkillProgress
     }
     public static int Revision { get; private set; }
     public static int CompletedRows => Completed.Count;
-    public static int Level(int skill) => IsSkillTestMode ? SkillCatalog.MaxLevel(skill) : Levels[skill];
+    public static int Level(int skill)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (_testSkillsEnabled) return TestLevels[skill];
+#endif
+        return Levels[skill];
+    }
     public static float Cooldown(int skill) => CurrentCooldowns[skill];
     public static float ActiveTime(int skill) => CurrentActive[skill];
     public static int Points
     {
         get
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (_testSkillsEnabled) return _testPoints;
+#endif
             int earned = 0, spent = 0;
             foreach (int threshold in SkillCatalog.Milestones) if (Completed.Count >= threshold) earned++;
             foreach (int level in Levels) spent += level;
@@ -122,6 +135,8 @@ public static class SkillProgress
         _autoshelfContext = null;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         _testSkillsEnabled = false;
+        _testPoints = 0;
+        Array.Clear(TestLevels, 0, TestLevels.Length);
         _testAutoshelfContext = null;
         Array.Clear(TestCooldowns, 0, TestCooldowns.Length);
         Array.Clear(TestActive, 0, TestActive.Length);
@@ -252,7 +267,16 @@ public static class SkillProgress
 
     public static bool Upgrade(int skill)
     {
-        if (!Ready || IsSkillTestMode || skill < 0 || skill >= SkillCatalog.Count || Points < 1 || Levels[skill] >= SkillCatalog.MaxLevel(skill)) return false;
+        if (!Ready || skill < 0 || skill >= SkillCatalog.Count || Points < 1 || Level(skill) >= SkillCatalog.MaxLevel(skill)) return false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (_testSkillsEnabled)
+        {
+            TestLevels[skill]++;
+            _testPoints--;
+            Revision++;
+            return true;
+        }
+#endif
         Levels[skill]++;
         Revision++;
         GameSaveDirtyTracker.MarkDirty();

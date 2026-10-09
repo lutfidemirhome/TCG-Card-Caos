@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -29,13 +31,61 @@ public class ExteriorTrafficSpawner : MonoBehaviour
     bool _slotWasOccupied;
     float _spawnAllowedTime;
 
-    void Start()
+    readonly Dictionary<GameObject, Queue<ExteriorTrafficCar>> _pool = new();
+    bool _prepared, _started;
+
+    public static IEnumerator PrewarmAll()
     {
-        _spawnAllowedTime = Time.time + initialDelay;
+        foreach (var spawner in FindObjectsByType<ExteriorTrafficSpawner>(FindObjectsSortMode.None))
+            yield return spawner.Prewarm();
+    }
+
+    IEnumerator Prewarm()
+    {
+        if (_prepared) yield break;
+        if (carPrefabs != null)
+            foreach (var prefab in carPrefabs)
+            {
+                if (!prefab || _pool.ContainsKey(prefab)) continue;
+                var available = new Queue<ExteriorTrafficCar>();
+                _pool.Add(prefab, available);
+                for (int i = 0; i < Mathf.Max(1, maxActiveCars); i++)
+                {
+                    available.Enqueue(CreatePooledCar(prefab, available));
+                    yield return null;
+                }
+            }
+        _prepared = true;
+    }
+
+    ExteriorTrafficCar CreatePooledCar(GameObject prefab, Queue<ExteriorTrafficCar> available)
+    {
+        // An inactive parent prevents prefab physics/OnEnable work until preparation finishes.
+        var staging = new GameObject("Traffic preparation");
+        staging.SetActive(false);
+        staging.transform.SetParent(transform, false);
+        GameObject obj = Instantiate(prefab, staging.transform);
+        obj.SetActive(false);
+        var driver = obj.GetComponent<ExteriorTrafficCar>();
+        if (!driver) driver = obj.AddComponent<ExteriorTrafficCar>();
+        driver.PrepareForPool(car =>
+        {
+            car.gameObject.SetActive(false);
+            available.Enqueue(car);
+        });
+        obj.transform.SetParent(transform, false);
+        Destroy(staging);
+        return driver;
     }
 
     void Update()
     {
+        if (!_prepared || !CardInstancedRenderManager.IsGameplayReady || GamePause.IsPaused) return;
+        if (!_started)
+        {
+            _started = true;
+            _spawnAllowedTime = Time.time + initialDelay;
+        }
         if (!CanSpawn())
             return;
 
@@ -94,13 +144,12 @@ public class ExteriorTrafficSpawner : MonoBehaviour
             direction = transform.forward;
 
         Quaternion rotation = ExteriorTrafficCar.GetDrivingRotation(direction);
-        GameObject carObject = Instantiate(prefab, spawnPosition, rotation, transform);
-
-        ExteriorTrafficCar driver = carObject.GetComponent<ExteriorTrafficCar>();
-        if (driver == null)
-            driver = carObject.AddComponent<ExteriorTrafficCar>();
-
+        if (!_pool.TryGetValue(prefab, out var available) || available.Count == 0)
+            return;
+        ExteriorTrafficCar driver = available.Dequeue();
+        driver.transform.SetPositionAndRotation(spawnPosition, rotation);
         driver.Initialize(path, Random.Range(minSpeed, maxSpeed), reverse);
+        driver.gameObject.SetActive(true);
 
         if (alternateDirection)
             _spawnReverse = !_spawnReverse;

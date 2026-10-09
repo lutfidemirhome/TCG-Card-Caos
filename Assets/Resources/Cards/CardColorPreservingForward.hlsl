@@ -13,6 +13,12 @@
 TEXTURE2D(_CardBackMap);
 SAMPLER(sampler_CardBackMap);
 
+#if defined(_CARD_WORLD_ATLAS)
+UNITY_INSTANCING_BUFFER_START(CardAtlas)
+    UNITY_DEFINE_INSTANCED_PROP(float4, _CardAtlasRect)
+UNITY_INSTANCING_BUFFER_END(CardAtlas)
+#endif
+
 struct Attributes
 {
     float4 positionOS : POSITION;
@@ -89,6 +95,13 @@ Varyings UnlitPassVertex(Attributes input)
     if (input.cardFace.x > 0.5)
         output.uv = float2(1.0 - input.uv.x, input.uv.y);
     #endif
+    #if defined(_CARD_WORLD_ATLAS) && defined(_CARD_SINGLE_PASS)
+    if (input.cardFace.x < 0.5)
+    {
+        float4 rect = UNITY_ACCESS_INSTANCED_PROP(CardAtlas, _CardAtlasRect);
+        output.uv = output.uv * rect.xy + rect.zw;
+    }
+    #endif
     #if defined(_FOG_FRAGMENT)
     output.fogCoord = vertexInput.positionVS.z;
     #else
@@ -122,7 +135,7 @@ void UnlitPassFragment(
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-    half2 uv = input.uv;
+    float2 uv = input.uv;
     half4 texColor;
     #if defined(_CARD_SINGLE_PASS)
     UNITY_BRANCH

@@ -85,7 +85,7 @@ public sealed class CardSkillController : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (Input.GetKeyDown(KeyCode.P))
             {
-                SkillProgress.EnableMaxSkillsForTesting();
+                SkillProgress.EnableSkillPointsForTesting();
                 _autoStarted = false;
                 _boundAutoContext = null;
                 _autoShelf = null;

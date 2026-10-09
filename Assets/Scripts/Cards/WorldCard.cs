@@ -119,6 +119,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// remain dynamic so contacts and removal of their support can wake them naturally.
     /// </summary>
     public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
+    internal bool CanUseWorldAtlas => _handState == HandState.World && !UsesPsaSlab
+        && !_interactionHighlighted && _fullDetailTexture == null && !HasShelfPlacementFeedback && !IsPhysicsSimulating;
     public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
@@ -327,6 +329,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
+        CardWorldAtlasRenderer.Untrack(this);
         CabinetCompletionEffect.CancelForCard(this);
         StopShelfRowCompleteFeedback();
         StopSkillPickupTrail(true);
@@ -338,6 +341,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDestroy()
     {
+        CardWorldAtlasRenderer.Untrack(this);
         StopShelfRowCompleteFeedback();
         StopSkillPickupTrail(true);
         ReleaseFullDetailTexture();
@@ -1760,10 +1764,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                     _singlePassMaterials = new Material[1];
                 _singlePassMaterials[0] = materials[0];
                 meshRenderer.sharedMaterials = _singlePassMaterials;
+                CardWorldAtlasRenderer.Track(this, meshRenderer, materials[0]);
                 return;
             }
         }
         _singlePassVisual = false;
+        CardWorldAtlasRenderer.Untrack(this);
         if (meshFilter != null)
             meshFilter.sharedMesh = CardSinglePassMesh.GetSourceOrSelf(meshFilter.sharedMesh);
         meshRenderer.sharedMaterials = materials;
@@ -1771,6 +1777,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void ReleaseCardVisual()
     {
+        CardWorldAtlasRenderer.Untrack(this);
         _cardVisualBound = false;
         ReleaseInteractionOutline();
         ReleaseHandSelectionOutline();

@@ -12,6 +12,7 @@ public sealed class SkillPanelView : MonoBehaviour
     GameObject _panel, _task, _bar;
     TMP_Text _title, _points, _instructions, _name, _description, _stats, _next, _taskTitle, _taskText;
     TMP_Text _closeText, _upgradeText, _openText, _selectedLevel;
+    TMP_Text _progressTitle, _progressText;
     Button _upgrade;
     Image _selectedIcon;
     [SerializeField] Sprite hotbarReadyBackground;
@@ -25,6 +26,7 @@ public sealed class SkillPanelView : MonoBehaviour
     readonly float[] _barActiveDuration = new float[5];
     readonly bool[] _barActive = new bool[5];
     readonly GameObject[] _checks = new GameObject[5];
+    readonly GameObject[] _selections = new GameObject[5];
     readonly Vector3[] _corners = new Vector3[4];
     RectTransform _hudStats, _root, _body, _taskRect, _taskOpen;
     float _refresh;
@@ -68,9 +70,11 @@ public sealed class SkillPanelView : MonoBehaviour
         _selectedIcon = transform.Find(body + "Details/IconFrame/Icon").GetComponent<Image>();
         _stats = TextAt(body + "Details/Stats"); _next = TextAt(body + "Details/Next");
         _upgrade = ButtonAt(body + "Details/Upgrade"); _upgradeText = TextAt(body + "Details/Upgrade/Label");
-        _closeText = TextAt(body + "Close/Label");
+        _closeText = TextAt("Panel/Close/Label");
+        _progressTitle = TextAt(body + "Progress/Title");
+        _progressText = TextAt(body + "Progress/Description");
         _taskTitle = TextAt("Task/Title"); _taskText = TextAt("Task/Description"); _openText = TextAt("Task/Open/Label");
-        ButtonAt(body + "Close").onClick.AddListener(Close);
+        ButtonAt("Panel/Close").onClick.AddListener(Close);
         ButtonAt("Task/Open").onClick.AddListener(Open);
         _upgrade.onClick.AddListener(() => { if (SkillProgress.Upgrade(_selected)) Refresh(); });
         for (int i = 0; i < 5; i++)
@@ -81,6 +85,7 @@ public sealed class SkillPanelView : MonoBehaviour
             _nodes[i] = transform.Find(path).GetComponent<Image>();
             _icons[i] = transform.Find(path + "/Icon").GetComponent<Image>();
             _checks[i] = transform.Find(path + "/Check").gameObject;
+            _selections[i] = transform.Find(path + "/Selection").gameObject;
             ButtonAt(path).onClick.AddListener(() => { _selected = skill; Refresh(); });
             _barLabels[i] = TextAt("Hotbar/Skill" + i + "/Label");
             _barBackgrounds[i] = transform.Find("Hotbar/Skill" + i).GetComponent<Image>();
@@ -146,15 +151,18 @@ public sealed class SkillPanelView : MonoBehaviour
     {
         if (_title == null) return;
         Set(_title, Localization.Get(LocalizationKeys.SkillsTitle));
-        Set(_points, Localization.Format(LocalizationKeys.SkillsPoints, SkillProgress.Points));
+        Set(_points, Localization.Format(LocalizationKeys.SkillsPoints,
+            "<color=#2E7D32>" + SkillProgress.Points + "</color>"));
         Set(_instructions, Localization.Get(LocalizationKeys.SkillsInstructions));
-        Set(_closeText, Localization.Get(LocalizationKeys.SkillsClose));
+        Set(_closeText, Localization.Get(LocalizationKeys.PauseBack));
         Set(_openText, Localization.Get(LocalizationKeys.SkillsOpen));
         Set(_taskTitle, Localization.Get(LocalizationKeys.SkillsTaskTitle));
         int target = SkillProgress.NextGoal, points = SkillProgress.Points;
         string taskText = target > 0
             ? Localization.Format(LocalizationKeys.SkillsTaskRows, target, SkillProgress.CompletedRows)
             : Localization.Get(LocalizationKeys.SkillsTaskDone);
+        Set(_progressTitle, Localization.Get(LocalizationKeys.SkillsTaskTitle));
+        Set(_progressText, taskText);
         if (points > 0) taskText += "\n" + Localization.Format(LocalizationKeys.SkillsPoints, points);
         Set(_taskText, taskText);
         LayoutTask();
@@ -164,7 +172,9 @@ public sealed class SkillPanelView : MonoBehaviour
             string name = Localization.Get("skills." + SkillCatalog.Keys[i] + ".name");
             Set(_names[i], name);
             Set(_levels[i], Localization.Format(LocalizationKeys.SkillsLevel, level, SkillCatalog.MaxLevel(i)));
-            _nodes[i].color = i == _selected ? new Color(1f, 0.9f, 0.55f) : level > 0 ? new Color(0.72f,1f,0.72f) : Color.white;
+            _nodes[i].color = Color.white;
+            SetVisible(_selections[i], i == _selected);
+            _levels[i].color = level > 0 ? new Color32(46, 111, 56, 255) : new Color32(94, 89, 77, 255);
             SetVisible(_checks[i], level > 0);
         }
         int current = SkillProgress.Level(_selected), maximum = SkillCatalog.MaxLevel(_selected);
@@ -228,7 +238,7 @@ public sealed class SkillPanelView : MonoBehaviour
     static string StatValue(int current, int next, bool locked, bool hasNext)
     {
         if (!hasNext) return current.ToString();
-        return (locked ? "\u2014" : current.ToString()) + " \u2192 " + next;
+        return (locked ? "\u2014" : current.ToString()) + " \u2192 <color=#2E7D32>" + next + "</color>";
     }
     void LayoutTask()
     {
@@ -245,7 +255,7 @@ public sealed class SkillPanelView : MonoBehaviour
     void PositionTask()
     {
         float fit = Mathf.Min(1f, Mathf.Min((_root.rect.width - 48f) / Mathf.Max(1f, _body.rect.width),
-            (_root.rect.height - 48f) / Mathf.Max(1f, _body.rect.height)));
+            (_root.rect.height - 160f) / Mathf.Max(1f, _body.rect.height)));
         Vector3 bodyScale = Vector3.one * Mathf.Max(0.1f, fit);
         if (_body.localScale != bodyScale) _body.localScale = bodyScale;
         if (_hudStats == null) return;

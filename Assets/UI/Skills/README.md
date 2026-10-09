@@ -2,49 +2,42 @@
 
 Düzenlenebilir prefab: `Assets/Resources/UI/Skills/SkillUI.prefab`.
 
-## Tek sayfalık skill pop-up
+## Tab penceresi
 
 Prefab düzenlerken `Panel` nesnesini aç. Oyunda Tab ile açılır, Tab veya Esc ile kapanır.
 
-- `Panel/Body/Title`, `Instructions`, `Points`: sol taraftaki başlık, ilerleme açıklaması ve yükseltme hakkı sayısı.
-- `Panel/Body/Nodes/Skill0` … `Skill4`: soldan sağa beş seçim düğmesi. Her birinde `Icon`, `Name`, `Level` ve açılmış yetenek için `Check` bulunur.
-- `Panel/Body/Details/IconFrame/Icon`: seçili yeteneğin büyük simgesi. Kod soldaki düğmenin simgesini buraya kopyalar; ayrı görsel atamana gerek yok.
-- `Panel/Body/Details/Name`, `Level`, `Description`: seçilen yeteneğin başlığı, seviyesi ve açıklaması.
-- `Panel/Body/Details/Next`, `Stats`: sonraki seviye başlığı ve **mevcut → sonraki** süre/miktar değerleri. Kilitli yetenekte mevcut değer `—`, en yüksek seviyede yalnız mevcut değer gösterilir.
-- `Panel/Body/Details/Upgrade`: seçilen yeteneğe 1 hak harcayan yükseltme düğmesi.
-- `Panel/Body/Close`: kapatma düğmesi.
+- `Panel/Body`: 1600 × 900 referans boyutunda açık kâğıt panel. Küçük ekranlarda bütünüyle ölçeklenir; üstte dış kapatma düğmesine alan bırakılır.
+- `Panel/Close`: ekranın sol üstüne sabitlenmiş ESC / Geri düğmesi, panelin dışında. Etiket `pause.back` çevirisini kullanır.
+- `Panel/Body/Title`, `Instructions`, `Points`: başlık, mevcut yükseltme açıklaması ve gerçek yükseltme hakkı. Yalnız sayısal puan değeri TMP rich text ile yeşildir.
+- `Panel/Body/Nodes/Skill0` … `Skill4`: kalıcı yetenek kimlikleri değişmez (Assemble, Sort, Guide, Insight, Autoshelf). Görsel sıralama alt skill barı ile aynıdır: Sort, Guide, Insight, Autoshelf, Assemble.
+- Her düğmede mevcut `Icon`, `Name`, `Level`, `Check` ve yalnız seçili yetenekte görünen altın `Selection` çerçevesi vardır.
+- `Panel/Body/Progress/Title`, `Description`: mevcut sıradaki raf/TCG dolabı hedefi; yeni oyun mekaniği eklenmez.
+- `Panel/Body/Details/IconFrame/Icon`: seçili yeteneğin mevcut simgesi.
+- `Panel/Body/Details/Name`, `Level`, `Description`: gerçek yetenek adı, seviyesi ve açıklaması.
+- `Panel/Body/Details/Next`, `Stats`: mevcut → sonraki süre/miktar. Sonraki değer yeşildir. Kilitliyken mevcut değer `—`, son seviyede yalnız mevcut değer gösterilir.
+- `Panel/Body/Details/Upgrade`: yeşil, altın çerçeveli düğme; 1 hak harcar. Hak yokken veya son seviyedeyken pasiftir.
 
-Tek pop-up içinde iki bilgi alanı vardır; kitap sayfası, Minor Magic veya Paver Layout Plan bölümü yoktur. Panel küçük ekrana bütün olarak sığdırılır. Seçim yalnız açıklamayı değiştirir; yükseltme ayrı düğmeyle yapılır.
+Yazılar PNG içine işlenmemiştir; TextMeshPro bileşenleri ve mevcut 12 dildeki localization anahtarları kullanılır. ESC tuş resmi mevcut oyun UI varlığıdır. Baloo 2 ve mevcut Noto fallback zinciri korunur. Panel metinleri kenarlıksız `Materials/SkillTextNoOutline.mat` kullanır; ortak font materyali değiştirilmez. Tasarım font boyutlarına %15 küçültme uygulanır ve uzun çeviriler için Auto Size açıktır.
 
-## Değiştirilebilir görseller
+## Görseller ve yeniden düzenleme
 
-Tüm skill paneli görselleri `Assets/UI/Skills/Art` altındaki bağımsız kopyalardır. PNG dosyalarını aynı adla ezebilirsin; **`.meta` dosyalarını koru**. Asıl oyun UI görselleri değiştirilmez. Simgeler geçici olarak mevcut oyun görsellerinden kopyalandı; her yeteneğin ayrı dosyası ve GUID'i vardır.
+- `Assets/UI/Skills/Panel/ParchmentPanel.png`: yerleşik Imagegen ile üretilmiş yazısız, transparan kenarlı kâğıt/altın çerçeve. Unity Sprite olarak içe aktarılır.
+- Aynı klasördeki `Inset`, `Badge`, `Level`, `Tile`, `Selection`, `Upgrade`: editör aracının ürettiği küçük nine-slice arayüz yüzeyleri. Metin veya skill simgesi içermez.
+- Yetenek simgeleri doğrudan `Assets/UI/Skills/Hotbar/Skill*.png` dosyalarıdır; kopyalanmaz veya yeniden çizilmez.
+- `TCG Card Chaos > UI > Apply Skill Panel Design`: yalnız bu prefab'ın Tab paneline tasarımı yeniden uygular. Task/Hotbar, sahneler, çeviri tablosu ve yetenek kayıtları değişmez. Prefab üzerinde elle yapılan panel konumlarını yeniden kuracağı için yalnız tasarımı sıfırlamak istediğinde çalıştır.
 
-| Dosya | Kullanım / kopyalanan kaynak |
-| --- | --- |
-| `skill_icon_assemble.png` | Assemble; HUD el/kart görseli |
-| `skill_icon_sort.png` | Sort; HUD el/kart görselinin ayrı kopyası |
-| `skill_icon_guide.png` | Shelf Guide; HUD dolap/kart görseli |
-| `skill_icon_insight.png` | Insight; mevcut pack açılışındaki ışıldama görseli |
-| `skill_icon_autoshelf.png` | Autoshelving; HUD dolap/kart görselinin ayrı kopyası |
-| `skill_node.png` | Sol seçim düğmeleri ve büyük simge çerçevesi |
-| `skill_details_panel.png` | Tek büyük pop-up'ın arka planı |
-| `skill_panel_bg.png` | Sağ bilgi alanının arka planı |
-| `skill_upgrade_button.png` | Yükseltme düğmesi |
-| `skill_close_hint.png` | Kapatma düğmesi |
-| `skill_unlocked_icon.png` | Açılmış yetenek işareti |
-| `skill_task_panel.png` | Sol üst görev kutusu |
+Kâğıt görselinin üretim istemi:
 
-PNG değiştirmenin dışında boyut, renk ve konumları prefab'da düzenleyebilirsin. Kodun bulduğu nesne adlarını ve hiyerarşiyi koru. Yeni simgeler en fazla 256 px olarak içe aktarılır, en-boy oranı korunur.
+> Create a production game UI background asset ONLY, no interface content. Wide landscape rectangular popup panel, aspect 1.62:1, a single warm ivory aged paper surface with a fine double brass gold outline, gently rounded small corners, tasteful tiny understated antique corner flourishes. Close match to a cozy card-shop game abilities menu. Flat front-facing orthographic 2D sprite. Pale cream paper #F4E8CD with very subtle fibers, almost uniform clean bright center for dark readable overlay text, quiet warm weathering only near corners. Border slender and elegant, gold not bright yellow, slight bevel depth. Panel occupies almost the entire image with a small TRANSPARENT margin outside its rounded edges. Center entirely EMPTY uninterrupted paper, no text no numbers no letters no stars no icons no buttons no dividers no inset panels no logos no watermark. Genuine alpha transparency outside panel. Professional clean game UI asset. Use large high resolution landscape output.
 
-`Materials/SkillTextNoOutline.mat` bu pop-up'ın yazılarına özel kenarlıksız materyaldir. Ortak font materyali değiştirilmez. Görev ve alt gösterge yazıları kendi mevcut materyallerini korur.
+## Kontroller
+
+Editör menüsündeki `Validate Skill Panel`, 12 dil × 5 yetenek × 3 seviye durumunda TMP taşmasını kontrol eder. `Validate Skill Panel Behavior`, geçici ilerleme ile gerçek seçim/yükseltme/kapatma callback'lerini çalıştırır, tüm geçici durumu geri alır ve kayıt dosyalarına yazmaz. İki araç da Play Mode dışında kullanılır; raporlar `Temp/skill-panel-*.txt` altındadır.
+
+`Render Skill Panel Preview`, gerçek prefab'ın Unity UI meshleriyle İngilizce/Türkçe önizleme üretir. Bu bağımsız editör önizlemesi oyun sahnesinin ekran görüntüsü değildir.
 
 ## Diğer HUD alanları
 
-- `Task`: sol üst sayaçların altındaki görev kutusu; konumu mevcut sayaca bağlanır.
-- `Hotbar`: sol alt köşeden sağa sıralanan 1–5 yetenek kutuları. Kutular 108×108, aralık 12 piksel; tuş numaraları `KeyHint` çocuklarıdır. Zıplama göstergesi yoktur.
-- Görev kutusu ve Tab erişimi oyun hazır olup welcome penceresi kapanınca açılır; tutorial aşamasını beklemez.
+`Task` sol üst sayaçların altındaki mevcut hedef kutusu, `Hotbar` sol alttaki mevcut 1–5 yetenek göstergeleridir. Bu yeniden tasarım yalnız Tab penceresini değiştirir; bu iki alanın düzeni, tuşları ve cooldown/aktif süre davranışı korunur.
 
-Oyuncu metinleri prefab örnek metninden değil `LocalizationTable.asset` içindeki `skills.*` anahtarlarından gelir. Dil desteği için yazıları oradan değiştir. Yerleşim veya simge değişikliği yetenek seviyelerini/kayıtlarını değiştirmez.
-
-Kurallar: `Docs/SkillSystemPlan.md`. Steam kurulum adımları: `Docs/SteamSkillAchievements.md`; başarım listesi: `Docs/SteamSkillAchievements.csv`.
+Yetenek kuralları: `Docs/SkillSystemPlan.md`. Steam adımları: `Docs/SteamSkillAchievements.md`.

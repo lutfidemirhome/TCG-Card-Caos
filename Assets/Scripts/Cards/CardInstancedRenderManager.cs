@@ -118,6 +118,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         RefreshAllPsaCabinetCardVisuals();
         yield return null;
 
+        yield return ExteriorTrafficSpawner.PrewarmAll();
         IsGameplayReady = true;
         GameProgressCounter.LockTotalFromWorld();
         GameSaveRestore.ResumePendingPhysics();

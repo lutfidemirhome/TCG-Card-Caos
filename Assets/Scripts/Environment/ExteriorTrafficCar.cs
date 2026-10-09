@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Moves a spawned car along an <see cref="ExteriorTrafficPath"/> and destroys itself at the end.
+/// Moves a spawned car along an <see cref="ExteriorTrafficPath"/> and returns to its pool at the end.
 /// </summary>
 [DisallowMultipleComponent]
 public class ExteriorTrafficCar : MonoBehaviour
@@ -31,6 +31,26 @@ public class ExteriorTrafficCar : MonoBehaviour
     bool _reverse;
     float _rotationSpeed = 8f;
     SpinningWheel[] _wheels;
+    Action<ExteriorTrafficCar> _returnToPool;
+    bool _prepared;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetCount() => _activeCount = 0;
+
+    internal void PrepareForPool(Action<ExteriorTrafficCar> returnToPool)
+    {
+        _returnToPool = returnToPool;
+        if (_prepared) return;
+        DisablePhysics();
+        CacheWheels();
+        _prepared = true;
+    }
+
+    void Release()
+    {
+        if (_returnToPool != null) _returnToPool(this);
+        else Destroy(gameObject);
+    }
 
     public void Initialize(ExteriorTrafficPath path, float speed, bool reverse)
     {
@@ -39,8 +59,12 @@ public class ExteriorTrafficCar : MonoBehaviour
         _reverse = reverse;
         _distance = reverse ? path.TotalLength : 0f;
 
-        DisablePhysics();
-        CacheWheels();
+        PrepareForPool(_returnToPool);
+        for (int i = 0; i < _wheels.Length; i++)
+        {
+            _wheels[i].Angle = 0f;
+            if (_wheels[i].Transform) _wheels[i].Transform.localRotation = _wheels[i].BaseLocalRotation;
+        }
         ApplyTransform(instantRotation: true);
     }
 
@@ -49,7 +73,7 @@ public class ExteriorTrafficCar : MonoBehaviour
         _activeCount++;
     }
 
-    void OnDestroy()
+    void OnDisable()
     {
         _activeCount = Mathf.Max(0, _activeCount - 1);
     }
@@ -58,7 +82,7 @@ public class ExteriorTrafficCar : MonoBehaviour
     {
         if (_path == null || _path.PointCount < 2)
         {
-            Destroy(gameObject);
+            Release();
             return;
         }
 
@@ -68,13 +92,13 @@ public class ExteriorTrafficCar : MonoBehaviour
 
         if (!_reverse && _distance >= _path.TotalLength)
         {
-            Destroy(gameObject);
+            Release();
             return;
         }
 
         if (_reverse && _distance <= 0f)
         {
-            Destroy(gameObject);
+            Release();
             return;
         }
 
