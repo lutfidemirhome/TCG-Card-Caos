@@ -70,6 +70,7 @@ public class PlayerCardHand : MonoBehaviour
 
     Transform _handAnchor;
     Camera _camera;
+    float _handZoomScale = 1f;
     int _selectedIndex;
     readonly List<WorldCard> _cards = new List<WorldCard>();
     readonly List<WorldBoosterPack> _heldPacks = new List<WorldBoosterPack>();
@@ -88,7 +89,9 @@ public class PlayerCardHand : MonoBehaviour
     public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots();
     public int AvailableSlots => Mathf.Max(0, CardDimensions.MaxHandSize - OccupiedHandSlots);
     public int SelectedIndex => _selectedIndex;
-    public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent);
+    public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent) * _handZoomScale;
+    // QuickOutline extrudes in view space, so held outlines need the same FOV compensation explicitly.
+    public float HeldOutlineWidthScale => _handZoomScale;
     public float SkillPickupFlightDuration => _skillPickupBatchDuration;
     public bool HasHeldPack => CountOccupiedPackSlots() > 0;
     public bool IsPackSelected => GetSelectedHeldPack() != null;
@@ -101,11 +104,11 @@ public class PlayerCardHand : MonoBehaviour
         if (Instance != null)
             return Instance.WasPackActionKeyPressedThisFrame();
 
-        return Input.GetKeyDown(KeyCode.F) || Input.GetMouseButtonDown(1);
+        return Input.GetKeyDown(KeyCode.F);
     }
 
     bool WasPackActionKeyPressedThisFrame() =>
-        Input.GetKeyDown(packActionKey) || Input.GetMouseButtonDown(1);
+        Input.GetKeyDown(packActionKey);
     public bool IsHandInputLocked => _handInputLocked || _isOpeningPack;
     public bool IsPackOpenMovementLocked => _packOpenMovementLocked;
     public float OpenRevealDistance => openRevealDistance;
@@ -420,11 +423,13 @@ public class PlayerCardHand : MonoBehaviour
             _handAnchor.SetParent(_camera.transform, false);
 
         float halfFovRad = _camera.fieldOfView * 0.5f * Mathf.Deg2Rad;
+        // Keep the whole hand at its normal screen size during temporary camera zoom.
+        _handZoomScale = Mathf.Tan(halfFovRad) / Mathf.Tan(GameSettings.Fov * 0.5f * Mathf.Deg2Rad);
         float frustumHeight = 2f * handDistance * Mathf.Tan(halfFovRad);
         float cardViewportHeight = GetCardViewportHeight(frustumHeight);
 
         float centerViewportY = cardViewportHeight * (0.5f - bottomClipPercent);
-        float localY = (centerViewportY - 0.5f) * frustumHeight - handDownwardOffset;
+        float localY = (centerViewportY - 0.5f) * frustumHeight - handDownwardOffset * _handZoomScale;
 
         _handAnchor.localPosition = new Vector3(0f, localY, handDistance);
         _handAnchor.localRotation = Quaternion.identity;
@@ -813,6 +818,7 @@ public class PlayerCardHand : MonoBehaviour
             () =>
             {
                 OnCardPickupFlightComplete(newCardIndex);
+                AssemblePickupTrail.PlayHandArrival(card);
                 GameSoundEffects.PlayPack(GameSoundEffects.PackId.WhileGathering);
             });
         GameSaveSignals.MarkDirty();
@@ -906,7 +912,7 @@ public class PlayerCardHand : MonoBehaviour
             HandCardPose targetPose = HandFanLayout.GetPose(fanIndex, fanCount, layout, false);
             Vector3 targetWorldPos = _handAnchor.TransformPoint(targetPose.LocalPosition);
             Quaternion targetWorldRot = _handAnchor.rotation * targetPose.LocalRotation;
-            pack.UpdatePickupFlight(targetWorldPos, targetWorldRot);
+            pack.UpdatePickupFlight(targetWorldPos, targetWorldRot, EffectiveHeldScale);
         }
     }
 
@@ -1011,7 +1017,7 @@ public class PlayerCardHand : MonoBehaviour
             HandCardPose targetPose = HandFanLayout.GetPose(GetFanIndexForCard(card), fanCount, layout, false);
             Vector3 targetWorldPos = _handAnchor.TransformPoint(targetPose.LocalPosition);
             Quaternion targetWorldRot = _handAnchor.rotation * targetPose.LocalRotation;
-            card.UpdatePickupFlight(targetWorldPos, targetWorldRot);
+            card.UpdatePickupFlight(targetWorldPos, targetWorldRot, EffectiveHeldScale);
         }
     }
 
@@ -1141,14 +1147,14 @@ public class PlayerCardHand : MonoBehaviour
             MaxFanAngle = maxFanAngle,
             FanAngleRampCardSpan = fanAngleRampCardSpan,
             FanAngleHardCap = fanAngleHardCap,
-            Radius = radius,
-            FanPivotY = fanPivotY,
-            VerticalCurve = verticalCurve,
-            MaxWidth = maxWidth,
-            ExtraMaxWidthPerCard = extraMaxWidthPerCard,
-            MaxWidthClamp = maxWidthClamp,
-            MinCardSpacing = minCardSpacing,
-            MaxCardSpacing = maxCardSpacing,
+            Radius = radius * _handZoomScale,
+            FanPivotY = fanPivotY * _handZoomScale,
+            VerticalCurve = verticalCurve * _handZoomScale,
+            MaxWidth = maxWidth * _handZoomScale,
+            ExtraMaxWidthPerCard = extraMaxWidthPerCard * _handZoomScale,
+            MaxWidthClamp = maxWidthClamp * _handZoomScale,
+            MinCardSpacing = minCardSpacing * _handZoomScale,
+            MaxCardSpacing = maxCardSpacing * _handZoomScale,
             SelectedLift = CardDimensions.Height * EffectiveHeldScale * selectedLiftPercent,
             SelectedForwardMargin = selectedForwardMargin,
         };

@@ -1301,7 +1301,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             material.SetFloat("_Smoothness", 0.65f);
         if (material.HasProperty("_Metallic"))
             material.SetFloat("_Metallic", 0.35f);
-        CardArtLibrary.ConfigureGroundWorldMaterial(material);
+        CardArtLibrary.ConfigureGroundWorldMaterial(material, preserveCardColors: false);
         return material;
     }
 
@@ -1369,7 +1369,10 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             _packOutline = _packModel.gameObject.AddComponent<Outline>();
 
         _packOutline.OutlineMode = Outline.Mode.OutlineAll;
-        _packOutline.OutlineWidth = PackVisualSettings.GetQuickOutlineWidthOrDefault();
+        float outlineWidth = PackVisualSettings.GetQuickOutlineWidthOrDefault();
+        if (IsHeld && PlayerCardHand.Instance != null)
+            outlineWidth *= PlayerCardHand.Instance.HeldOutlineWidthScale;
+        _packOutline.OutlineWidth = outlineWidth;
     }
 
     void RefreshPackOutlineState()
@@ -1454,11 +1457,12 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         ApplyHandVisualOrientation();
     }
 
-    public void UpdatePickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
+    public void UpdatePickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot, float targetHandScale = -1f)
     {
         if (_state != PackState.FlyingToHand)
             return;
 
+        if (targetHandScale > 0f) _flightTargetScale = targetHandScale;
         AdvanceFlightToward(targetWorldPos, targetWorldRot);
 
         if (_flightElapsed >= _flightDuration)

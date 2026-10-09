@@ -628,12 +628,12 @@ public static class CardArtLibrary
     /// <summary>
     /// GPU-instanced ground quads only. Queue 2501 draws after SSAO; mesh cards must stay opaque (Detail).
     /// </summary>
-    public static void ConfigureGroundWorldMaterial(Material material)
+    public static void ConfigureGroundWorldMaterial(Material material, bool preserveCardColors = true)
     {
         if (material == null)
             return;
 
-        ApplyUnlitCardShader(material);
+        ApplyUnlitCardShader(material, preserveCardColors);
         ApplyNoShadowMaterialSettings(material);
         ForceOpaqueSurface(material);
         if (material.HasProperty("_ZWrite"))
@@ -667,12 +667,14 @@ public static class CardArtLibrary
         material.renderQueue = (int)RenderQueue.Geometry;
     }
 
-    static void ApplyUnlitCardShader(Material material)
+    static void ApplyUnlitCardShader(Material material, bool preserveCardColors = true)
     {
         if (material == null || !UseUnlitCardMaterials)
             return;
 
-        Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
+        Shader unlit = preserveCardColors ? CardArtColorCorrection.GetShader() : null;
+        if (unlit == null)
+            unlit = Shader.Find("Universal Render Pipeline/Unlit");
         if (unlit == null || material.shader == unlit)
             return;
 

@@ -14,6 +14,8 @@ public sealed class CabinetCompletionEffect : MonoBehaviour
     static readonly int TextureId = Shader.PropertyToID("_MainTex");
     static readonly int TextureSTId = Shader.PropertyToID("_MainTex_ST");
     static readonly int ColorId = Shader.PropertyToID("_SourceColor");
+    static readonly int CardBackTextureId = Shader.PropertyToID("_CardBackMap");
+    static readonly int CardSinglePassId = Shader.PropertyToID("_CardSinglePass");
     readonly List<Part> _parts = new List<Part>(256);
     readonly List<MeshRenderer> _sources = new List<MeshRenderer>(256);
     readonly List<MeshRenderer> _suppressedOutlines = new List<MeshRenderer>(8);
@@ -146,6 +148,16 @@ public sealed class CabinetCompletionEffect : MonoBehaviour
                 properties.SetTexture(TextureId, texture ? texture : Texture2D.whiteTexture);
                 properties.SetVector(TextureSTId, new Vector4(uvScale.x, uvScale.y, uvOffset.x, uvOffset.y));
                 properties.SetColor(ColorId, color);
+                // A combined card still has different art on its front and back/edges.
+                // Carry its selector into the existing gold pass without extra draws.
+                bool singlePassCard = material && material.IsKeywordEnabled("_CARD_SINGLE_PASS")
+                    && material.HasProperty(CardBackTextureId);
+                properties.SetFloat(CardSinglePassId, singlePassCard ? 1f : 0f);
+                if (singlePassCard)
+                {
+                    Texture back = material.GetTexture(CardBackTextureId);
+                    properties.SetTexture(CardBackTextureId, back ? back : Texture2D.whiteTexture);
+                }
             }
             if (hasBounds) bounds.Encapsulate(source.bounds);
             else { bounds = source.bounds; hasBounds = true; }

@@ -182,6 +182,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     }
 
     bool UsesDefinitionFrontArt => definition != null && definition.FrontTexture != null;
+    bool _singlePassVisual;
+    Material[] _singlePassMaterials;
 
     public string GetInstancedBatchKey()
     {
@@ -519,11 +521,12 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         _flightElapsed = -Mathf.Max(0f, delay);
     }
 
-    public void UpdatePickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot)
+    public void UpdatePickupFlight(Vector3 targetWorldPos, Quaternion targetWorldRot, float targetHandScale = -1f)
     {
         if (_handState != HandState.FlyingToHand)
             return;
 
+        if (targetHandScale > 0f) _flightTargetHandScale = targetHandScale;
         if (_skillPickupView != null)
             AdvanceSkillPickupFlight(targetWorldPos, targetWorldRot);
         else
@@ -1242,6 +1245,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_cardVisual == null || mesh == null)
             return;
 
+        if (_singlePassVisual)
+            mesh = CardSinglePassMesh.Get(mesh) ?? mesh;
+
         var meshFilter = _cardVisual.GetComponent<MeshFilter>();
         if (meshFilter != null && meshFilter.sharedMesh != mesh)
             meshFilter.sharedMesh = mesh;
@@ -1682,7 +1688,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (meshFilter == null)
             meshFilter = _cardVisual.gameObject.AddComponent<MeshFilter>();
         if (CardArtLibrary.CardMesh != null)
-            meshFilter.sharedMesh = CardArtLibrary.CardMesh;
+            SetCardVisualMesh(CardArtLibrary.CardMesh);
 
         MeshRenderer meshRenderer = _cardVisual.GetComponent<MeshRenderer>();
         if (meshRenderer == null)
@@ -1732,6 +1738,34 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         }
 
         meshRenderer.enabled = true;
+        var meshFilter = _cardVisual.GetComponent<MeshFilter>();
+        if (Application.isPlaying && !UsesPsaSlab && meshFilter != null
+            && materials.Length == 2 && materials[0].shader == CardArtColorCorrection.GetShader())
+        {
+            Mesh combined = CardSinglePassMesh.Get(meshFilter.sharedMesh);
+            if (combined != null)
+            {
+                // Same faces, thin edge geometry and authored pose; one submission instead of two.
+                // English/Japanese backs come from the existing paired material.
+                Texture back = materials[1].GetTexture("_BaseMap");
+                if (materials[0].GetTexture("_CardBackMap") != back)
+                    materials[0].SetTexture("_CardBackMap", back);
+                if (!materials[0].IsKeywordEnabled("_CARD_SINGLE_PASS"))
+                    materials[0].EnableKeyword("_CARD_SINGLE_PASS");
+                _singlePassVisual = true;
+                meshFilter.sharedMesh = combined;
+                // Setting sharedMaterial alone leaves a previous second material slot
+                // alive, which would draw the entire combined mesh a second time.
+                if (_singlePassMaterials == null)
+                    _singlePassMaterials = new Material[1];
+                _singlePassMaterials[0] = materials[0];
+                meshRenderer.sharedMaterials = _singlePassMaterials;
+                return;
+            }
+        }
+        _singlePassVisual = false;
+        if (meshFilter != null)
+            meshFilter.sharedMesh = CardSinglePassMesh.GetSourceOrSelf(meshFilter.sharedMesh);
         meshRenderer.sharedMaterials = materials;
     }
 

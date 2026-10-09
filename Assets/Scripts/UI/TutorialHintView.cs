@@ -17,10 +17,12 @@ public class TutorialHintView : MonoBehaviour
 
     enum Step
     {
+        // Keep the existing IDs stable; transitions below define the tutorial order.
         Move = 0,
         Pickup = 1,
         Drop = 2,
         Scroll = 3,
+        Zoom = 7,
         Arrange = 4,
         Crouch = 5,
         Done = 6,
@@ -124,9 +126,6 @@ public class TutorialHintView : MonoBehaviour
         if (!GameScenes.IsActiveGameScene() || _gameplayInstance != this)
             return;
 
-        if (_showThisSession && _step < Step.Crouch)
-            RememberCrouchKeyIfPressed();
-
         if (GameSceneLoader.IsLoading || !CardInstancedRenderManager.IsGameplayReady)
         {
             _arrangeCacheValid = false;
@@ -134,17 +133,21 @@ public class TutorialHintView : MonoBehaviour
             return;
         }
 
-        if (!_showThisSession || _step >= Step.Done)
+        if (!_showThisSession || _step == Step.Done)
         {
             Hide();
             return;
         }
 
-        if (WelcomePopupView.IsWaitingForStart || GamePause.IsPaused)
+        if (WelcomePopupView.IsWaitingForStart || GamePause.IsPaused
+            || !Application.isFocused || Cursor.lockState != CursorLockMode.Locked)
         {
             Hide();
             return;
         }
+
+        if (_step != Step.Crouch)
+            RememberCrouchKeyIfPressed();
 
         if (_step == Step.Drop && IsPackFlowBlockingDropHint())
         {
@@ -180,6 +183,12 @@ public class TutorialHintView : MonoBehaviour
         }
 
         if (_step == Step.Scroll && HasScrollInput())
+        {
+            AdvanceTo(Step.Zoom);
+            return;
+        }
+
+        if (_step == Step.Zoom && FirstPersonController.IsZoomInputActive)
         {
             AdvanceTo(Step.Arrange);
             return;
@@ -311,7 +320,7 @@ public class TutorialHintView : MonoBehaviour
         _laidOutText = null;
         _stepShownAt = Time.realtimeSinceStartup;
 
-        if (_step >= Step.Done)
+        if (_step == Step.Done)
         {
             Hide();
             return;
@@ -357,6 +366,8 @@ public class TutorialHintView : MonoBehaviour
                 return LocalizationKeys.TutorialDrop;
             case Step.Scroll:
                 return LocalizationKeys.TutorialScroll;
+            case Step.Zoom:
+                return LocalizationKeys.TutorialZoom;
             case Step.Arrange:
                 return LocalizationKeys.TutorialArrange;
             case Step.Crouch:

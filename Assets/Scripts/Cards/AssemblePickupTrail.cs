@@ -34,6 +34,16 @@ public sealed class AssemblePickupTrail : MonoBehaviour
         effect?.PlayGlow(card, GlowKind.Reveal);
     }
 
+    public static void PlayHandArrival(WorldCard card)
+    {
+        if (card == null || !card.IsHeld || !card.isActiveAndEnabled || !EnsurePool(card.transform))
+            return;
+
+        CancelArrival(card);
+        Emitter effect = _instance.Take(card.transform.position, card.gameObject.layer, false);
+        effect?.PlayArrival(card);
+    }
+
     /// <summary>One arrival-style flash after a correct placement has physically landed.</summary>
     public static void PlayShelfPlacement(WorldCard card)
     {

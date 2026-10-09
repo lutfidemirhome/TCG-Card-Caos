@@ -479,7 +479,10 @@ public sealed class PsaCardVisualController
 
         _modelOutline.hideFlags |= HideFlags.DontSave;
         _modelOutline.OutlineMode = Outline.Mode.OutlineAll;
-        _modelOutline.OutlineWidth = PackVisualSettings.GetQuickOutlineWidthOrDefault();
+        float outlineWidth = PackVisualSettings.GetQuickOutlineWidthOrDefault();
+        if (_owner.IsHeld && PlayerCardHand.Instance != null)
+            outlineWidth *= PlayerCardHand.Instance.HeldOutlineWidthScale;
+        _modelOutline.OutlineWidth = outlineWidth;
     }
 
     static Quaternion GetWorldGroundLocalRotation(bool showsBack)

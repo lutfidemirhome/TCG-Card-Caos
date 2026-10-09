@@ -33,6 +33,13 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] float maxPitch = 89f;
     [SerializeField] bool lockCursorOnStart = true;
 
+    [Header("Zoom (hold right mouse button)")]
+    [SerializeField, Range(0.25f, 1f)] float zoomFovMultiplier = 0.6f;
+    [SerializeField, Min(1f)] float zoomTransitionSpeed = 160f;
+
+    Camera _viewCamera;
+    float _normalFov = GameSettings.DefaultFov;
+
     CharacterController _controller;
     float _pitch;
     float _verticalVelocity;
@@ -44,6 +51,7 @@ public class FirstPersonController : MonoBehaviour
     float _standingCameraLocalY;
 
     public bool IsCrouching => _crouchBlend > 0.05f;
+    public static bool IsZoomInputActive { get; private set; }
 
     public PlayerSaveRecord CaptureSaveState()
     {
@@ -95,6 +103,9 @@ public class FirstPersonController : MonoBehaviour
         if (cameraTransform == null)
             Debug.LogWarning("FirstPersonController: assign a cameraTransform.", this);
 
+        if (cameraTransform != null)
+            _viewCamera = cameraTransform.GetComponent<Camera>();
+
         _standingHeight = _controller.height;
         _standingCenterY = _controller.center.y;
         _standingCameraLocalY = cameraTransform != null ? cameraTransform.localPosition.y : _standingHeight * 0.89f;
@@ -114,16 +125,53 @@ public class FirstPersonController : MonoBehaviour
 
     public void ApplySettingsFov(float fov)
     {
-        if (cameraTransform == null)
-            return;
+        _normalFov = Mathf.Clamp(fov, GameSettings.MinFov, GameSettings.MaxFov);
+        if (_viewCamera == null && cameraTransform != null)
+            _viewCamera = cameraTransform.GetComponent<Camera>();
+        ResetZoom();
+    }
 
-        Camera camera = cameraTransform.GetComponent<Camera>();
-        if (camera != null)
-            camera.fieldOfView = Mathf.Clamp(fov, GameSettings.MinFov, GameSettings.MaxFov);
+    void UpdateCameraZoom()
+    {
+        PlayerCardHand hand = PlayerCardHand.Instance;
+        bool canZoom = Application.isFocused && Cursor.lockState == CursorLockMode.Locked
+            && !GamePause.IsPaused && !GameSceneLoader.IsLoading
+            && CardInstancedRenderManager.IsGameplayReady && !WelcomePopupView.IsWaitingForStart
+            && (hand == null || (!hand.IsOpeningPack && !hand.IsAwaitingRevealCollect && !hand.IsPackOpenMovementLocked));
+        if (!canZoom)
+        {
+            ResetZoom();
+            return;
+        }
+        UpdateZoom(Input.GetMouseButton(1), Time.unscaledDeltaTime);
+    }
+
+    void UpdateZoom(bool held, float deltaTime)
+    {
+        IsZoomInputActive = held && _viewCamera != null;
+        if (_viewCamera == null) return;
+        float target = held ? _normalFov * (zoomFovMultiplier / 1.2f) : _normalFov;
+        float fov = Mathf.MoveTowards(_viewCamera.fieldOfView, target, zoomTransitionSpeed * deltaTime);
+        if (_viewCamera.fieldOfView != fov) _viewCamera.fieldOfView = fov;
+    }
+
+    void ResetZoom()
+    {
+        IsZoomInputActive = false;
+        // Zoom is temporary camera state, never a settings/save change.
+        if (_viewCamera != null && _viewCamera.fieldOfView != _normalFov)
+            _viewCamera.fieldOfView = _normalFov;
+    }
+
+    void OnApplicationFocus(bool focused)
+    {
+        if (!focused) ResetZoom();
     }
 
     void Update()
     {
+        // Hand layout runs in LateUpdate and must see this frame's zoom.
+        UpdateCameraZoom();
         if (GamePause.IsPaused || GameSceneLoader.IsLoading || !CardInstancedRenderManager.IsGameplayReady)
             return;
 
@@ -323,6 +371,7 @@ public class FirstPersonController : MonoBehaviour
 
     void OnDisable()
     {
+        ResetZoom();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }

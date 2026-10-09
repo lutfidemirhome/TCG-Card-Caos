@@ -3,6 +3,8 @@ Shader "TCG/Cabinet Completion"
     Properties
     {
         _MainTex("Surface", 2D) = "white" {}
+        [HideInInspector] _CardBackMap("Card Back", 2D) = "white" {}
+        [HideInInspector] _CardSinglePass("Combined Card", Float) = 0
         _SourceColor("Source Color", Color) = (1,1,1,1)
         _Progress("Progress", Float) = 0
     }
@@ -24,13 +26,15 @@ Shader "TCG/Cabinet Completion"
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
+            TEXTURE2D(_CardBackMap); SAMPLER(sampler_CardBackMap);
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
                 half4 _SourceColor;
                 float _Progress;
+                float _CardSinglePass;
             CBUFFER_END
-            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; float3 normalOS : NORMAL; };
-            struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; float3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2; };
+            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; float3 normalOS : NORMAL; float2 cardFace : TEXCOORD1; };
+            struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; float3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2; float cardFace : TEXCOORD3; };
             Varyings vert(Attributes input)
             {
                 Varyings output;
@@ -38,13 +42,22 @@ Shader "TCG/Cabinet Completion"
                 output.positionCS = TransformWorldToHClip(output.positionWS);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = input.uv * _MainTex_ST.xy + _MainTex_ST.zw;
+                output.cardFace = input.cardFace.x * _CardSinglePass;
+                if (output.cardFace > 0.5)
+                    output.uv = float2(1.0 - input.uv.x, input.uv.y);
                 return output;
             }
             half4 frag(Varyings input) : SV_Target
             {
                 float t = saturate(_Progress);
                 float envelope = smoothstep(0, 0.14, t) * (1 - smoothstep(0.52, 1, t));
-                half4 art = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _SourceColor;
+                half4 art;
+                UNITY_BRANCH
+                if (input.cardFace > 0.5)
+                    art = SAMPLE_TEXTURE2D(_CardBackMap, sampler_CardBackMap, input.uv);
+                else
+                    art = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                art *= _SourceColor;
                 clip(art.a - 0.01);
                 half luminance = dot(art.rgb, half3(0.2126, 0.7152, 0.0722));
                 half rim = pow(1 - saturate(abs(dot(normalize(input.normalWS), GetWorldSpaceNormalizeViewDir(input.positionWS)))), 3);

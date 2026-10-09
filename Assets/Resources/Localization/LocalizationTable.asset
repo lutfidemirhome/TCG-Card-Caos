@@ -581,18 +581,18 @@ MonoBehaviour:
     - "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 [E] \u0438\u043B\u0438 \u043A\u043B\u0438\u043A: {0}"
   - key: prompt.press_f
     values:
-    - Press [F] or Right Click To {0}
-    - "[F] veya sa\u011F t\u0131kla: {0}"
-    - Appuie sur [F] ou clic droit pour {0}
-    - Premi [F] o tasto destro per {0}
-    - "Dr\xFCcke [F] oder Rechtsklick f\xFCr {0}"
-    - Pulsa [F] o clic derecho para {0}
-    - Pressione [F] ou clique direito para {0}
-    - "[F] \u6216\u53F3\u952E\u4EE5{0}"
-    - "[F] \u6216\u53F3\u9375\u4EE5{0}"
-    - "[F] \u307E\u305F\u306F\u53F3\u30AF\u30EA\u30C3\u30AF\u3067{0}"
-    - "[F] \uB610\uB294 \uC6B0\uD074\uB9AD: {0}"
-    - "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 [F] \u0438\u043B\u0438 \u041F\u041A\u041C: {0}"
+    - "Press [F] To {0}"
+    - "[F] tuşuna bas: {0}"
+    - "Appuie sur [F] pour {0}"
+    - "Premi [F] per {0}"
+    - "Drücke [F] für {0}"
+    - "Pulsa [F] para {0}"
+    - "Pressione [F] para {0}"
+    - "按 [F] 以{0}"
+    - "按 [F] 以{0}"
+    - "[F] で{0}"
+    - "[F]: {0}"
+    - "Нажмите [F]: {0}"
   - key: prompt.pick_up
     values:
     - Pick Up {0}
@@ -1125,6 +1125,20 @@ MonoBehaviour:
     - "\u30AB\u30FC\u30C9\u306F\u540C\u6642\u306B\u8907\u6570\u6301\u3066\u307E\u3059\u3002\n\u9806\u756A\u3092\u5909\u3048\u308B\u306B\u306F\n<sprite name=\"MouseWheelUp\"> \u4E0A\u307E\u305F\u306F <sprite name=\"MouseWheelDown\"> \u4E0B\u306B\u30B9\u30AF\u30ED\u30FC\u30EB\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
     - "\uCE74\uB4DC\uB97C \uB3D9\uC2DC\uC5D0 \uC5EC\uB7EC \uC7A5 \uB4E4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\n\uC21C\uC11C\uB97C \uBC14\uAFB8\uB824\uBA74\n<sprite name=\"MouseWheelUp\"> \uC704\uB85C \uB610\uB294 <sprite name=\"MouseWheelDown\"> \uC544\uB798\uB85C \uC2A4\uD06C\uB864\uD558\uC138\uC694."
     - "\u041C\u043E\u0436\u043D\u043E \u043D\u0435\u0441\u0442\u0438 \u0441\u0440\u0430\u0437\u0443 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u0430\u0440\u0442.\n\u0427\u0442\u043E\u0431\u044B \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u043F\u043E\u0440\u044F\u0434\u043E\u043A, \u043F\u0440\u043E\u043A\u0440\u0443\u0442\u0438\n<sprite name=\"MouseWheelUp\"> \u0432\u0432\u0435\u0440\u0445 \u0438\u043B\u0438 <sprite name=\"MouseWheelDown\"> \u0432\u043D\u0438\u0437."
+  - key: tutorial.zoom
+    values:
+    - "Hold the right mouse button to zoom in."
+    - "Yak\u0131nla\u015Ft\u0131rmak i\u00E7in farenin sa\u011F tu\u015Funu bas\u0131l\u0131 tutun."
+    - "Maintenez le bouton droit de la souris enfonc\u00E9 pour zoomer."
+    - "Tieni premuto il tasto destro del mouse per ingrandire la visuale."
+    - "Halte die rechte Maustaste gedr\u00FCckt, um heranzuzoomen."
+    - "Mant\u00E9n pulsado el bot\u00F3n derecho del rat\u00F3n para acercar la vista."
+    - "Mantenha o bot\u00E3o direito do mouse pressionado para ampliar a vis\u00E3o."
+    - "\u6309\u4F4F\u9F20\u6807\u53F3\u952E\u53EF\u62C9\u8FD1\u89C6\u91CE\u3002"
+    - "\u6309\u4F4F\u6ED1\u9F20\u53F3\u9375\u53EF\u62C9\u8FD1\u8996\u91CE\u3002"
+    - "\u30DE\u30A6\u30B9\u306E\u53F3\u30DC\u30BF\u30F3\u3092\u9577\u62BC\u3057\u3059\u308B\u3068\u30BA\u30FC\u30E0\u3067\u304D\u307E\u3059\u3002"
+    - "\uB9C8\uC6B0\uC2A4 \uC624\uB978\uCABD \uBC84\uD2BC\uC744 \uB204\uB974\uACE0 \uC788\uC73C\uBA74 \uD655\uB300\uB429\uB2C8\uB2E4."
+    - "\u0423\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0439 \u043F\u0440\u0430\u0432\u0443\u044E \u043A\u043D\u043E\u043F\u043A\u0443 \u043C\u044B\u0448\u0438, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u0438\u0431\u043B\u0438\u0437\u0438\u0442\u044C \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435."
   - key: tutorial.arrange
     values:
     - "Find the remaining cards that belong to the same header and arrange them on the same shelf."

@@ -742,7 +742,7 @@ public class InteractionController : MonoBehaviour
 
         public void Interact(GameObject interactor)
         {
-            // Pack open / reveal collect use F or right click (see HandleInput).
+            // Pack open / reveal collect use F (see HandleInput).
         }
     }
 
