@@ -319,19 +319,23 @@ public class FirstPersonController : MonoBehaviour
 
     void HandleJump()
     {
-        if (IsPackOpenMovementLocked())
-            return;
+        if (Input.GetKeyDown(jumpKey))
+            TryJump();
+    }
 
-        if (!Input.GetKeyDown(jumpKey))
-            return;
+    internal bool TryJump()
+    {
+        if (IsPackOpenMovementLocked())
+            return false;
 
         if (TryStandUp())
-            return;
+            return false;
 
         if (!_controller.isGrounded)
-            return;
+            return false;
 
         _verticalVelocity = Mathf.Sqrt(jumpHeight * PlayerJumpSkill.HeightMultiplier * -2f * gravity);
+        return true;
     }
 
     void ToggleCrouchInput()
@@ -367,7 +371,8 @@ public class FirstPersonController : MonoBehaviour
         if (input.sqrMagnitude > 1f)
             input.Normalize();
 
-        float speed = Mathf.Lerp(walkSpeed, crouchSpeed, _crouchBlend);
+        // Run is a permanent chest reward. Crouching keeps its existing speed.
+        float speed = Mathf.Lerp(walkSpeed * MinorSkillProgress.MovementMultiplier, crouchSpeed, _crouchBlend);
         Vector3 move = (transform.right * input.x + transform.forward * input.z) * speed;
 
         if (_controller.isGrounded && _verticalVelocity < 0f)

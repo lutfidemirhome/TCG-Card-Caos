@@ -138,7 +138,7 @@ public static class InGameHudUIBuilder
 
         shelvesValue.text = "0 / " + GameHudLimits.MaxShelves;
         cardsValue.text = "0 / " + GameHudLimits.MaxPlacedCards;
-        handValue.text = "0 / " + CardDimensions.MaxHandSize;
+        handValue.text = "0 / " + CardDimensions.BaseHandSize;
     }
 
     static void BindView(Canvas canvas)

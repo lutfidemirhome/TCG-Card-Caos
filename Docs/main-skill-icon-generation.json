@@ -1,0 +1,27 @@
+{
+  "tool": "Built-in image_gen",
+  "transparentBackground": true,
+  "unityMaxTextureSize": 512,
+  "icons": [
+    {
+      "asset": "Assets/UI/Skills/Hotbar/SkillSort.png",
+      "prompt": "Use case: style-transfer. Asset type: single transparent square white game skill pictogram. First image is the old tiny icon to redraw faithfully in high resolution, second is a style reference for bold clean white forms only. Redraw the first icon from scratch with smooth precise vector-like edges. Subject: Three outlined playing cards arranged as a symmetrical shallow fan, each with one solid diamond, below them a horizontal double-headed arrow. Use pure solid white strokes and fills, transparent negative spaces, uniform bold stroke width and rounded joins. Center optically with symmetric generous padding, all artwork within central 74% of square. Crisp legible silhouette at 64px. No dark outlines, no black pixels, no shadow, no glow, no gradient, no texture, no distress, no haze, no lettering except the i in lightbulb if applicable. Match the old icon's meaning, not its low resolution or black shadow. Truly transparent background. One icon only."
+    },
+    {
+      "asset": "Assets/UI/Skills/Hotbar/SkillGuide.png",
+      "prompt": "Use case: style-transfer. Asset type: single transparent square white game skill pictogram. First image is the old tiny icon to redraw faithfully in high resolution, second is a style reference for bold clean white forms only. Redraw the first icon from scratch with smooth precise vector-like edges. Subject: A clear light bulb outline with a lowercase i inside and three short light rays above it. Use pure solid white strokes and fills, transparent negative spaces, uniform bold stroke width and rounded joins. Center optically with symmetric generous padding, all artwork within central 74% of square. Crisp legible silhouette at 64px. No dark outlines, no black pixels, no shadow, no glow, no gradient, no texture, no distress, no haze, no lettering except the i in lightbulb if applicable. Match the old icon's meaning, not its low resolution or black shadow. Truly transparent background. One icon only."
+    },
+    {
+      "asset": "Assets/UI/Skills/Hotbar/SkillInsight.png",
+      "prompt": "Use case: style-transfer. Asset type: single transparent square white game skill pictogram. First image is the old tiny icon to redraw faithfully in high resolution, second is a style reference for bold clean white forms only. Redraw the first icon from scratch with smooth precise vector-like edges. Subject: One upright outlined playing card containing a solid diamond, with one large four-point sparkle at upper right and one small sparkle at lower left. Use pure solid white strokes and fills, transparent negative spaces, uniform bold stroke width and rounded joins. Center optically with symmetric generous padding, all artwork within central 74% of square. Crisp legible silhouette at 64px. No dark outlines, no black pixels, no shadow, no glow, no gradient, no texture, no distress, no haze, no lettering except the i in lightbulb if applicable. Match the old icon's meaning, not its low resolution or black shadow. Truly transparent background. One icon only."
+    },
+    {
+      "asset": "Assets/UI/Skills/Hotbar/SkillAutoshelving.png",
+      "prompt": "Use case: style-transfer. Asset type: single transparent square white game skill pictogram. First image is the old tiny icon to redraw faithfully in high resolution, second is a style reference for bold clean white forms only. Redraw the first icon from scratch with smooth precise vector-like edges. Subject: Two small upright diamond cards on a horizontal shelf at left, one tilted diamond card at right, a curved arrow above pointing from the loose right card toward the shelf. Use pure solid white strokes and fills, transparent negative spaces, uniform bold stroke width and rounded joins. Center optically with symmetric generous padding, all artwork within central 74% of square. Crisp legible silhouette at 64px. No dark outlines, no black pixels, no shadow, no glow, no gradient, no texture, no distress, no haze, no lettering except the i in lightbulb if applicable. Match the old icon's meaning, not its low resolution or black shadow. Truly transparent background. One icon only."
+    },
+    {
+      "asset": "Assets/UI/Skills/Hotbar/SkillAssemble.png",
+      "prompt": "Use case: style-transfer. Asset type: single transparent square white game skill pictogram. First image is the old tiny icon to redraw faithfully in high resolution, second is a style reference for bold clean white forms only. Redraw the first icon from scratch with smooth precise vector-like edges. Subject: Two small tilted diamond cards at upper left and upper right, each moving downward toward a fan of three collected cards at bottom center; two simple downward arrowheads between them. Use pure solid white strokes and fills, transparent negative spaces, uniform bold stroke width and rounded joins. Center optically with symmetric generous padding, all artwork within central 74% of square. Crisp legible silhouette at 64px. No dark outlines, no black pixels, no shadow, no glow, no gradient, no texture, no distress, no haze, no lettering except the i in lightbulb if applicable. Match the old icon's meaning, not its low resolution or black shadow. Truly transparent background. One icon only."
+    }
+  ]
+}

@@ -47,7 +47,7 @@ public static class SkillPanelDesignBuilder
             pointsBg.transform.SetAsFirstSibling();
             Text(body.Find("Points"),1100,103,376,44,28 * .85f,Ink,TextAlignmentOptions.Center);
             Line(body,"HeaderRule",86,222,1428,2);
-            Line(body,"Divider",876,258,2,544);
+            Line(body,"Divider",876,258,2,590);
 
             Transform nodes = body.Find("Nodes");
             Rect(nodes, 86, 318, 770, 226);
@@ -57,12 +57,23 @@ public static class SkillPanelDesignBuilder
                 int id = (int)SkillCatalog.HotbarSkill(slot);
                 Transform node = nodes.Find("Skill" + id);
                 Rect(node, slot * 154 + 9, 0, 126, 132);
-                SetImage(node.GetComponent<Image>(), "Tile");
+                SetImage(node.GetComponent<Image>(), "Badge");
+                node.GetComponent<Image>().color = new Color32(136,125,98,255);
                 SetupButton(node.GetComponent<Button>(), false);
-                Rect(node.Find("Icon"),16,18,94,96);
+                Rect(node.Find("Icon"),-7.2f,-5.5f,140.4f,143);
+                if (id == (int)CardSkill.Sort || id == (int)CardSkill.ShelfGuide)
+                {
+                    // Both 75x81 sprites have alpha bounds centered at (37.5, 41).
+                    // Center the aspect-preserved artwork, not its top-left-pivot rect.
+                    var iconRect = (RectTransform)node.Find("Icon");
+                    iconRect.anchorMin = iconRect.anchorMax = iconRect.pivot = new Vector2(.5f,.5f);
+                    iconRect.anchoredPosition = new Vector2(0,143f / 162f);
+                }
                 var icon = node.Find("Icon").GetComponent<Image>();
                 icon.color = Color.white; icon.preserveAspect = true; icon.raycastTarget = false;
                 Image selection = Decor(node,"Selection",-6,-6,138,144,"Selection");
+                selection.color = new Color(.15f,1f,.5f,1f);
+                selection.pixelsPerUnitMultiplier = .7f;
                 selection.gameObject.SetActive(id == 0);
                 Text(node.Find("Name"),-9,150,144,64,25 * .85f,Ink,TextAlignmentOptions.Top);
                 Image levelBg = Decor(node,"LevelFrame",-5,217,136,38,"Badge");
@@ -70,19 +81,19 @@ public static class SkillPanelDesignBuilder
                 Text(node.Find("Level"),-2,219,130,34,22 * .85f,Muted,TextAlignmentOptions.Center);
                 Rect(node.Find("Check"),103,107,22,22);
             }
-            Image progress = Decor(body,"Progress",100,646,730,156,"Inset");
-            Text(Label(progress.transform,"Title"),26,17,678,36,29 * .85f,Ink,TextAlignmentOptions.Left);
-            Text(Label(progress.transform,"Description"),26,62,678,78,25 * .85f,Muted,TextAlignmentOptions.TopLeft);
             Line(body,"SkillsRule",110,286,718,2);
             Line(body,"ProgressRule",110,610,718,2);
 
             Transform details = body.Find("Details");
-            Rect(details,906,252,602,566);
+            Rect(details,906,232,602,590);
             SetImage(details.GetComponent<Image>(),"Inset");
             Rect(details.Find("IconFrame"),28,26,128,136);
-            SetImage(details.Find("IconFrame").GetComponent<Image>(),"Tile");
-            Decor(details.Find("IconFrame"),"Selection",-4,-4,136,144,"Selection");
-            Rect(details.Find("IconFrame/Icon"),16,16,96,104);
+            SetImage(details.Find("IconFrame").GetComponent<Image>(),"Badge");
+            details.Find("IconFrame").GetComponent<Image>().color = new Color32(136,125,98,255);
+            Image detailSelection = Decor(details.Find("IconFrame"),"Selection",-4,-4,136,144,"Selection");
+            detailSelection.color = new Color(.15f,1f,.5f,1f);
+            detailSelection.pixelsPerUnitMultiplier = .7f;
+            Rect(details.Find("IconFrame/Icon"),-7.5f,-10,143,156);
             Text(details.Find("Name"),186,30,382,67,39 * .85f,Ink,TextAlignmentOptions.Left);
             Image selectedLevel = Decor(details,"LevelFrame",186,110,260,40,"Level");
             selectedLevel.transform.SetAsFirstSibling();
@@ -91,15 +102,15 @@ public static class SkillPanelDesignBuilder
             Transform oldLine = details.Find("DescriptionDivider");
             if (oldLine != null) oldLine.gameObject.SetActive(false);
             Line(details,"TitleRule",30,180,542,2);
-            Text(details.Find("Description"),32,206,538,102,25 * .85f,Ink,TextAlignmentOptions.TopLeft);
-            Line(details,"StatsRule",30,322,542,2);
-            Text(details.Find("Next"),32,340,538,42,29 * .85f,Ink,TextAlignmentOptions.Left);
-            Image statsBg = Decor(details,"StatsFrame",26,390,550,92,"Badge");
+            Text(details.Find("Description"),32,198,538,146,25 * .85f,Ink,TextAlignmentOptions.TopLeft);
+            Line(details,"StatsRule",30,358,542,2);
+            Text(details.Find("Next"),32,376,538,42,29 * .85f,Ink,TextAlignmentOptions.Left);
+            Image statsBg = Decor(details,"StatsFrame",26,426,550,92,"Badge");
             statsBg.transform.SetAsFirstSibling();
-            Text(details.Find("Stats"),42,400,518,76,27 * .85f,Ink,TextAlignmentOptions.TopLeft);
+            Text(details.Find("Stats"),42,436,518,76,27 * .85f,Ink,TextAlignmentOptions.TopLeft);
             details.Find("Stats").GetComponent<TMP_Text>().lineSpacing = 12;
             Transform upgrade = details.Find("Upgrade");
-            Rect(upgrade,28,500,546,58);
+            Rect(upgrade,28,528,546,52);
             SetImage(upgrade.GetComponent<Image>(),"Upgrade");
             SetupButton(upgrade.GetComponent<Button>(),true);
             Text(upgrade.Find("Label"),22,6,502,46,30 * .85f,new Color32(255,246,217,255),TextAlignmentOptions.Center);
@@ -114,6 +125,7 @@ public static class SkillPanelDesignBuilder
             key.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/UI/ingame/esc_icon.png");
             key.preserveAspect = true;
             Text(close.Find("Label"),66,4,166,48,30 * .85f,Color.white,TextAlignmentOptions.Left);
+            MinorSkillPanelBuilder.ApplyToRoot(root.transform);
             panel.gameObject.SetActive(false);
             PrefabUtility.SaveAsPrefabAsset(root,PrefabPath);
         }

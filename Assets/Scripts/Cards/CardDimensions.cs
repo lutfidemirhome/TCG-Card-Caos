@@ -1,6 +1,8 @@
 public static class CardDimensions
 {
-    public const int MaxHandSize = 10;
+    public const int BaseHandSize = 10;
+    public const int MaximumUpgradedHandSize = 15;
+    public static int MaxHandSize => BaseHandSize + MinorSkillProgress.ExtraHandSlots;
 
     /// <summary>Cards revealed when opening one booster pack.</summary>
     public const int CardsPerBoosterPack = 5;

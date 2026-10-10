@@ -23,6 +23,8 @@ public class GameSaveData
     // Null in older saves: retain the scene's normal spawn point.
     public PlayerSaveRecord player;
     public SkillSaveRecord skills;
+    // Missing in older saves: all four keys and minor-skill chests begin unopened.
+    public MinorSkillSaveRecord minorSkills;
     public CardSaveRecord[] cards = Array.Empty<CardSaveRecord>();
     public PackSaveRecord[] packs = Array.Empty<PackSaveRecord>();
 

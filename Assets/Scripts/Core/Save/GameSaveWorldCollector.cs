@@ -92,6 +92,7 @@ public static class GameSaveWorldCollector
             handOrder = hand != null ? hand.CaptureHandOrder() : null,
             player = player != null ? player.CaptureSaveState() : null,
             skills = SkillProgress.Capture(),
+            minorSkills = MinorSkillProgress.Capture(),
             cards = CardScratch.ToArray(),
             packs = PackScratch.ToArray(),
         };

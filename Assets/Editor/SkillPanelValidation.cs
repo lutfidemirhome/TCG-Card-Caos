@@ -19,6 +19,7 @@ using Object = UnityEngine.Object;
 public static class SkillPanelValidation
 {
     const string PrefabPath = "Assets/Resources/UI/Skills/SkillUI.prefab";
+    const string UnlockPrefabPath = "Assets/Resources/UI/Skills/MinorSkillUnlock.prefab";
     const string ReportPath = "Temp/skill-panel-validation.txt";
     const string Body = "Panel/Body/";
     static readonly string[] IconGuids = {
@@ -64,26 +65,20 @@ public static class SkillPanelValidation
                         Canvas.ForceUpdateCanvases();
                         string context = locale + "/" + SkillCatalog.Keys[selected] + "/level=" + level;
                         int before = errors;
-                        foreach (TMP_Text label in labels)
-                        {
-                            if (!label.gameObject.activeInHierarchy) continue;
-                            label.ForceMeshUpdate(true, true);
-                            labelsChecked++;
-                            Rect box = label.rectTransform.rect;
-                            Vector4 margin = label.margin;
-                            float width = Mathf.Max(0f, box.width - margin.x - margin.z);
-                            float height = Mathf.Max(0f, box.height - margin.y - margin.w);
-                            Bounds bounds = label.textBounds;
-                            // Bounds catches overflow even when the authored overflow mode draws past its box.
-                            bool exceeds = bounds.size.x > width + 1f || bounds.size.y > height + 1f;
-                            if (label.isTextOverflowing || label.isTextTruncated || exceeds)
-                                Error(report, ref errors, context + " " + RelativePath(root.transform, label.transform)
-                                    + " overflow=" + label.isTextOverflowing + " truncated=" + label.isTextTruncated
-                                    + " firstOverflow=" + label.firstOverflowCharacterIndex
-                                    + " font=" + label.fontSize.ToString("0.##", CultureInfo.InvariantCulture)
-                                    + " bounds=" + bounds.size.ToString("F1") + " available=" + width + "x" + height
-                                    + " text=" + label.text.Replace("\n", " | "));
-                        }
+                        ValidateLabels(root.transform, labels, context, report, ref errors, ref labelsChecked);
+                        report.AppendLine((errors == before ? "PASS " : "FAIL ") + context);
+                        scenarios++;
+                    }
+                }
+                for (int minor = 0; minor < MinorSkillProgress.Count; minor++)
+                {
+                    foreach (bool unlocked in new[] { false, true })
+                    {
+                        PopulateMinor(root.transform, table, locale, minor, unlocked);
+                        Canvas.ForceUpdateCanvases();
+                        string context = locale + "/minor" + (minor + 1) + "/" + (unlocked ? "unlocked" : "locked");
+                        int before = errors;
+                        ValidateLabels(root.transform, labels, context, report, ref errors, ref labelsChecked);
                         report.AppendLine((errors == before ? "PASS " : "FAIL ") + context);
                         scenarios++;
                     }
@@ -107,8 +102,113 @@ public static class SkillPanelValidation
         if (errors == 0) Debug.Log(result); else Debug.LogError(result);
     }
 
+    [MenuItem("TCG Card Chaos/UI/Validate Minor Skill Unlock Popup")]
+    public static void ValidateUnlock()
+    {
+        var report = new StringBuilder("Minor skill unlock popup validation\n");
+        report.AppendLine("Isolated 1920x1080 preview; four messages across 12 locales; no live unlock/save events.");
+        int errors = 0, scenarios = 0, labelsChecked = 0;
+        GameObject root = null;
+        var fonts = new PreviewFonts();
+        try
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Run this validation outside Play Mode.");
+            var table = AssetDatabase.LoadAssetAtPath<LocalizationTable>("Assets/Resources/Localization/LocalizationTable.asset");
+            if (table == null) throw new InvalidOperationException("Missing localization table.");
+            ValidateTranslations(table, report, ref errors);
+            root = PrefabUtility.LoadPrefabContents(UnlockPrefabPath);
+            ValidateUnlockStructure(root.transform, report, ref errors);
+            if (errors > 0) throw new InvalidOperationException("Fix popup structure/translations before validating layout.");
+            PreparePreview(root, fonts);
+            TMP_Text[] labels = root.GetComponentsInChildren<TMP_Text>(true);
+            for (int language = 0; language < GameLanguages.Count; language++)
+                for (int skill = 0; skill < MinorSkillProgress.Count; skill++)
+                {
+                    PopulateUnlock(root.transform, table, (GameLanguage)language, skill);
+                    Canvas.ForceUpdateCanvases();
+                    string context = (GameLanguage)language + "/unlock" + (skill + 1);
+                    int before = errors;
+                    ValidateLabels(root.transform, labels, context, report, ref errors, ref labelsChecked);
+                    report.AppendLine((errors == before ? "PASS " : "FAIL ") + context);
+                    scenarios++;
+                }
+        }
+        catch (Exception exception) { Error(report, ref errors, exception.ToString()); }
+        finally
+        {
+            if (root != null) PrefabUtility.UnloadPrefabContents(root);
+            fonts.Dispose();
+            report.AppendLine("Scenarios: " + scenarios + "; label layouts: " + labelsChecked + "; errors: " + errors);
+            Directory.CreateDirectory("Temp");
+            File.WriteAllText("Temp/minor-unlock-ui-validation.txt", report.ToString(), new UTF8Encoding(false));
+        }
+        string result = "[Minor Skills] Unlock popup: " + scenarios + " locale/message scenarios, " + labelsChecked
+            + " label layouts, " + errors + " errors. Report: " + Path.GetFullPath("Temp/minor-unlock-ui-validation.txt");
+        if (errors == 0) Debug.Log(result); else Debug.LogError(result);
+    }
+
+    static void ValidateUnlockStructure(Transform root, StringBuilder report, ref int errors)
+    {
+        Required<MinorSkillUnlockView>(root, "", report, ref errors);
+        Required<Image>(root, "Panel", report, ref errors);
+        Required<Image>(root, "Panel/Body", report, ref errors);
+        Required<Image>(root, "Panel/Body/Icon", report, ref errors);
+        Required<Button>(root, "Panel/Body/Close", report, ref errors);
+        foreach (string path in new[] { "Title", "Message", "Close/Label" })
+            Required<TMP_Text>(root, "Panel/Body/" + path, report, ref errors);
+        var body = Required<RectTransform>(root, "Panel/Body", report, ref errors);
+        if (body != null && body.sizeDelta != new Vector2(800f, 520f))
+            Error(report, ref errors, "Unlock popup must retain its 800x520 reference size, half the skill-panel width.");
+    }
+
+    static void PopulateUnlock(Transform root, LocalizationTable table, GameLanguage language, int skill)
+    {
+        root.Find("Panel/Body/Title").GetComponent<TMP_Text>().text = table.Get("minor.unlock.title", language);
+        root.Find("Panel/Body/Message").GetComponent<TMP_Text>().text = string.Format(CultureInfo.InvariantCulture,
+            table.Get("minor.unlock.message", language), table.Get("minor.skill" + (skill + 1) + ".name", language))
+            + "\n" + table.Get("minor.skill" + (skill + 1) + ".description", language);
+        root.Find("Panel/Body/Icon").GetComponent<Image>().sprite = root.GetComponent<MinorSkillUnlockView>().GetMinorSkillIcon(skill);
+        root.Find("Panel/Body/Close/Label").GetComponent<TMP_Text>().text = table.Get("minor.unlock.close", language);
+    }
+
+    static void ValidateLabels(Transform root, TMP_Text[] labels, string context, StringBuilder report,
+        ref int errors, ref int labelsChecked)
+    {
+        foreach (TMP_Text label in labels)
+        {
+            if (!label.gameObject.activeInHierarchy) continue;
+            label.ForceMeshUpdate(true, true);
+            labelsChecked++;
+            Rect box = label.rectTransform.rect;
+            Vector4 margin = label.margin;
+            float width = Mathf.Max(0f, box.width - margin.x - margin.z);
+            float height = Mathf.Max(0f, box.height - margin.y - margin.w);
+            Bounds bounds = label.textBounds;
+            bool exceeds = bounds.size.x > width + 1f || bounds.size.y > height + 1f;
+            if (label.isTextOverflowing || label.isTextTruncated || exceeds)
+                Error(report, ref errors, context + " " + RelativePath(root, label.transform)
+                    + " overflow=" + label.isTextOverflowing + " truncated=" + label.isTextTruncated
+                    + " firstOverflow=" + label.firstOverflowCharacterIndex
+                    + " font=" + label.fontSize.ToString("0.##", CultureInfo.InvariantCulture)
+                    + " bounds=" + bounds.size.ToString("F1") + " available=" + width + "x" + height
+                    + " text=" + label.text.Replace("\n", " | "));
+        }
+    }
+
     [MenuItem("TCG Card Chaos/UI/Render Skill Panel Preview")]
-    public static void RenderPreview()
+    public static void RenderPreview() => RenderPreview(false);
+
+    [MenuItem("TCG Card Chaos/UI/Render Locked Minor Skill Preview")]
+    public static void RenderMinorPreview() => RenderPreview(true);
+
+    [MenuItem("TCG Card Chaos/UI/Render Minor Skill Unlock Preview")]
+    public static void RenderUnlockPreview() => RenderPreview(false, true);
+
+    [MenuItem("TCG Card Chaos/UI/Render Unlocked Minor Skills")]
+    public static void RenderUnlockedMinorPreview() => RenderPreview(true, false, true);
+
+    static void RenderPreview(bool minor, bool unlock = false, bool minorUnlocked = false)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             throw new InvalidOperationException("Render the isolated preview outside Play Mode.");
@@ -122,10 +222,11 @@ public static class SkillPanelValidation
             LocalizationTable table = AssetDatabase.LoadAssetAtPath<LocalizationTable>(
                 "Assets/Resources/Localization/LocalizationTable.asset");
             if (table == null) throw new InvalidOperationException("Missing localization table.");
-            root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            root = PrefabUtility.LoadPrefabContents(unlock ? UnlockPrefabPath : PrefabPath);
             var report = new StringBuilder();
             int errors = 0;
-            ValidateStructure(root.transform, report, ref errors);
+            if (unlock) ValidateUnlockStructure(root.transform, report, ref errors);
+            else ValidateStructure(root.transform, report, ref errors);
             if (errors != 0) throw new InvalidOperationException(report.ToString());
             Canvas canvas = PreparePreview(root, fonts);
             var cameraObject = new GameObject("Skill preview camera", typeof(Camera));
@@ -164,7 +265,9 @@ public static class SkillPanelValidation
             GameLanguage[] languages = { GameLanguage.English, GameLanguage.Turkish };
             foreach (GameLanguage language in languages)
             {
-                Populate(root.transform, table, language, (int)CardSkill.Insight, 1);
+                if (unlock) PopulateUnlock(root.transform, table, language, 0);
+                else if (minor) PopulateMinor(root.transform, table, language, 0, minorUnlocked);
+                else Populate(root.transform, table, language, (int)CardSkill.Insight, 1);
                 Canvas.ForceUpdateCanvases();
                 foreach (TMP_Text text in root.transform.Find("Panel").GetComponentsInChildren<TMP_Text>())
                     text.ForceMeshUpdate(true, true);
@@ -188,7 +291,8 @@ public static class SkillPanelValidation
                 File.WriteAllText("Temp/skill-panel-preview-render.txt", renderReport.ToString());
                 if (IsUniform(readback))
                     throw new InvalidOperationException("Preview remained blank; see Temp/skill-panel-preview-render.txt.");
-                string path = "Temp/skill-panel-preview-" + (language == GameLanguage.English ? "en" : "tr") + ".png";
+                string path = "Temp/skill-panel-preview-" + (unlock ? "unlock-" : minor ? (minorUnlocked ? "minor-open-" : "minor-") : "")
+                    + (language == GameLanguage.English ? "en" : "tr") + ".png";
                 File.WriteAllBytes(path, readback.EncodeToPNG());
                 Debug.Log("[Skills] Rendered isolated Unity UI preview: " + Path.GetFullPath(path));
             }
@@ -282,8 +386,8 @@ public static class SkillPanelValidation
         foreach (MonoBehaviour component in root.GetComponentsInChildren<MonoBehaviour>(true))
             if (!(component is UIBehaviour)) component.enabled = false;
         root.SetActive(true);
-        root.transform.Find("Task").gameObject.SetActive(false);
-        root.transform.Find("Hotbar").gameObject.SetActive(false);
+        root.transform.Find("Task")?.gameObject.SetActive(false);
+        root.transform.Find("Hotbar")?.gameObject.SetActive(false);
         root.transform.Find("Panel").gameObject.SetActive(true);
         foreach (TMP_Text text in root.transform.Find("Panel").GetComponentsInChildren<TMP_Text>(true)) fonts.Isolate(text);
         return canvas;
@@ -301,9 +405,19 @@ public static class SkillPanelValidation
         RectTransform body = Required<RectTransform>(root, "Panel/Body", report, ref errors);
         if (body != null && body.sizeDelta != new Vector2(1600f, 900f))
             Error(report, ref errors, "Panel/Body must retain its 1600x900 reference size.");
-        string[] paths = { "Title", "Points", "Instructions", "Progress/Title", "Progress/Description", "Details/Name", "Details/Level",
+        string[] paths = { "Title", "Points", "Instructions", "MinorSkills/Title", "Details/Name", "Details/Level",
             "Details/Description", "Details/Stats", "Details/Next", "Details/Upgrade/Label" };
         foreach (string path in paths) Required<TMP_Text>(root, Body + path, report, ref errors);
+        for (int i = 0; i < MinorSkillProgress.Count; i++)
+        {
+            string path = Body + "MinorSkills/Skill" + i;
+            Required<Button>(root, path, report, ref errors);
+            Required<Image>(root, path + "/Icon", report, ref errors);
+            Required<Image>(root, path + "/Selection", report, ref errors);
+            Required<TMP_Text>(root, path + "/Name", report, ref errors);
+        }
+        if (root.Find(Body + "Progress") != null)
+            Error(report, ref errors, "The duplicated panel goal section must be removed.");
         Required<Button>(root, Body + "Details/Upgrade", report, ref errors);
         Required<Image>(root, Body + "Details/IconFrame/Icon", report, ref errors);
         Required<Button>(root, "Panel/Close", report, ref errors);
@@ -360,7 +474,8 @@ public static class SkillPanelValidation
         foreach (LocalizationTable.Entry row in table.Entries)
         {
             if (row == null || string.IsNullOrEmpty(row.key)) continue;
-            if (!row.key.StartsWith("skills.", StringComparison.Ordinal) && row.key != LocalizationKeys.PauseBack) continue;
+            if (!row.key.StartsWith("skills.", StringComparison.Ordinal) && !row.key.StartsWith("minor.", StringComparison.Ordinal)
+                && row.key != LocalizationKeys.PauseBack) continue;
             if (rows.ContainsKey(row.key)) { Error(report, ref errors, "Duplicate translation: " + row.key); continue; }
             rows.Add(row.key, row);
             if (row.values == null || row.values.Length != GameLanguages.Count)
@@ -390,6 +505,14 @@ public static class SkillPanelValidation
             if (!rows.ContainsKey("skills." + key + ".name")) Error(report, ref errors, "Missing skill name: " + key);
             if (!rows.ContainsKey("skills." + key + ".description")) Error(report, ref errors, "Missing skill description: " + key);
         }
+        string[] minorKeys = { "minor.title", "minor.locked.name", "minor.locked.description", "minor.unlocked.status",
+            "minor.unlock.title", "minor.unlock.message", "minor.unlock.close" };
+        foreach (string key in minorKeys)
+            if (!rows.ContainsKey(key)) Error(report, ref errors, "Missing minor translation: " + key);
+        for (int i = 1; i <= MinorSkillProgress.Count; i++)
+            foreach (string suffix in new[] { ".name", ".description" })
+                if (!rows.ContainsKey("minor.skill" + i + suffix))
+                    Error(report, ref errors, "Missing minor translation: minor.skill" + i + suffix);
         report.AppendLine("Translation rows inspected: " + rows.Count + "; locales: " + GameLanguages.Count);
     }
 
@@ -405,11 +528,19 @@ public static class SkillPanelValidation
         string Get(string key) => table.Get(key, language);
         string Format(string key, params object[] args) => string.Format(CultureInfo.InvariantCulture, Get(key), args);
         void Set(string path, string value) => root.Find(path).GetComponent<TMP_Text>().text = value;
+        foreach (string path in new[] { "Level", "LevelFrame", "Stats", "Next", "StatsFrame", "StatsRule", "Upgrade" })
+            root.Find(Body + "Details/" + path).gameObject.SetActive(true);
         Set(Body + "Title", Get(LocalizationKeys.SkillsTitle));
         Set(Body + "Instructions", Get(LocalizationKeys.SkillsInstructions));
         Set(Body + "Points", Format(LocalizationKeys.SkillsPoints, "<color=#2E7D32>2</color>"));
-        Set(Body + "Progress/Title", Get(LocalizationKeys.SkillsTaskTitle));
-        Set(Body + "Progress/Description", Format(LocalizationKeys.SkillsTaskRows, 269, 239));
+        Set(Body + "MinorSkills/Title", Get("minor.title"));
+        for (int i = 0; i < MinorSkillProgress.Count; i++)
+        {
+            string minor = Body + "MinorSkills/Skill" + i;
+            Set(minor + "/Name", Get("minor.locked.name"));
+            root.Find(minor + "/Selection").gameObject.SetActive(false);
+            root.Find(minor + "/Icon").GetComponent<Image>().sprite = root.Find("Hotbar/Skill0/LockIcon").GetComponent<Image>().sprite;
+        }
         Set("Panel/Close/Label", Get(LocalizationKeys.PauseBack));
         for (int i = 0; i < SkillCatalog.Count; i++)
         {
@@ -417,7 +548,6 @@ public static class SkillPanelValidation
             int nodeLevel = Mathf.Min(level, SkillCatalog.MaxLevel(i));
             Set(node + "/Name", Get("skills." + SkillCatalog.Keys[i] + ".name"));
             Set(node + "/Level", Format(LocalizationKeys.SkillsLevel, nodeLevel, SkillCatalog.MaxLevel(i)));
-            root.Find(node).GetComponent<Image>().color = Color.white;
             root.Find(node + "/Selection").gameObject.SetActive(i == selected);
             root.Find(node + "/Check").gameObject.SetActive(nodeLevel > 0);
             root.Find(node + "/Level").GetComponent<TMP_Text>().color = nodeLevel > 0
@@ -445,6 +575,32 @@ public static class SkillPanelValidation
             : Format(LocalizationKeys.SkillsWait, cooldown);
         if (selected == 0) stats += "\n" + Format(LocalizationKeys.SkillsAmount, effect);
         Set(Body + "Details/Stats", stats);
+    }
+
+    static void PopulateMinor(Transform root, LocalizationTable table, GameLanguage language, int selected, bool unlocked)
+    {
+        Populate(root, table, language, (int)CardSkill.Sort, 0);
+        void Set(string path, string key) => root.Find(path).GetComponent<TMP_Text>().text = table.Get(key, language);
+        foreach (string path in new[] { "Level", "LevelFrame", "Stats", "Next", "StatsFrame", "StatsRule", "Upgrade" })
+            root.Find(Body + "Details/" + path).gameObject.SetActive(false);
+        for (int i = 0; i < SkillCatalog.Count; i++)
+            root.Find(Body + "Nodes/Skill" + i + "/Selection").gameObject.SetActive(false);
+        Sprite locked = root.Find("Hotbar/Skill0/LockIcon").GetComponent<Image>().sprite;
+        SkillPanelView view = root.GetComponent<SkillPanelView>();
+        Sprite icon = unlocked ? view.GetMinorSkillIcon(selected) : locked;
+        for (int i = 0; i < MinorSkillProgress.Count; i++)
+        {
+            string path = Body + "MinorSkills/Skill" + i;
+            Set(path + "/Name", unlocked ? "minor.skill" + (i + 1) + ".name" : "minor.locked.name");
+            root.Find(path + "/Selection").gameObject.SetActive(i == selected);
+            root.Find(path + "/Icon").GetComponent<Image>().sprite = unlocked ? view.GetMinorSkillIcon(i) : locked;
+        }
+        string key = "minor.skill" + (selected + 1);
+        Set(Body + "Details/Name", unlocked ? key + ".name" : "minor.locked.name");
+        Set(Body + "Details/Description", unlocked ? key + ".description" : "minor.locked.description");
+        root.Find(Body + "Details/IconFrame/Icon").GetComponent<Image>().sprite = icon;
+        root.Find(Body + "Details/Next").gameObject.SetActive(unlocked);
+        Set(Body + "Details/Next", "minor.unlocked.status");
     }
 
     static string RelativePath(Transform root, Transform target) => AnimationUtility.CalculateTransformPath(target, root);

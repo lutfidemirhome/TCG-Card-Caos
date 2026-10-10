@@ -127,6 +127,10 @@ public static class GameSaveRestore
         RestoredIds.Clear();
         _remappedIds = false;
 
+        // Capacity must be restored before cards 11–15 re-enter the hand.
+        // Restore is silent: it never announces a newly opened chest.
+        MinorSkillProgress.Restore(data.minorSkills);
+
         int processed = 0;
         using (var lookups = new RestoreLookups())
         {

@@ -1,0 +1,29 @@
+{
+  "tool": "Built-in image_gen",
+  "intent": "generate with style reference",
+  "transparent_background": true,
+  "style_reference": "Assets/UI/Skills/Hotbar/SkillSort.png",
+  "common_prompt": "Use case: logo-brand. Asset type: square transparent game UI skill icon. Create one new icon matching the supplied reference simple thick white pictogram style. The reference is style-only. Pure white flat strokes and solid shapes only, real transparent background. No black panel, colored background, shadow, glow, gradient, border, or watermark. Center with equal margins and occupy 75% of canvas. Legible at 64px, consistent 8% stroke, rounded joins, crisp antialiasing.",
+  "assets": [
+    {
+      "path": "Assets/UI/Skills/Minor/LongJump.png",
+      "subject_prompt": "One upward arrow rising from a stylized shoe, with two lift strokes underneath. No extra text or arrows.",
+      "unity_import": "Sprite, maximum size 256, no mipmaps, read/write disabled"
+    },
+    {
+      "path": "Assets/UI/Skills/Minor/Run.png",
+      "subject_prompt": "Running person facing right, circular head, bent limbs and two motion strokes.",
+      "unity_import": "Sprite, maximum size 256, no mipmaps, read/write disabled"
+    },
+    {
+      "path": "Assets/UI/Skills/Minor/CapacityPlus2.png",
+      "subject_prompt": "Three outlined cards in a fan, diamond on the center card, and the exact text +2 in white bold sans serif.",
+      "unity_import": "Sprite, maximum size 256, no mipmaps, read/write disabled"
+    },
+    {
+      "path": "Assets/UI/Skills/Minor/CapacityPlus3.png",
+      "subject_prompt": "Three outlined cards in a fan, diamond on the center card, and the exact text +3 in white bold sans serif.",
+      "unity_import": "Sprite, maximum size 256, no mipmaps, read/write disabled"
+    }
+  ]
+}

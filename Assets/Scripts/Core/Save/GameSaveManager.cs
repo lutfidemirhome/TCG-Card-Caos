@@ -193,6 +193,7 @@ public sealed class GameSaveManager : MonoBehaviour
         GameSaveDirtyTracker.Clear();
         GameProgressCounter.InvalidateCache();
         SkillProgress.Restore(null, isNewGame: true);
+        MinorSkillProgress.Restore(null);
         _instance.BeginGameplaySession(fromSave: false, 0d);
     }
 

@@ -45,7 +45,7 @@ public static class SkillPanelBehaviorValidation
         try
         {
             if (Application.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode
-                || GameSaveManager.Instance != null || SkillPanelView.Instance != null
+                || GameSaveManager.Instance != null || SkillPanelView.Instance != null || MinorSkillUnlockView.Instance != null
                 || GameSceneLoader.IsLoading || PlayerCardHand.Instance != null)
                 throw new InvalidOperationException("Run outside Play Mode with no live skill view, player hand, save manager or scene load.");
 
@@ -54,6 +54,8 @@ public static class SkillPanelBehaviorValidation
             state.Capture(typeof(SkillProgress), "Levels", "Completed", "Cooldowns", "Active",
                 "<Ready>k__BackingField", "<Revision>k__BackingField", "_testSkillsEnabled",
                 "_testPoints", "TestLevels", "TestCooldowns", "TestActive", "_testAutoshelfContext");
+            state.Capture(typeof(MinorSkillProgress), "_ownedKeys", "_unlockedSkills", "<Ready>k__BackingField", "Changed", "Unlocked");
+            state.Capture(typeof(MinorSkillUnlockView), "<Instance>k__BackingField", "_closedFrame");
             state.Capture(typeof(GameSaveDirtyTracker), "<IsDirty>k__BackingField", "<Revision>k__BackingField");
             state.Capture(typeof(GameSaveManager), "_milestoneQueued");
             state.Capture(typeof(SkillPanelView), "<Instance>k__BackingField", "_closedFrame");
@@ -105,6 +107,10 @@ public static class SkillPanelBehaviorValidation
             Set(typeof(CardInstancedRenderManager), "<IsGameplayReady>k__BackingField", true);
             Set(typeof(WelcomePopupView), "<IsWaitingForStart>k__BackingField", false);
             Set(typeof(GameSaveManager), "_milestoneQueued", false);
+            Set(typeof(MinorSkillProgress), "Changed", null);
+            Set(typeof(MinorSkillProgress), "Unlocked", null);
+            Set(typeof(MinorSkillUnlockView), "_closedFrame", -1);
+            MinorSkillProgress.Restore(null);
             GamePause.SetPaused(false);
             Check(SkillProgress.Points == 2, "Three completed rows provide two temporary upgrade points");
 
@@ -113,6 +119,14 @@ public static class SkillPanelBehaviorValidation
             MethodInfo awake = typeof(SkillPanelView).GetMethod("Awake", InstanceMethods);
             if (awake == null) throw new MissingMethodException("SkillPanelView.Awake");
             awake.Invoke(view, null);
+            // Edit-mode listener validation needs no visual coroutines. Initialize each dynamically
+            // attached feedback component before disabling it, preserving the authored scale.
+            MethodInfo feedbackAwake = typeof(SkillPanelButtonFeedback).GetMethod("Awake", InstanceMethods);
+            foreach (var feedback in root.GetComponentsInChildren<SkillPanelButtonFeedback>(true))
+            {
+                feedbackAwake.Invoke(feedback, null);
+                feedback.enabled = false;
+            }
             CardSkillController controller = root.GetComponent<CardSkillController>();
             if (controller != null) controller.enabled = false;
             Check(SkillPanelView.Instance == view && !view.IsOpen, "Awake binds the authored prefab and starts closed");
@@ -139,6 +153,48 @@ public static class SkillPanelBehaviorValidation
                         "Skill " + i + " selection highlight " + j + " matches");
                 Check(upgrade.interactable, "Skill " + i + " can be upgraded with available points");
             }
+
+            int pointsBeforeMinor = SkillProgress.Points;
+            ulong dirtyBeforeMinor = GameSaveDirtyTracker.Revision;
+            string[] majorDetails = { "Level", "LevelFrame", "Stats", "Next", "StatsFrame", "StatsRule", "Upgrade" };
+            for (int i = 0; i < MinorSkillProgress.Count; i++)
+            {
+                At(Body + "MinorSkills/Skill" + i).onClick.Invoke();
+                Check(Text(Body + "Details/Name").text == Localization.Get("minor.locked.name")
+                    && Text(Body + "Details/Description").text == Localization.Get("minor.locked.description")
+                    && ImageAt(Body + "Details/IconFrame/Icon").sprite == ImageAt("Hotbar/Skill0/LockIcon").sprite,
+                    "Locked minor " + i + " displays its lock and localized description");
+                foreach (string path in majorDetails)
+                    Check(!root.transform.Find(Body + "Details/" + path).gameObject.activeSelf,
+                        "Locked minor hides major-only detail " + path);
+                for (int j = 0; j < MinorSkillProgress.Count; j++)
+                    Check(root.transform.Find(Body + "MinorSkills/Skill" + j + "/Selection").gameObject.activeSelf == (i == j),
+                        "Minor " + i + " selection highlight " + j + " matches");
+                for (int j = 0; j < SkillCatalog.Count; j++)
+                    Check(!root.transform.Find(Body + "Nodes/Skill" + j + "/Selection").gameObject.activeSelf,
+                        "Minor selection clears major highlight " + j);
+                upgrade.onClick.Invoke(); // Explicitly bypass Button.interactable to exercise the listener's guard.
+                Check(SkillProgress.Points == pointsBeforeMinor && GameSaveDirtyTracker.Revision == dirtyBeforeMinor,
+                    "Minor " + i + " cannot spend a major upgrade point or dirty the save");
+            }
+            MinorSkillProgress.Restore(new MinorSkillSaveRecord { unlockedSkillsMask = 1 });
+            At(Body + "MinorSkills/Skill0").onClick.Invoke();
+            Check(Text(Body + "Details/Name").text == Localization.Get("minor.skill1.name")
+                && Text(Body + "Details/Description").text == Localization.Get("minor.skill1.description")
+                && Text(Body + "Details/Next").text == Localization.Get("minor.unlocked.status")
+                && ImageAt(Body + "Details/IconFrame/Icon").sprite == view.GetMinorSkillIcon(0)
+                && view.GetMinorSkillIcon(0) != null,
+                "Unlocked minor displays its permanent ability name, description and dedicated icon");
+            Check(!upgrade.gameObject.activeSelf && !upgrade.interactable && SkillProgress.Points == pointsBeforeMinor,
+                "Unlocked minor still has no major upgrade control or point cost");
+            Check(root.transform.Find("Hotbar").childCount == SkillCatalog.Count,
+                "Minor abilities do not add slots to the 1–5 hotbar");
+            At(Body + "Nodes/Skill1").onClick.Invoke();
+            foreach (string path in majorDetails)
+                Check(root.transform.Find(Body + "Details/" + path).gameObject.activeSelf,
+                    "Switching back to Sort restores detail " + path);
+            Check(Text(Body + "Details/Name").text == Localization.Get("skills.sort.name") && upgrade.interactable,
+                "Returning to a major skill restores its description and upgrade availability");
 
             At(Body + "Nodes/Skill0").onClick.Invoke();
             int revision = SkillProgress.Revision;

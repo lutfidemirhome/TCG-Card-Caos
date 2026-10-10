@@ -34,6 +34,7 @@ public class InteractionController : MonoBehaviour
     IInteractionHighlight _currentHighlight;
     CardInspectPreview _inspectPreview;
     PackInspectPreview _packInspectPreview;
+    MinorKeyInspectPreview _keyInspectPreview;
     PsaInspectPreview _psaInspectPreview;
     WorldCard _raycastAimedCard;
     WorldBoosterPack _raycastAimedPack;
@@ -71,6 +72,7 @@ public class InteractionController : MonoBehaviour
 
         _inspectPreview = CardInspectPreview.EnsureOn(viewCamera);
         _packInspectPreview = PackInspectPreview.EnsureOn(viewCamera);
+        _keyInspectPreview = MinorKeyInspectPreview.EnsureOn(viewCamera);
         _psaInspectPreview = PsaInspectPreview.EnsureOn(viewCamera);
         _playerHand = PlayerCardHandResolver.FromTransformHierarchy(transform);
         BuildPromptUI();
@@ -759,6 +761,7 @@ public class InteractionController : MonoBehaviour
 
     void ClearPromptAndHighlight()
     {
+        _keyInspectPreview?.Hide();
         StopPromptPulse();
         ClearHighlight();
         _currentTarget = null;
@@ -790,6 +793,9 @@ public class InteractionController : MonoBehaviour
     {
         if (interactable == null || string.IsNullOrEmpty(prompt))
             return;
+
+        if (interactable is WorldMinorSkillKey key) _keyInspectPreview?.Show(key);
+        else _keyInspectPreview?.Hide();
 
         if (_promptPanelRect != null)
         {

@@ -1,10 +1,11 @@
 /// <summary>
-/// The existing enhanced jump is always available through Space.
-/// It is independent of the upgrade system and has no hotbar toggle.
+/// One Space press jumps normally until the Long Jump chest is opened.
+/// Unlocking restores the original enhanced height; never adds an airborne jump.
 /// </summary>
 public static class PlayerJumpSkill
 {
-    public const float DoubleJumpHeightMultiplier = 5f;
+    public const float LongJumpHeightMultiplier = 5f;
 
-    public static float HeightMultiplier => DoubleJumpHeightMultiplier;
+    public static float HeightMultiplier => MinorSkillProgress.IsUnlocked(MinorSkillProgress.LongJump)
+        ? LongJumpHeightMultiplier : 1f;
 }

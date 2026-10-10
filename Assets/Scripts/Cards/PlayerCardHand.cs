@@ -3,7 +3,8 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 /// <summary>
-/// Holds up to 10 cards in a bottom-center fan. Newest pickup (card or pack) goes to the right.
+/// Holds 10–15 cards in a bottom-center fan, according to permanent chest rewards.
+/// Newest pickup (card or pack) goes to the right.
 /// Each held booster pack uses one fan slot (scroll-selectable, not shelf-placeable).
 /// </summary>
 public class PlayerCardHand : MonoBehaviour
@@ -67,6 +68,7 @@ public class PlayerCardHand : MonoBehaviour
     [SerializeField] KeyCode packActionKey = KeyCode.F;
 
     static readonly RaycastHit[] ThrowAimHits = new RaycastHit[8];
+    const float HandViewportLift = 0.045f;
 
     Transform _handAnchor;
     Camera _camera;
@@ -96,6 +98,7 @@ public class PlayerCardHand : MonoBehaviour
     public bool HasHeldPack => CountOccupiedPackSlots() > 0;
     public bool IsPackSelected => GetSelectedHeldPack() != null;
     public WorldBoosterPack SelectedHeldPack => GetSelectedHeldPack();
+    public WorldMinorSkillKey SelectedHeldKey => TryGetEntryAtFanIndex(_selectedIndex, out HandFanEntry entry) ? entry.Key : null;
     public bool IsOpeningPack => _isOpeningPack;
     public bool IsAwaitingRevealCollect => _awaitingRevealCollect;
 
@@ -135,6 +138,7 @@ public class PlayerCardHand : MonoBehaviour
         Instance = this;
         _camera = Camera.main;
         EnsureHandAnchor();
+        WorldMinorSkillKey.BindOwnedKeys();
     }
 
     void OnDestroy()
@@ -155,7 +159,9 @@ public class PlayerCardHand : MonoBehaviour
 
         if (Input.GetKeyDown(dropKey))
         {
-            if (IsPackSelected)
+            if (SelectedHeldKey != null)
+                TryDropSelectedKey();
+            else if (IsPackSelected)
                 TryDropHeldPack();
             else
                 TryDropSelectedCard();
@@ -219,6 +225,7 @@ public class PlayerCardHand : MonoBehaviour
         if (!TryGetEntryAtFanIndex(fanIndex, out HandFanEntry entry))
             return false;
 
+        if (entry.Key != null) return entry.Key.IsHeld;
         if (entry.Card != null)
             return entry.Card.IsHeld || entry.Card.IsFlyingToHand;
 
@@ -249,6 +256,7 @@ public class PlayerCardHand : MonoBehaviour
 
     static bool EntryOccupiesFanSlot(in HandFanEntry entry)
     {
+        if (entry.Key != null) return entry.Key.IsHeld;
         if (entry.Card != null)
             return entry.Card.IsHeld || entry.Card.IsFlyingToHand;
 
@@ -259,6 +267,26 @@ public class PlayerCardHand : MonoBehaviour
         return pack.IsHeld
             || pack.State == WorldBoosterPack.PackState.FlyingToHand
             || pack.State == WorldBoosterPack.PackState.Opening;
+    }
+
+    public void AddHeldKey(WorldMinorSkillKey key)
+    {
+        foreach (var entry in _handFanOrder) if (entry.Key == key) return;
+        EnsureHandAnchor();
+        key.AttachToHand(_handAnchor);
+        _handFanOrder.Add(new HandFanEntry { Key = key });
+        _selectedIndex = GetHandFanCount() - 1;
+    }
+
+    public void RemoveHeldKey(WorldMinorSkillKey key)
+    {
+        for (int i = _handFanOrder.Count - 1; i >= 0; i--)
+            if (_handFanOrder[i].Key == key)
+            {
+                _handFanOrder.RemoveAt(i);
+                if (_selectedIndex > i) _selectedIndex--;
+            }
+        ClampSelectionIndex();
     }
 
     void AddHandFanEntry(in HandFanEntry entry)
@@ -387,6 +415,7 @@ public class PlayerCardHand : MonoBehaviour
         for (int i = 0; i < _heldPacks.Count; i++)
         {
             WorldBoosterPack pack = _heldPacks[i];
+            if (pack == null) continue;
             if (pack.IsHeld
                 || pack.State == WorldBoosterPack.PackState.FlyingToHand
                 || pack.State == WorldBoosterPack.PackState.Opening)
@@ -428,7 +457,8 @@ public class PlayerCardHand : MonoBehaviour
         float frustumHeight = 2f * handDistance * Mathf.Tan(halfFovRad);
         float cardViewportHeight = GetCardViewportHeight(frustumHeight);
 
-        float centerViewportY = cardViewportHeight * (0.5f - bottomClipPercent);
+        // Raise the whole fan from the start; unlocking capacity never makes it jump position.
+        float centerViewportY = cardViewportHeight * (0.5f - bottomClipPercent) + HandViewportLift;
         float localY = (centerViewportY - 0.5f) * frustumHeight - handDownwardOffset * _handZoomScale;
 
         _handAnchor.localPosition = new Vector3(0f, localY, handDistance);
@@ -604,7 +634,7 @@ public class PlayerCardHand : MonoBehaviour
             return;
 
         int childCount = _handAnchor.childCount;
-        if (childCount == 0 || childCount <= CountHeldCards() + CountHeldPacks())
+        if (childCount == 0 || childCount <= GetHandFanCount())
             return;
 
         for (int i = 0; i < childCount; i++)
@@ -916,6 +946,20 @@ public class PlayerCardHand : MonoBehaviour
         }
     }
 
+    public bool TryDropSelectedKey()
+    {
+        var key = SelectedHeldKey;
+        if (key == null || IsHandInputLocked) return false;
+        if (_camera == null) _camera = Camera.main;
+        if (_camera == null) return false;
+        Ray ray = _camera.ViewportPointToRay(new Vector3(.5f, .5f, 0));
+        Vector3 direction = GetReticleAimPoint(ray) - key.VisualRoot.position;
+        if (!key.DropFromHand((direction.sqrMagnitude > .0001f ? direction.normalized : ray.direction) * throwSpeed)) return false;
+        GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
+        GameSaveSignals.MarkDirty();
+        return true;
+    }
+
     public bool TryDropSelectedCard()
     {
         if (_cards.Count == 0 || IsHandInputLocked || IsPackSelected)
@@ -1067,6 +1111,13 @@ public class PlayerCardHand : MonoBehaviour
                 continue;
             }
 
+            if (entry.Key != null)
+            {
+                entry.Key.ApplyHandPose(_handAnchor, HandFanLayout.GetPose(fanIndex, fanCount, layout, fanIndex == _selectedIndex), fanIndex == _selectedIndex);
+                fanIndex++;
+                continue;
+            }
+
             WorldBoosterPack pack = entry.Pack;
             if (pack == null || !pack.IsHeld)
             {
@@ -1128,7 +1179,7 @@ public class PlayerCardHand : MonoBehaviour
         int heldCount = 0;
         for (int i = 0; i < _heldPacks.Count; i++)
         {
-            if (_heldPacks[i].IsHeld)
+            if (_heldPacks[i] != null && _heldPacks[i].IsHeld)
                 heldCount++;
         }
 
@@ -1137,11 +1188,16 @@ public class PlayerCardHand : MonoBehaviour
 
     HandFanLayoutSettings BuildLayoutSettings()
     {
+        // Keep the original ten-card depth envelope. Extra slots overlap more,
+        // rather than pulling the rightmost card closer and outside the screen.
+        int fanCount = GetHandFanCount();
+        float depthFit = fanCount > CardDimensions.BaseHandSize
+            ? (CardDimensions.BaseHandSize - 1f) / (fanCount - 1f) : 1f;
         return new HandFanLayoutSettings
         {
             HeldScale = EffectiveHeldScale,
             CardPitchDegrees = cardPitchDegrees,
-            CardDepthStep = cardDepthStep,
+            CardDepthStep = cardDepthStep * depthFit,
             CardVisualOffsetY = cardVisualOffsetY,
             MinFanAngle = minFanAngle,
             MaxFanAngle = maxFanAngle,
@@ -1193,7 +1249,8 @@ public class PlayerCardHand : MonoBehaviour
             _handFanOrder.Insert(i, new HandFanEntry { Card = _cards[i] });
         for (int i = 0; i < _handFanOrder.Count; i++)
             if ((selected.Card != null && _handFanOrder[i].Card == selected.Card)
-                || (selected.Pack != null && _handFanOrder[i].Pack == selected.Pack)) _selectedIndex = i;
+                || (selected.Pack != null && _handFanOrder[i].Pack == selected.Pack)
+                || (selected.Key != null && _handFanOrder[i].Key == selected.Key)) _selectedIndex = i;
         ApplyFanLayout();
         GameSaveSignals.MarkDirty();
         return true;
@@ -1279,7 +1336,7 @@ public class PlayerCardHand : MonoBehaviour
 
         _cards.Clear();
         _heldPacks.Clear();
-        _handFanOrder.Clear();
+        _handFanOrder.RemoveAll(entry => entry.Key == null);
         _selectedIndex = 0;
 
         if (_openPackRoutine != null)
@@ -1339,7 +1396,8 @@ public class PlayerCardHand : MonoBehaviour
         foreach (HandFanEntry entry in _handFanOrder)
         {
             GameObject item = entry.Card != null ? entry.Card.gameObject : entry.Pack != null ? entry.Pack.gameObject : null;
-            if (item != null) ids.Add(PersistentId.GetOrCreate(item).Value);
+            if (entry.Key != null) ids.Add("minor-key:" + entry.Key.SkillIndex);
+            else if (item != null) ids.Add(PersistentId.GetOrCreate(item).Value);
         }
         return ids.ToArray();
     }
@@ -1356,7 +1414,8 @@ public class PlayerCardHand : MonoBehaviour
             {
                 HandFanEntry entry = _handFanOrder[i];
                 GameObject item = entry.Card != null ? entry.Card.gameObject : entry.Pack != null ? entry.Pack.gameObject : null;
-                if (item == null || PersistentId.Resolve(item) != id) continue;
+                string entryId = entry.Key != null ? "minor-key:" + entry.Key.SkillIndex : item != null ? PersistentId.Resolve(item) : null;
+                if (entryId != id) continue;
                 _handFanOrder.RemoveAt(i);
                 _handFanOrder.Insert(next++, entry);
                 break;
@@ -1376,5 +1435,6 @@ public class PlayerCardHand : MonoBehaviour
     {
         public WorldCard Card;
         public WorldBoosterPack Pack;
+        public WorldMinorSkillKey Key;
     }
 }
