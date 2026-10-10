@@ -51,6 +51,9 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     Texture2D _fullDetailTexture;
     bool _handSelected;
     GameObject _outlineObject;
+    static GameObject _spareInteractionOutline;
+    bool _singlePassVisual;
+    Material[] _singlePassMaterials;
     GameObject _handSelectionOutlineObject;
     GameObject _shelfStatusOutlineObject;
     ShelfPlacementStatus _shelfPlacementStatus = ShelfPlacementStatus.None;
@@ -97,6 +100,8 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// remain dynamic so contacts and removal of their support can wake them naturally.
     /// </summary>
     public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
+    internal bool CanUseWorldAtlas => _handState == HandState.World && !UsesPsaSlab
+        && !_interactionHighlighted && _fullDetailTexture == null && !HasShelfPlacementFeedback && !IsPhysicsSimulating;
     public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
@@ -298,6 +303,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDisable()
     {
+        CardWorldAtlasRenderer.Untrack(this);
         ClearTransientVisualFeedback();
         ReleaseFullDetailTexture();
         StopThrownPhysicsMonitor();
@@ -307,6 +313,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     void OnDestroy()
     {
+        CardWorldAtlasRenderer.Untrack(this);
         ClearTransientVisualFeedback();
         ReleaseFullDetailTexture();
         CardGroundQuery.UntrackShelfCard(this);
@@ -1090,8 +1097,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
 
         var meshFilter = _cardVisual.GetComponent<MeshFilter>();
-        if (meshFilter != null && meshFilter.sharedMesh != mesh)
-            meshFilter.sharedMesh = mesh;
+        if (meshFilter != null)
+        {
+            Mesh target = _singlePassVisual ? CardSinglePassMesh.Get(mesh) : mesh;
+            if (target && meshFilter.sharedMesh != target) meshFilter.sharedMesh = target;
+        }
     }
 
     void SetVisualRotation(Quaternion localRotation)
@@ -1574,11 +1584,31 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         }
 
         meshRenderer.enabled = true;
+        var meshFilter = _cardVisual.GetComponent<MeshFilter>();
+        if (Application.isPlaying && !UsesPsaSlab && meshFilter && materials.Length == 2)
+        {
+            Material combinedMaterial = CardWorldAtlasRenderer.GetSinglePassMaterial(materials[0], materials[1]);
+            Mesh combinedMesh = combinedMaterial ? CardSinglePassMesh.Get(meshFilter.sharedMesh) : null;
+            if (combinedMesh)
+            {
+                _singlePassVisual = true;
+                meshFilter.sharedMesh = combinedMesh;
+                if (_singlePassMaterials == null) _singlePassMaterials = new Material[1];
+                _singlePassMaterials[0] = combinedMaterial;
+                meshRenderer.sharedMaterials = _singlePassMaterials;
+                CardWorldAtlasRenderer.Track(this, meshRenderer, _singlePassMaterials);
+                return;
+            }
+        }
+        _singlePassVisual = false;
+        if (meshFilter) meshFilter.sharedMesh = CardSinglePassMesh.GetSourceOrSelf(meshFilter.sharedMesh);
         meshRenderer.sharedMaterials = materials;
+        CardWorldAtlasRenderer.Track(this, meshRenderer, materials);
     }
 
     void ReleaseCardVisual()
     {
+        CardWorldAtlasRenderer.Untrack(this);
         ReleaseInteractionOutline();
         ReleaseHandSelectionOutline();
 
@@ -1615,19 +1645,26 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
-        _outlineObject = new GameObject("InteractionOutline");
+        if (Application.isPlaying && _spareInteractionOutline)
+        { _outlineObject = _spareInteractionOutline; _spareInteractionOutline = null; }
+        else _outlineObject = new GameObject("InteractionOutline");
         Transform outlineParent = _cardVisual != null ? _cardVisual : transform;
         _outlineObject.transform.SetParent(outlineParent, false);
+        _outlineObject.transform.localPosition = Vector3.zero;
+        _outlineObject.transform.localRotation = Quaternion.identity;
+        _outlineObject.transform.localScale = Vector3.one;
         if (_cardVisual == null)
         {
             _outlineObject.transform.localRotation = CardArtLibrary.WorldVisualRotation;
             _outlineObject.transform.localPosition = Vector3.up * GetOutlineLift();
         }
 
-        var meshFilter = _outlineObject.AddComponent<MeshFilter>();
+        var meshFilter = _outlineObject.GetComponent<MeshFilter>();
+        if (!meshFilter) meshFilter = _outlineObject.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = CardVisualResources.InteractionBorderFrameMesh;
 
-        var meshRenderer = _outlineObject.AddComponent<MeshRenderer>();
+        var meshRenderer = _outlineObject.GetComponent<MeshRenderer>();
+        if (!meshRenderer) meshRenderer = _outlineObject.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = CardVisualResources.InteractionOutlineMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         meshRenderer.receiveShadows = false;
@@ -1664,7 +1701,13 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_outlineObject == null)
             return;
 
-        if (Application.isPlaying)
+        if (Application.isPlaying && !_spareInteractionOutline)
+        {
+            _outlineObject.SetActive(false);
+            _outlineObject.transform.SetParent(null, false);
+            _spareInteractionOutline = _outlineObject;
+        }
+        else if (Application.isPlaying)
             Destroy(_outlineObject);
         else
             DestroyImmediate(_outlineObject);

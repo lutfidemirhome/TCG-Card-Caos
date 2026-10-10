@@ -88,6 +88,11 @@ public class FirstPersonController : MonoBehaviour
     void Awake()
     {
         _controller = GetComponent<CharacterController>();
+        // Pairwise ignores are lost when save restoration disables the controller.
+        // Keep floor cards/packs excluded through every re-enable.
+        int worldCardLayer = LayerMask.NameToLayer(CardLayers.WorldCardLayerName);
+        if (worldCardLayer >= 0)
+            _controller.excludeLayers |= 1 << worldCardLayer;
 
         if (cameraTransform == null && Camera.main != null)
             cameraTransform = Camera.main.transform;
@@ -174,6 +179,11 @@ public class FirstPersonController : MonoBehaviour
         if (GameSettings.InvertY)
             mouseY = -mouseY;
 
+        ApplyLookDelta(mouseX, mouseY);
+    }
+
+    internal void ApplyLookDelta(float mouseX, float mouseY)
+    {
         transform.Rotate(Vector3.up, mouseX, Space.World);
 
         _pitch -= mouseY;
@@ -243,6 +253,10 @@ public class FirstPersonController : MonoBehaviour
             if (overlap == null)
                 continue;
 
+            if ((_controller.excludeLayers.value & (1 << overlap.gameObject.layer)) != 0
+                || (overlap.excludeLayers.value & (1 << gameObject.layer)) != 0)
+                continue;
+
             if (overlap.transform == transform || overlap.transform.IsChildOf(transform))
                 continue;
 
@@ -293,6 +307,11 @@ public class FirstPersonController : MonoBehaviour
     {
         float inputX = movementLocked ? 0f : Input.GetAxisRaw("Horizontal");
         float inputZ = movementLocked ? 0f : Input.GetAxisRaw("Vertical");
+        ApplyMoveInput(inputX, inputZ);
+    }
+
+    internal void ApplyMoveInput(float inputX, float inputZ)
+    {
         Vector3 input = new Vector3(inputX, 0f, inputZ);
         if (input.sqrMagnitude > 1f)
             input.Normalize();

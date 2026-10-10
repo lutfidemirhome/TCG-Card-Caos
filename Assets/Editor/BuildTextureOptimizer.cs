@@ -52,6 +52,7 @@ public class BuildTextureOptimizer : AssetPostprocessor
         for (int i = 0; i < guids.Length; i++)
         {
             string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            if (IsWorldAtlas(path)) continue;
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null || !NeedsCap(importer, maxSize))
                 continue;
@@ -76,6 +77,8 @@ public class BuildTextureOptimizer : AssetPostprocessor
     static int MaxSizeForPath(string assetPath)
     {
         string path = assetPath.Replace('\\', '/');
+        // Each page contains hundreds of small card faces, not one inspect texture.
+        if (IsWorldAtlas(path)) return 0;
         if (path.StartsWith("Assets/Art/Cards/") || path.StartsWith("Assets/Resources/Cards/"))
             return CardMaxSize;
         if (path.StartsWith("Assets/AE_New_York/Textures/"))
@@ -85,6 +88,8 @@ public class BuildTextureOptimizer : AssetPostprocessor
             return EnvironmentMaxSize;
         return 0;
     }
+
+    static bool IsWorldAtlas(string path) => path.StartsWith("Assets/Resources/Cards/WorldAtlas/", System.StringComparison.Ordinal);
 
     static bool NeedsCap(TextureImporter importer, int maxSize)
     {
