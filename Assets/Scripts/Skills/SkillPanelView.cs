@@ -19,6 +19,9 @@ public sealed class SkillPanelView : MonoBehaviour
     readonly SkillPanelButtonFeedback[] _minorFeedback = new SkillPanelButtonFeedback[MinorSkillProgress.Count];
     readonly GameObject[] _majorDetails = new GameObject[7];
     Sprite _minorLock;
+    const float MinorLockScale = 0.6f;
+    Vector3 _selectedIconBaseScale;
+    [SerializeField] Sprite minorLockedIcon;
     [SerializeField] Sprite[] minorSkillIcons = new Sprite[MinorSkillProgress.Count];
     public Sprite GetMinorSkillIcon(int index) => index >= 0 && index < minorSkillIcons.Length
         ? minorSkillIcons[index] : null;
@@ -80,6 +83,8 @@ public sealed class SkillPanelView : MonoBehaviour
         _name = TextAt(body + "Details/Name"); _description = TextAt(body + "Details/Description");
         _selectedLevel = TextAt(body + "Details/Level");
         _selectedIcon = transform.Find(body + "Details/IconFrame/Icon").GetComponent<Image>();
+        CenterIconPivot(_selectedIcon.rectTransform);
+        _selectedIconBaseScale = _selectedIcon.rectTransform.localScale;
         _stats = TextAt(body + "Details/Stats"); _next = TextAt(body + "Details/Next");
         _upgrade = ButtonAt(body + "Details/Upgrade"); _upgradeText = TextAt(body + "Details/Upgrade/Label");
         _closeText = TextAt("Panel/Close/Label");
@@ -112,13 +117,14 @@ public sealed class SkillPanelView : MonoBehaviour
             _barTimers[i] = transform.Find("Hotbar/Skill" + i + "/BarBackground").gameObject;
             _barFills[i] = transform.Find("Hotbar/Skill" + i + "/BarBackground/Fill").GetComponent<Image>();
         }
-        _minorLock = _barLocks[0].sprite;
+        _minorLock = minorLockedIcon != null ? minorLockedIcon : _barLocks[0].sprite;
         for (int i = 0; i < MinorSkillProgress.Count; i++)
         {
             int minor = i;
             string path = body + "MinorSkills/Skill" + i;
             _minorNames[i] = TextAt(path + "/Name");
             _minorIcons[i] = transform.Find(path + "/Icon").GetComponent<Image>();
+            CenterIconPivot(_minorIcons[i].rectTransform);
             _minorSelections[i] = transform.Find(path + "/Selection").gameObject;
             _minorFeedback[i] = SkillPanelButtonFeedback.Ensure(ButtonAt(path));
             ButtonAt(path).onClick.AddListener(() => { _selectedMinor = minor; Refresh(); });
@@ -130,6 +136,13 @@ public sealed class SkillPanelView : MonoBehaviour
         _bar.SetActive(false);
         if (GetComponent<CardSkillController>() == null) gameObject.AddComponent<CardSkillController>();
     }
+    static void CenterIconPivot(RectTransform rect)
+    {
+        Vector2 delta = Vector2.Scale(new Vector2(.5f, .5f) - rect.pivot, rect.rect.size);
+        rect.anchoredPosition += Vector2.Scale(delta, (Vector2)rect.localScale);
+        rect.pivot = new Vector2(.5f, .5f);
+    }
+
     void OnEnable() { Localization.LanguageChanged += Refresh; MinorSkillProgress.Changed += Refresh; }
     void OnDisable() { Localization.LanguageChanged -= Refresh; MinorSkillProgress.Changed -= Refresh; Close(); }
     void OnDestroy() { if (Instance == this) Instance = null; }
@@ -211,6 +224,7 @@ public sealed class SkillPanelView : MonoBehaviour
             bool unlocked = MinorSkillProgress.IsUnlocked(i);
             Set(_minorNames[i], Localization.Get(unlocked ? "minor.skill" + (i + 1) + ".name" : "minor.locked.name"));
             _minorIcons[i].sprite = unlocked ? GetMinorSkillIcon(i) : _minorLock;
+            _minorIcons[i].rectTransform.localScale = Vector3.one * (unlocked ? 1f : MinorLockScale);
             _minorIcons[i].color = Color.white;
             SetVisible(_minorSelections[i], i == _selectedMinor);
             _minorFeedback[i].SetSelected(i == _selectedMinor);
@@ -223,6 +237,7 @@ public sealed class SkillPanelView : MonoBehaviour
             Set(_name, Localization.Get(unlocked ? minorKey + ".name" : "minor.locked.name"));
             Set(_description, Localization.Get(unlocked ? minorKey + ".description" : "minor.locked.description"));
             _selectedIcon.sprite = unlocked ? GetMinorSkillIcon(_selectedMinor) : _minorLock;
+            _selectedIcon.rectTransform.localScale = _selectedIconBaseScale * (unlocked ? 1f : MinorLockScale);
             _selectedIcon.color = Color.white;
             SetVisible(_next.gameObject, unlocked);
             Set(_next, Localization.Get("minor.unlocked.status"));
@@ -235,6 +250,7 @@ public sealed class SkillPanelView : MonoBehaviour
         Set(_name, Localization.Get(key + ".name"));
         Set(_selectedLevel, Localization.Format(LocalizationKeys.SkillsLevel, current, maximum));
         _selectedIcon.sprite = _icons[_selected].sprite;
+        _selectedIcon.rectTransform.localScale = _selectedIconBaseScale;
         _selectedIcon.color = _icons[_selected].color;
         Set(_description, Localization.Get(key + ".description"));
         Set(_stats, Stats(_selected, current));

@@ -4493,7 +4493,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &339400237
 RectTransform:
   m_ObjectHideFlags: 0
@@ -13022,7 +13022,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &909967942
 RectTransform:
   m_ObjectHideFlags: 0
@@ -13177,7 +13177,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &910000002
 RectTransform:
   m_ObjectHideFlags: 0
@@ -19305,7 +19305,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1472909087}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -19607,14 +19607,14 @@ MonoBehaviour:
   m_text: "B\u0130Z\u0130 TAK\u0130P ED\u0130N"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 19133410948514086983d0026b2d8795, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: ddecd1a6cf044d47998b213b1ccb479d, type: 2}
+  m_sharedMaterial: {fileID: 1109455171129820241, guid: 19133410948514086983d0026b2d8795, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4283590532
-  m_fontColor: {r: 0.5188679, g: 0.40322402, b: 0.32062122, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -19641,7 +19641,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: -1.92
+  m_characterSpacing: 0
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0

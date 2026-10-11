@@ -1,0 +1,6 @@
+{
+  "tool": "built-in image_gen",
+  "asset": "Assets/UI/Skills/Minor/Locked.png",
+  "prompt": "Clean centered closed padlock, smooth vector-like silhouette, transparent cutouts and background, warm dark brown #443A27 matching a darker shade of the skill tile, no shadow or text.",
+  "scope": "Tab minor skill nodes and selected minor skill detail only; hotbar unchanged"
+}

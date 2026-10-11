@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Wires the authored main menu hierarchy. All visuals live in the scene so art can be swapped in
-/// the editor; this component only handles input, links and the version label.
+/// the editor; this component handles input, links, the version label and gentle logo motion.
 /// </summary>
 public class MainMenuView : MonoBehaviour
 {
@@ -24,6 +24,11 @@ public class MainMenuView : MonoBehaviour
 
     [Header("Menu layout")]
     [SerializeField] RectTransform logoRect;
+    const float LogoFloatAmplitude = 8f;
+    const float LogoFloatPeriod = 4f;
+    Vector2 _logoRestPosition;
+    float _logoFloatPhase;
+    bool _logoPositionCaptured;
 
     [Header("Version label")]
     [SerializeField] TMP_Text versionText;
@@ -68,6 +73,30 @@ public class MainMenuView : MonoBehaviour
         ApplyVersionLabel();
 
         GameAssetPrewarm.Start(this);
+    }
+
+    void OnEnable()
+    {
+        EnsureLogoReference();
+        if (logoRect == null) return;
+        _logoRestPosition = logoRect.anchoredPosition;
+        _logoFloatPhase = 0f;
+        _logoPositionCaptured = true;
+    }
+
+    void Update()
+    {
+        if (!_logoPositionCaptured || logoRect == null || !logoRect.gameObject.activeInHierarchy) return;
+        _logoFloatPhase = Mathf.Repeat(_logoFloatPhase + Time.unscaledDeltaTime, LogoFloatPeriod);
+        float offset = Mathf.Sin(_logoFloatPhase * (2f * Mathf.PI / LogoFloatPeriod)) * LogoFloatAmplitude;
+        logoRect.anchoredPosition = _logoRestPosition + new Vector2(0f, offset);
+    }
+
+    void OnDisable()
+    {
+        if (_logoPositionCaptured && logoRect != null)
+            logoRect.anchoredPosition = _logoRestPosition;
+        _logoPositionCaptured = false;
     }
 
     void EnsureLogoReference()

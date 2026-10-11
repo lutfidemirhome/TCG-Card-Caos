@@ -52,7 +52,11 @@ public static class MinorSkillPanelBuilder
         Rect(title.transform, 22, 0, 686, 34);
         Image tile = body.Find("Nodes/Skill0").GetComponent<Image>();
         Image selection = body.Find("Nodes/Skill0/Selection").GetComponent<Image>();
-        Sprite locked = root.Find("Hotbar/Skill0/LockIcon").GetComponent<Image>().sprite;
+        Sprite locked = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/Skills/Minor/Locked.png");
+        if (locked == null) locked = root.Find("Hotbar/Skill0/LockIcon").GetComponent<Image>().sprite;
+        var viewData = new SerializedObject(root.GetComponent<SkillPanelView>());
+        viewData.FindProperty("minorLockedIcon").objectReferenceValue = locked;
+        viewData.ApplyModifiedPropertiesWithoutUndo();
         for (int i = 0; i < MinorSkillProgress.Count; i++)
         {
             Image slot = Image(group, "Skill" + i, tile);
@@ -66,6 +70,9 @@ public static class MinorSkillPanelBuilder
             icon.sprite = locked;
             icon.preserveAspect = true;
             Rect(icon.transform, 4, 4, 88, 92);
+            ((RectTransform)icon.transform).pivot = new Vector2(.5f, .5f);
+            ((RectTransform)icon.transform).anchoredPosition = new Vector2(48, -50);
+            icon.transform.localScale = Vector3.one * .6f;
             Image ring = Image(slot.transform, "Selection", selection);
             Rect(ring.transform, -5, -5, 106, 110);
             ring.gameObject.SetActive(false);
