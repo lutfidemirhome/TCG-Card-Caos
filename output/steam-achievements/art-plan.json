@@ -1,0 +1,246 @@
+{
+  "tool": "Built-in image_gen",
+  "base": "Use case: stylized-concept. Asset type: one Steam achievement icon for TCG Card Chaos, square. Create a polished colorful casual game achievement badge for completing shelf tasks. Full-bleed deep navy blue background, rounded square thick golden beveled frame, central three cream trading cards with a simple gold diamond suit on each, neatly arranged standing on a short dark shelf. Friendly clean 3D vector-like rendering, precise bold silhouettes readable at tiny 64px. Large exact white number \"2\" in the lower third, perfectly legible, not overlapping card symbols. Bronze and gold accents, small restrained celebratory glints. No other text, no logo, no real trading card brand, no extra numbers, no watermark. Symmetric centered composition and generous padding. Output a square PNG at 256x256 if supported. This is the first icon in a coherent collection of numbered shelf achievement badges.",
+  "icons": [
+    {
+      "rows": 2,
+      "api": "SKILL_ROWS_002",
+      "subject": "three cream diamond cards standing on one wooden shelf"
+    },
+    {
+      "rows": 3,
+      "api": "SKILL_ROWS_003",
+      "subject": "three cream diamond cards arranged as a fan with a small gold checkmark"
+    },
+    {
+      "rows": 4,
+      "api": "SKILL_ROWS_004",
+      "subject": "a tidy horizontal stack of four cream diamond trading cards, the top card face visible"
+    },
+    {
+      "rows": 5,
+      "api": "SKILL_ROWS_005",
+      "subject": "five small cream diamond cards aligned on one wooden shelf"
+    },
+    {
+      "rows": 6,
+      "api": "SKILL_ROWS_006",
+      "subject": "a compact two-level card shelf with neatly arranged cream diamond cards"
+    },
+    {
+      "rows": 7,
+      "api": "SKILL_ROWS_007",
+      "subject": "an arc of cream diamond cards held together by a golden ribbon"
+    },
+    {
+      "rows": 8,
+      "api": "SKILL_ROWS_008",
+      "subject": "one thick graded trading-card slab with a large golden diamond and clear cream frame, no label writing"
+    },
+    {
+      "rows": 9,
+      "api": "SKILL_ROWS_009",
+      "subject": "two orderly wooden card shelves with a small gold star above"
+    },
+    {
+      "rows": 10,
+      "api": "SKILL_ROWS_010",
+      "subject": "two fanned groups of diamond cards with a central gold medallion"
+    },
+    {
+      "rows": 11,
+      "api": "SKILL_ROWS_011",
+      "subject": "one tall cream diamond card and a bold gold checkmark beside it"
+    },
+    {
+      "rows": 12,
+      "api": "SKILL_ROWS_012",
+      "subject": "an open storage box with neatly organized cards and three dividers"
+    },
+    {
+      "rows": 13,
+      "api": "SKILL_ROWS_013",
+      "subject": "a circular rosette of cream trading cards with a gold diamond at its heart"
+    },
+    {
+      "rows": 14,
+      "api": "SKILL_ROWS_014",
+      "subject": "an open collector binder displaying six simple cream diamond cards"
+    },
+    {
+      "rows": 15,
+      "api": "SKILL_ROWS_015",
+      "subject": "a neat card sorting tray with a large gold checkmark"
+    },
+    {
+      "rows": 16,
+      "api": "SKILL_ROWS_016",
+      "subject": "a small stepped wooden display rack holding cream diamond cards"
+    },
+    {
+      "rows": 17,
+      "api": "SKILL_ROWS_017",
+      "subject": "a cream diamond card surrounded by a gold laurel wreath"
+    },
+    {
+      "rows": 18,
+      "api": "SKILL_ROWS_018",
+      "subject": "a gold award rosette with a cream diamond card at the center"
+    },
+    {
+      "rows": 21,
+      "api": "SKILL_ROWS_021",
+      "subject": "one handsome navy-and-wood card display cabinet with three filled shelves"
+    },
+    {
+      "rows": 24,
+      "api": "SKILL_ROWS_024",
+      "subject": "two small matching card display cabinets standing together"
+    },
+    {
+      "rows": 27,
+      "api": "SKILL_ROWS_027",
+      "subject": "a five-card row on a wooden shelf, with a prominent gold completion checkmark"
+    },
+    {
+      "rows": 31,
+      "api": "SKILL_ROWS_031",
+      "subject": "a neat gold-rimmed card storage case containing organized rows of cards"
+    },
+    {
+      "rows": 35,
+      "api": "SKILL_ROWS_035",
+      "subject": "a single diamond card with small symmetrical golden wings"
+    },
+    {
+      "rows": 39,
+      "api": "SKILL_ROWS_039",
+      "subject": "a four-compartment sorting tray with neat cream card stacks"
+    },
+    {
+      "rows": 44,
+      "api": "SKILL_ROWS_044",
+      "subject": "a gold shield bearing a cream diamond card emblem"
+    },
+    {
+      "rows": 49,
+      "api": "SKILL_ROWS_049",
+      "subject": "five small gold stars arcing over a filled wooden card shelf"
+    },
+    {
+      "rows": 55,
+      "api": "SKILL_ROWS_055",
+      "subject": "a silver-and-gold trophy cup with a small fan of diamond cards emerging"
+    },
+    {
+      "rows": 61,
+      "api": "SKILL_ROWS_061",
+      "subject": "a three-step collector podium topped by three cream diamond cards"
+    },
+    {
+      "rows": 68,
+      "api": "SKILL_ROWS_068",
+      "subject": "a geometric gold hexagonal medal with a diamond card emblem"
+    },
+    {
+      "rows": 75,
+      "api": "SKILL_ROWS_075",
+      "subject": "a faceted golden diamond trophy on a small wooden base"
+    },
+    {
+      "rows": 83,
+      "api": "SKILL_ROWS_083",
+      "subject": "a filled miniature card cabinet encircled by golden laurel branches"
+    },
+    {
+      "rows": 91,
+      "api": "SKILL_ROWS_091",
+      "subject": "an ornate open collector box filled with neatly arranged cream cards"
+    },
+    {
+      "rows": 100,
+      "api": "SKILL_ROWS_100",
+      "subject": "a large gold trophy cup holding a fan of diamond cards"
+    },
+    {
+      "rows": 109,
+      "api": "SKILL_ROWS_109",
+      "subject": "a small golden crown resting on one central cream diamond card"
+    },
+    {
+      "rows": 119,
+      "api": "SKILL_ROWS_119",
+      "subject": "a balanced decorative tower of cream trading-card stacks"
+    },
+    {
+      "rows": 129,
+      "api": "SKILL_ROWS_129",
+      "subject": "a crystal-blue diamond framed by three cream collector cards"
+    },
+    {
+      "rows": 140,
+      "api": "SKILL_ROWS_140",
+      "subject": "a gold five-point star trophy bearing a tiny diamond-card emblem"
+    },
+    {
+      "rows": 152,
+      "api": "SKILL_ROWS_152",
+      "subject": "a filled wooden card display shelf wrapped in a gold victory ribbon"
+    },
+    {
+      "rows": 165,
+      "api": "SKILL_ROWS_165",
+      "subject": "a round gold collector medal mounted in front of a neat stack of cards"
+    },
+    {
+      "rows": 179,
+      "api": "SKILL_ROWS_179",
+      "subject": "a gold shield framed by laurel branches, cream card emblem at its center"
+    },
+    {
+      "rows": 194,
+      "api": "SKILL_ROWS_194",
+      "subject": "three cream diamond cards ascending on a three-step gold display"
+    },
+    {
+      "rows": 214,
+      "api": "SKILL_ROWS_214",
+      "subject": "a stately two-tier display of matching miniature filled card cabinets"
+    },
+    {
+      "rows": 239,
+      "api": "SKILL_ROWS_239",
+      "subject": "a gold trophy cup with two short golden wings and a cream card emblem"
+    },
+    {
+      "rows": 269,
+      "api": "SKILL_ROWS_269",
+      "subject": "a premium open card binder with a gold crown above its pages"
+    },
+    {
+      "rows": 309,
+      "api": "SKILL_ROWS_309",
+      "subject": "three miniature filled display cabinets arranged on a gold podium"
+    },
+    {
+      "rows": 359,
+      "api": "SKILL_ROWS_359",
+      "subject": "a faceted blue gemstone flanked by two graded cream card slabs and gold leaves"
+    },
+    {
+      "rows": 409,
+      "api": "SKILL_ROWS_409",
+      "subject": "a royal filled display cabinet with a small gold crown on top"
+    },
+    {
+      "rows": 459,
+      "api": "SKILL_ROWS_459",
+      "subject": "a luxurious large gold medallion featuring a completed card shelf with gold laurels"
+    },
+    {
+      "rows": 509,
+      "api": "SKILL_ROWS_509",
+      "subject": "a grand gold collector trophy with wide laurel wings, crown and three cream diamond cards"
+    }
+  ]
+}

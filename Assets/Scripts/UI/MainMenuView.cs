@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// </summary>
 public class MainMenuView : MonoBehaviour
 {
-    const float MenuButtonStep = 105f;
+    const float MenuButtonStep = 90f;
 
     /// <summary>Quit sits on the same line as the Feedback button; the stack grows upward from it.</summary>
     const float QuitAnchoredY = -437f;
@@ -19,6 +19,7 @@ public class MainMenuView : MonoBehaviour
     [SerializeField] Button newGameButton;
     [SerializeField] Button loadGameButton;
     [SerializeField] Button settingsButton;
+    [SerializeField] Button howToPlayButton;
     [SerializeField] Button quitButton;
     [SerializeField] Button feedbackButton;
 
@@ -62,6 +63,8 @@ public class MainMenuView : MonoBehaviour
 
         EnsureEventSystem();
         EnsureLogoReference();
+        if (GetComponent<MainMenuMusic>() == null)
+            gameObject.AddComponent<MainMenuMusic>();
         if (loadGamePanel == null)
             loadGamePanel = GetComponentInChildren<LoadGamePanelView>(true);
         if (settingsPanel == null)
@@ -118,9 +121,10 @@ public class MainMenuView : MonoBehaviour
 
         SetAnchoredY(quitButton, QuitAnchoredY);
         SetAnchoredY(settingsButton, QuitAnchoredY + MenuButtonStep);
-        SetAnchoredY(loadGameButton, QuitAnchoredY + MenuButtonStep * 2f);
-        SetAnchoredY(newGameButton, QuitAnchoredY + MenuButtonStep * 3f);
-        SetAnchoredY(continueButton, QuitAnchoredY + MenuButtonStep * 4f);
+        SetAnchoredY(howToPlayButton, QuitAnchoredY + MenuButtonStep * 2f);
+        SetAnchoredY(loadGameButton, QuitAnchoredY + MenuButtonStep * 3f);
+        SetAnchoredY(newGameButton, QuitAnchoredY + MenuButtonStep * 4f);
+        SetAnchoredY(continueButton, QuitAnchoredY + MenuButtonStep * 5f);
     }
 
     static void SetAnchoredY(Component target, float y)
@@ -153,6 +157,7 @@ public class MainMenuView : MonoBehaviour
         Bind(newGameButton, OnNewGameClicked);
         Bind(loadGameButton, OnLoadGameClicked);
         Bind(settingsButton, OnSettingsClicked);
+        Bind(howToPlayButton, OnHowToPlayClicked);
         Bind(quitButton, OnQuitClicked);
 
         Bind(feedbackButton, () => OpenUrl(feedbackUrl, "Feedback"));
@@ -160,6 +165,12 @@ public class MainMenuView : MonoBehaviour
         Bind(tiktokButton, () => OpenUrl(tiktokUrl, "TikTok"));
         Bind(instagramButton, () => OpenUrl(instagramUrl, "Instagram"));
         Bind(youtubeButton, () => OpenUrl(youtubeUrl, "YouTube"));
+    }
+
+    void OnHowToPlayClicked()
+    {
+        if (!GameSceneLoader.IsLoading)
+            CabinetTutorialView.ShowFromMenu(transform);
     }
 
     static void Bind(Button button, UnityEngine.Events.UnityAction action)

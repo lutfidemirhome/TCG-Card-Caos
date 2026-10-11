@@ -23,7 +23,7 @@ public static class MinorSkillProgress
     public const int Run = 1;
     public const int CapacityPlusTwo = 2;
     public const int CapacityPlusThree = 3;
-    public const float UnlockedRunMultiplier = 1.35f;
+    public const float UnlockedRunMultiplier = 1.4f;
     const int ValidMask = (1 << Count) - 1;
     public static bool ChestIntroductionSeen { get; private set; }
     public static void MarkChestIntroductionSeen()

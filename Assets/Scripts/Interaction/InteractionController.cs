@@ -9,6 +9,8 @@ using UnityEngine.UI;
 /// </summary>
 public class InteractionController : MonoBehaviour
 {
+    public enum ReticleTarget { None, Interactable, Cabinet }
+    public ReticleTarget CurrentReticleTarget { get; private set; }
     [SerializeField] Camera viewCamera;
     [SerializeField] float interactDistance = 4.5f;
     [SerializeField] LayerMask interactMask = ~0;
@@ -83,6 +85,7 @@ public class InteractionController : MonoBehaviour
 
     void Update()
     {
+        CurrentReticleTarget = ReticleTarget.None;
         AimedSkillShelf = null;
         _cachedSkillRow = -2;
         AimedSkillPsaCabinet = null;
@@ -175,6 +178,8 @@ public class InteractionController : MonoBehaviour
             aimedCardDistance,
             aimedPack,
             aimedPackDistance);
+
+        UpdateReticleTarget(interactable, HitBuffer, hitCount);
 
         AimedSkillShelf = interactable as CardShelf;
         if (AimedSkillShelf == null && interactable is WorldCard shelfCard)
@@ -301,6 +306,46 @@ public class InteractionController : MonoBehaviour
         AimedSkillShelf = visible ? shelf : null;
         AimedSkillPsaCabinet = visible ? psaCabinet : null;
         _cachedSkillRow = -2;
+    }
+
+    void UpdateReticleTarget(IInteractable target, RaycastHit[] hits, int count)
+    {
+        if (target is CardShelf || target is PsaCabinetSlot)
+        {
+            CurrentReticleTarget = ReticleTarget.Cabinet;
+            return;
+        }
+        if (target is WorldCard card)
+        {
+            if (!card.IsInHand && !card.IsShelfRowCompleteLocked)
+                CurrentReticleTarget = ReticleTarget.Interactable;
+            return;
+        }
+        if (target is WorldBoosterPack pack)
+        {
+            if (!pack.IsInHand) CurrentReticleTarget = ReticleTarget.Interactable;
+            return;
+        }
+        if (target != null)
+        {
+            CurrentReticleTarget = ReticleTarget.Interactable;
+            return;
+        }
+
+        // Empty TCG holders/cabinet bodies need a visual cue even without a held card.
+        // Reuse the existing hits and only inspect the nearest surface, never through walls.
+        Collider nearest = null;
+        float distance = float.MaxValue;
+        for (int i = 0; i < count; i++)
+            if (hits[i].collider != null && hits[i].distance < distance)
+            {
+                nearest = hits[i].collider;
+                distance = hits[i].distance;
+            }
+        if (nearest != null && (nearest.GetComponentInParent<PsaCabinet>() != null
+            || nearest.GetComponentInParent<PsaCabinetSlot>() != null
+            || nearest.GetComponentInParent<CardShelf>() != null))
+            CurrentReticleTarget = ReticleTarget.Cabinet;
     }
 
     void HandleGroundCardTarget(WorldCard worldCard)

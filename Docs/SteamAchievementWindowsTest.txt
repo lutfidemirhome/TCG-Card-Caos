@@ -1,0 +1,47 @@
+TCG CARD CHAOS - WINDOWS STEAM BASARIM TESTI
+
+Bu klasor tam oyunun (5125130) yerel test kopyasidir. Steam'e yuklemek
+veya oyunu satisa acmak gerekmez. Tum klasoru Windows'a kopyala;
+sadece EXE dosyasini tasima. ZIP icindeyse once tamamini cikart.
+
+1. Windows'ta Steam'i ac, cevrimici ol. Tam oyuna gelistirici erisimi
+   olan Steam hesabinla gir. Sadece demo sahipligi yeterli degildir.
+2. TESTI_BASLAT.cmd dosyasini ac. Yonetici olarak calistirma.
+3. Ayri bir test kaydinda oyna; mevcut kaydini silme/ezme.
+   Yeni kayitta iki FARKLI normal kart serisinin rafini dogru tamamla.
+   Oyun toplam iki raf gorevi kazandiginda SKILL_ROWS_002 acilmalidir.
+   Ucuncu farkli gorev SKILL_ROWS_003 basarimini acmalidir.
+   TCG tarafinda bir dogru dolu dolap bir gorevdir.
+4. Son yerlestirmeden sonra en az 20 saniye bekle, oyunu kaydedip kapat.
+5. SONUCU_GOSTER.cmd dosyasini ac. Logda su satirlari kontrol et:
+
+   CONNECTED app=5125130
+   EARNED_PROGRESS total=2
+   STORE_RESULT k_EResultOK
+   STEAM_CONFIRMED SKILL_ROWS_002
+
+   QUEUED veya STORE_SENT tek basina kayit onayi degildir.
+   INIT_WAIT: Steam baglanamadi; hesap erisimini ve acik Steam'i kontrol et.
+   available=False: basarim tanimlari okunamadi; Steam'i yeniden baslat.
+
+6. TESTI_BASLAT.cmd ile tekrar ac. Menuye geldikten sonra kapat ve
+   SONUCU_GOSTER.cmd ile sunu kontrol et:
+
+   STARTUP_STATE SKILL_ROWS_002 available=True unlocked=True
+
+   Bu sorgu oyunun bu oturumda basarim gondermesinden ONCE yapilir.
+   Boylece Steam'in onceki kazanimi sakladigini gorebiliriz. Online test et.
+   Ilk log SteamAchievementTest.previous.log olarak tutulur.
+
+Basarim zaten hesaptaysa ilk acilista unlocked=True gorunmesi normaldir;
+tekrar bildirim cikmayabilir. Oyun kaydi/Steam basarimi bu araclarla sifirlanmaz.
+Oyunu yayinlamadan once kutuphane/profil basarim listesine guvenme;
+Steam cikis oncesi asamada bu gorunumu kisitlayabilir.
+
+Kontrol icin SteamAchievementTest.log ve SteamAchievementTest.previous.log
+dosyalarini getirmen yeterli. Steam logunda kullanici bilgileri olabileceginden
+bu dosyalari herkese acik paylasma.
+
+Bu build Development + TCG_STEAM_TEST ile alinmistir; performans olcumu veya
+musteriye yayin icin kullanma. Normal build'de tani satirlari derlenmez.
+steam_appid.txt yalniz yerel test icindir; musteriye giden Steam depotuna koyma.

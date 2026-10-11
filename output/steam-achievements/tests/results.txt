@@ -1,0 +1,1 @@
+PASS: 117 checks; actual catalogue, bridge and provider sources; fake SDK only; no real account changes.

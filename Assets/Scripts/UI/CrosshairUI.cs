@@ -13,14 +13,29 @@ public class CrosshairUI : MonoBehaviour
     Canvas _canvas;
     Sprite _dotSprite;
     Texture2D _dotTexture;
+    Image _dot;
+    InteractionController _interaction;
+    static readonly Color InteractionColor = new Color32(75, 230, 75, 242);
+    static readonly Color CabinetColor = new Color32(255, 220, 45, 242);
 
     void Awake()
     {
         BuildCrosshair();
     }
 
+    void Start() => _interaction = GetComponent<InteractionController>();
+
     void LateUpdate()
     {
+        Color targetColor = color;
+        if (_interaction != null && _interaction.isActiveAndEnabled)
+        {
+            if (_interaction.CurrentReticleTarget == InteractionController.ReticleTarget.Cabinet)
+                targetColor = CabinetColor;
+            else if (_interaction.CurrentReticleTarget == InteractionController.ReticleTarget.Interactable)
+                targetColor = InteractionColor;
+        }
+        if (_dot != null && _dot.color != targetColor) _dot.color = targetColor;
         if (_canvas != null && hideWhenCursorUnlocked)
         {
             bool visible = Cursor.lockState == CursorLockMode.Locked;
@@ -37,9 +52,11 @@ public class CrosshairUI : MonoBehaviour
         dotGo.transform.SetParent(_canvas.transform, false);
 
         var dot = dotGo.AddComponent<Image>();
-        _dotSprite = CreateDotSprite(32, color);
+        _dot = dot;
+        _dotSprite = CreateDotSprite(32, Color.white);
         _dotTexture = _dotSprite.texture;
         dot.sprite = _dotSprite;
+        dot.color = color;
         dot.raycastTarget = false;
 
         RectTransform rect = dot.rectTransform;
@@ -47,7 +64,7 @@ public class CrosshairUI : MonoBehaviour
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = Vector2.zero;
-        rect.sizeDelta = new Vector2(dotSize, dotSize);
+        rect.sizeDelta = new Vector2(dotSize, dotSize) * 1.4f;
     }
 
     void OnDestroy()

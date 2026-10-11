@@ -13,6 +13,7 @@ public class InGamePauseView : MonoBehaviour
     [SerializeField] Button saveButton;
     [SerializeField] Button loadButton;
     [SerializeField] Button settingsButton;
+    [SerializeField] Button howToPlayButton;
     [SerializeField] Button quitButton;
     [SerializeField] LoadGamePanelView loadGamePanel;
     [SerializeField] SaveGamePanelView saveGamePanel;
@@ -45,6 +46,7 @@ public class InGamePauseView : MonoBehaviour
         Wire(saveButton, OnSaveGame);
         Wire(loadButton, OnLoadGame);
         Wire(settingsButton, OnSettings);
+        Wire(howToPlayButton, OnHowToPlay);
         Wire(quitButton, OnQuit);
 
         if (loadGamePanel != null)
@@ -63,7 +65,7 @@ public class InGamePauseView : MonoBehaviour
 
     void Update()
     {
-        if (SkillPanelView.ConsumesPauseInput) return;
+        if (SkillPanelView.ConsumesPauseInput || CabinetTutorialView.ConsumesInput) return;
         if (GameSceneLoader.IsLoading)
             return;
 
@@ -125,6 +127,12 @@ public class InGamePauseView : MonoBehaviour
         if (ContainsPointer(loadButton))
         {
             OnLoadGame();
+            return;
+        }
+
+        if (ContainsPointer(howToPlayButton))
+        {
+            OnHowToPlay();
             return;
         }
 
@@ -240,6 +248,12 @@ public class InGamePauseView : MonoBehaviour
             loadGamePanel.Show();
         else
             Debug.Log("[Pause] Load Game panel is missing. Run TCG Card Chaos → UI → Add In-Game Pause Menu.");
+    }
+
+    void OnHowToPlay()
+    {
+        if (IsOpen && !GameSceneLoader.IsLoading)
+            CabinetTutorialView.ShowFromMenu(transform);
     }
 
     void OnSettings()

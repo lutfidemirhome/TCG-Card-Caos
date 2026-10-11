@@ -113,7 +113,7 @@ public static class MinorSkillProgressValidation
                 int expectedCapacity = 10 + ((mask & 4) != 0 ? 2 : 0) + ((mask & 8) != 0 ? 3 : 0);
                 Check(CardDimensions.MaxHandSize == expectedCapacity, "mask " + mask + " capacity");
                 Check(PlayerJumpSkill.HeightMultiplier == ((mask & 1) != 0 ? 5f : 1f), "mask " + mask + " single-press jump height");
-                Check(Mathf.Approximately(MinorSkillProgress.MovementMultiplier, (mask & 2) != 0 ? 1.35f : 1f),
+                Check(Mathf.Approximately(MinorSkillProgress.MovementMultiplier, (mask & 2) != 0 ? 1.4f : 1f),
                     "mask " + mask + " permanent movement speed");
                 var roundtrip = JsonUtility.FromJson<GameSaveData>(JsonUtility.ToJson(new GameSaveData { minorSkills = MinorSkillProgress.Capture() }));
                 MinorSkillProgress.PrepareForSceneReload();

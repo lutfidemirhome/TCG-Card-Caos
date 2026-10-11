@@ -1,0 +1,338 @@
+[
+  {
+    "rows": 2,
+    "api": "SKILL_ROWS_002",
+    "subject": "three cream diamond cards standing on one wooden shelf",
+    "prompt": "Use case: stylized-concept. Asset type: one Steam achievement icon for TCG Card Chaos, square. Create a polished colorful casual game achievement badge for completing shelf tasks. Full-bleed deep navy blue background, rounded square thick golden beveled frame, central three cream trading cards with a simple gold diamond suit on each, neatly arranged standing on a short dark shelf. Friendly clean 3D vector-like rendering, precise bold silhouettes readable at tiny 64px. Large exact white number \"2\" in the lower third, perfectly legible, not overlapping card symbols. Bronze and gold accents, small restrained celebratory glints. No other text, no logo, no real trading card brand, no extra numbers, no watermark. Symmetric centered composition and generous padding. Output a square PNG at 256x256 if supported. This is the first icon in a coherent collection of numbered shelf achievement badges.",
+    "path": "output/steam-achievements/source/SKILL_ROWS_002.png"
+  },
+  {
+    "rows": 3,
+    "api": "SKILL_ROWS_003",
+    "subject": "three cream diamond cards arranged as a fan with a small gold checkmark",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: three cream diamond cards arranged as a fan with a small gold checkmark. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"3\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_003.png"
+  },
+  {
+    "rows": 4,
+    "api": "SKILL_ROWS_004",
+    "subject": "a tidy horizontal stack of four cream diamond trading cards, the top card face visible",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a tidy horizontal stack of four cream diamond trading cards, the top card face visible. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"4\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_004.png"
+  },
+  {
+    "rows": 5,
+    "api": "SKILL_ROWS_005",
+    "subject": "five small cream diamond cards aligned on one wooden shelf",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: five small cream diamond cards aligned on one wooden shelf. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"5\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_005.png"
+  },
+  {
+    "rows": 6,
+    "api": "SKILL_ROWS_006",
+    "subject": "a compact two-level card shelf with neatly arranged cream diamond cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a compact two-level card shelf with neatly arranged cream diamond cards. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"6\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_006.png"
+  },
+  {
+    "rows": 7,
+    "api": "SKILL_ROWS_007",
+    "subject": "an arc of cream diamond cards held together by a golden ribbon",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: an arc of cream diamond cards held together by a golden ribbon. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"7\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_007.png"
+  },
+  {
+    "rows": 8,
+    "api": "SKILL_ROWS_008",
+    "subject": "one thick graded trading-card slab with a large golden diamond and clear cream frame, no label writing",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: one thick graded trading-card slab with a large golden diamond and clear cream frame, no label writing. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"8\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_008.png"
+  },
+  {
+    "rows": 9,
+    "api": "SKILL_ROWS_009",
+    "subject": "two orderly wooden card shelves with a small gold star above",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: two orderly wooden card shelves with a small gold star above. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"9\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_009.png"
+  },
+  {
+    "rows": 10,
+    "api": "SKILL_ROWS_010",
+    "subject": "two fanned groups of diamond cards with a central gold medallion",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: two fanned groups of diamond cards with a central gold medallion. Keep the new subject within the SAME upper area, readable at small size, no clutter. Replace the lower number with exact \"10\". No other numbers or text. No logo. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_010.png"
+  },
+  {
+    "rows": 11,
+    "api": "SKILL_ROWS_011",
+    "subject": "one tall cream diamond card and a bold gold checkmark beside it",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: one tall cream diamond card and a bold gold checkmark beside it. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"11\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_011.png"
+  },
+  {
+    "rows": 12,
+    "api": "SKILL_ROWS_012",
+    "subject": "an open storage box with neatly organized cards and three dividers",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: an open storage box with neatly organized cards and three dividers. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"12\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_012.png"
+  },
+  {
+    "rows": 13,
+    "api": "SKILL_ROWS_013",
+    "subject": "a circular rosette of cream trading cards with a gold diamond at its heart",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a circular rosette of cream trading cards with a gold diamond at its heart. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"13\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_013.png"
+  },
+  {
+    "rows": 14,
+    "api": "SKILL_ROWS_014",
+    "subject": "an open collector binder displaying six simple cream diamond cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: an open collector binder displaying six simple cream diamond cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"14\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_014.png"
+  },
+  {
+    "rows": 15,
+    "api": "SKILL_ROWS_015",
+    "subject": "a neat card sorting tray with a large gold checkmark",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a neat card sorting tray with a large gold checkmark. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"15\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_015.png"
+  },
+  {
+    "rows": 16,
+    "api": "SKILL_ROWS_016",
+    "subject": "a small stepped wooden display rack holding cream diamond cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a small stepped wooden display rack holding cream diamond cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"16\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_016.png"
+  },
+  {
+    "rows": 17,
+    "api": "SKILL_ROWS_017",
+    "subject": "a cream diamond card surrounded by a gold laurel wreath",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a cream diamond card surrounded by a gold laurel wreath. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"17\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_017.png"
+  },
+  {
+    "rows": 18,
+    "api": "SKILL_ROWS_018",
+    "subject": "a gold award rosette with a cream diamond card at the center",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a gold award rosette with a cream diamond card at the center. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"18\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_018.png"
+  },
+  {
+    "rows": 21,
+    "api": "SKILL_ROWS_021",
+    "subject": "one handsome navy-and-wood card display cabinet with three filled shelves",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: one handsome navy-and-wood card display cabinet with three filled shelves. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"21\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_021.png"
+  },
+  {
+    "rows": 24,
+    "api": "SKILL_ROWS_024",
+    "subject": "two small matching card display cabinets standing together",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: two small matching card display cabinets standing together. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"24\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_024.png"
+  },
+  {
+    "rows": 27,
+    "api": "SKILL_ROWS_027",
+    "subject": "a five-card row on a wooden shelf, with a prominent gold completion checkmark",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a five-card row on a wooden shelf, with a prominent gold completion checkmark. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"27\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_027.png"
+  },
+  {
+    "rows": 31,
+    "api": "SKILL_ROWS_031",
+    "subject": "a neat gold-rimmed card storage case containing organized rows of cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a neat gold-rimmed card storage case containing organized rows of cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"31\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_031.png"
+  },
+  {
+    "rows": 35,
+    "api": "SKILL_ROWS_035",
+    "subject": "a single diamond card with small symmetrical golden wings",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a single diamond card with small symmetrical golden wings. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"35\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_035.png"
+  },
+  {
+    "rows": 39,
+    "api": "SKILL_ROWS_039",
+    "subject": "a four-compartment sorting tray with neat cream card stacks",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a four-compartment sorting tray with neat cream card stacks. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"39\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_039.png"
+  },
+  {
+    "rows": 44,
+    "api": "SKILL_ROWS_044",
+    "subject": "a gold shield bearing a cream diamond card emblem",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a gold shield bearing a cream diamond card emblem. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"44\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_044.png"
+  },
+  {
+    "rows": 49,
+    "api": "SKILL_ROWS_049",
+    "subject": "five small gold stars arcing over a filled wooden card shelf",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: five small gold stars arcing over a filled wooden card shelf. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"49\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_049.png"
+  },
+  {
+    "rows": 55,
+    "api": "SKILL_ROWS_055",
+    "subject": "a silver-and-gold trophy cup with a small fan of diamond cards emerging",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a silver-and-gold trophy cup with a small fan of diamond cards emerging. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"55\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_055.png"
+  },
+  {
+    "rows": 61,
+    "api": "SKILL_ROWS_061",
+    "subject": "a three-step collector podium topped by three cream diamond cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a three-step collector podium topped by three cream diamond cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"61\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_061.png"
+  },
+  {
+    "rows": 68,
+    "api": "SKILL_ROWS_068",
+    "subject": "a geometric gold hexagonal medal with a diamond card emblem",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a geometric gold hexagonal medal with a diamond card emblem. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"68\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_068.png"
+  },
+  {
+    "rows": 75,
+    "api": "SKILL_ROWS_075",
+    "subject": "a faceted golden diamond trophy on a small wooden base",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a faceted golden diamond trophy on a small wooden base. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"75\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_075.png"
+  },
+  {
+    "rows": 83,
+    "api": "SKILL_ROWS_083",
+    "subject": "a filled miniature card cabinet encircled by golden laurel branches",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a filled miniature card cabinet encircled by golden laurel branches. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"83\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_083.png"
+  },
+  {
+    "rows": 91,
+    "api": "SKILL_ROWS_091",
+    "subject": "an ornate open collector box filled with neatly arranged cream cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: an ornate open collector box filled with neatly arranged cream cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"91\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_091.png"
+  },
+  {
+    "rows": 100,
+    "api": "SKILL_ROWS_100",
+    "subject": "a large gold trophy cup holding a fan of diamond cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a large gold trophy cup holding a fan of diamond cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"100\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_100.png"
+  },
+  {
+    "rows": 109,
+    "api": "SKILL_ROWS_109",
+    "subject": "a small golden crown resting on one central cream diamond card",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a small golden crown resting on one central cream diamond card. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"109\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_109.png"
+  },
+  {
+    "rows": 119,
+    "api": "SKILL_ROWS_119",
+    "subject": "a balanced decorative tower of cream trading-card stacks",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a balanced decorative tower of cream trading-card stacks. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"119\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_119.png"
+  },
+  {
+    "rows": 129,
+    "api": "SKILL_ROWS_129",
+    "subject": "a crystal-blue diamond framed by three cream collector cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a crystal-blue diamond framed by three cream collector cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"129\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_129.png"
+  },
+  {
+    "rows": 140,
+    "api": "SKILL_ROWS_140",
+    "subject": "a gold five-point star trophy bearing a tiny diamond-card emblem",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a gold five-point star trophy bearing a tiny diamond-card emblem. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"140\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_140.png"
+  },
+  {
+    "rows": 152,
+    "api": "SKILL_ROWS_152",
+    "subject": "a filled wooden card display shelf wrapped in a gold victory ribbon",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a filled wooden card display shelf wrapped in a gold victory ribbon. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"152\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_152.png"
+  },
+  {
+    "rows": 165,
+    "api": "SKILL_ROWS_165",
+    "subject": "a round gold collector medal mounted in front of a neat stack of cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a round gold collector medal mounted in front of a neat stack of cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"165\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_165.png"
+  },
+  {
+    "rows": 179,
+    "api": "SKILL_ROWS_179",
+    "subject": "a gold shield framed by laurel branches, cream card emblem at its center",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a gold shield framed by laurel branches, cream card emblem at its center. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"179\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_179.png"
+  },
+  {
+    "rows": 194,
+    "api": "SKILL_ROWS_194",
+    "subject": "three cream diamond cards ascending on a three-step gold display",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: three cream diamond cards ascending on a three-step gold display. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"194\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_194.png"
+  },
+  {
+    "rows": 214,
+    "api": "SKILL_ROWS_214",
+    "subject": "a stately two-tier display of matching miniature filled card cabinets",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a stately two-tier display of matching miniature filled card cabinets. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"214\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_214.png"
+  },
+  {
+    "rows": 239,
+    "api": "SKILL_ROWS_239",
+    "subject": "a gold trophy cup with two short golden wings and a cream card emblem",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a gold trophy cup with two short golden wings and a cream card emblem. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"239\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_239.png"
+  },
+  {
+    "rows": 269,
+    "api": "SKILL_ROWS_269",
+    "subject": "a premium open card binder with a gold crown above its pages",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a premium open card binder with a gold crown above its pages. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"269\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_269.png"
+  },
+  {
+    "rows": 309,
+    "api": "SKILL_ROWS_309",
+    "subject": "three miniature filled display cabinets arranged on a gold podium",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: three miniature filled display cabinets arranged on a gold podium. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"309\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_309.png"
+  },
+  {
+    "rows": 359,
+    "api": "SKILL_ROWS_359",
+    "subject": "a faceted blue gemstone flanked by two graded cream card slabs and gold leaves",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a faceted blue gemstone flanked by two graded cream card slabs and gold leaves. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"359\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_359.png"
+  },
+  {
+    "rows": 409,
+    "api": "SKILL_ROWS_409",
+    "subject": "a royal filled display cabinet with a small gold crown on top",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a royal filled display cabinet with a small gold crown on top. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"409\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_409.png"
+  },
+  {
+    "rows": 459,
+    "api": "SKILL_ROWS_459",
+    "subject": "a luxurious large gold medallion featuring a completed card shelf with gold laurels",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a luxurious large gold medallion featuring a completed card shelf with gold laurels. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"459\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_459.png"
+  },
+  {
+    "rows": 509,
+    "api": "SKILL_ROWS_509",
+    "subject": "a grand gold collector trophy with wide laurel wings, crown and three cream diamond cards",
+    "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a grand gold collector trophy with wide laurel wings, crown and three cream diamond cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"509\". No other numbers, text or logos. Same square opaque canvas.",
+    "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_509.png"
+  }
+]

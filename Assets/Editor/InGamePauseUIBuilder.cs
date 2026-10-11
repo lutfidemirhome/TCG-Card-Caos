@@ -137,6 +137,13 @@ public static class InGamePauseUIBuilder
             new Color(0.18f, 0.70f, 0.95f),
             LocalizationKeys.MenuLoadGame,
             font);
+        Button howToPlay = BuildPauseButton(
+            column,
+            "Button_HowToPlay",
+            LoadSprite(MenuArtFolder + "/settings_button.png"),
+            new Color(0.18f, 0.70f, 0.95f),
+            "menu.how_to_play",
+            font);
         Button settings = BuildPauseButton(
             column,
             "Button_Settings",
@@ -170,6 +177,7 @@ public static class InGamePauseUIBuilder
         serialized.FindProperty("saveButton").objectReferenceValue = save;
         serialized.FindProperty("loadButton").objectReferenceValue = load;
         serialized.FindProperty("settingsButton").objectReferenceValue = settings;
+        serialized.FindProperty("howToPlayButton").objectReferenceValue = howToPlay;
         serialized.FindProperty("quitButton").objectReferenceValue = quit;
         serialized.FindProperty("loadGamePanel").objectReferenceValue = loadPanel;
 
@@ -244,10 +252,10 @@ public static class InGamePauseUIBuilder
         RectTransform rect = CreateUIObject(objectName, parent);
         var layout = rect.gameObject.AddComponent<LayoutElement>();
         layout.preferredWidth = 300f;
-        layout.preferredHeight = 90f;
+        layout.preferredHeight = 72f;
         layout.minWidth = 300f;
-        layout.minHeight = 90f;
-        rect.sizeDelta = new Vector2(300f, 90f);
+        layout.minHeight = 72f;
+        rect.sizeDelta = new Vector2(300f, 72f);
 
         var image = rect.gameObject.AddComponent<Image>();
         image.sprite = sprite;

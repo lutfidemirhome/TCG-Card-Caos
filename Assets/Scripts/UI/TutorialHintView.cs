@@ -24,7 +24,6 @@ public class TutorialHintView : MonoBehaviour
         Scroll = 3,
         Zoom = 7,
         Arrange = 4,
-        Crouch = 5,
         Done = 6,
     }
 
@@ -36,7 +35,6 @@ public class TutorialHintView : MonoBehaviour
     static Step _step;
     static bool _showThisSession;
     static bool _sessionDecided;
-    static bool _usedCrouchBeforeHint;
 
     TutorialHintFitter _fitter;
     LocalizedText _localized;
@@ -55,7 +53,6 @@ public class TutorialHintView : MonoBehaviour
         _step = Step.Move;
         _showThisSession = false;
         _sessionDecided = false;
-        _usedCrouchBeforeHint = false;
     }
 
     public static void ResetSession()
@@ -63,7 +60,6 @@ public class TutorialHintView : MonoBehaviour
         _step = Step.Move;
         _sessionDecided = true;
         _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
-        _usedCrouchBeforeHint = false;
         if (_gameplayInstance != null)
         {
             _gameplayInstance._arrangeCacheValid = false;
@@ -146,9 +142,6 @@ public class TutorialHintView : MonoBehaviour
             return;
         }
 
-        if (_step != Step.Crouch)
-            RememberCrouchKeyIfPressed();
-
         if (_step == Step.Drop && IsPackFlowBlockingDropHint())
         {
             Hide();
@@ -196,12 +189,10 @@ public class TutorialHintView : MonoBehaviour
 
         if (_step == Step.Arrange && HasArrangedMatchingRow())
         {
-            AdvanceTo(_usedCrouchBeforeHint ? Step.Done : Step.Crouch);
+            AdvanceTo(Step.Done);
             return;
         }
 
-        if (_step == Step.Crouch && HasCrouchInput())
-            AdvanceTo(Step.Done);
     }
 
     static void EnsureSession()
@@ -212,7 +203,6 @@ public class TutorialHintView : MonoBehaviour
         _sessionDecided = true;
         _step = Step.Move;
         _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
-        _usedCrouchBeforeHint = false;
     }
 
     void BindExisting()
@@ -370,8 +360,6 @@ public class TutorialHintView : MonoBehaviour
                 return LocalizationKeys.TutorialZoom;
             case Step.Arrange:
                 return LocalizationKeys.TutorialArrange;
-            case Step.Crouch:
-                return LocalizationKeys.TutorialCrouch;
             default:
                 return null;
         }
@@ -491,22 +479,6 @@ public class TutorialHintView : MonoBehaviour
         }
 
         return false;
-    }
-
-    static void RememberCrouchKeyIfPressed()
-    {
-        if (WasCrouchKeyPressedThisFrame())
-            _usedCrouchBeforeHint = true;
-    }
-
-    static bool HasCrouchInput()
-    {
-        return WasCrouchKeyPressedThisFrame();
-    }
-
-    static bool WasCrouchKeyPressedThisFrame()
-    {
-        return Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift);
     }
 
     static void DiscardCarried()

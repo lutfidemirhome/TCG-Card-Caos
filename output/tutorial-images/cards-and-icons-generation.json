@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "files": [
+    "eldeki-kartlar-10-secili.png",
+    "eldeki-kartlar-8-secili.png",
+    "yesil-tik.png",
+    "kirmizi-carpi.png"
+  ],
+  "prompts": [
+    "Extract only the held four-card fan from screenshot 056, preserve right selected grade10 card, remove environment and HUD, transparent background.",
+    "Extract only the held four-card fan from screenshot 057, preserve left selected grade8 card, remove environment and HUD, transparent background.",
+    "Standalone bold rounded green checkmark, no badge or shadow, transparent PNG.",
+    "Standalone bold rounded red X, no badge or shadow, transparent PNG."
+  ]
+}

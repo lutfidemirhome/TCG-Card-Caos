@@ -1,0 +1,54 @@
+{
+  "english": [
+    "Shelf Collector {n}",
+    "Complete {n} shelf tasks. Each completed normal-card series or TCG cabinet counts once."
+  ],
+  "turkish": [
+    "Raf Koleksiyoncusu {n}",
+    "{n} raf görevi tamamla. Tamamlanan her normal kart serisi veya TCG dolabı yalnızca bir kez sayılır."
+  ],
+  "german": [
+    "Regalsammler {n}",
+    "Schließe {n} Regalaufgaben ab. Jede vervollständigte normale Kartenserie und jeder vervollständigte TCG-Schrank zählt nur einmal."
+  ],
+  "french": [
+    "Collectionneur d’étagères {n}",
+    "Terminez {n} objectifs de rangement. Chaque série de cartes normales ou meuble TCG complété ne compte qu’une fois."
+  ],
+  "italian": [
+    "Collezionista di scaffali {n}",
+    "Completa {n} obiettivi di sistemazione. Ogni serie di carte normali o mobile TCG completato conta una sola volta."
+  ],
+  "spanish": [
+    "Coleccionista de estanterías {n}",
+    "Completa {n} objetivos de estanterías. Cada serie de cartas normales o mueble TCG completado cuenta una sola vez."
+  ],
+  "brazilian": [
+    "Colecionador de prateleiras {n}",
+    "Conclua {n} objetivos de organização. Cada série de cartas normais ou armário TCG concluído conta apenas uma vez."
+  ],
+  "portuguese": [
+    "Colecionador de prateleiras {n}",
+    "Conclui {n} objetivos de organização. Cada série de cartas normais ou armário TCG concluído conta apenas uma vez."
+  ],
+  "russian": [
+    "Коллекционер полок {n}",
+    "Выполните задания по расстановке карт: {n}. Каждая собранная серия обычных карт или заполненный шкаф TCG засчитывается только один раз."
+  ],
+  "japanese": [
+    "棚コレクター {n}",
+    "棚の目標を{n}回達成する。完成した通常カードのシリーズ、またはTCGカードの陳列棚は、それぞれ1回だけカウントされる。"
+  ],
+  "schinese": [
+    "卡架收藏家 {n}",
+    "完成{n}个卡架目标。每套集齐的普通卡系列或填满的TCG卡柜仅计数一次。"
+  ],
+  "tchinese": [
+    "卡架收藏家 {n}",
+    "完成{n}個卡架目標。每套集齊的普通卡系列或填滿的TCG卡櫃僅計數一次。"
+  ],
+  "korean": [
+    "선반 수집가 {n}",
+    "선반 목표를 {n}개 달성하세요. 완성한 일반 카드 시리즈 또는 TCG 진열장은 각각 한 번만 집계됩니다."
+  ]
+}

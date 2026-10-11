@@ -1,0 +1,15 @@
+{
+  "target": "Windows x86_64 Mono Development",
+  "appId": 5125130,
+  "testDefine": "TCG_STEAM_TEST",
+  "buildResult": "Success",
+  "buildSeconds": 203.486,
+  "bytesReportedByUnity": 2520347386,
+  "realSteamAccountTest": "PASS: user Windows screenshots show SKILL_ROWS_002 StoreStats OK and explicit acknowledgement; restart reads unlocked=True before any write. SKILL_ROWS_003 remains locked. Other 47 achievements not individually exercised.",
+  "sourceSha256": {
+    "Assets/SteamIntegration/SteamSkillAchievementsProvider.cs": "a29f03d2fd8b00000a112c9f742e36c607bc1ef0c8bf9c6d91e4b46d3f601e06",
+    "Assets/Editor/SteamAchievementTestBuilder.cs": "c28a290cd461df16b74b6eef66966e3404e720772a84fd5d2e4c6ee429b5429d",
+    "Assets/Scripts/Skills/SteamSkillAchievements.cs": "ad59f8e8c11f3bf7b8c0d7238d8ebcfb292ee186259e968b50cdd087dd8256ba",
+    "Assets/Scripts/Skills/SkillCatalog.cs": "8659ac5cc46c9381475527efa5c633ce32af5e159f01e50713bf7057a7199ff0"
+  }
+}

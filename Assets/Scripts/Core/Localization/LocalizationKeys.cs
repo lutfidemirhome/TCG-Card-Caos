@@ -102,7 +102,6 @@ public static class LocalizationKeys
     public const string TutorialScroll = "tutorial.scroll";
     public const string TutorialZoom = "tutorial.zoom";
     public const string TutorialArrange = "tutorial.arrange";
-    public const string TutorialCrouch = "tutorial.crouch";
 
     // Skill progression, tasks and modal
     public const string SkillsTitle = "skills.title";

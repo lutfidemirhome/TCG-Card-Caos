@@ -1,0 +1,10 @@
+{
+  "tool": "built-in image_gen",
+  "operation": "Edit supplied screenshots: isolate the central cabinets, correct to frontal view, remove UI and room; preserve holders/sign; transparent background.",
+  "files": [
+    "tcg-dolabi-seffaf.png",
+    "normal-raf-seffaf.png"
+  ],
+  "alpha_validation": "Both PNGs have RGBA channels and fully transparent exterior pixels.",
+  "note": "AI edited tutorial illustrations, not exact model renders; not installed into Unity."
+}

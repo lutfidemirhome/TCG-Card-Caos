@@ -133,6 +133,7 @@ public sealed class SkillPanelView : MonoBehaviour
         _hudStats = transform.parent != null ? transform.parent.Find("Panel_TopLeft") as RectTransform : null;
         _panel.SetActive(false);
         _task.SetActive(false);
+        _bar.AddComponent<MinorMovementHud>().Configure(this, _barBackgrounds[0]);
         _bar.SetActive(false);
         if (GetComponent<CardSkillController>() == null) gameObject.AddComponent<CardSkillController>();
     }

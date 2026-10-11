@@ -33,6 +33,7 @@ public class InGameHudView : MonoBehaviour
             gameObject.AddComponent<SkillBarView>();
         Refresh();
         SkillPanelView.Ensure(transform);
+        CabinetTutorialView.Ensure(transform);
     }
 
     void LateUpdate()

@@ -57,6 +57,7 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
         {
             if (initialized && !AccountMatches()) return;
             highestRows = Mathf.Max(highestRows, rows);
+            TestTrace("EARNED_PROGRESS total=" + highestRows);
             RememberProgress();
             // Batch rows completed together; a failed upload retains its retry backoff.
             nextAttempt = Mathf.Max(Time.realtimeSinceStartup + 2f, nextStoreAllowed);
@@ -118,7 +119,11 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
 
     void TryInitialize()
     {
-        if (!SteamAPI.Init()) return; // Steam may start later; continue the game without it.
+        if (!SteamAPI.Init())
+        {
+            TestTrace("INIT_WAIT: Open Steam with an account that owns the full game; retry in 30 seconds.");
+            return; // Steam may start later; continue the game without it.
+        }
         initialized = true;
         if (SteamUtils.GetAppID().m_AppId != SteamFullGameStore.FullGameAppId)
         {
@@ -135,6 +140,8 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
             initialized = false;
             return;
         }
+        TestTrace("CONNECTED app=" + SteamFullGameStore.FullGameAppId + " full-game Steam session ready.");
+        TestReadInitialAchievements();
 
         // This is an earned-progress journal, NOT a claim that Steam has stored anything.
         // Keeping it per account prevents another Steam user's pending unlocks leaking across accounts.
@@ -164,8 +171,14 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
                 continue;
             }
             // A value we set this session is only in Steam's memory until acknowledged.
-            if (achieved && !locallySet[i]) { confirmed[i] = true; continue; }
+            if (achieved && !locallySet[i])
+            {
+                confirmed[i] = true;
+                TestTrace("ALREADY_UNLOCKED " + id + " read from Steam before setting it this session.");
+                continue;
+            }
             if (!SteamUserStats.SetAchievement(id)) continue;
+            TestTrace("QUEUED " + id + " (not yet confirmed).");
             locallySet[i] = true;
             haveChanges = true;
         }
@@ -173,10 +186,12 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
         float now = Time.realtimeSinceStartup;
         if (!SteamUserStats.StoreStats())
         {
+            TestTrace("STORE_REJECTED: pending achievements retained; retry in 120 seconds.");
             nextAttempt = nextStoreAllowed = now + FailureRetrySeconds;
             return;
         }
         waitingForStore = true;
+        TestTrace("STORE_SENT: waiting for Steam acknowledgement.");
         storeStarted = now;
         nextStoreAllowed = now + MinimumStoreInterval;
     }
@@ -185,6 +200,7 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
     {
         if (result.m_nGameID != SteamFullGameStore.FullGameAppId || !AccountMatches()) return;
         waitingForStore = false;
+        TestTrace("STORE_RESULT " + result.m_eResult);
         if (result.m_eResult != EResult.k_EResultOK)
         {
             // Keep locallySet flags: GetAchievement(true) after a failed store is not proof of upload.
@@ -205,11 +221,36 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
             if (!string.Equals(result.m_rgchAchievementName, SteamSkillAchievements.ApiName(i), StringComparison.Ordinal)) continue;
             confirmed[i] = true;
             locallySet[i] = false;
+            TestTrace("STEAM_CONFIRMED " + result.m_rgchAchievementName);
             break;
         }
     }
 
     bool AccountMatches() => initialized && SteamUser.GetSteamID().m_SteamID == steamUser;
+
+    // Only the dedicated test build defines this symbol. Release builds omit both
+    // calls and argument evaluation; no added logging or API reads in normal play.
+    [System.Diagnostics.Conditional("TCG_STEAM_TEST")]
+    static void TestTrace(string message)
+    {
+#if TCG_STEAM_TEST
+        Debug.Log("[Steam Test] " + message);
+#endif
+    }
+
+    [System.Diagnostics.Conditional("TCG_STEAM_TEST")]
+    static void TestReadInitialAchievements()
+    {
+#if TCG_STEAM_TEST
+        // Read before any SetAchievement calls so a restart can verify persistence.
+        for (int i = 0; i < 2; i++)
+        {
+            string id = SteamSkillAchievements.ApiName(i);
+            bool available = SteamUserStats.GetAchievement(id, out bool unlocked);
+            TestTrace("STARTUP_STATE " + id + " available=" + available + " unlocked=" + unlocked);
+        }
+#endif
+    }
 
     void RememberProgress()
     {

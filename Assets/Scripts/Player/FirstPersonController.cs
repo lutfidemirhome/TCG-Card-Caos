@@ -1,8 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Basic first-person movement: WASD walk, mouse look, tap Shift to toggle crouch, Space to jump.
-/// Space while crouched stands up first; jump only when already standing.
+/// Basic first-person movement: WASD walk, mouse look, unlocked Left Shift run toggle, Space jump.
 /// Attach to a CharacterController root with a child Camera at eye height.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
@@ -13,15 +12,7 @@ public class FirstPersonController : MonoBehaviour
 
     [Header("Movement")]
     [SerializeField] float walkSpeed = 3.15f;
-    [SerializeField] float crouchSpeed = 1.68f;
     [SerializeField] float gravity = -20f;
-
-    [Header("Crouch")]
-    [SerializeField] KeyCode crouchKey = KeyCode.LeftShift;
-    [SerializeField] KeyCode crouchKeyAlt = KeyCode.RightShift;
-    [Tooltip("CharacterController height while crouching.")]
-    [SerializeField] float crouchHeight = 1.0f;
-    [SerializeField] float crouchTransitionSpeed = 12f;
 
     [Header("Jump")]
     [SerializeField] KeyCode jumpKey = KeyCode.Space;
@@ -44,13 +35,11 @@ public class FirstPersonController : MonoBehaviour
     float _pitch;
     float _verticalVelocity;
     bool _cursorLocked;
-    float _crouchBlend;
-    bool _crouchToggled;
-    float _standingHeight;
-    float _standingCenterY;
-    float _standingCameraLocalY;
-
-    public bool IsCrouching => _crouchBlend > 0.05f;
+    bool _runToggled;
+    bool _jumpInProgress;
+    public bool IsLongJumpInProgress => _jumpInProgress && MinorSkillProgress.IsUnlocked(MinorSkillProgress.LongJump);
+    public bool IsRunning => _runToggled && MinorSkillProgress.IsUnlocked(MinorSkillProgress.Run);
+    internal float CurrentMoveSpeed => walkSpeed * (IsRunning ? MinorSkillProgress.UnlockedRunMultiplier : 1f);
     public static bool IsZoomInputActive { get; private set; }
 
     public PlayerSaveRecord CaptureSaveState()
@@ -63,7 +52,7 @@ public class FirstPersonController : MonoBehaviour
             pz = position.z,
             yaw = transform.eulerAngles.y,
             pitch = _pitch,
-            crouching = _crouchToggled || IsCrouching,
+            crouching = false, // Retained only for compatibility with older save files.
         };
     }
 
@@ -84,10 +73,8 @@ public class FirstPersonController : MonoBehaviour
         if (cameraTransform != null)
             cameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
 
-        // Restore a crouched capsule before enabling collision, including under shelves.
-        _crouchToggled = state.crouching;
-        _crouchBlend = state.crouching ? 1f : 0f;
-        UpdateCrouchPoseOnly();
+        _runToggled = false;
+        _jumpInProgress = false;
         _controller.enabled = wasEnabled;
     }
 
@@ -112,9 +99,7 @@ public class FirstPersonController : MonoBehaviour
         if (cameraTransform != null)
             _viewCamera = cameraTransform.GetComponent<Camera>();
 
-        _standingHeight = _controller.height;
-        _standingCenterY = _controller.center.y;
-        _standingCameraLocalY = cameraTransform != null ? cameraTransform.localPosition.y : _standingHeight * 0.89f;
+
     }
 
     void Start()
@@ -184,25 +169,21 @@ public class FirstPersonController : MonoBehaviour
         Vector3 previousPosition = transform.position;
         Quaternion previousRotation = transform.rotation;
         float previousPitch = _pitch;
-        bool previousCrouch = _crouchToggled;
         HandleLook();
 
         bool movementLocked = IsPackOpenMovementLocked();
         if (!movementLocked)
         {
-            UpdateCrouch();
+            if (Application.isFocused && Cursor.lockState == CursorLockMode.Locked
+                && Input.GetKeyDown(KeyCode.LeftShift)) ToggleRun();
             HandleJump();
-        }
-        else
-        {
-            UpdateCrouchPoseOnly();
         }
 
         HandleMove(movementLocked);
 
         // Walking/look changes alone must also trigger autosave and save-on-exit.
         if (transform.position != previousPosition || transform.rotation != previousRotation
-            || _pitch != previousPitch || _crouchToggled != previousCrouch)
+            || _pitch != previousPitch)
             GameSaveDirtyTracker.MarkDirty();
     }
 
@@ -240,81 +221,9 @@ public class FirstPersonController : MonoBehaviour
         cameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
     }
 
-    void UpdateCrouch()
+    internal void ToggleRun()
     {
-        if (Input.GetKeyDown(crouchKey) || Input.GetKeyDown(crouchKeyAlt))
-            ToggleCrouchInput();
-
-        UpdateCrouchPoseOnly();
-    }
-
-    void UpdateCrouchPoseOnly()
-    {
-        bool wantsCrouch = _crouchToggled || !CanStand();
-
-        float targetBlend = wantsCrouch ? 1f : 0f;
-        _crouchBlend = Mathf.MoveTowards(_crouchBlend, targetBlend, crouchTransitionSpeed * Time.deltaTime);
-
-        float height = Mathf.Lerp(_standingHeight, crouchHeight, _crouchBlend);
-        float centerY = height * 0.5f;
-        float crouchCameraY = _standingCameraLocalY * (crouchHeight / _standingHeight);
-        float cameraY = Mathf.Lerp(_standingCameraLocalY, crouchCameraY, _crouchBlend);
-
-        // Preserve every crouch transition value without repeatedly rewriting
-        // an unchanged native collision shape while standing or resting low.
-        if (_controller.height != height)
-            _controller.height = height;
-        Vector3 center = new Vector3(0f, centerY, 0f);
-        if (!_controller.center.Equals(center))
-            _controller.center = center;
-
-        if (cameraTransform != null)
-        {
-            Vector3 localPos = cameraTransform.localPosition;
-            if (localPos.y != cameraY)
-            {
-                localPos.y = cameraY;
-                cameraTransform.localPosition = localPos;
-            }
-        }
-    }
-
-    bool CanStand()
-    {
-        if (_crouchBlend <= 0.001f)
-            return true;
-
-        float radius = Mathf.Max(0.05f, _controller.radius - 0.04f);
-        float standHeight = _standingHeight;
-        Vector3 bottom = transform.position + Vector3.up * (radius + 0.02f);
-        Vector3 top = transform.position + Vector3.up * (standHeight - radius - 0.02f);
-
-        Collider[] overlaps = Physics.OverlapCapsule(
-            bottom,
-            top,
-            radius,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Ignore);
-
-        for (int i = 0; i < overlaps.Length; i++)
-        {
-            Collider overlap = overlaps[i];
-            if (overlap == null)
-                continue;
-
-            if ((_controller.excludeLayers.value & (1 << overlap.gameObject.layer)) != 0)
-                continue;
-
-            if ((overlap.excludeLayers.value & (1 << gameObject.layer)) != 0)
-                continue;
-
-            if (overlap.transform == transform || overlap.transform.IsChildOf(transform))
-                continue;
-
-            return false;
-        }
-
-        return true;
+        _runToggled = MinorSkillProgress.IsUnlocked(MinorSkillProgress.Run) && !_runToggled;
     }
 
     void HandleJump()
@@ -328,33 +237,11 @@ public class FirstPersonController : MonoBehaviour
         if (IsPackOpenMovementLocked())
             return false;
 
-        if (TryStandUp())
-            return false;
-
         if (!_controller.isGrounded)
             return false;
 
         _verticalVelocity = Mathf.Sqrt(jumpHeight * PlayerJumpSkill.HeightMultiplier * -2f * gravity);
-        return true;
-    }
-
-    void ToggleCrouchInput()
-    {
-        if (_crouchToggled)
-            TryStandUp();
-        else
-            _crouchToggled = true;
-    }
-
-    bool TryStandUp()
-    {
-        if (!_crouchToggled && !IsCrouching)
-            return false;
-
-        if (!CanStand())
-            return true;
-
-        _crouchToggled = false;
+        _jumpInProgress = true;
         return true;
     }
 
@@ -365,23 +252,26 @@ public class FirstPersonController : MonoBehaviour
         ApplyMoveInput(inputX, inputZ);
     }
 
-    internal void ApplyMoveInput(float inputX, float inputZ)
+    internal void ApplyMoveInput(float inputX, float inputZ) => ApplyMoveInput(inputX, inputZ, Time.deltaTime);
+
+    internal void ApplyMoveInput(float inputX, float inputZ, float deltaTime)
     {
         Vector3 input = new Vector3(inputX, 0f, inputZ);
         if (input.sqrMagnitude > 1f)
             input.Normalize();
 
-        // Run is a permanent chest reward. Crouching keeps its existing speed.
-        float speed = Mathf.Lerp(walkSpeed * MinorSkillProgress.MovementMultiplier, crouchSpeed, _crouchBlend);
+        float speed = CurrentMoveSpeed;
         Vector3 move = (transform.right * input.x + transform.forward * input.z) * speed;
 
         if (_controller.isGrounded && _verticalVelocity < 0f)
             _verticalVelocity = -2f;
 
-        _verticalVelocity += gravity * Time.deltaTime;
+        _verticalVelocity += gravity * deltaTime;
         move.y = _verticalVelocity;
 
-        CollisionFlags collisions = _controller.Move(move * Time.deltaTime);
+        CollisionFlags collisions = _controller.Move(move * deltaTime);
+        if ((collisions & CollisionFlags.Below) != 0 && _verticalVelocity <= 0f)
+            _jumpInProgress = false;
         if ((collisions & CollisionFlags.Above) != 0 && _verticalVelocity > 0f)
             _verticalVelocity = 0f;
     }
@@ -395,6 +285,7 @@ public class FirstPersonController : MonoBehaviour
 
     void OnDisable()
     {
+        _jumpInProgress = false;
         ResetZoom();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
