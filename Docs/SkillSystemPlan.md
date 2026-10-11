@@ -103,9 +103,9 @@ Hedef raf/dolap ve seçilen grup yeni kayıtlarda saklanır. Yükleme sonrasınd
 
 Toplam 45 yükseltme eşiği, toplam 45 skill seviyesi vardır. Her eşik 1 hak verir; hangi skill'in yükseleceğini oyuncu seçer.
 
-Steam görevleri 2–18 arasındaki her tamamlanma sayısında, sonra tablodaki sonraki eşiklerde açılır. Böylece 13,15,17 hedefleri de başarım verir, fakat bu üçü ekstra skill hakkı vermez. Toplam 48 başarım vardır. Başarımlar skill satın almaya değil, gerçek raf/dolap hedeflerini tamamlamaya bağlıdır.
+Steam başarımları yukarıdaki 45 yükseltme eşiğinde açılır. 13, 15 ve 17 tamamlanmalarında başarım veya skill hakkı verilmez. Toplam 45 başarım vardır. Başarımlar skill satın almaya değil, gerçek raf/dolap hedeflerini tamamlamaya bağlıdır.
 
-Steamworks.NET 2025.164.1 projeye eklenmiştir. Oyun bağlantısı, hesabın doğru App ID'sini ve sunucu yanıtlarını kontrol ederek başarısız gönderimleri yeniden dener. Editor ve demo gerçek Steam başarımı göndermez. Steamworks tanımlarını ve gerçek Steam build kontrolünü kullanıcı tamamlamalı: [adım adım Steam rehberi](SteamSkillAchievements.md), [48 başarım listesi](SteamSkillAchievements.csv).
+Steamworks.NET 2025.164.1 projeye eklenmiştir. Oyun bağlantısı, hesabın doğru App ID'sini ve sunucu yanıtlarını kontrol ederek başarısız gönderimleri yeniden dener. Editor ve demo gerçek Steam başarımı göndermez. Steamworks yayın durumu ve gerçek Windows/Steam test sonucu: [adım adım Steam rehberi](SteamSkillAchievements.md), [45 başarım listesi](SteamSkillAchievements.csv).
 
 Periyodik autosave korunur. 2–18 arasındaki yeni raf tamamlamalarında, sonraki yükseltme eşiklerinde ve yükseltme satın alırken ek otomatik kayıt istenir; mevcut kayıt kuyruğu istekleri birleştirir.
 

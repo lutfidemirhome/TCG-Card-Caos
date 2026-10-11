@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
@@ -9,7 +8,9 @@ using UnityEngine;
 /// </summary>
 public static class SteamSkillAchievements
 {
-    static readonly int[] Goals = BuildGoals();
+    // Steam rewards the same 45 completion milestones as skill upgrade points.
+    // Copy the table once so the two catalogues cannot gain extra in-between goals.
+    static readonly int[] Goals = (int[])SkillCatalog.Milestones.Clone();
     static readonly string[] Names = BuildNames();
     public static int Count => Goals.Length;
     public static int HighestCompletedRows { get; private set; }
@@ -34,17 +35,6 @@ public static class SteamSkillAchievements
         if (completedRows <= HighestCompletedRows) return;
         HighestCompletedRows = completedRows;
         ProgressChanged?.Invoke(completedRows);
-    }
-
-    static int[] BuildGoals()
-    {
-        // Match SkillProgress.NextGoal, including 13, 15 and 17 (tasks without an upgrade point).
-        var goals = new List<int>(48);
-        for (int row = 2; row <= 18; row++) goals.Add(row);
-        foreach (int row in SkillCatalog.Milestones)
-            if (row > 18 && !goals.Contains(row)) goals.Add(row);
-        goals.Sort();
-        return goals.ToArray();
     }
 
     static string[] BuildNames()

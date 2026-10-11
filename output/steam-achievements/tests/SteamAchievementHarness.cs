@@ -50,9 +50,14 @@ static class Harness {
  }
  static void Dispose(object p)=>Call(p,"OnDestroy");
  static void Main(){
-  var expected=new[]{2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,21,24,27,31,35,39,44,49,55,61,68,75,83,91,100,109,119,129,140,152,165,179,194,214,239,269,309,359,409,459,509};
-  Check(SteamSkillAchievements.Count==48,"48 actual task goals");
-  for(int i=0;i<48;i++){Check(SteamSkillAchievements.RequiredRows(i)==expected[i],"goal "+i);Check(SteamSkillAchievements.ApiName(i)=="SKILL_ROWS_"+expected[i].ToString("D3"),"API "+i);}
+  var expected=new[]{2,3,4,5,6,7,8,9,10,11,12,14,16,18,21,24,27,31,35,39,44,49,55,61,68,75,83,91,100,109,119,129,140,152,165,179,194,214,239,269,309,359,409,459,509};
+  Check(SteamSkillAchievements.Count==45,"45 upgrade milestones; no extra 13/15/17 achievements");
+  for(int i=0;i<expected.Length;i++){Check(SteamSkillAchievements.RequiredRows(i)==expected[i],"goal "+i);Check(SteamSkillAchievements.ApiName(i)=="SKILL_ROWS_"+expected[i].ToString("D3"),"API "+i);}
+  foreach(int completed in new[]{12,13,14,15,16,17,18,509}){
+   var boundary=Fresh();Tick(boundary,0);SteamSkillAchievements.NotifyProgress(completed);Tick(boundary,2);
+   Check(Steamworks.SteamUserStats.Set.SequenceEqual(expected.Where(n=>n<=completed).Select(n=>"SKILL_ROWS_"+n.ToString("D3"))),"only permitted achievements at "+completed+" completions");
+   Dispose(boundary);
+  }
   ResetBridge();int events=0;SteamSkillAchievements.ProgressChanged+=_=>events++;
   foreach(int n in new[]{-5,0,1,1,0,2,999,510})SteamSkillAchievements.NotifyProgress(n);
   Check(events==3&&SteamSkillAchievements.HighestCompletedRows==509,"monotonic clamped progress");
@@ -64,8 +69,8 @@ static class Harness {
   Call(p,"OnAchievementStored",new Steamworks.UserAchievementStored_t{m_nGameID=5125130,m_rgchAchievementName="SKILL_ROWS_002"});Call(p,"OnStatsStored",new Steamworks.UserStatsStored_t{m_nGameID=5125130,m_eResult=Steamworks.EResult.k_EResultOK});
   Steamworks.SteamUserStats.Set.Clear();Tick(p,139);Check(Steamworks.SteamUserStats.Set.SequenceEqual(new[]{"SKILL_ROWS_003"}),"only explicitly acknowledged ID retired");Dispose(p);
   p=Fresh();Tick(p,0);SteamSkillAchievements.NotifyProgress(2);Tick(p,2);Tick(p,63);Check(Steamworks.SteamUserStats.Stores==1,"missing callback waits then backs off");Tick(p,183);Check(Steamworks.SteamUserStats.Stores==2,"lost callback retry");Dispose(p);
-  p=Fresh();Steamworks.SteamAPI.Available=false;SteamSkillAchievements.NotifyProgress(21);Tick(p,2);Tick(p,31);Check(Steamworks.SteamAPI.InitCalls==1,"Steam absent retry rate");Steamworks.SteamAPI.Available=true;Tick(p,32);Tick(p,34);Check(Steamworks.SteamUserStats.Set.Count==18,"late Steam catches up");
-  Steamworks.SteamUser.User=20;SteamSkillAchievements.NotifyProgress(509);Tick(p,200);Check(!UnityEngine.PlayerPrefs.Data.ContainsKey("SteamSkillRows.5125130.20"),"account switch does not leak pending progress");Check(Steamworks.SteamUserStats.Set.Count==18,"account switch prevents sends");Dispose(p);
+  p=Fresh();Steamworks.SteamAPI.Available=false;SteamSkillAchievements.NotifyProgress(21);Tick(p,2);Tick(p,31);Check(Steamworks.SteamAPI.InitCalls==1,"Steam absent retry rate");Steamworks.SteamAPI.Available=true;Tick(p,32);Tick(p,34);Check(Steamworks.SteamUserStats.Set.Count==15,"late Steam catches up");
+  Steamworks.SteamUser.User=20;SteamSkillAchievements.NotifyProgress(509);Tick(p,200);Check(!UnityEngine.PlayerPrefs.Data.ContainsKey("SteamSkillRows.5125130.20"),"account switch does not leak pending progress");Check(Steamworks.SteamUserStats.Set.Count==15,"account switch prevents sends");Dispose(p);
   p=Fresh();Steamworks.SteamUtils.App=5144220;Tick(p,0);Check(!p.enabled&&Steamworks.SteamAPI.Shutdowns==1&&Steamworks.SteamUserStats.Stores==0,"wrong App ID disabled");Dispose(p);
   p=Fresh();Tick(p,0);Steamworks.SteamUserStats.Definitions=false;SteamSkillAchievements.NotifyProgress(2);Tick(p,2);Check(Steamworks.SteamUserStats.Stores==0,"missing definition no invalid send");Steamworks.SteamUserStats.Definitions=true;Tick(p,122);Check(Steamworks.SteamUserStats.Stores==1,"missing definitions recover");Dispose(p);
   p=Fresh();Tick(p,0);SteamSkillAchievements.NotifyProgress(7);Call(p,"OnApplicationQuit");Dispose(p);p=Fresh(false);Tick(p,0);Tick(p,2);Check(Steamworks.SteamUserStats.Set.Count==6,"pending earned progress survives restart");Dispose(p);

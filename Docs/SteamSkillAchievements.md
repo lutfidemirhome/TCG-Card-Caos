@@ -1,15 +1,15 @@
 # Skill görevleri ve Steam başarımları
 
-11 Ekim 2026 tarihinde **48 başarım Steamworks'te kaydedildi ve yapılandırma yayını başarıyla tamamlandı** (App ID **5125130**). Eski kart/paket hedefleri oyundaki gerçek raf hedefleriyle değiştirildi. Her başarımın 256×256 renkli simgesi ve ortak gri kilit simgesi yüklendi. Oyunun 12 dili ve Steam tarafında zaten açık olan Portekiz Portekizcesi dahil 13 dilde ad/açıklama mevcut. Bu işlem oyunun çıkışını başlatmadı; build, depot ve çıkış tarihi değiştirilmedi.
+11 Ekim 2026 tarihindeki düzeltmeyle katalog **45 başarıma** indirildi (tam oyun App ID **5125130**). Önceki 48 kayıtlı yayındaki `SKILL_ROWS_013`, `SKILL_ROWS_015` ve `SKILL_ROWS_017` kaldırıldı; kalan API adları ve Steam token kimlikleri korundu. Düzeltmenin yayın durumu aşağıdaki bölümde kayıtlıdır. Eski kart/paket hedefleri oyundaki gerçek raf hedefleriyle değiştirildi. Her başarımın 256×256 renkli simgesi ve ortak gri kilit simgesi yüklendi. Oyunun 12 dili ve Steam tarafında zaten açık olan Portekiz Portekizcesi dahil 13 dilde ad/açıklama mevcut. Bu işlem oyunun çıkışını başlatmadı; build, depot ve çıkış tarihi değiştirilmedi.
 
 Bağlantı **Steamworks.NET 2025.164.1** kullanır; Standalone için `TCG_STEAMWORKS_NET` zaten etkindir. Başarım kurulumunda oyun davranışı korunmuştur. Sonraki Windows test hazırlığında sağlayıcıya yalnız `TCG_STEAM_TEST` tanımlı build'de çalışan tanılama eklendi; ayrıntılar aşağıdadır. 11 Ekim 2026'da kullanıcı Windows laptopta gerçek Steam hesabıyla ilk başarımı kazandı; yeniden açılışta aynı başarım Steam'den açık olarak okundu. Hesap başarımları sıfırlanmadı.
 
 ## Hangi görev hangi başarımı açıyor?
 
 - Normal kartlarda doğru tamamlanan yatay raf bir görevdir; aynı kart serisi tekrar tamamlanınca ek görev kazanılmaz. TCG tarafında (kodda PSA) doğru tamamlanan bütün dolap bir görevdir ve aynı dolap tekrar sayılmaz.
-- Oyun içindeki hedeflerle aynı eşikler kullanılır: **2–18 arasındaki her sayı**, sonra **21, 24, 27, 31, 35, 39, 44, 49, 55, 61, 68, 75, 83, 91, 100, 109, 119, 129, 140, 152, 165, 179, 194, 214, 239, 269, 309, 359, 409, 459, 509**.
-- Toplam **48 başarım** vardır. API adları `SKILL_ROWS_002` … `SKILL_ROWS_509` biçimindedir; yalnız listelenen eşikler tanımlanır. Tam liste ve önerilen Türkçe/İngilizce adlar [SteamSkillAchievements.csv](SteamSkillAchievements.csv) içindedir.
-- 13, 15 ve 17 raf görevleri de başarım açar; bu üç hedef ayrıca yükseltme puanı vermez. Yükseltme puanları `SkillCatalog.Milestones` tablosunu izlemeye devam eder.
+- Skill yükseltme eşikleri kullanılır: **2–12 arasındaki her sayı, 14, 16, 18**, sonra **21, 24, 27, 31, 35, 39, 44, 49, 55, 61, 68, 75, 83, 91, 100, 109, 119, 129, 140, 152, 165, 179, 194, 214, 239, 269, 309, 359, 409, 459, 509**.
+- Toplam **45 başarım** vardır. API adları `SKILL_ROWS_002` … `SKILL_ROWS_509` biçimindedir; yalnız listelenen eşikler tanımlanır. Tam liste ve önerilen Türkçe/İngilizce adlar [SteamSkillAchievements.csv](SteamSkillAchievements.csv) içindedir.
+- 13, 15 ve 17 tamamlanmaları başarım veya yükseltme puanı vermez. Başarım listesi doğrudan `SkillCatalog.Milestones` tablosundan bir kez kopyalanır. Yükseltme puanları, oyun içi hedef gösterimi, autosave ve tamamlanma sayacı değiştirilmedi.
 - Skill satın almak veya kullanmak tek başına başarım açmaz. Başarımın kaynağı kaydedilen gerçek raf/dolap tamamlamalarıdır.
 - Yeni Oyun, Steam hesabında kazanılmış başarımları geri almaz. Oyunun yeni kaydındaki görev ilerlemesi yine sıfırdan başlar. Eski kayıt yüklenince tamamlanmış hedefler Steam'e tekrar bildirilir; Steam'de zaten açık olanlar tekrar ödül oluşturmaz.
 
@@ -28,9 +28,9 @@ Bu kurulum, Steamworks.NET'in [resmî kurulum adımlarını](https://steamworks.
 
 ## Steamworks'te tamamlananlar
 
-- 48 API adı oyun kataloğuyla eşleştirildi; `Set By = Client`, `Hidden = false`. Sayısal Steam stat bağlantısı kullanılmıyor.
-- 48 renkli simge ve ortak kilit simgesi yüklendi; ilk/son hedefler dahil görsel eşleşmeleri kontrol edildi.
-- Steam'in kendi VDF şablonundaki token'lar kullanıldı. 13 dilde toplam **624 ad + 624 açıklama** yüklendi. Geri indirilen ilk tam çeviri dosyası kaynakla birebir karşılaştırıldı; ardından Rusça sayı dilbilgisi düzeltmesi 48 kayıt için ayrıca başarıyla kaydedildi. Başarım sayfası bütün dilleri tamamen yerelleştirilmiş gösterdi.
+- Güncel 45 API adı oyun kataloğuyla eşleştirildi; `Set By = Client`, `Hidden = false`. Sayısal Steam stat bağlantısı kullanılmıyor.
+- İlk kurulumda 48 renkli simge ve ortak kilit simgesi yüklendi; düzeltmeyle 45 aktif başarım kaldı; ilk/son hedefler dahil görsel eşleşmeleri kontrol edildi.
+- Steam'in kendi VDF şablonundaki token'lar kullanıldı. İlk kurulumda 13 dilde toplam **624 ad + 624 açıklama** yüklendi; üç kaydın kaldırılmasıyla güncel katalog **585 ad + 585 açıklama** içerir. Geri indirilen ilk tam çeviri dosyası kaynakla birebir karşılaştırıldı; ardından Rusça sayı dilbilgisi düzeltmesi 48 kayıt için ayrıca başarıyla kaydedildi. Başarım sayfası bütün dilleri tamamen yerelleştirilmiş gösterdi.
 - Yayın öncesi farklarda yalnız `common` bölümündeki Korece dil işareti ve `stats` bölümündeki başarım değişiklikleri vardı. Yayın sonucu: **Publish to steam OK — Publishing successful!**
 - Mağaza sayfasındaki **Steam Başarımları** özelliği açıldı ve yayınlandı. Mağaza farkı yalnız `category_22 = true` eklemesiydi; yayın sonucu **Successfully published!**, revizyon **10**. Diğer mağaza alanları değiştirilmedi.
 - Yerel görseller, çeviri VDF'leri, token eşlemesi ve önceki metin yedekleri `output/steam-achievements/` altında. CSV bir referans tablosudur; doğrudan Steam içe aktarma biçimi değildir.
@@ -51,7 +51,7 @@ Steam bağlantısı açıkken her karede yalnız Steam'in gerekli callback pompa
 
 ## Doğrulama ve kalan gerçek build testi
 
-Üretimde kullanılan `SkillCatalog`, `SteamSkillAchievements` ve `SteamSkillAchievementsProvider` kaynakları, sahte Unity/Steam SDK sınırıyla izole derlendi: **116 kontrol geçti**. Katalogdaki 48 eşik, artan ilerleme, demo engeli, toplu gönderim, 1.000 karede gereksiz sorgu olmaması, bağlantının geç başlaması, iki dakikalık yeniden deneme, callback kaybı, yanlış App ID, hesaplar arasında izolasyon ve yeniden açılışta bekleyen ilerlemenin korunması kapsandı. Sonuç `output/steam-achievements/tests/results.txt` içinde.
+Üretimde kullanılan `SkillCatalog`, `SteamSkillAchievements` ve `SteamSkillAchievementsProvider` kaynakları, sahte Unity/Steam SDK sınırıyla izole derlendi: **119 normal derleme / 122 test derlemesi kontrolü geçti**. Katalogdaki 45 eşik, 12–18 arasındaki geçişler ve kaldırılan üç API adının hiç gönderilmemesi, artan ilerleme, demo engeli, toplu gönderim, 1.000 karede gereksiz sorgu olmaması, bağlantının geç başlaması, iki dakikalık yeniden deneme, callback kaybı, yanlış App ID, hesaplar arasında izolasyon ve yeniden açılışta bekleyen ilerlemenin korunması kapsandı. Sonuç `output/steam-achievements/tests/results.txt` içinde.
 
 Bu test gerçek Steam hizmetine bağlanmaz ve kullanıcının kayıtlarına dokunmaz. İlk denetimde bu bilgisayarda çalışan Steam istemcisi ve güncel tam oyun build'i yoktu. Daha sonra aşağıdaki Windows test paketi oluşturuldu; kullanıcının Windows laptopta gönderdiği iki test görüntüsü ilk başarımın kazanılmasını ve yeniden açılışta korunmasını doğruladı. İki farklı normal kart serisi veya uygun TCG dolabı tamamlayıp `SKILL_ROWS_002` onayını kontrol et; üçüncü görevde `SKILL_ROWS_003` açılmalı. Editor Play bu bağlantıyı bilerek başlatmaz.
 
@@ -65,7 +65,7 @@ Paketin `TESTI_BASLAT.cmd` dosyası çalışma klasörünü ayarlar ve Unity ç�
 
 Başlangıçta ilk iki başarım, oyun henüz herhangi bir `SetAchievement` çağrısı yapmadan okunur. `QUEUED`/`STORE_SENT` kayıt onayı değildir; `STORE_RESULT k_EResultOK` ve ilgili `STEAM_CONFIRMED` satırı beklenir. Sonraki çalıştırmada `STARTUP_STATE ... available=True unlocked=True` satırı önceki kazanımın Steam tarafından geri okunabildiğini gösterir. Çıkış öncesi kütüphane/topluluk görünümü sınırlıdır; [Valve test açıklaması](https://partner.steamgames.com/doc/features/achievements#Testing) uyarınca tanılama çıktısıyla kontrol edilir.
 
-Tanılama eklemesinden sonra test derlemesinde **120**, normal derlemede **117** izole kontrol geçti. Normal derlemede ek log/başlangıç sorgusu olmadığı ve kuyruklama işleminin yanlışlıkla kayıt onayı olarak gösterilmediği ayrıca doğrulandı. Windows'taki gerçek Steam hesabında `SKILL_ROWS_002` kazanımı ve yeniden açılışta kalıcılığı doğrulandı; diğer 47 başarım tek tek oynanarak denenmedi. Kullanıcı adımları: [SteamAchievementWindowsTest.txt](SteamAchievementWindowsTest.txt).
+Tanılama eklemesinden sonra test derlemesinde **120**, normal derlemede **117** izole kontrol geçti. Normal derlemede ek log/başlangıç sorgusu olmadığı ve kuyruklama işleminin yanlışlıkla kayıt onayı olarak gösterilmediği ayrıca doğrulandı. Windows'taki gerçek Steam hesabında `SKILL_ROWS_002` kazanımı ve yeniden açılışta kalıcılığı doğrulandı; bu, 45 kayıt düzeltmesinden önce yapılan gerçek hesap testidir; güncel diğer 44 başarım tek tek oynanarak denenmedi. Kullanıcı adımları: [SteamAchievementWindowsTest.txt](SteamAchievementWindowsTest.txt).
 
 Windows x64 build'i Unity'de **Success** ile tamamlandı (203 saniye, yaklaşık 2,3 GiB). Paket içindeki test tanılama metinleri, Windows `steam_api64.dll`, tam oyun App ID dosyası ve kullanım talimatları doğrulandı. Taşıma paketi: `Builds/SteamAchievementTest-Windows.zip`. Unity Play modunda bırakılmadı. Build sırasında Unity'nin yeniden yazdığı, önceden temiz olan dört font/render ayarı dosyası eski içeriklerine geri alındı.
 
@@ -79,4 +79,14 @@ Oyunu kapatıp yeniden açtıktan sonra gönderilen `IMG_1732.HEIC` fotoğrafın
 - `STARTUP_STATE SKILL_ROWS_003 available=True unlocked=False`
 - `ALREADY_UNLOCKED SKILL_ROWS_002 read from Steam before setting it this session.`
 
-Bu kanıtlar ilk başarımın kazanıldığını ve ikinci çalıştırmada yeniden gönderilmeden Steam'den açık olarak okunduğunu doğruluyor. Üç görev başarımı henüz kilitli; bu durum iki tamamlanma ile uyumlu. Temel gerçek hesap testi başarılıdır. Tüm 48 başarımın oyunla tek tek testi, başka cihaz senkronizasyonu ve Steam bildiriminin görsel olarak çıkması bu görüntülerle doğrulanmış değildir.
+Bu kanıtlar ilk başarımın kazanıldığını ve ikinci çalıştırmada yeniden gönderilmeden Steam'den açık olarak okunduğunu doğruluyor. Üç görev başarımı henüz kilitli; bu durum iki tamamlanma ile uyumlu. Temel gerçek hesap testi başarılıdır. Tüm güncel 45 başarımın oyunla tek tek testi, başka cihaz senkronizasyonu ve Steam bildiriminin görsel olarak çıkması bu görüntülerle doğrulanmış değildir.
+
+## 45 kayıt düzeltmesi — 11 Ekim 2026
+
+Kullanıcı 13, 15 ve 17 tamamlanmalarının başarım vermemesi gerektiğini belirtti. Üretim kataloğu doğrudan 45 yükseltme eşiğine bağlandı. Eski kayıt yükleme dahil 509 tamamlanmaya kadar izin verilen API adları test edildi. Provider, oyun kayıtları, demo, sahneler ve skill puanı hesaplaması değişmedi. Testler gerçek Steam hesabını sıfırlamaz.
+
+Yayın durumu: Tam oyun 5125130 için Steamworks `stats` revizyon 2 → 3 farkı kontrol edildi; yalnız 13/15/17 kayıtlarının kaldırılması vardı. Yapılandırma yeniden yayımlandı: **Publish to steam OK — Publishing successful!** Kanıt: `output/steam-achievements/tests/publish-45-success.png`. Yeniden açılan başarım sayfası **45 kayıt** ve 13 dilin tamamını yerelleştirilmiş gösterdi; API listesi yerel CSV ile birebir doğrulandı. Oyun build/depotları ve demo değiştirilmedi.
+
+`5125130_*.vdf`, CSV ve token eşlemesi güncel 45 kaydı içerir. Önceki indirilen Steam VDF kanıtları `output/steam-achievements/backup/before-45-correction-*` altında tarihsel yedek olarak korunur. Kullanılmayan 13/15/17 görselleri ve üretim manifesti kaynak arşividir.
+
+Daha önce alınan Windows ZIP, eski 48 kayıtlı kodu içerir; bu düzeltmeyi içermesi için sonraki build yeniden alınmalıdır. Bu işlem oyun build/depot yayını değildir.
