@@ -34,6 +34,7 @@ public class InGameHudView : MonoBehaviour
         Refresh();
         SkillPanelView.Ensure(transform);
         CabinetTutorialView.Ensure(transform);
+        GameCompleteView.Ensure(transform);
     }
 
     void LateUpdate()
@@ -65,6 +66,7 @@ public class InGameHudView : MonoBehaviour
     void Refresh()
     {
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
+        GameCompleteView.Observe(progress);
         SetCounter(shelvesValueText, progress.shelvesCompleted, progress.totalShelves, ref _shelvesCounter);
         SetCounter(cardsValueText, progress.cardsPlaced, progress.totalCards, ref _cardsCounter);
 

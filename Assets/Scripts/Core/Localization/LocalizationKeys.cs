@@ -4,6 +4,8 @@
 /// </summary>
 public static class LocalizationKeys
 {
+    public const string GameCompleteTitle = "game_complete.title";
+    public const string GameCompleteMessage = "game_complete.message";
     // Main menu buttons
     public const string MenuContinue = "menu.continue";
     public const string MenuNewGame = "menu.new_game";

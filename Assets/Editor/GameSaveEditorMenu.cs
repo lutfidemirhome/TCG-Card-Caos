@@ -160,8 +160,16 @@ class SteamAppIdOnBuild : IPostprocessBuildWithReport
         if (string.IsNullOrEmpty(folder))
             return;
 
+        string appIdPath = Path.Combine(folder, "steam_appid.txt");
+        if ((report.summary.options & BuildOptions.Development) == 0)
+        {
+            // Steam supplies the App ID at launch. Remove a leftover local-test override
+            // when reusing an output directory for a customer build.
+            if (File.Exists(appIdPath)) File.Delete(appIdPath);
+            return;
+        }
         string appId = SteamFullGameStore.RunningAppId.ToString();
-        File.WriteAllText(Path.Combine(folder, "steam_appid.txt"), appId + "\n");
+        File.WriteAllText(appIdPath, appId + "\n");
         File.WriteAllText(
             Path.Combine(Directory.GetParent(Application.dataPath).FullName, "steam_appid.txt"),
             appId + "\n");

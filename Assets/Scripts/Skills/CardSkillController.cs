@@ -82,20 +82,6 @@ public sealed class CardSkillController : MonoBehaviour
         SkillProgress.Tick(Time.deltaTime);
         if (Cursor.lockState == CursorLockMode.Locked && !SkillPanelView.ConsumesPauseInput)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (Input.GetKeyDown(KeyCode.P))
-            {
-                SkillProgress.EnableSkillPointsForTesting();
-                _autoStarted = false;
-                _boundAutoContext = null;
-                _autoShelf = null;
-                _autoPsaCabinet = null;
-                _autoRow = -1;
-                _autoGroup = default;
-                _autoPlace = 0f;
-                _effectRefresh = 0f;
-            }
-#endif
             for (int i = 0; i < SkillCatalog.Count; i++)
             {
                 if (!Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + i)) && !Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + i))) continue;

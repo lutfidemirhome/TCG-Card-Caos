@@ -1,0 +1,145 @@
+Skill panel isolated behavior validation
+Edit mode only. Real prefab listeners; temporary progress; no save manager or world scans.
+PASS Preview EventSystem is isolated from the open scene
+PASS Three completed rows provide two temporary upgrade points
+PASS Awake binds the authored prefab and starts closed
+PASS Open displays the popup and pauses gameplay, time and audio
+PASS Open releases the cursor and consumes pause input
+PASS Selection listener updates the name and original icon for skill 0
+PASS Skill 0 selection highlight 0 matches
+PASS Skill 0 selection highlight 1 matches
+PASS Skill 0 selection highlight 2 matches
+PASS Skill 0 selection highlight 3 matches
+PASS Skill 0 selection highlight 4 matches
+PASS Skill 0 can be upgraded with available points
+PASS Selection listener updates the name and original icon for skill 1
+PASS Skill 1 selection highlight 0 matches
+PASS Skill 1 selection highlight 1 matches
+PASS Skill 1 selection highlight 2 matches
+PASS Skill 1 selection highlight 3 matches
+PASS Skill 1 selection highlight 4 matches
+PASS Skill 1 can be upgraded with available points
+PASS Selection listener updates the name and original icon for skill 2
+PASS Skill 2 selection highlight 0 matches
+PASS Skill 2 selection highlight 1 matches
+PASS Skill 2 selection highlight 2 matches
+PASS Skill 2 selection highlight 3 matches
+PASS Skill 2 selection highlight 4 matches
+PASS Skill 2 can be upgraded with available points
+PASS Selection listener updates the name and original icon for skill 3
+PASS Skill 3 selection highlight 0 matches
+PASS Skill 3 selection highlight 1 matches
+PASS Skill 3 selection highlight 2 matches
+PASS Skill 3 selection highlight 3 matches
+PASS Skill 3 selection highlight 4 matches
+PASS Skill 3 can be upgraded with available points
+PASS Selection listener updates the name and original icon for skill 4
+PASS Skill 4 selection highlight 0 matches
+PASS Skill 4 selection highlight 1 matches
+PASS Skill 4 selection highlight 2 matches
+PASS Skill 4 selection highlight 3 matches
+PASS Skill 4 selection highlight 4 matches
+PASS Skill 4 can be upgraded with available points
+PASS Dedicated minor lock artwork is assigned
+PASS Locked minor 0 displays its lock and localized description
+PASS Locked minor hides major-only detail Level
+PASS Locked minor hides major-only detail LevelFrame
+PASS Locked minor hides major-only detail Stats
+PASS Locked minor hides major-only detail Next
+PASS Locked minor hides major-only detail StatsFrame
+PASS Locked minor hides major-only detail StatsRule
+PASS Locked minor hides major-only detail Upgrade
+PASS Minor 0 selection highlight 0 matches
+PASS Minor 0 selection highlight 1 matches
+PASS Minor 0 selection highlight 2 matches
+PASS Minor 0 selection highlight 3 matches
+PASS Minor selection clears major highlight 0
+PASS Minor selection clears major highlight 1
+PASS Minor selection clears major highlight 2
+PASS Minor selection clears major highlight 3
+PASS Minor selection clears major highlight 4
+PASS Minor 0 cannot spend a major upgrade point or dirty the save
+PASS Locked minor 1 displays its lock and localized description
+PASS Locked minor hides major-only detail Level
+PASS Locked minor hides major-only detail LevelFrame
+PASS Locked minor hides major-only detail Stats
+PASS Locked minor hides major-only detail Next
+PASS Locked minor hides major-only detail StatsFrame
+PASS Locked minor hides major-only detail StatsRule
+PASS Locked minor hides major-only detail Upgrade
+PASS Minor 1 selection highlight 0 matches
+PASS Minor 1 selection highlight 1 matches
+PASS Minor 1 selection highlight 2 matches
+PASS Minor 1 selection highlight 3 matches
+PASS Minor selection clears major highlight 0
+PASS Minor selection clears major highlight 1
+PASS Minor selection clears major highlight 2
+PASS Minor selection clears major highlight 3
+PASS Minor selection clears major highlight 4
+PASS Minor 1 cannot spend a major upgrade point or dirty the save
+PASS Locked minor 2 displays its lock and localized description
+PASS Locked minor hides major-only detail Level
+PASS Locked minor hides major-only detail LevelFrame
+PASS Locked minor hides major-only detail Stats
+PASS Locked minor hides major-only detail Next
+PASS Locked minor hides major-only detail StatsFrame
+PASS Locked minor hides major-only detail StatsRule
+PASS Locked minor hides major-only detail Upgrade
+PASS Minor 2 selection highlight 0 matches
+PASS Minor 2 selection highlight 1 matches
+PASS Minor 2 selection highlight 2 matches
+PASS Minor 2 selection highlight 3 matches
+PASS Minor selection clears major highlight 0
+PASS Minor selection clears major highlight 1
+PASS Minor selection clears major highlight 2
+PASS Minor selection clears major highlight 3
+PASS Minor selection clears major highlight 4
+PASS Minor 2 cannot spend a major upgrade point or dirty the save
+PASS Locked minor 3 displays its lock and localized description
+PASS Locked minor hides major-only detail Level
+PASS Locked minor hides major-only detail LevelFrame
+PASS Locked minor hides major-only detail Stats
+PASS Locked minor hides major-only detail Next
+PASS Locked minor hides major-only detail StatsFrame
+PASS Locked minor hides major-only detail StatsRule
+PASS Locked minor hides major-only detail Upgrade
+PASS Minor 3 selection highlight 0 matches
+PASS Minor 3 selection highlight 1 matches
+PASS Minor 3 selection highlight 2 matches
+PASS Minor 3 selection highlight 3 matches
+PASS Minor selection clears major highlight 0
+PASS Minor selection clears major highlight 1
+PASS Minor selection clears major highlight 2
+PASS Minor selection clears major highlight 3
+PASS Minor selection clears major highlight 4
+PASS Minor 3 cannot spend a major upgrade point or dirty the save
+PASS Unlocked minor displays its permanent ability name, description and dedicated icon
+PASS Unlocked minor still has no major upgrade control or point cost
+PASS Major hotbar retains five slots alongside the separate movement hints
+PASS Switching back to Sort restores detail Level
+PASS Switching back to Sort restores detail LevelFrame
+PASS Switching back to Sort restores detail Stats
+PASS Switching back to Sort restores detail Next
+PASS Switching back to Sort restores detail StatsFrame
+PASS Switching back to Sort restores detail StatsRule
+PASS Switching back to Sort restores detail Upgrade
+PASS Returning to a major skill restores its description and upgrade availability
+PASS Upgrade button is enabled before a real upgrade
+PASS Real upgrade listener spends exactly one point and increments the selected level
+PASS Upgrade preserves dirty tracking and queues a milestone without creating a save manager
+PASS Upgrade refreshes the level and green point count
+PASS Zero points disable the upgrade button
+PASS A pointer click on the disabled button cannot upgrade
+PASS Maximum level disables upgrades even with remaining points
+PASS A pointer click cannot exceed maximum level
+PASS Sort cooldown advances immediately using real progress
+PASS Cooldown changes remain present in the real save record
+PASS Timed skills retain their pending cooldown while active
+PASS Active effect time remains present in the real save record
+PASS Close button hides the popup and resumes gameplay, time and audio
+PASS Close restores the cursor state captured by Open
+PASS Closing consumes Escape for the current frame
+PASS No save manager was created during validation
+PASS All 27 captured static fields/collections restored
+PASS Original time, audio and cursor state restored
+Checks: 140; errors: 0

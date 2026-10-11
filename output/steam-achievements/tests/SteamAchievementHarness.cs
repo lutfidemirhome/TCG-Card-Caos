@@ -51,7 +51,7 @@ static class Harness {
  static void Dispose(object p)=>Call(p,"OnDestroy");
  static void Main(){
   var expected=new[]{2,3,4,5,6,7,8,9,10,11,12,14,16,18,21,24,27,31,35,39,44,49,55,61,68,75,83,91,100,109,119,129,140,152,165,179,194,214,239,269,309,359,409,459,509};
-  Check(SteamSkillAchievements.Count==45,"45 upgrade milestones; no extra 13/15/17 achievements");
+  Check(SteamSkillAchievements.Count==46 && SteamSkillAchievements.MilestoneCount==45,"45 milestones plus completion; no extra 13/15/17 achievements");
   for(int i=0;i<expected.Length;i++){Check(SteamSkillAchievements.RequiredRows(i)==expected[i],"goal "+i);Check(SteamSkillAchievements.ApiName(i)=="SKILL_ROWS_"+expected[i].ToString("D3"),"API "+i);}
   foreach(int completed in new[]{12,13,14,15,16,17,18,509}){
    var boundary=Fresh();Tick(boundary,0);SteamSkillAchievements.NotifyProgress(completed);Tick(boundary,2);
@@ -76,17 +76,23 @@ static class Harness {
   p=Fresh();Tick(p,0);SteamSkillAchievements.NotifyProgress(7);Call(p,"OnApplicationQuit");Dispose(p);p=Fresh(false);Tick(p,0);Tick(p,2);Check(Steamworks.SteamUserStats.Set.Count==6,"pending earned progress survives restart");Dispose(p);
   p=Fresh();Tick(p,0);SteamSkillAchievements.NotifyProgress(2);Steamworks.SteamAPI.ThrowPump=true;Tick(p,2);var pumps=Steamworks.SteamAPI.Pumps;Tick(p,10);Check(Steamworks.SteamAPI.Pumps==pumps,"exception pump backoff");Dispose(p);
   p=Fresh();UnityEngine.Debug.Logs.Clear();Tick(p,0);
-#if TCG_STEAM_TEST
-  Check(Steamworks.SteamUserStats.Reads==2 && Steamworks.SteamUserStats.Set.Count==0 && Steamworks.SteamUserStats.Stores==0,"startup diagnostics only read, never unlock");
-  Check(UnityEngine.Debug.Logs.Any(s=>s.Contains("STARTUP_STATE SKILL_ROWS_002 available=True unlocked=False")),"startup reports locked state before any writes");
-  SteamSkillAchievements.NotifyProgress(2);Tick(p,2);
-  Check(!UnityEngine.Debug.Logs.Any(s=>s.Contains("STEAM_CONFIRMED")),"queuing and StoreStats do not claim acknowledgement");
-  Call(p,"OnAchievementStored",new Steamworks.UserAchievementStored_t{m_nGameID=5125130,m_rgchAchievementName="SKILL_ROWS_002"});
-  Check(UnityEngine.Debug.Logs.Any(s=>s.Contains("STEAM_CONFIRMED SKILL_ROWS_002")),"only per-achievement acknowledgement reports confirmed");
-#else
-  Check(Steamworks.SteamUserStats.Reads==0 && UnityEngine.Debug.Logs.Count==0,"normal build has no diagnostic API reads or log calls");
-#endif
+  Check(Steamworks.SteamUserStats.Reads==0 && UnityEngine.Debug.Logs.Count==0,"release has no test diagnostics or extra API reads");
   Dispose(p);
+  p=Fresh();Tick(p,0);SteamSkillAchievements.NotifyProgress(509);Tick(p,2);
+  Check(!Steamworks.SteamUserStats.Set.Contains("SHOP_COMPLETE"),"509 tasks alone do not complete the shop");Dispose(p);
+  p=Fresh();Tick(p,0);int completionEvents=0;SteamSkillAchievements.CompletionEarned+=()=>completionEvents++;
+  SteamSkillAchievements.NotifyGameCompleted();SteamSkillAchievements.NotifyGameCompleted();Tick(p,2);
+  Check(completionEvents==1 && Steamworks.SteamUserStats.Set.SequenceEqual(new[]{"SHOP_COMPLETE"}),"completion emits once, independently of upgrades");
+  Check(UnityEngine.PlayerPrefs.GetInt("SteamShopComplete.5125130.10",0)==1,"completion journal is per account");
+  Call(p,"OnApplicationQuit");Dispose(p);p=Fresh(false);Tick(p,0);Tick(p,2);
+  Check(Steamworks.SteamUserStats.Set.Contains("SHOP_COMPLETE"),"pending completion survives restart");Dispose(p);
+  p=Fresh();Tick(p,0);GameBuildVariant.IsDemo=true;SteamSkillAchievements.NotifyGameCompleted();Tick(p,2);
+  Check(!Steamworks.SteamUserStats.Set.Contains("SHOP_COMPLETE"),"demo cannot earn full game ending");GameBuildVariant.IsDemo=false;Dispose(p);
+  p=Fresh();Steamworks.SteamAPI.Available=false;SteamSkillAchievements.NotifyGameCompleted();Tick(p,0);
+  Steamworks.SteamAPI.Available=true;Tick(p,30);Tick(p,32);
+  Check(Steamworks.SteamUserStats.Set.Contains("SHOP_COMPLETE"),"completion earned offline catches up");Dispose(p);
+  p=Fresh();Tick(p,0);Steamworks.SteamUser.User=20;SteamSkillAchievements.NotifyGameCompleted();Tick(p,2);
+  Check(Steamworks.SteamUserStats.Set.Count==0 && UnityEngine.PlayerPrefs.GetInt("SteamShopComplete.5125130.10",0)==0,"completion does not leak after account switch");Dispose(p);
   Console.WriteLine("PASS: "+checks+" checks; actual catalogue, bridge and provider sources; fake SDK only; no real account changes.");
  }
 }

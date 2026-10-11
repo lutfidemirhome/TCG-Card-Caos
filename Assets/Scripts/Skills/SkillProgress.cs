@@ -27,95 +27,22 @@ public static class SkillProgress
     static readonly float[] Cooldowns = new float[SkillCatalog.Count];
     static readonly float[] Active = new float[SkillCatalog.Count];
     static SkillAutoshelfContext _autoshelfContext;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    // Temporary P-key preview. Real progress and pending effects remain saveable unchanged.
-    static bool _testSkillsEnabled;
-    static int _testPoints;
-    static readonly int[] TestLevels = new int[SkillCatalog.Count];
-    static readonly float[] TestCooldowns = new float[SkillCatalog.Count];
-    static readonly float[] TestActive = new float[SkillCatalog.Count];
-    static SkillAutoshelfContext _testAutoshelfContext;
-
-    public static void EnableSkillPointsForTesting()
-    {
-        if (!Ready) return;
-        _testSkillsEnabled = true;
-        _testPoints = 100;
-        Array.Copy(Levels, TestLevels, Levels.Length);
-        Array.Clear(TestCooldowns, 0, TestCooldowns.Length);
-        Array.Clear(TestActive, 0, TestActive.Length);
-        _testAutoshelfContext = null;
-        Revision++;
-    }
-#endif
-    static bool IsSkillTestMode
-    {
-        get
-        {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            return _testSkillsEnabled;
-#else
-            return false;
-#endif
-        }
-    }
-    static float[] CurrentCooldowns
-    {
-        get
-        {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (_testSkillsEnabled) return TestCooldowns;
-#endif
-            return Cooldowns;
-        }
-    }
-    static float[] CurrentActive
-    {
-        get
-        {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (_testSkillsEnabled) return TestActive;
-#endif
-            return Active;
-        }
-    }
     public static bool Ready { get; private set; }
-    public static SkillAutoshelfContext AutoshelfContext
-    {
-        get
-        {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (_testSkillsEnabled) return _testAutoshelfContext;
-#endif
-            return _autoshelfContext;
-        }
-    }
+    public static SkillAutoshelfContext AutoshelfContext => _autoshelfContext;
 
-    public static void SetAutoshelfContext(SkillAutoshelfContext context)
-    {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (_testSkillsEnabled) { _testAutoshelfContext = context; return; }
-#endif
-        _autoshelfContext = context;
-    }
+    public static void SetAutoshelfContext(SkillAutoshelfContext context) => _autoshelfContext = context;
     public static int Revision { get; private set; }
     public static int CompletedRows => Completed.Count;
     public static int Level(int skill)
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (_testSkillsEnabled) return TestLevels[skill];
-#endif
         return Levels[skill];
     }
-    public static float Cooldown(int skill) => CurrentCooldowns[skill];
-    public static float ActiveTime(int skill) => CurrentActive[skill];
+    public static float Cooldown(int skill) => Cooldowns[skill];
+    public static float ActiveTime(int skill) => Active[skill];
     public static int Points
     {
         get
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (_testSkillsEnabled) return _testPoints;
-#endif
             int earned = 0, spent = 0;
             foreach (int threshold in SkillCatalog.Milestones) if (Completed.Count >= threshold) earned++;
             foreach (int level in Levels) spent += level;
@@ -133,14 +60,6 @@ public static class SkillProgress
     {
         Ready = false; Completed.Clear(); CompletedSeries.Clear(); Rows.Clear(); PsaKeys.Clear();
         _autoshelfContext = null;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        _testSkillsEnabled = false;
-        _testPoints = 0;
-        Array.Clear(TestLevels, 0, TestLevels.Length);
-        _testAutoshelfContext = null;
-        Array.Clear(TestCooldowns, 0, TestCooldowns.Length);
-        Array.Clear(TestActive, 0, TestActive.Length);
-#endif
         Array.Clear(Levels, 0, Levels.Length); Array.Clear(Cooldowns, 0, Cooldowns.Length); Array.Clear(Active, 0, Active.Length);
         Revision++;
     }
@@ -268,15 +187,6 @@ public static class SkillProgress
     public static bool Upgrade(int skill)
     {
         if (!Ready || skill < 0 || skill >= SkillCatalog.Count || Points < 1 || Level(skill) >= SkillCatalog.MaxLevel(skill)) return false;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (_testSkillsEnabled)
-        {
-            TestLevels[skill]++;
-            _testPoints--;
-            Revision++;
-            return true;
-        }
-#endif
         Levels[skill]++;
         Revision++;
         GameSaveDirtyTracker.MarkDirty();
@@ -287,18 +197,18 @@ public static class SkillProgress
         && Level(skill) > 0 && Cooldown(skill) <= 0f && ActiveTime(skill) <= 0f;
     public static void Used(int skill, float effectDurationOverride = -1f)
     {
-        float[] cooldowns = CurrentCooldowns, active = CurrentActive;
+        float[] cooldowns = Cooldowns, active = Active;
         cooldowns[skill] = SkillCatalog.Cooldown(skill, Level(skill));
         active[skill] = skill >= 2 ? SkillCatalog.Effect(skill, Level(skill)) : 0f;
         if (skill == (int)CardSkill.Assemble && effectDurationOverride >= 0f)
             active[skill] = SafeTime(effectDurationOverride, MaxPickupEffectSeconds);
         Revision++;
-        if (!IsSkillTestMode) GameSaveDirtyTracker.MarkDirty();
+        GameSaveDirtyTracker.MarkDirty();
     }
     public static void Tick(float delta)
     {
         if (!Ready || delta <= 0f) return;
-        float[] cooldowns = CurrentCooldowns, active = CurrentActive;
+        float[] cooldowns = Cooldowns, active = Active;
         bool changedSecond = false;
         for (int i = 0; i < SkillCatalog.Count; i++)
         {
@@ -309,7 +219,7 @@ public static class SkillProgress
             cooldowns[i] = Mathf.Max(0f, cooldowns[i] - cooldownDelta);
             changedSecond |= cooldownBefore != Mathf.CeilToInt(cooldowns[i]) || activeBefore != Mathf.CeilToInt(active[i]);
         }
-        if (changedSecond && !IsSkillTestMode) GameSaveDirtyTracker.MarkDirty();
+        if (changedSecond) GameSaveDirtyTracker.MarkDirty();
     }
     public static SkillSaveRecord Capture() => Ready ? new SkillSaveRecord {
         version = SaveVersion, levels = (int[])Levels.Clone(), completedRows = ToSortedArray(Completed),

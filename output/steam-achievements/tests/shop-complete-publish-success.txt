@@ -1,0 +1,17 @@
+Window: "Yayınlanıyor: TCG Card Chaos (5125130)", App: Safari.
+0 standart pencere Yayınlanıyor: TCG Card Chaos (5125130), ID: SafariWindow?UsingUnifiedBar=false&IsSecure=false&UUID=557884A3-8AF6-4FB6-8A2E-3E80832B53B7, Secondary Actions: Raise
+				5 HTML içerik Description: Yayınlanıyor: TCG Card Chaos (5125130), URL: partner.steamgames.com/apps/publishing/5125130
+						29 link TCG Card Chaos, Value: partner.steamgames.com/apps/landing/5125130
+					31 metin TCG Card Chaos (5125130)
+						34 link Yayınla, Value: partner.steamgames.com/apps/publishing/5125130
+					44 link Anahtarları Yönet, Value: partner.steamgames.com/apps/packages/5125130
+					46 link Yayınla, Value: partner.steamgames.com/apps/publishing/5125130
+					49 link Tüm Beklemedeki Değişiklikleri & Geçmişi Görüntüle, Value: partner.steamgames.com/apps/history/5125130
+						56 text Publish to steam OK Publishing successful!
+			107 metin alanı (settable) Description: güvenli bir adres gösteren akıllı arama alanı, Value: https://partner.steamgames.com/apps/publishing/5125130, ID: WEB_BROWSER_ADDRESS_AND_SEARCH_FIELD
+		121 sekme Wishlist Actions - TCG Card Chaos (5125130), Value: off, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+		124 sekme Store: TCG Card Chaos ( 5125130 ), Value: off, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+		130 sekme TCG Card Chaos (5125130), Value: off, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+		133 sekme Yayınlanıyor: TCG Card Chaos (5125130), Value: on, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+		140 menü düğmesi Game: TCG Ca…s (5125130), Help: https://partner.steampowered.com/app/details/5125130/?dateStart=2026-08-26&dateEnd=2026-09-06, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+The focused UI element is 5 HTML içerik Description: Yayınlanıyor: TCG Card Chaos (5125130), URL: partner.steamgames.com/apps/publishing/5125130

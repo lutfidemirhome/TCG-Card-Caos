@@ -7,7 +7,7 @@ public sealed class SkillPanelView : MonoBehaviour
 {
     public static SkillPanelView Instance { get; private set; }
     static int _closedFrame = -1;
-    public static bool ConsumesPauseInput => (Instance != null && Instance.IsOpen) || _closedFrame == Time.frameCount || MinorSkillUnlockView.ConsumesInput;
+    public static bool ConsumesPauseInput => (Instance != null && Instance.IsOpen) || _closedFrame == Time.frameCount || MinorSkillUnlockView.ConsumesInput || GameCompleteView.ConsumesInput;
     public bool IsOpen => _panel != null && _panel.activeSelf;
     GameObject _panel, _task, _bar;
     TMP_Text _title, _points, _instructions, _name, _description, _stats, _next, _taskTitle, _taskText;

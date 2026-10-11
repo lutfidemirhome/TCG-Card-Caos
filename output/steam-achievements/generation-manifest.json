@@ -334,5 +334,13 @@
     "subject": "a grand gold collector trophy with wide laurel wings, crown and three cream diamond cards",
     "prompt": "Use case: precise-object-edit. Make one achievement icon variation of this game badge. Keep EXACTLY the reference's navy blue square background, thick gold rounded-square border, golden lower flourishes, ivory-and-gold large number typography and clean polished 3D game illustration style. Replace the interior upper shelf-and-three-cards picture with: a grand gold collector trophy with wide laurel wings, crown and three cream diamond cards. Keep the new subject within the SAME upper area, readable at small sizes, no clutter. Replace the lower number with exact \"509\". No other numbers, text or logos. Same square opaque canvas.",
     "path": "/Users/lutfidemir/Documents/GitHub/TCG-Card-Caos/output/steam-achievements/source/SKILL_ROWS_509.png"
+  },
+  {
+    "api": "SHOP_COMPLETE",
+    "subject": "completed trading card shop cabinet, crown and ivory checkmark",
+    "prompt": "Use case: precise-object-edit. Create one variation of this existing Steam achievement badge for the final achievement Shop Complete. Keep EXACTLY the same dark navy square background, thick rounded beveled gold border, ivory/gold polished casual 3D illustration style. Replace the central trophy with a beautifully tidy small trading card shop cabinet full of neatly aligned ivory diamond cards, with a small golden crown above. Replace the large number 509 with a large ivory checkmark edged in gold in the lower third. No numbers, no lettering, no logos. Symmetric composition, clean readable at 64px, opaque square. Reference is the existing game's badge; do not change the visual family.",
+    "path": "output/steam-achievements/source/SHOP_COMPLETE.png",
+    "reference": "output/steam-achievements/source/SKILL_ROWS_509.png",
+    "export": "output/steam-achievements/icons/SHOP_COMPLETE.jpg"
   }
 ]

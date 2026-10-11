@@ -1,0 +1,15 @@
+PASS Player and runtime version 1.0.0
+PASS Full game 5125130
+PASS Standalone Steam enabled; demo/test symbols absent
+PASS Development, debugger and profiler disabled
+PASS Boot, Menu, Main scene order
+PASS Windows x64 build support installed
+PASS Windows Mono backend available for build from this Mac
+PASS 46 achievements including Shop Complete
+PASS Ending popup resource present
+PASS Steam x64 native plugin included
+PASS Menu v1.0.0, no stale version override
+PASS 197 scene/prefab dependencies; 21615 script references resolved
+PASS No local test prefab, fill helper or App ID text in build dependencies
+PASS Skill panel upgrades, cooldowns and saves validation passed
+Checks: 140; errors: 0

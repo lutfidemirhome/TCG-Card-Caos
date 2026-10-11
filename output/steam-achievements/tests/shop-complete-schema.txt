@@ -1,0 +1,18 @@
+Full game App ID 5125130
+67 text Başarımların sayısı:  46
+68 metin English tamamen yerelleştirilmiş.
+69 metin German tamamen yerelleştirilmiş.
+70 metin French tamamen yerelleştirilmiş.
+71 metin Italian tamamen yerelleştirilmiş.
+72 metin Korean tamamen yerelleştirilmiş.
+73 metin Spanish - Spain tamamen yerelleştirilmiş.
+74 metin Simplified Chinese tamamen yerelleştirilmiş.
+75 metin Traditional Chinese tamamen yerelleştirilmiş.
+76 metin Russian tamamen yerelleştirilmiş.
+77 metin Japanese tamamen yerelleştirilmiş.
+78 metin Portuguese - Portugal tamamen yerelleştirilmiş.
+79 metin Turkish tamamen yerelleştirilmiş.
+80 metin Portuguese-Brazil tamamen yerelleştirilmiş.
+451 hücre (selectable) SHOP_COMPLETE
+452 hücre (selectable) Shop Complete
+Place every card in its correct spot and finish tidying the entire shop.

@@ -1,0 +1,7 @@
+play=True paused=True ready=True loading=False
+progress=5480/5480 cabinets=107/107 popup=True prefab=True
+testActive=True ready=True canSave=False hand=0 locked=False
+last=Card_steel_uncommon_cogtail_1 lastHeld=False slot=Cabinets_SteelUncommon row=4 number=1
+welcome=False tutorial=False cursor=None
+cardPos=(-0.01, 0.40, -13.91) playerPos=(2.22, 0.14, -12.12) viewport=(-7.04, -12.69, 0.15)
+rayFound=False rayHitLast=False occluded=False active=True canInstance=False actualAimLast=False

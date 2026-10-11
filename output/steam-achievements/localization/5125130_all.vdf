@@ -94,6 +94,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Complete 459 shelf tasks. Each completed normal-card series or TCG cabinet counts once."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Shelf Collector 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Complete 509 shelf tasks. Each completed normal-card series or TCG cabinet counts once."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Shop Complete"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Place every card in its correct spot and finish tidying the entire shop."
 		}
 	}
 	"german"
@@ -190,6 +192,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Schließe 459 Regalaufgaben ab. Jede vervollständigte normale Kartenserie und jeder vervollständigte TCG-Schrank zählt nur einmal."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Regalsammler 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Schließe 509 Regalaufgaben ab. Jede vervollständigte normale Kartenserie und jeder vervollständigte TCG-Schrank zählt nur einmal."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Laden aufgeräumt"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Lege jede Karte an den richtigen Platz und räume den gesamten Laden auf."
 		}
 	}
 	"french"
@@ -286,6 +290,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Terminez 459 objectifs de rangement. Chaque série de cartes normales ou meuble TCG complété ne compte qu’une fois."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Collectionneur d’étagères 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Terminez 509 objectifs de rangement. Chaque série de cartes normales ou meuble TCG complété ne compte qu’une fois."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Boutique rangée"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Place chaque carte au bon endroit et termine de ranger toute la boutique."
 		}
 	}
 	"italian"
@@ -382,6 +388,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Completa 459 obiettivi di sistemazione. Ogni serie di carte normali o mobile TCG completato conta una sola volta."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Collezionista di scaffali 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Completa 509 obiettivi di sistemazione. Ogni serie di carte normali o mobile TCG completato conta una sola volta."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Negozio sistemato"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Metti ogni carta al posto giusto e finisci di riordinare tutto il negozio."
 		}
 	}
 	"korean"
@@ -478,6 +486,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"선반 목표를 459개 달성하세요. 완성한 일반 카드 시리즈 또는 TCG 진열장은 각각 한 번만 집계됩니다."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"선반 수집가 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"선반 목표를 509개 달성하세요. 완성한 일반 카드 시리즈 또는 TCG 진열장은 각각 한 번만 집계됩니다."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"매장 정리 완료"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"모든 카드를 올바른 자리에 놓고 매장 전체의 정리를 마치세요."
 		}
 	}
 	"spanish"
@@ -574,6 +584,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Completa 459 objetivos de estanterías. Cada serie de cartas normales o mueble TCG completado cuenta una sola vez."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Coleccionista de estanterías 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Completa 509 objetivos de estanterías. Cada serie de cartas normales o mueble TCG completado cuenta una sola vez."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Tienda ordenada"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Coloca cada carta en su lugar correcto y termina de ordenar toda la tienda."
 		}
 	}
 	"schinese"
@@ -670,6 +682,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"完成459个卡架目标。每套集齐的普通卡系列或填满的TCG卡柜仅计数一次。"
 			"NEW_ACHIEVEMENT_2_15_NAME"	"卡架收藏家 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"完成509个卡架目标。每套集齐的普通卡系列或填满的TCG卡柜仅计数一次。"
+			"NEW_ACHIEVEMENT_2_16_NAME"	"店铺整理完毕"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"将每张卡牌放在正确的位置，完成整间店铺的整理。"
 		}
 	}
 	"tchinese"
@@ -766,6 +780,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"完成459個卡架目標。每套集齊的普通卡系列或填滿的TCG卡櫃僅計數一次。"
 			"NEW_ACHIEVEMENT_2_15_NAME"	"卡架收藏家 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"完成509個卡架目標。每套集齊的普通卡系列或填滿的TCG卡櫃僅計數一次。"
+			"NEW_ACHIEVEMENT_2_16_NAME"	"店鋪整理完畢"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"將每張卡牌放在正確的位置，完成整間店鋪的整理。"
 		}
 	}
 	"russian"
@@ -862,6 +878,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Выполните задания по расстановке карт: 459. Каждая собранная серия обычных карт или заполненный шкаф TCG засчитывается только один раз."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Коллекционер полок 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Выполните задания по расстановке карт: 509. Каждая собранная серия обычных карт или заполненный шкаф TCG засчитывается только один раз."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Магазин приведён в порядок"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Разложите все карты по нужным местам и наведите порядок во всём магазине."
 		}
 	}
 	"japanese"
@@ -958,6 +976,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"棚の目標を459回達成する。完成した通常カードのシリーズ、またはTCGカードの陳列棚は、それぞれ1回だけカウントされる。"
 			"NEW_ACHIEVEMENT_2_15_NAME"	"棚コレクター 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"棚の目標を509回達成する。完成した通常カードのシリーズ、またはTCGカードの陳列棚は、それぞれ1回だけカウントされる。"
+			"NEW_ACHIEVEMENT_2_16_NAME"	"お店の片付け完了"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"すべてのカードを正しい場所に置き、お店全体の片付けを終える。"
 		}
 	}
 	"portuguese"
@@ -1054,6 +1074,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Conclui 459 objetivos de organização. Cada série de cartas normais ou armário TCG concluído conta apenas uma vez."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Colecionador de prateleiras 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Conclui 509 objetivos de organização. Cada série de cartas normais ou armário TCG concluído conta apenas uma vez."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Loja arrumada"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Coloca cada carta no sítio certo e termina de arrumar toda a loja."
 		}
 	}
 	"turkish"
@@ -1150,6 +1172,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"459 raf görevi tamamla. Tamamlanan her normal kart serisi veya TCG dolabı yalnızca bir kez sayılır."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Raf Koleksiyoncusu 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"509 raf görevi tamamla. Tamamlanan her normal kart serisi veya TCG dolabı yalnızca bir kez sayılır."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Dükkân Tamamlandı"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Tüm kartları doğru yerlerine yerleştirerek dükkânın tamamını düzenle."
 		}
 	}
 	"brazilian"
@@ -1246,6 +1270,8 @@
 			"NEW_ACHIEVEMENT_2_14_DESC"	"Conclua 459 objetivos de organização. Cada série de cartas normais ou armário TCG concluído conta apenas uma vez."
 			"NEW_ACHIEVEMENT_2_15_NAME"	"Colecionador de prateleiras 509"
 			"NEW_ACHIEVEMENT_2_15_DESC"	"Conclua 509 objetivos de organização. Cada série de cartas normais ou armário TCG concluído conta apenas uma vez."
+			"NEW_ACHIEVEMENT_2_16_NAME"	"Loja organizada"
+			"NEW_ACHIEVEMENT_2_16_DESC"	"Coloque cada carta no lugar certo e termine de organizar toda a loja."
 		}
 	}
 }

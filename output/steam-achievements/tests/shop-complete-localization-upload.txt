@@ -1,0 +1,2 @@
+Full game App ID 5125130
+6 metin {"success":true,"message":["598 achievements processed.","Localized names: 598","Localized descriptions: 598","Converted from non-localized names: 0","Converted from non-localized descriptions: 0","Names with no localization token: 0","Descriptions with no localization token: 0","Names with no localization for Portuguese-Brazil: 0","Descriptions with no localization for Portuguese-Brazil: 0"]}

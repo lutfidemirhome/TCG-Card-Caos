@@ -52,8 +52,7 @@ public static class SkillPanelBehaviorValidation
             // Resolve every field and record its original contents before changing anything.
             state = new StateSnapshot();
             state.Capture(typeof(SkillProgress), "Levels", "Completed", "Cooldowns", "Active",
-                "<Ready>k__BackingField", "<Revision>k__BackingField", "_testSkillsEnabled",
-                "_testPoints", "TestLevels", "TestCooldowns", "TestActive", "_testAutoshelfContext");
+                "<Ready>k__BackingField", "<Revision>k__BackingField");
             state.Capture(typeof(MinorSkillProgress), "_ownedKeys", "_unlockedSkills", "<Ready>k__BackingField", "Changed", "Unlocked");
             state.Capture(typeof(MinorSkillUnlockView), "<Instance>k__BackingField", "_closedFrame");
             state.Capture(typeof(GameSaveDirtyTracker), "<IsDirty>k__BackingField", "<Revision>k__BackingField");
@@ -103,7 +102,6 @@ public static class SkillPanelBehaviorValidation
             completed.Clear();
             for (int i = 0; i < 3; i++) completed.Add("isolated-preview-row-" + i);
             Set(typeof(SkillProgress), "<Ready>k__BackingField", true);
-            Set(typeof(SkillProgress), "_testSkillsEnabled", false);
             Set(typeof(CardInstancedRenderManager), "<IsGameplayReady>k__BackingField", true);
             Set(typeof(WelcomePopupView), "<IsWaitingForStart>k__BackingField", false);
             Set(typeof(GameSaveManager), "_milestoneQueued", false);
@@ -156,13 +154,15 @@ public static class SkillPanelBehaviorValidation
 
             int pointsBeforeMinor = SkillProgress.Points;
             ulong dirtyBeforeMinor = GameSaveDirtyTracker.Revision;
+            var minorLock = (Sprite)new SerializedObject(view).FindProperty("minorLockedIcon").objectReferenceValue;
+            Check(minorLock != null, "Dedicated minor lock artwork is assigned");
             string[] majorDetails = { "Level", "LevelFrame", "Stats", "Next", "StatsFrame", "StatsRule", "Upgrade" };
             for (int i = 0; i < MinorSkillProgress.Count; i++)
             {
                 At(Body + "MinorSkills/Skill" + i).onClick.Invoke();
                 Check(Text(Body + "Details/Name").text == Localization.Get("minor.locked.name")
                     && Text(Body + "Details/Description").text == Localization.Get("minor.locked.description")
-                    && ImageAt(Body + "Details/IconFrame/Icon").sprite == ImageAt("Hotbar/Skill0/LockIcon").sprite,
+                    && ImageAt(Body + "Details/IconFrame/Icon").sprite == minorLock,
                     "Locked minor " + i + " displays its lock and localized description");
                 foreach (string path in majorDetails)
                     Check(!root.transform.Find(Body + "Details/" + path).gameObject.activeSelf,
@@ -187,8 +187,11 @@ public static class SkillPanelBehaviorValidation
                 "Unlocked minor displays its permanent ability name, description and dedicated icon");
             Check(!upgrade.gameObject.activeSelf && !upgrade.interactable && SkillProgress.Points == pointsBeforeMinor,
                 "Unlocked minor still has no major upgrade control or point cost");
-            Check(root.transform.Find("Hotbar").childCount == SkillCatalog.Count,
-                "Minor abilities do not add slots to the 1–5 hotbar");
+            int majorHotbarSlots = 0;
+            foreach (Transform child in root.transform.Find("Hotbar"))
+                if (child.name.StartsWith("Skill", StringComparison.Ordinal)) majorHotbarSlots++;
+            Check(majorHotbarSlots == SkillCatalog.Count,
+                "Major hotbar retains five slots alongside the separate movement hints");
             At(Body + "Nodes/Skill1").onClick.Invoke();
             foreach (string path in majorDetails)
                 Check(root.transform.Find(Body + "Details/" + path).gameObject.activeSelf,
@@ -225,20 +228,26 @@ public static class SkillPanelBehaviorValidation
             upgrade.OnPointerClick(new PointerEventData(events) { button = PointerEventData.InputButton.Left });
             Check(SkillProgress.Level(0) == SkillCatalog.MaxLevel(0), "A pointer click cannot exceed maximum level");
 
-            string savedBeforeTest = JsonUtility.ToJson(SkillProgress.Capture());
-            dirtyRevision = GameSaveDirtyTracker.Revision;
-            SkillProgress.EnableSkillPointsForTesting();
-            Check(SkillProgress.Points == 100, "Manual skill testing starts with 100 points");
-            int testLevel = SkillProgress.Level(1);
-            Check(SkillProgress.Upgrade(1) && SkillProgress.Level(1) == testLevel + 1 && SkillProgress.Points == 99,
-                "Manual testing upgrades the chosen skill and spends one test point");
-            Check(JsonUtility.ToJson(SkillProgress.Capture()) == savedBeforeTest
-                && GameSaveDirtyTracker.Revision == dirtyRevision,
-                "Test upgrades leave saved progress and dirty tracking unchanged");
-            Check(!SkillProgress.Upgrade(0), "Test upgrades respect the maximum level");
-            SkillProgress.EnableSkillPointsForTesting();
-            Check(SkillProgress.Points == 100 && SkillProgress.Level(1) == testLevel,
-                "Repeated test shortcut restores saved levels and replenishes 100 points");
+            int sort = (int)CardSkill.Sort;
+            levels[sort] = 1;
+            SkillProgress.Used(sort);
+            float sortCooldown = SkillProgress.Cooldown(sort);
+            SkillProgress.Tick(1f);
+            Check(Mathf.Approximately(SkillProgress.Cooldown(sort), sortCooldown - 1f)
+                && SkillProgress.ActiveTime(sort) == 0f,
+                "Sort cooldown advances immediately using real progress");
+            Check(Mathf.Approximately(SkillProgress.Capture().cooldowns[sort], SkillProgress.Cooldown(sort)),
+                "Cooldown changes remain present in the real save record");
+            int autoshelf = (int)CardSkill.Autoshelving;
+            levels[autoshelf] = 1;
+            SkillProgress.Used(autoshelf);
+            float pendingCooldown = SkillProgress.Cooldown(autoshelf), activeTime = SkillProgress.ActiveTime(autoshelf);
+            SkillProgress.Tick(activeTime * .5f);
+            Check(Mathf.Approximately(SkillProgress.Cooldown(autoshelf), pendingCooldown)
+                && Mathf.Approximately(SkillProgress.ActiveTime(autoshelf), activeTime * .5f),
+                "Timed skills retain their pending cooldown while active");
+            Check(Mathf.Approximately(SkillProgress.Capture().activeTimes[autoshelf], SkillProgress.ActiveTime(autoshelf)),
+                "Active effect time remains present in the real save record");
 
             At("Panel/Close").onClick.Invoke();
             Check(!view.IsOpen && !GamePause.IsPaused && Time.timeScale == 1f && !AudioListener.pause,

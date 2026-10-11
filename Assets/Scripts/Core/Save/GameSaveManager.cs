@@ -146,15 +146,6 @@ public sealed class GameSaveManager : MonoBehaviour
             if (GameSaveDirtyTracker.IsDirty)
                 RequestAutosave(SaveRequestKind.Autosave);
         }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (WasSaveDebugPressed(KeyCode.F6, KeyCode.Alpha6))
-            RequestAutosave(SaveRequestKind.Autosave);
-        if (WasSaveDebugPressed(KeyCode.F7, KeyCode.Alpha7))
-            LoadLatestFromGameplay();
-        if (WasSaveDebugPressed(KeyCode.F8, KeyCode.Alpha8))
-            Application.OpenURL("file://" + SaveFileIO.RootFolder);
-#endif
     }
 
     void OnApplicationPause(bool paused)
@@ -166,15 +157,6 @@ public sealed class GameSaveManager : MonoBehaviour
     void OnApplicationQuit()
     {
         TryExitSave();
-    }
-
-    static bool WasSaveDebugPressed(KeyCode functionKey, KeyCode numberKey)
-    {
-        if (Input.GetKeyDown(functionKey))
-            return true;
-
-        return (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-               && Input.GetKeyDown(numberKey);
     }
 
     public void BeginGameplaySession(bool fromSave, double loadedPlayTime)
@@ -590,18 +572,6 @@ public sealed class GameSaveManager : MonoBehaviour
             _activeThumbnailSlot = null;
             _thumbnailRoutine = null;
         }
-    }
-
-    void LoadLatestFromGameplay()
-    {
-        SaveSlotMetadata latest = GetLatestValidSave();
-        if (latest == null)
-        {
-            Debug.LogWarning("[Save] No valid save to load.");
-            return;
-        }
-
-        GameSceneLoader.LoadSaveSlot(latest.slotId);
     }
 
     public static bool HasAnyCompatibleSave()

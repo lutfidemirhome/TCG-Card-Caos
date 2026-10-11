@@ -24,8 +24,10 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
     bool initialized, waitingForStore, warningShown, preferencesDirty;
     float nextAttempt, nextStoreAllowed, storeStarted, nextPreferencesFlush, nextPumpAllowed;
     int highestRows;
+    bool gameCompleted;
     ulong steamUser;
     string progressKey;
+    string completionKey;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetSession() => instance = null;
@@ -33,7 +35,7 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Bootstrap()
     {
-        // Unity preview, including P testing, never changes a developer's real Steam account.
+        // Unity preview never changes a developer's real Steam account.
         if (Application.isEditor || !SteamSkillAchievements.IsAvailableForBuild || instance) return;
         var owner = new GameObject("Steam Skill Achievements");
         DontDestroyOnLoad(owner);
@@ -48,7 +50,25 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
             return;
         }
         highestRows = SteamSkillAchievements.HighestCompletedRows;
+        gameCompleted = SteamSkillAchievements.GameCompleted;
         SteamSkillAchievements.ProgressChanged += OnProgress;
+        SteamSkillAchievements.CompletionEarned += OnCompletion;
+    }
+
+    void OnCompletion()
+    {
+        try
+        {
+            if (initialized && !AccountMatches()) return;
+            gameCompleted = true;
+            RememberProgress();
+            nextAttempt = Mathf.Max(Time.realtimeSinceStartup + 2f, nextStoreAllowed);
+        }
+        catch (Exception exception)
+        {
+            nextAttempt = nextStoreAllowed = Time.realtimeSinceStartup + FailureRetrySeconds;
+            WarnOnce("Steam completion sync will retry: " + exception.Message);
+        }
     }
 
     void OnProgress(int rows)
@@ -57,7 +77,6 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
         {
             if (initialized && !AccountMatches()) return;
             highestRows = Mathf.Max(highestRows, rows);
-            TestTrace("EARNED_PROGRESS total=" + highestRows);
             RememberProgress();
             // Batch rows completed together; a failed upload retains its retry backoff.
             nextAttempt = Mathf.Max(Time.realtimeSinceStartup + 2f, nextStoreAllowed);
@@ -121,7 +140,6 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
     {
         if (!SteamAPI.Init())
         {
-            TestTrace("INIT_WAIT: Open Steam with an account that owns the full game; retry in 30 seconds.");
             return; // Steam may start later; continue the game without it.
         }
         initialized = true;
@@ -140,14 +158,14 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
             initialized = false;
             return;
         }
-        TestTrace("CONNECTED app=" + SteamFullGameStore.FullGameAppId + " full-game Steam session ready.");
-        TestReadInitialAchievements();
 
         // This is an earned-progress journal, NOT a claim that Steam has stored anything.
         // Keeping it per account prevents another Steam user's pending unlocks leaking across accounts.
         progressKey = "SteamSkillRows." + SteamFullGameStore.FullGameAppId + "." + steamUser;
+        completionKey = "SteamShopComplete." + SteamFullGameStore.FullGameAppId + "." + steamUser;
+        gameCompleted |= PlayerPrefs.GetInt(completionKey, 0) != 0;
         highestRows = Mathf.Clamp(Mathf.Max(highestRows, PlayerPrefs.GetInt(progressKey, 0)),
-            0, SteamSkillAchievements.RequiredRows(SteamSkillAchievements.Count - 1));
+            0, SteamSkillAchievements.RequiredRows(SteamSkillAchievements.MilestoneCount - 1));
         RememberProgress();
         statsStored = Callback<UserStatsStored_t>.Create(OnStatsStored);
         achievementStored = Callback<UserAchievementStored_t>.Create(OnAchievementStored);
@@ -163,7 +181,7 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
         bool haveChanges = false;
         for (int i = 0; i < SteamSkillAchievements.Count; i++)
         {
-            if (SteamSkillAchievements.RequiredRows(i) > highestRows || confirmed[i]) continue;
+            if (!SteamSkillAchievements.IsEarned(i, highestRows, gameCompleted) || confirmed[i]) continue;
             string id = SteamSkillAchievements.ApiName(i);
             if (!SteamUserStats.GetAchievement(id, out bool achieved))
             {
@@ -174,11 +192,9 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
             if (achieved && !locallySet[i])
             {
                 confirmed[i] = true;
-                TestTrace("ALREADY_UNLOCKED " + id + " read from Steam before setting it this session.");
                 continue;
             }
             if (!SteamUserStats.SetAchievement(id)) continue;
-            TestTrace("QUEUED " + id + " (not yet confirmed).");
             locallySet[i] = true;
             haveChanges = true;
         }
@@ -186,12 +202,10 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
         float now = Time.realtimeSinceStartup;
         if (!SteamUserStats.StoreStats())
         {
-            TestTrace("STORE_REJECTED: pending achievements retained; retry in 120 seconds.");
             nextAttempt = nextStoreAllowed = now + FailureRetrySeconds;
             return;
         }
         waitingForStore = true;
-        TestTrace("STORE_SENT: waiting for Steam acknowledgement.");
         storeStarted = now;
         nextStoreAllowed = now + MinimumStoreInterval;
     }
@@ -200,7 +214,6 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
     {
         if (result.m_nGameID != SteamFullGameStore.FullGameAppId || !AccountMatches()) return;
         waitingForStore = false;
-        TestTrace("STORE_RESULT " + result.m_eResult);
         if (result.m_eResult != EResult.k_EResultOK)
         {
             // Keep locallySet flags: GetAchievement(true) after a failed store is not proof of upload.
@@ -221,41 +234,20 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
             if (!string.Equals(result.m_rgchAchievementName, SteamSkillAchievements.ApiName(i), StringComparison.Ordinal)) continue;
             confirmed[i] = true;
             locallySet[i] = false;
-            TestTrace("STEAM_CONFIRMED " + result.m_rgchAchievementName);
             break;
         }
     }
 
     bool AccountMatches() => initialized && SteamUser.GetSteamID().m_SteamID == steamUser;
 
-    // Only the dedicated test build defines this symbol. Release builds omit both
-    // calls and argument evaluation; no added logging or API reads in normal play.
-    [System.Diagnostics.Conditional("TCG_STEAM_TEST")]
-    static void TestTrace(string message)
-    {
-#if TCG_STEAM_TEST
-        Debug.Log("[Steam Test] " + message);
-#endif
-    }
-
-    [System.Diagnostics.Conditional("TCG_STEAM_TEST")]
-    static void TestReadInitialAchievements()
-    {
-#if TCG_STEAM_TEST
-        // Read before any SetAchievement calls so a restart can verify persistence.
-        for (int i = 0; i < 2; i++)
-        {
-            string id = SteamSkillAchievements.ApiName(i);
-            bool available = SteamUserStats.GetAchievement(id, out bool unlocked);
-            TestTrace("STARTUP_STATE " + id + " available=" + available + " unlocked=" + unlocked);
-        }
-#endif
-    }
-
     void RememberProgress()
     {
-        if (string.IsNullOrEmpty(progressKey) || PlayerPrefs.GetInt(progressKey, 0) >= highestRows) return;
-        PlayerPrefs.SetInt(progressKey, highestRows);
+        if (string.IsNullOrEmpty(progressKey)) return;
+        bool rowsChanged = PlayerPrefs.GetInt(progressKey, 0) < highestRows;
+        bool completionChanged = gameCompleted && PlayerPrefs.GetInt(completionKey, 0) == 0;
+        if (!rowsChanged && !completionChanged) return;
+        if (rowsChanged) PlayerPrefs.SetInt(progressKey, highestRows);
+        if (completionChanged) PlayerPrefs.SetInt(completionKey, 1);
         preferencesDirty = true;
         nextPreferencesFlush = Time.realtimeSinceStartup + 15f;
     }
@@ -273,6 +265,7 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
     void OnDestroy()
     {
         SteamSkillAchievements.ProgressChanged -= OnProgress;
+        SteamSkillAchievements.CompletionEarned -= OnCompletion;
         FlushPreferences();
         statsStored?.Dispose();
         achievementStored?.Dispose();

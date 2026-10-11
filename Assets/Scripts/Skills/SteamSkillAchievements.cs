@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// SDK-independent achievement catalogue. Only real, completed shelf tasks feed this bridge;
-/// buying a skill or enabling the temporary skill preview does not unlock achievements.
+/// buying a skill does not unlock achievements.
 /// </summary>
 public static class SteamSkillAchievements
 {
@@ -12,12 +12,17 @@ public static class SteamSkillAchievements
     // Copy the table once so the two catalogues cannot gain extra in-between goals.
     static readonly int[] Goals = (int[])SkillCatalog.Milestones.Clone();
     static readonly string[] Names = BuildNames();
-    public static int Count => Goals.Length;
+    public const string CompletionApiName = "SHOP_COMPLETE";
+    public static int MilestoneCount => Goals.Length;
+    public static int Count => Goals.Length + 1;
     public static int HighestCompletedRows { get; private set; }
+    public static bool GameCompleted { get; private set; }
     public static event Action<int> ProgressChanged;
+    public static event Action CompletionEarned;
 
-    public static int RequiredRows(int index) => Goals[index];
-    public static string ApiName(int index) => Names[index];
+    public static int RequiredRows(int index) => index == Goals.Length ? int.MaxValue : Goals[index];
+    public static string ApiName(int index) => index == Goals.Length ? CompletionApiName : Names[index];
+    public static bool IsEarned(int index, int rows, bool completed) => index == Goals.Length ? completed : rows >= Goals[index];
     public static bool IsAvailableForBuild => !GameBuildVariant.IsDemo;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -25,6 +30,15 @@ public static class SteamSkillAchievements
     {
         HighestCompletedRows = 0;
         ProgressChanged = null;
+        GameCompleted = false;
+        CompletionEarned = null;
+    }
+
+    public static void NotifyGameCompleted()
+    {
+        if (!IsAvailableForBuild || GameCompleted) return;
+        GameCompleted = true;
+        CompletionEarned?.Invoke();
     }
 
     /// <summary>Call after restoring or increasing the real completed-task count.</summary>

@@ -1,0 +1,206 @@
+Window: "Yayınlanıyor: TCG Card Chaos (5125130)", App: Safari.
+0 standart pencere Yayınlanıyor: TCG Card Chaos (5125130), ID: SafariWindow?UsingUnifiedBar=false&IsSecure=false&UUID=557884A3-8AF6-4FB6-8A2E-3E80832B53B7, Secondary Actions: Raise
+	1 ayırma grubu
+		2 ayırıcı (disabled, settable, float) -1
+		3 sekme grubu
+			4 sarma alanı
+				5 HTML içerik Description: Yayınlanıyor: TCG Card Chaos (5125130), URL: partner.steamgames.com/apps/publishing/5125130
+					6 container
+						7 link Steamworks, Value: partner.steamgames.com/
+						8 içerik listesi
+							9 düğme (collapsed) Belgeler, Secondary Actions: Expand
+							10 düğme (collapsed) Kaynaklar, Secondary Actions: Expand
+							11 düğme (collapsed) Haberler ve Güncellemeler, Secondary Actions: Expand
+							12 link Destek, Value: help.steampowered.com/wizard/HelpWithPublishing
+						13 metin Ezgi Kilic Demir
+						14 düğme (collapsed) oddforgegames, Secondary Actions: Expand
+						15 link steamcommunity.com/id/oddforgegames
+					16 container
+						17 içerik listesi
+							18 link Pano, Value: partner.steamgames.com/dashboard
+							19 düğme (collapsed) Uygulamalar ve Demetler, Secondary Actions: Expand
+							20 düğme (collapsed) Araçlar, Secondary Actions: Expand
+							21 düğme (collapsed) Kullanıcılar ve İzinler, Secondary Actions: Expand
+							22 link Finansal Bilgiler, Value: partner.steampowered.com/
+						23 metin alanı (settable) Uygulama Adı/ID ile Bul
+					24 container
+						25 link Steamworks, Value: partner.steamgames.com/
+						26 metin  >
+						27 link Uygulama Yöneticisi, Value: partner.steamgames.com/apps/
+						28 metin  >
+						29 link TCG Card Chaos, Value: partner.steamgames.com/apps/landing/5125130
+					30 metin Uygulama Veri Yöneticisi:
+					31 metin TCG Card Chaos (5125130)
+					32 container
+						33 metin Bu uygulamada yayınlanmamış değişiklikler var. Bu değişiklikleri göndermek için '
+						34 link Yayınla, Value: partner.steamgames.com/apps/publishing/5125130
+						35 metin ' sekmesindeki yayınlama araçlarını kullanmanız gerekmektedir.
+					36 açılır düğme
+
+					37 metin Uygulama
+					38 metin SteamPipe
+					39 metin Kurulum
+					40 metin Güvenlik
+					41 metin İstatistikler ve Başarımlar
+					42 metin Topluluk
+					43 metin Atölye
+					44 link Anahtarları Yönet, Value: partner.steamgames.com/apps/packages/5125130
+					45 metin Çeşitli
+					46 link Yayınla, Value: partner.steamgames.com/apps/publishing/5125130
+					47 metin Değişiklikleri Yayınla
+					48 metin Bu siteyi oluşturmak için kullandığınız tüm üstverileri yayınlamak için bu sayfayı kullanın. Oyununuzun depo yapılandırmasını, yeni derlemelerini ya da eklediğiniz yeni başarımları test etmek için bu işlemi gerçekleştirmelisiniz. Eğer oyununuz henüz oynanabilir olarak ayarlanmamışsa bu işlem oyununuzu yayınlamayacaktır, basitçe yaptığınız yapılandırma değişimlerini yayınlayacaktır.
+					49 link Tüm Beklemedeki Değişiklikleri & Geçmişi Görüntüle, Value: partner.steamgames.com/apps/history/5125130
+					50 metin  - Beklemedeki değişiklikleri ve tüm değişiklik geçmişini görüntüle
+					51 container
+						52 link Farklılıkları Görüntüle, Value: javascript:void(0);
+						53 metin  - Yayınlamadan önce yaptığınız tüm değişimleri kontrol etmenizi sağlayan bir liste
+						54 link Değişiklikleri Geri Al, Value: javascript:void(0)
+						55 metin  - Yaptığınız tüm yayınlanmamış değişimleri iptal ederek şu anki yayınlanmış versiyona geri döndürmek için bunu kullanın
+						56 link Yayınlanmak için hazırlanın, Value: javascript:void(0)
+						57 metin  - Kendi yaptıklarınızla diğer kullanıcıların yaptıkları arasında herhangi bir çakışma olup olmadığını kontrol edin
+						58 onay kutusu "Hafif Paylaş" (resimsiz), Value: 0
+						59 metin "Hafif Paylaş" (resimsiz)
+					60 metin Değişiklikler:
+					61 container
+						62 text App section "stats" has uncommitted changes. Revision 4 was last modified by oddforgegames on 11 Eki @ 14:59 === Changes to "stats" section (Revision 3 vs 4 )=== ...
+						"icon"	"a5d878f49e9bcd99813e3ea53a204411c389bd72.jpg"
+						"icon_gray"	"288dcd734a865c725cfe149721a9a6800a451db7.jpg"
+					}
+				}
+				"16"
+				{
+					"name"	"SHOP_COMPLETE"
+					"display"
+					{
+						"name"
+						{
+							"english"	"Shop Complete"
+							"token"	"NEW_ACHIEVEMENT_2_16_NAME"
+							"german"	"Laden aufgeräumt"
+							"french"	"Boutique rangée"
+							"italian"	"Negozio sistemato"
+							"koreana"	"매장 정리 완료"
+							"spanish"	"Tienda ordenada"
+							"schinese"	"店铺整理完毕"
+							"tchinese"	"店鋪整理完畢"
+							"russian"	"Магазин приведён в порядок"
+							"japanese"	"お店の片付け完了"
+							"portuguese"	"Loja arrumada"
+							"turkish" 			}
+			"type"	"ACHIEVEMENTS"
+		}
+	}
+	"version"	"5"
+ ...
+					63 metin Sonuçlar:
+					64 başlık Valve Özel İçeriği, Value: 2
+						65 metin Valve Özel İçeriği
+					66 metin Bu kısıtlı erişim sitesi ve sağladığı içeriği (kod, belgelendirme, vb.) gizli Valve bilgisidir. Bu siteye erişmek veya bu siteyi kullanmak için Valve ile yaptığınız gizli bilgileri kapsayan bir gizlilik ve/veya lisans anlaşmanız olmalıdır.
+					67 görüntü
+					68 container
+						69 metin Steamworks,
+						70 link Valve, Value: valvesoftware.com/
+						71 metin  tarafından size, oyununuzu
+						72 link Steam, Value: store.steampowered.com/
+						73 metin 'de yapılandırmak, yönetmek ve işletmek maksadıyla yardımcı olması için tasarlanmış bir dizi araç ve hizmettir.
+					74 container
+						75 link valvesoftware.com/
+						76 link store.steampowered.com/
+					77 container
+						78 metin BELGELER
+						79 link Ana Sayfa, Value: partner.steamgames.com/doc/
+						80 link Başlarken, Value: partner.steamgames.com/doc/gettingstarted
+						81 link Mağaza Görünümü, Value: partner.steamgames.com/doc/store
+						82 link Özellikler, Value: partner.steamgames.com/doc/features
+						83 link Finans, Value: partner.steamgames.com/doc/finance
+						84 link Satış ve Pazarlama, Value: partner.steamgames.com/doc/marketing
+						85 link Steamworks SDK, Value: partner.steamgames.com/doc/sdk
+						86 link PC Café Lisansı, Value: partner.steamgames.com/pccafe
+						87 link SteamVR, Value: partner.steamgames.com/doc/features/steamvr/info
+					88 container
+						89 metin KAYNAKLAR
+						90 link SteamVR, Value: partner.steamgames.com/vrlicensing
+						91 link Steam PC Café Programı, Value: partner.steamgames.com/pccafe
+						92 link Steamworks Tartışmaları, Value: steamcommunity.com/groups/steamworks/discussions
+						93 link Steamworks Video Eğitimleri, Value: youtube.com/user/SteamworksDev
+						94 link X: @Steamworks, Value: twitter.com/Steamworks
+						95 link Bluesky: Steamworks, Value: bsky.app/profile/partner.steamgames.com
+						96 link Destek İle İrtibata Geçin, Value: help.steampowered.com/tr/wizard/HelpWithPublishing
+					97 container
+						98 metin HABERLER VE GÜNCELLEMELER
+						99 link Steamworks Blogu, Value: store.steampowered.com/news/group/4145017
+						100 link Steam Blogu, Value: store.steampowered.com/news/app/593110
+						101 link SteamVR Blogu, Value: store.steampowered.com/news/app/250820
+						102 link Steam Deck Blogu, Value: store.steampowered.com/news/app/1675200
+				103 sarma çubuğu (settable, float) 0
+	104 araç çubuğu
+		105 container
+			106 düğme Description: kenar çubuğunu göster, Help: Kenar çubuğunu göster, ID: SidebarButton
+			107 menü düğmesi Description: Sekme grubu seçici, ID: TabGroupPickerButton?TabGroup=
+		108 container BackForwardSegmentedControl
+			109 düğme Description: Geri git, Help: Önceki sayfayı göster, ID: BackButton
+			110 düğme (disabled) Description: İleri git, Help: Sonraki sayfayı göster, ID: ForwardButton
+		111 container
+			112 düğme Sayfa Menüsü, ID: AssistantButton
+			113 düğme güvenli site sertifikası, Help: Sertifikayı göster, ID: LockButton
+			114 metin alanı (settable) Description: güvenli bir adres gösteren akıllı arama alanı, Value: https://partner.steamgames.com/apps/publishing/5125130, ID: WEB_BROWSER_ADDRESS_AND_SEARCH_FIELD
+			115 düğme Çeviri Kullanılabiliyor, ID: TranslationButton
+			116 düğme Bu sayfayı yeniden yükle, ID: ReloadButton
+		117 container Büyüt/Küçült
+			118 düğme Description: küçült, Help: Küçült
+			119 düğme Description: büyüt, Help: Büyüt
+		120 düğme Description: İndirilenler, ID: DownloadsButton
+			121 düğme Description: indirilenler penceresi, Help: İndirilenleri göster, ID: DownloadsButton
+		122 düğme Description: Paylaş, ID: ShareButton
+		123 düğme Description: Yeni Sekme, ID: NewTabButton
+			124 düğme Description: yeni sekme, Help: Yeni Sekme, ID: NewTabButton
+				125 düğme Description: ekle, Help: Yeni Sekme
+		126 düğme Description: Sekmelere Genel Bakış, ID: TabOverviewButton
+	127 container (settable, unknown) sekme çubuğu, Description: Sekme çubuğu, 5 sekme, ID: TabBar
+		128 sekme Wishlist Actions - TCG Card Chaos (5125130), Value: off, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+			129 düğme sekmeyi kapat, Description: Kapat, ID: CloseTabBarItemButton
+			130 görüntü FaviconImageView
+		131 sekme Store: TCG Card Chaos ( 5125130 ), Value: off, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+			132 düğme sekmeyi kapat, Description: Kapat, ID: CloseTabBarItemButton
+			133 görüntü FaviconImageView
+		134 sekme Ana Sayfa - Steamworks, Value: off, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+			135 düğme sekmeyi kapat, Description: Kapat, ID: CloseTabBarItemButton
+			136 görüntü FaviconImageView
+		137 sekme TCG Card Chaos (5125130), Value: off, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+			138 düğme sekmeyi kapat, Description: Kapat, ID: CloseTabBarItemButton
+			139 görüntü FaviconImageView
+		140 sekme Yayınlanıyor: TCG Card Chaos (5125130), Value: on, ID: TabBarTab?isNarrow=false&isPinned=false, Secondary Actions: sekmeyi kapat
+			141 düğme sekmeyi kapat, Description: Kapat, ID: CloseTabBarItemButton
+			142 görüntü FaviconImageView
+	143 container Description: Favoriler çubuğu, ID: FavoritesBarView?DisplayMode=0
+		144 düğme Description: başlangıç sayfasını göster, Help: Başlangıç Sayfasını Göster
+		145 düğme Description: Daha Fazla Yer İşareti, Help: Daha fazla yer işareti göster
+		146 menü düğmesi Favoriler, Description: aşağıya açılır, Help: Bu klasördeki yer işaretlerini göster, ID: FavoritesBarButton?Type=Folder&PerBookmarkShowTitle=true
+		147 menü düğmesi Game: TCG Ca…s (5125130), Help: https://partner.steampowered.com/app/details/5125130/?dateStart=2026-08-26&dateEnd=2026-09-06, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		148 menü düğmesi Reklam Yönet…Kampanyalar, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true, Help: https://adsmanager.facebook.com/adsmanager/manage/campaign…ity_score_ecvr%2Ccampaign_name&attribution_windows=default
+		149 menü düğmesi TCG Card Mar…tor Steam'de, Help: https://store.steampowered.com/app/5312920/TCG_Card_Market_Simulator/, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		150 menü düğmesi Sole Mates: …emo Steam'de, Help: https://store.steampowered.com/app/5177250/Sole_Mates_Tidy_Up_the_Shoe_Store_Demo/, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		151 menü düğmesi Gamalytic, Help: https://gamalytic.com, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		152 menü düğmesi Lurkit, Help: https://www.lurkit.com/campaigns/quests/tcg-card-chaos-demo-creator-campaign/edit/creator-kit, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		153 menü düğmesi Keymailer - G…s - Keymailer, Help: https://account.keymailer.co/1788109879/products/317722#setup, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		154 menü düğmesi Animated GIF Maker, Help: https://ezgif.com/maker, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		155 menü düğmesi TBH: Task Ba…ero Steam'de, Help: https://store.steampowered.com/app/3678970/TBH_Task_Bar_Hero/, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		156 menü düğmesi Office Arch vi…y Asset Store, Help: https://assetstore.unity.com/packages/3d/environments/industrial/office-arch-viz-191852, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		157 menü düğmesi Old Office Pa…y Asset Store, Help: https://assetstore.unity.com/packages/3d/environments/urban/old-office-pack-157183, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		158 menü düğmesi Google, Help: https://www.google.com/?client=safari&channel=iphone_bm, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		159 menü düğmesi translate - Google'da Ara, Help: https://www.google.com/search?client=safari&rls=en&q=translate&ie=UTF-8&oe=UTF-8, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true
+		160 menü düğmesi Electronics M…y Asset Store, ID: FavoritesBarButton?Type=Bookmark&PerBookmarkShowTitle=true, Help: https://assetstore.unity.com/packages/3d/environments/electronics-mega-store-modular-environment-371016
+	161 kapatma düğmesi
+	162 tam ekran düğmesi Help: bu düğmenin de pencereyi yakınlaştırma etkinliği var, Secondary Actions: pencereyi büyüt/küçült
+	163 simge durumuna küçültme düğmesi
+164 menu bar
+	165 Safari
+	166 Dosya
+	167 Düzen
+	168 Görüntü, ID: SafariViewMenu
+	169 Geçmiş
+	170 Yer İşaretleri, ID: SafariBookmarksMenu
+	171 Pencere
+	172 Yardım
+
+The focused UI element is 5 HTML içerik Description: Yayınlanıyor: TCG Card Chaos (5125130), URL: partner.steamgames.com/apps/publishing/5125130
