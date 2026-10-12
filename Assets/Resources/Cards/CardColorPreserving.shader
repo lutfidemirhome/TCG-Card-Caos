@@ -91,7 +91,9 @@ Shader "TCG/Card Color Preserving"
         UsePass "Universal Render Pipeline/Unlit/DepthNormalsOnly"
         UsePass "Universal Render Pipeline/Unlit/Meta"
         UsePass "Universal Render Pipeline/Unlit/MotionVectors"
-        UsePass "Universal Render Pipeline/Unlit/XRMotionVectors"
+        // Non-XR player builds strip URP's XRMotionVectors pass. Referencing it with
+        // UsePass invalidates this subshader and falls back to plain Unlit, losing
+        // both the card-back selector and atlas UVs. This game does not use XR.
     }
     FallBack "Universal Render Pipeline/Unlit"
 }
