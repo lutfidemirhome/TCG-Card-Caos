@@ -673,13 +673,14 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(interactKey) && SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
+        bool interactPressed = WasInteractPressedThisFrame();
+        if (interactPressed && SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
         {
             if (_skillController == null) _skillController = FindFirstObjectByType<CardSkillController>();
             if (_skillController != null && _skillController.TryStartAutoshelvingFromInteract()) return;
         }
 
-        if (WasInteractPressedThisFrame() && ShouldUseCurrentTargetForInteract())
+        if (interactPressed && ShouldUseCurrentTargetForInteract())
         {
             _currentTarget.Interact(gameObject.transform.root.gameObject);
             ClearTarget();

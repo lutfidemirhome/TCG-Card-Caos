@@ -37,7 +37,7 @@ Hepsi gerçek yeni oyunda seviye 0/kilitli başlar. Seviye 1 açar; yükseltmele
 
 ### 1 — Assemble
 
-Elde seçili kartın grubuna ait yerdeki kartları yakından uzağa ele toplar. Normal kartlarda grup aynı kart serisidir. PSA'da grup aynı dil/set ve aynı PSA numarasıdır (örneğin İngilizce PSA 7); varyantlar bu grubun içindedir. El kapasitesi, eldeki paketlerin kapladığı yerler dahil korunur. Raflardaki, kilitli, açılma gösterimindeki veya hâlen hareketli kartlar toplanmaz. Toplama uçuşu tamamlandıktan sonra bekleme başlar. En üst seviye PDF'deki gibi 9 karttır.
+Elde seçili kartın grubuna ait yerdeki kartları yakından uzağa ele toplar. Normal kartlarda grup aynı kart serisidir. TCG kartlarında grup yalnız derecedir (7–10); aynı derecedeki İngilizce ve Japonca kartlar, varyantlarıyla birlikte toplanır. El kapasitesi, eldeki paketlerin kapladığı yerler dahil korunur. Raflardaki, kilitli, açılma gösterimindeki veya hâlen hareketli kartlar toplanmaz. Toplama uçuşu tamamlandıktan sonra bekleme başlar. En üst seviye PDF'deki gibi 9 karttır.
 
 ### 2 — Sort
 
@@ -53,15 +53,15 @@ Seçili normal veya PSA kartına uygun tüm dolapların yalnız dış gövdeleri
 
 ### 4 — Insight
 
-Seçili normal serinin veya PSA dil/numara grubunun yerdeki kartlarını yeşil işaret ve yukarı yükselen ışık/ışıltıyla gösterir. Etki sırasında yere düşen uygun kartlar da takip edilir. Pack'ler ve raflara yerleşmiş kartlar dahil değildir. Seçili kart değişirse gösterilen grup güncellenir.
+Seçili normal serinin veya dil ayrımı olmadan aynı TCG derecesinin yerdeki kartlarını yeşil işaret ve yukarı yükselen ışık/ışıltıyla gösterir. Etki sırasında yere düşen uygun kartlar da takip edilir. Pack'ler ve raflara yerleşmiş kartlar dahil değildir. Seçili kart değişirse gösterilen grup güncellenir.
 
 ### 5 — Autoshelving
 
-Elde seçili X serisi kart ve nişangâhın hedeflediği uygun raf gerekir. Dolaba genel olarak bakmak yeterli değildir; mevcut hedefleme mesafesi içinde rafın slot bölgesine bakılmalıdır. 5 tuşu yeteneği etkinleştirir; yalnız bakmak kart taşımaz. Etki açıkken rafa bakıp E’ye basıldığında o anda seçili X serisi ve o fiziksel raf sabitlenir. Tek E basışı bu grubun sıralı yerleştirmesini başlatır; normal tek kart yerleştirme aynı basışta ayrıca çalışmaz. X kartları numara sırasıyla yalnız doğru, boş slotlara gider. Elde Y serisi olsa, X bitince seçim Y'ye geçse veya aynı dolabın başka rafına bakılsa Y otomatik yerleştirilmez.
+Elde seçili X serisi kart ve nişangâhın hedeflediği uygun raf gerekir. Dolaba genel olarak bakmak yeterli değildir; mevcut hedefleme mesafesi içinde rafın slot bölgesine bakılmalıdır. 5 tuşu yeteneği etkinleştirir; yalnız bakmak kart taşımaz. Etki açıkken rafa bakıp E’ye veya sol fare tuşuna basıldığında o anda seçili X serisi ve o fiziksel raf sabitlenir. Tek E/sol tık bu grubun sıralı yerleştirmesini başlatır; normal tek kart yerleştirme aynı basışta ayrıca çalışmaz. X kartları numara sırasıyla yalnız doğru, boş slotlara gider. Elde Y serisi olsa, X bitince seçim Y'ye geçse veya aynı dolabın başka rafına bakılsa Y otomatik yerleştirilmez.
 
-PSA'da seçilen dil/numara grubu ve hedeflenen PSA dolabı sabitlenir; aynı gruptaki kartlar uygun boş tutuculara gider. Başka dolaba gönderilmez. Bakışı hedeften ayırmak yerleştirmeyi duraklatır; kalan etki süresi işlemeye devam eder. Yeniden aynı hedefe bakınca devam eder. Kartları 0,16 saniye arayla mevcut yerleştirme uçuşuna verir. Slot, uçuş başladığında rezerve edilir ve kayıt güncellenir.
+TCG kartlarında seçilen derece ve hedeflenen dolap sabitlenir; İngilizce ve Japonca aynı derecedeki kartlar birlikte uygun boş tutuculara gider. Aynı içerik/varyant kopyasını iki kez yerleştirme engeli korunur. Başka dolaba gönderilmez. Bakışı hedeften ayırmak yerleştirmeyi duraklatır; kalan etki süresi işlemeye devam eder. Yeniden aynı hedefe bakınca devam eder. Kartları 0,16 saniye arayla mevcut yerleştirme uçuşuna verir. Slot, uçuş başladığında rezerve edilir ve kayıt güncellenir.
 
-Hedef raf/dolap ve seçilen grup yeni kayıtlarda saklanır. Yükleme sonrasında aktif süre korunur ancak yeniden E’ye basmadan taşıma başlamaz. Etki sürerken başka bir grup/raf için yeniden E’ye basarak yeni bir yerleştirme başlatılabilir; yalnız bakmak hedefi değiştirmez.
+Hedef raf/dolap ve seçilen grup yeni kayıtlarda saklanır. Yükleme sonrasında aktif süre korunur ancak yeniden E veya sol tık olmadan taşıma başlamaz. Etki sürerken başka bir grup/raf için yeniden E veya sol tık ile yeni bir yerleştirme başlatılabilir; yalnız bakmak hedefi değiştirmez.
 
 ## Süreler, kayıt ve yeni oyun
 

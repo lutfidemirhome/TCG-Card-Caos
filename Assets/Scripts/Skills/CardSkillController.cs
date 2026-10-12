@@ -62,7 +62,9 @@ public sealed class CardSkillController : MonoBehaviour
         public bool Matches(WorldCard card)
         {
             if (card == null || card.UsesPsaSlab != psa) return false;
-            return psa ? card.PsaSet == set && card.PsaSlotNumber == number
+            // TCG cabinets accept both languages at the same grade. Collection,
+            // highlighting and automatic placement share that same grouping rule.
+            return psa ? card.PsaSlotNumber == number
                 : CardShelfSeries.TryGetSeriesId(card.Definition, out string other) && other == series;
         }
     }
@@ -192,7 +194,7 @@ public sealed class CardSkillController : MonoBehaviour
         return _guideCabinets.Count > 0;
     }
 
-    // Called before ordinary E interaction so the selected card cannot be placed twice,
+    // Called before ordinary E/left-click interaction so the selected card cannot be placed twice,
     // or replaced by the next hand selection before we capture its series.
     public bool TryStartAutoshelvingFromInteract()
     {
@@ -231,7 +233,7 @@ public sealed class CardSkillController : MonoBehaviour
             _autoPsaCabinet = _autoGroup.psa ? _interaction.AimedSkillPsaCabinet : null;
         }
 
-        // The active effect belongs to the row and card group chosen by the E press.
+        // The active effect belongs to the row and card group chosen by the interaction.
         // Looking away pauses placement; looking at another row cannot redirect it.
         if (_autoGroup.psa)
         {
@@ -261,7 +263,7 @@ public sealed class CardSkillController : MonoBehaviour
         SkillAutoshelfContext context = SkillProgress.AutoshelfContext;
         if (ReferenceEquals(context, _boundAutoContext)) return;
         _boundAutoContext = context;
-        // Loading an active effect never moves cards without another E press.
+        // Loading an active effect never moves cards without another E/left-click interaction.
         _autoStarted = false;
         _autoShelf = null;
         _autoPsaCabinet = null;
