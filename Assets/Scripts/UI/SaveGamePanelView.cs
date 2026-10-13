@@ -302,7 +302,8 @@ public class SaveGamePanelView : MonoBehaviour
     void RefreshSlotList()
     {
         int emptySlotRows = GameSaveStore.AvailableManualSlotCount;
-        List<SaveSlotMetadata> saves = GameSaveStore.GetSaveSlots();
+        SaveSlotListLayout.HideLoadGroupHeaders(transform);
+        List<SaveSlotMetadata> saves = GameSaveStore.GetManualSaveSlots();
         if (saves == null)
             saves = new List<SaveSlotMetadata>();
 
@@ -394,7 +395,7 @@ public class SaveGamePanelView : MonoBehaviour
             return;
         }
 
-        if (string.IsNullOrEmpty(slot.BoundSlotId))
+        if (!SaveFileIO.TryGetManualSlotIndex(slot.BoundSlotId, out _))
             return;
 
         ShowConfirm(ConfirmMode.Overwrite, slot.BoundSlotId);
@@ -402,7 +403,7 @@ public class SaveGamePanelView : MonoBehaviour
 
     void OnSlotRightClicked(LoadGameSlotView slot)
     {
-        if (slot == null || slot.IsEmpty || string.IsNullOrEmpty(slot.BoundSlotId))
+        if (slot == null || slot.IsEmpty || !SaveFileIO.TryGetManualSlotIndex(slot.BoundSlotId, out _))
             return;
 
         ShowConfirm(ConfirmMode.Delete, slot.BoundSlotId);
@@ -441,7 +442,8 @@ public class SaveGamePanelView : MonoBehaviour
         string slotId = _pendingSlotId;
         ConfirmMode mode = _confirmMode;
         HideConfirm();
-        if (string.IsNullOrEmpty(slotId))
+        if (!SaveFileIO.TryGetManualSlotIndex(slotId, out _)
+            || (mode != ConfirmMode.Delete && mode != ConfirmMode.Overwrite))
             return;
 
         if (mode == ConfirmMode.Delete)

@@ -191,7 +191,10 @@ public static class GameSaveWorldCollector
         record.SetPosition(packTransform.position);
         record.SetRotation(packTransform.rotation);
         if (!record.held)
+        {
             record.physics = ThrownPhysicsSaveState.Capture(pack.PhysicsBody);
+            record.worldVisualPose = pack.CaptureWorldVisualPose();
+        }
         return record;
     }
 

@@ -344,7 +344,7 @@ public sealed class GameSaveManager : MonoBehaviour
         {
             _saveInProgress = false;
             _saveRoutine = null;
-            GameSaveEvents.RaiseSaveFailed("All manual save slots are full. Select an existing slot to overwrite it.");
+            GameSaveEvents.RaiseSaveFailed(SlotResolutionError(manualSlotId));
             DrainQueue();
             yield break;
         }
@@ -423,7 +423,7 @@ public sealed class GameSaveManager : MonoBehaviour
             return;
         if (!TryResolveSlot(kind, manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex))
         {
-            GameSaveEvents.RaiseSaveFailed("All manual save slots are full. Select an existing slot to overwrite it.");
+            GameSaveEvents.RaiseSaveFailed(SlotResolutionError(manualSlotId));
             return;
         }
         _saveInProgress = true;
@@ -481,6 +481,10 @@ public sealed class GameSaveManager : MonoBehaviour
         }
     }
 
+    static string SlotResolutionError(string manualSlotId) => string.IsNullOrEmpty(manualSlotId)
+        ? "All manual save slots are full. Select an existing slot to overwrite it."
+        : "Invalid manual save slot. Automatic saves cannot be overwritten manually.";
+
     bool TryResolveSlot(SaveRequestKind kind, string manualSlotId, out string slotId, out SaveSlotType slotType, out int slotIndex)
     {
         if (kind == SaveRequestKind.Manual)
@@ -488,11 +492,11 @@ public sealed class GameSaveManager : MonoBehaviour
             if (!string.IsNullOrEmpty(manualSlotId))
             {
                 slotId = manualSlotId;
-                slotIndex = ParseIndex(manualSlotId);
-                slotType = manualSlotId.StartsWith("autosave_", StringComparison.Ordinal)
-                    ? SaveSlotType.Auto
-                    : SaveSlotType.Manual;
-                return true;
+                slotType = SaveSlotType.Manual;
+                // A manual save must never enter the rotating autosave namespace,
+                // even if an old/stale UI row passes an autosave ID.
+                return SaveFileIO.TryGetManualSlotIndex(manualSlotId, out slotIndex)
+                    && slotIndex < _settings.MaxManualSlots;
             }
 
             slotType = SaveSlotType.Manual;
@@ -506,14 +510,6 @@ public sealed class GameSaveManager : MonoBehaviour
         slotIndex = Mathf.Clamp(SaveFileIO.LoadManifest().nextAutosaveIndex, 0, GameSaveSettings.AutosaveSlotCount - 1);
         slotId = SaveFileIO.AutosaveSlotId(slotIndex);
         return true;
-    }
-
-    static int ParseIndex(string slotId)
-    {
-        int underscore = slotId.LastIndexOf('_');
-        if (underscore < 0 || underscore == slotId.Length - 1)
-            return 0;
-        return int.TryParse(slotId.Substring(underscore + 1), out int index) ? index : 0;
     }
 
     int NextManualIndex()

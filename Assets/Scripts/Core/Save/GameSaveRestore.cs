@@ -600,6 +600,8 @@ public static class GameSaveRestore
 
         string restoreId = AllocateRestoreId(record.id);
         List<CardDefinition> contents = ResolvePackContents(record.contents);
+        bool physical = !record.held && record.physics != null && record.physics.isSimulating;
+        PackWorldVisualPose visualPose = !record.held ? record.worldVisualPose : null;
 
         WorldBoosterPack pack;
         if (PersistentIdRegistry.TryGetPack(restoreId, out WorldBoosterPack existing) && existing != null)
@@ -611,6 +613,10 @@ public static class GameSaveRestore
             pack = existing;
             if (!demoAuthored)
             {
+                // Older saves predate visual snapshots. Untouched, nonphysical scene
+                // packs still have their original authored child pose available here.
+                if (!record.held && !physical && (visualPose == null || !visualPose.IsValid))
+                    visualPose = pack.CaptureWorldVisualPose();
                 WakeRestoredObject(pack.transform);
                 pack.Initialize(null, record.variant, contents, (PackCardSet)record.packSet,
                     preserveExistingVisualLayout: true);
@@ -639,9 +645,9 @@ public static class GameSaveRestore
         pack.transform.SetParent(scatterRoot, true);
         pack.transform.SetPositionAndRotation(record.Position, record.Rotation);
         pack.RestoreSavedWorldPose(record.faceDown, record.stackLayer,
-            preservePhysicsPose: !record.held && record.physics != null && record.physics.isSimulating);
+            preservePhysicsPose: physical, visualPose: visualPose);
         CardGroundStack.TrackPack(pack);
-        if (!record.held && record.physics != null && record.physics.isSimulating)
+        if (physical)
             PendingPackPhysics.Add(new KeyValuePair<WorldBoosterPack, ThrownPhysicsSaveState>(pack, record.physics));
     }
 

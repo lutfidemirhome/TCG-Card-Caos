@@ -38,6 +38,15 @@ public static class SaveFileIO
     public static string AutosaveSlotId(int index) => "autosave_" + index;
     public static string ManualSlotId(int index) => "manual_" + index;
 
+    public static bool TryGetManualSlotIndex(string slotId, out int index)
+    {
+        index = -1;
+        const string prefix = "manual_";
+        return slotId != null && slotId.StartsWith(prefix, StringComparison.Ordinal)
+            && int.TryParse(slotId.Substring(prefix.Length), out index) && index >= 0
+            && slotId == ManualSlotId(index);
+    }
+
     public static bool HasSlotFiles(string slotId) =>
         File.Exists(GetSavePath(slotId)) || File.Exists(GetMetaPath(slotId))
         || File.Exists(GetBackupPath(slotId)) || File.Exists(GetLegacyBackupPath(slotId));

@@ -9,6 +9,24 @@ public static class GameSaveStore
 
     public static List<SaveSlotMetadata> GetSaveSlots() => GameSaveManager.GetSaveSlots();
 
+    public static List<SaveSlotMetadata> GetManualSaveSlots()
+    {
+        List<SaveSlotMetadata> slots = GetSaveSlots();
+        slots.RemoveAll(slot => slot == null || slot.slotType != SaveSlotType.Manual
+            || !SaveFileIO.TryGetManualSlotIndex(slot.slotId, out _));
+        return slots;
+    }
+
+    public static List<SaveSlotMetadata> GetGroupedLoadSlots()
+    {
+        List<SaveSlotMetadata> slots = GetSaveSlots();
+        // Continue still uses the chronological list. Only the Load UI groups slots.
+        slots.Sort((a, b) => a.slotType == b.slotType
+            ? b.timestampUnix.CompareTo(a.timestampUnix)
+            : a.slotType == SaveSlotType.Manual ? -1 : 1);
+        return slots;
+    }
+
     public static SaveSlotMetadata GetLatestValidSave() => GameSaveManager.GetLatestValidSave();
 
     public static void LoadSaveSlot(string slotId) => GameSaveManager.LoadSaveSlot(slotId);

@@ -199,15 +199,20 @@ public class LoadGamePanelView : MonoBehaviour
 
     void RefreshSlotList()
     {
-        List<SaveSlotMetadata> saves = GameSaveStore.GetSaveSlots();
+        List<SaveSlotMetadata> saves = GameSaveStore.GetGroupedLoadSlots();
         if (saves == null)
             saves = new List<SaveSlotMetadata>();
 
         int saveCount = 0;
+        int manualCount = 0;
         for (int i = 0; i < saves.Count; i++)
         {
             if (saves[i] != null && !string.IsNullOrEmpty(saves[i].slotId))
+            {
                 saveCount++;
+                if (saves[i].slotType == SaveSlotType.Manual)
+                    manualCount++;
+            }
         }
 
         slots = SaveSlotListLayout.EnsureRows(transform, saveCount);
@@ -245,6 +250,8 @@ public class LoadGamePanelView : MonoBehaviour
             slots[i].ClearBinding();
             slots[i].gameObject.SetActive(false);
         }
+
+        SaveSlotListLayout.ShowLoadGroupHeaders(transform, slots, manualCount, saveCount - manualCount);
     }
 
     void RefreshEmptyHint(int saveCount)

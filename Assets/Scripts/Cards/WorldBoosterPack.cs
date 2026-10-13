@@ -42,7 +42,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     Rigidbody _rigidbody;
     Coroutine _thrownPhysicsRoutine;
     int _thrownLandingScope;
-    bool _preserveRestoredPhysicsPose;
+    bool _preserveRestoredWorldPose;
+    bool _hasRestoredVisualPose;
     bool _restoreGroundTrackingOnEnable;
     BoxCollider _collider;
     bool _interactionHighlighted;
@@ -132,20 +133,38 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     }
 
     /// <summary>
-    /// Re-applies a saved world pose without the flat-floor visual lift that would shift a leaning
-    /// pack (e.g. against glass) along its local up and push it through walls on load.
+    /// Restores the visible pose without applying a second local-space floor lift.
+    /// Legacy generated packs without a visual snapshot use their previous pose rules.
     /// </summary>
-    public void RestoreSavedWorldPose(bool faceDown, int stackLayer, bool preservePhysicsPose = false)
+    public void RestoreSavedWorldPose(bool faceDown, int stackLayer, bool preservePhysicsPose = false,
+        PackWorldVisualPose visualPose = null)
     {
         _state = PackState.World;
-        _preserveRestoredPhysicsPose = preservePhysicsPose;
+        _preserveRestoredWorldPose = true;
         _groundShowsBack = faceDown;
         SetGroundStackLayer(stackLayer);
 
-        // Physical saves keep the same proxy basis even if the solver left the root flat.
-        // Older pose-only saves retain their original ground-pose interpretation.
-        bool upright = !preservePhysicsPose && CardSettlePlacement.IsFlatOnFloor(transform);
-        ApplyWorldVisualOrientation(alignPackModelToGround: upright);
+        EnsureVisual();
+        _hasRestoredVisualPose = visualPose != null && visualPose.IsValid
+            && _cardRef != null && _packModel != null;
+        if (_hasRestoredVisualPose)
+        {
+            // Restored world items live under the unscaled scatter root.
+            transform.localScale = visualPose.worldScale;
+            _cardRef.SetLocalPositionAndRotation(visualPose.proxyPosition, visualPose.proxyRotation.normalized);
+            _cardRef.localScale = visualPose.proxyScale;
+            _packModel.SetLocalPositionAndRotation(visualPose.modelPosition, visualPose.modelRotation.normalized);
+            _packModel.localScale = visualPose.modelScale;
+            CaptureExistingVisualLayout();
+            SetCardRefMesh(CardArtLibrary.CardMesh);
+            RefreshPackOutlineBoundsFromLayout();
+            ApplyPackBodyCollider();
+        }
+        else
+        {
+            bool upright = !preservePhysicsPose && CardSettlePlacement.IsFlatOnFloor(transform);
+            ApplyWorldVisualOrientation(alignPackModelToGround: upright);
+        }
 
         if (_collider != null)
         {
@@ -155,6 +174,26 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         }
 
         ApplyPackModelShadowSettings();
+    }
+
+    public PackWorldVisualPose CaptureWorldVisualPose()
+    {
+        // Also works on suspended authored packs, before Awake/Initialize rewrites any child.
+        Transform proxy = _cardRef != null ? _cardRef : transform.Find(CardRefChildName);
+        Transform model = _packModel != null ? _packModel : proxy != null ? proxy.Find(PackModelChildName) : null;
+        if (proxy == null || model == null)
+            return null;
+        return new PackWorldVisualPose
+        {
+            captured = true,
+            worldScale = transform.lossyScale,
+            proxyPosition = proxy.localPosition,
+            proxyRotation = proxy.localRotation,
+            proxyScale = proxy.localScale,
+            modelPosition = model.localPosition,
+            modelRotation = model.localRotation,
+            modelScale = model.localScale,
+        };
     }
 
     /// <summary>
@@ -169,7 +208,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         EnsureVisual();
         CaptureExistingVisualLayout();
         ApplyPackBodyCollider();
-        if (!_preserveRestoredPhysicsPose)
+        if (!_preserveRestoredWorldPose)
             LiftMeshAboveFloor();
         EnsureContentsPreRolled();
         CardGroundStack.TrackPack(this);
@@ -238,7 +277,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         this.packSet = definition != null ? definition.PackSet : packSet;
         this.packVariantIndex = Mathf.Clamp(packVariantIndex, 1, PackArtLibrary.PackVariantCount);
         _preserveSavedContents = false;
-        _preserveRestoredPhysicsPose = false;
+        _preserveRestoredWorldPose = false;
+        _hasRestoredVisualPose = false;
         // An explicitly saved empty list must stay empty; never inherit scene contents or reroll.
         if (preRolledContents != null)
             this.preRolledContents = new List<CardDefinition>(preRolledContents);
@@ -1568,7 +1608,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
             return;
 
         EnsureRigidbody();
-        ApplyWorldVisualOrientation(alignPackModelToGround: false);
+        if (!_hasRestoredVisualPose)
+            ApplyWorldVisualOrientation(alignPackModelToGround: false);
         ApplyPackBodyCollider();
         if (_collider != null)
         {
@@ -1577,7 +1618,8 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         }
         IgnorePlayerCollision();
         state.Apply(_rigidbody);
-        _preserveRestoredPhysicsPose = false;
+        _preserveRestoredWorldPose = false;
+        _hasRestoredVisualPose = false;
         StartThrownPhysicsMonitor(_rigidbody);
     }
 
