@@ -45,6 +45,7 @@ public sealed class SkillPanelView : MonoBehaviour
     RectTransform _hudStats, _root, _body, _taskRect, _taskOpen;
     float _refresh;
     int _selected, _revision = -1;
+    ulong _taskProgressRevision;
     readonly int[] _barState = { -1,-1,-1,-1,-1 };
     bool _pausedByUs;
     CursorLockMode _previousLock;
@@ -160,7 +161,11 @@ public sealed class SkillPanelView : MonoBehaviour
         {
             _refresh = 0.25f;
             if (_revision != SkillProgress.Revision) { _revision = SkillProgress.Revision; Refresh(); }
-            else RefreshHotbar(false);
+            else
+            {
+                RefreshHotbar(false);
+                if (_taskProgressRevision != GameProgressCounter.Revision) RefreshTask();
+            }
             PositionTask();
         }
         if (hudVisible) RefreshHotbarFills();
@@ -191,6 +196,25 @@ public sealed class SkillPanelView : MonoBehaviour
         }
     }
     static void Set(TMP_Text label, string value) { if (label != null && label.text != value) label.text = value; }
+    void RefreshTask()
+    {
+        int target = SkillProgress.NextGoal, points = SkillProgress.Points;
+        string taskText;
+        if (target > 0)
+            taskText = Localization.Format(LocalizationKeys.SkillsTaskRows, target, SkillProgress.CompletedRows);
+        else if (GameCompleteView.IsComplete(GameProgressCounter.Capture()))
+            taskText = Localization.Get(LocalizationKeys.SkillsTaskDone);
+        else if (points > 0)
+            taskText = Localization.Format(LocalizationKeys.SkillsTaskUpgrade, points);
+        else
+            taskText = Localization.Get(LocalizationKeys.SkillsTaskRemainingCards);
+
+        if (target > 0 && points > 0)
+            taskText += "\n" + Localization.Format(LocalizationKeys.SkillsPoints, points);
+        Set(_taskText, taskText);
+        LayoutTask();
+        _taskProgressRevision = GameProgressCounter.Revision;
+    }
     public void Refresh()
     {
         if (_title == null) return;
@@ -201,14 +225,8 @@ public sealed class SkillPanelView : MonoBehaviour
         Set(_closeText, Localization.Get(LocalizationKeys.PauseBack));
         Set(_openText, Localization.Get(LocalizationKeys.SkillsOpen));
         Set(_taskTitle, Localization.Get(LocalizationKeys.SkillsTaskTitle));
-        int target = SkillProgress.NextGoal, points = SkillProgress.Points;
-        string taskText = target > 0
-            ? Localization.Format(LocalizationKeys.SkillsTaskRows, target, SkillProgress.CompletedRows)
-            : Localization.Get(LocalizationKeys.SkillsTaskDone);
+        RefreshTask();
         Set(_minorTitle, Localization.Get("minor.title"));
-        if (points > 0) taskText += "\n" + Localization.Format(LocalizationKeys.SkillsPoints, points);
-        Set(_taskText, taskText);
-        LayoutTask();
         for (int i = 0; i < 5; i++)
         {
             int level = SkillProgress.Level(i);
@@ -259,7 +277,7 @@ public sealed class SkillPanelView : MonoBehaviour
             : current == 0 ? Localization.Get(LocalizationKeys.SkillsLocked) + " / " + Localization.Get(LocalizationKeys.SkillsNext)
             : Localization.Get(LocalizationKeys.SkillsNext) + " (" + current + " \u2192 " + (current + 1) + ")");
         Set(_upgradeText, Localization.Get(current >= maximum ? LocalizationKeys.SkillsMax : LocalizationKeys.SkillsUpgrade));
-        _upgrade.interactable = points > 0 && current < maximum;
+        _upgrade.interactable = SkillProgress.Points > 0 && current < maximum;
         RefreshHotbar(true);
     }
     void RefreshHotbar(bool force)

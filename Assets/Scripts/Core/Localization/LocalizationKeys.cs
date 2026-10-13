@@ -127,6 +127,7 @@ public static class LocalizationKeys
     public const string SkillsTaskRows = "skills.task_rows";
     public const string SkillsTaskUpgrade = "skills.task_upgrade";
     public const string SkillsTaskDone = "skills.task_done";
+    public const string SkillsTaskRemainingCards = "skills.task_remaining_cards";
     public const string SkillsAssembleName = "skills.assemble.name";
     public const string SkillsSortName = "skills.sort.name";
     public const string SkillsGuideName = "skills.guide.name";
