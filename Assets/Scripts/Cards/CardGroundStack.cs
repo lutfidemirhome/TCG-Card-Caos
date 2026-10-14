@@ -111,6 +111,19 @@ public static class CardGroundStack
 
     public static void Untrack(WorldCard card)
     {
+        Untrack(card, refreshPile: true);
+    }
+
+    /// <summary>Hide a prepared group without rebuilding its neighbourhood once per card.</summary>
+    public static void UntrackBatch(IReadOnlyList<WorldCard> cards)
+    {
+        if (cards == null || cards.Count == 0) return;
+        for (int i = 0; i < cards.Count; i++) Untrack(cards[i], refreshPile: false);
+        RebuildCellPiles();
+    }
+
+    static void Untrack(WorldCard card, bool refreshPile)
+    {
         if (card == null)
             return;
 
@@ -133,7 +146,7 @@ public static class CardGroundStack
         RemoveFromList(card);
         RemoveFromSpatialBucket(card);
 
-        if (GroundCards.Count >= BulkFlatStackThreshold)
+        if (refreshPile && GroundCards.Count >= BulkFlatStackThreshold)
             RefreshCellAt(removedPos);
     }
 
