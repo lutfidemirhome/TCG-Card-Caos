@@ -52,6 +52,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   trailerTaskLocalizationKey: skills.trailer_task
+  hideCaptureHud: 1
   minorLockedIcon: {fileID: 21300000, guid: 9c65ae1e2739410585db907564ffacf7, type: 3}
   minorSkillIcons:
   - {fileID: 21300000, guid: b08550472383409d94b848f31b46a173, type: 3}

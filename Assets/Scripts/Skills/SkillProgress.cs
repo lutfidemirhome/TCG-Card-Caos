@@ -38,7 +38,7 @@ public static class SkillProgress
     {
         return Levels[skill];
     }
-    public static float Cooldown(int skill) => Cooldowns[skill];
+    public static float Cooldown(int skill) => CpiTrailerMoundToggle.IsCaptureScene ? 0f : Cooldowns[skill];
     public static float ActiveTime(int skill) => Active[skill];
     public static int Points
     {
@@ -108,6 +108,7 @@ public static class SkillProgress
         // No fake completed rows or minor-skill unlocks are created.
         if (UnityEngine.Object.FindFirstObjectByType<CpiTrailerMoundToggle>() != null)
         {
+            Array.Clear(Cooldowns, 0, Cooldowns.Length);
             int spent = 0, earned = 0;
             for (int i = 0; i < Levels.Length; i++)
             {
@@ -214,7 +215,7 @@ public static class SkillProgress
     public static void Used(int skill, float effectDurationOverride = -1f)
     {
         float[] cooldowns = Cooldowns, active = Active;
-        cooldowns[skill] = SkillCatalog.Cooldown(skill, Level(skill));
+        cooldowns[skill] = CpiTrailerMoundToggle.IsCaptureScene ? 0f : SkillCatalog.Cooldown(skill, Level(skill));
         active[skill] = skill >= 2 ? SkillCatalog.Effect(skill, Level(skill)) : 0f;
         if (skill == (int)CardSkill.Assemble && effectDurationOverride >= 0f)
             active[skill] = SafeTime(effectDurationOverride, MaxPickupEffectSeconds);

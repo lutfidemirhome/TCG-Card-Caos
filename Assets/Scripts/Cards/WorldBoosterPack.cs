@@ -1527,6 +1527,28 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         return preRolledContents;
     }
 
+    public bool TryCollectCardForCapture(int index, PlayerCardHand hand, int sequenceIndex)
+    {
+        if (!CpiTrailerMoundToggle.IsCaptureScene || IsInHand || hand == null || hand.AvailableSlots <= 0
+            || preRolledContents == null || index < 0 || index >= preRolledContents.Count) return false;
+        var definition = preRolledContents[index];
+        if (definition == null) return false;
+        var card = CardFactory.CreateWorldCard(transform.position, transform.rotation, definition, 0);
+        if (!hand.TryPickupForSkill(card, sequenceIndex))
+        {
+            Destroy(card.gameObject);
+            return false;
+        }
+        preRolledContents.RemoveAt(index);
+        GameSaveSignals.MarkDirty();
+        if (preRolledContents.Count == 0)
+        {
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+        }
+        return true;
+    }
+
     // Older saves can contain repeats from the previous pack generator. Keep those exact
     // snapshots playable; editor-authored/new-game packs still reject repeated definitions.
     public void PreserveSavedContents()
@@ -1789,7 +1811,9 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     public bool TryGetFixedContents(out IReadOnlyList<CardDefinition> contents, out string error)
     {
         contents = preRolledContents;
-        if (preRolledContents == null || preRolledContents.Count != CardDimensions.CardsPerBoosterPack)
+        bool partialCapturePack = CpiTrailerMoundToggle.IsCaptureScene && preRolledContents != null
+            && preRolledContents.Count > 0 && preRolledContents.Count < CardDimensions.CardsPerBoosterPack;
+        if (preRolledContents == null || (preRolledContents.Count != CardDimensions.CardsPerBoosterPack && !partialCapturePack))
         {
             error = "Pakete tam 5 kart atanmalı. Eksik veya fazla içerik rastgele tamamlanmaz.";
             return false;

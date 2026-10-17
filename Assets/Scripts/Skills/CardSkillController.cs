@@ -144,6 +144,7 @@ public sealed class CardSkillController : MonoBehaviour
 
     bool Assemble(PlayerCardHand hand, int limit)
     {
+        if (CpiTrailerMoundToggle.IsCaptureScene) return AssembleForCapture(hand);
         if (hand.AvailableSlots <= 0 || !FindMatching(hand.SelectedHeldCard)) return false;
         Vector3 origin = hand.transform.position;
         _matching.Sort((a, b) => (a.transform.position - origin).sqrMagnitude.CompareTo((b.transform.position - origin).sqrMagnitude));
@@ -155,6 +156,62 @@ public sealed class CardSkillController : MonoBehaviour
             // change this skill's eligible cards halfway through the same batch.
             // TryPickup safely stops a moving card's physics, just like manual pickup.
             if (hand.TryPickupForSkill(card, collected)) collected++;
+        }
+        return collected > 0;
+    }
+
+    static string CaptureCardKey(WorldCard card) => card.UsesPsaSlab
+        ? $"psa:{card.PsaSet}:{card.PsaSlotNumber}:{card.PsaVariantIndex}"
+        : card.Definition != null ? card.Definition.DefinitionId : null;
+
+    bool AssembleForCapture(PlayerCardHand hand)
+    {
+        if (hand.AvailableSlots <= 0 || !CardGroup.TryFrom(hand.SelectedHeldCard, out CardGroup group)) return false;
+        var collectedKeys = new HashSet<string>();
+        hand.CopyHeldCards(_held);
+        foreach (var held in _held)
+            if (held != null) collectedKeys.Add(CaptureCardKey(held));
+
+        // Capture-only, on key press: include shelf occupants as well as ground cards.
+        _matching.Clear();
+        foreach (var card in FindObjectsByType<WorldCard>(FindObjectsSortMode.None))
+            if (card && !card.IsInHand && !card.IsFlyingToShelf && !card.IsPackReveal && group.Matches(card))
+                _matching.Add(card);
+        Vector3 origin = hand.transform.position;
+        _matching.Sort((a, b) => (a.transform.position - origin).sqrMagnitude.CompareTo((b.transform.position - origin).sqrMagnitude));
+        int collected = 0;
+        foreach (var card in _matching)
+        {
+            if (hand.AvailableSlots <= 0) break;
+            string key = CaptureCardKey(card);
+            if (string.IsNullOrEmpty(key) || collectedKeys.Contains(key)) continue;
+            bool locked = card.IsShelfRowCompleteLocked;
+            card.SetSkillCompletionLocked(false);
+            if (hand.TryPickupForSkill(card, collected))
+            {
+                collectedKeys.Add(key);
+                collected++;
+            }
+            else card.SetSkillCompletionLocked(locked);
+        }
+        if (!group.psa && hand.AvailableSlots > 0)
+        {
+            foreach (var pack in FindObjectsByType<WorldBoosterPack>(FindObjectsSortMode.None))
+            {
+                if (hand.AvailableSlots <= 0) break;
+                if (!pack || pack.IsInHand) continue;
+                var contents = pack.PeekPreRolledContents();
+                if (contents == null) continue;
+                for (int i = contents.Count - 1; i >= 0 && hand.AvailableSlots > 0; i--)
+                {
+                    var definition = contents[i];
+                    if (!CardShelfSeries.TryGetSeriesId(definition, out string series) || series != group.series
+                        || collectedKeys.Contains(definition.DefinitionId)) continue;
+                    if (!pack.TryCollectCardForCapture(i, hand, collected)) continue;
+                    collectedKeys.Add(definition.DefinitionId);
+                    collected++;
+                }
+            }
         }
         return collected > 0;
     }

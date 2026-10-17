@@ -13,14 +13,21 @@ public static class CpiRecordingSetup
 {
     const string Menu = "Tools/TCG Trailer/";
     const string RestoreKey = "TCG.Trailer.RestoreGameView";
+    const string StartKey = "TCG.Trailer.ManualStartPending";
     static RecorderController activeRecording;
 
     static CpiRecordingSetup()
     {
         EditorApplication.playModeStateChanged += state =>
         {
+            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool(StartKey, false))
+            {
+                SessionState.SetBool(StartKey, false);
+                EditorApplication.delayCall += () => { if (EditorApplication.isPlaying) Start(); };
+            }
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
+                SessionState.SetBool(StartKey, false);
                 activeRecording?.StopRecording();
                 activeRecording = null;
             }
@@ -43,12 +50,16 @@ public static class CpiRecordingSetup
     [MenuItem(Menu + "2 - 1440p 30 FPS - Compact MP4")]
     public static void Smooth1440() => Configure(2560, 1440, 30, false);
 
+    [MenuItem(Menu + "Portrait - 1080x1920 30 FPS - Compact MP4")]
+    public static void Portrait1080() => Configure(1080, 1920, 30, false);
+
     [MenuItem(Menu + "1440p 60 FPS - Higher Recording Load", false, 3)]
     static void HighFrameRate1440() => Configure(2560, 1440, 60, false);
 
     [MenuItem(Menu + "1 - 4K 30 FPS - Premiere ProRes HQ", true)]
     [MenuItem(Menu + "2 - 1440p 30 FPS - Compact MP4", true)]
     [MenuItem(Menu + "1440p 60 FPS - Higher Recording Load", true)]
+    [MenuItem(Menu + "Portrait - 1080x1920 30 FPS - Compact MP4", true)]
     static bool CanConfigure() => !EditorApplication.isPlayingOrWillChangePlaymode && !EditorApplication.isCompiling;
 
     static void Configure(int width, int height, int fps, bool hq)
@@ -97,6 +108,15 @@ public static class CpiRecordingSetup
     [MenuItem(Menu + "3 - Start Recording (Game View Only)")]
     static void Start()
     {
+        if (IsRecording()) return;
+        if (!EditorApplication.isPlaying)
+        {
+            SessionState.SetBool(StartKey, true);
+            EditorApplication.isPlaying = true;
+            return;
+        }
+        activeRecording?.StopRecording();
+        activeRecording = null;
         var recorder = EditorWindow.GetWindow<RecorderWindow>();
         if (recorder.IsRecording()) return;
         var view = FindGameView();
@@ -112,15 +132,22 @@ public static class CpiRecordingSetup
                 $"TCG_{movie.ImageInputSettings.OutputHeight}p_{DateTime.Now:yyyyMMdd_HHmmss_fff}_<Take>");
         activeRecording.PrepareRecording();
         if (!activeRecording.StartRecording()) Stop();
+        else
+        {
+            view?.ShowNotification(new GUIContent("Kayıt başladı"), 2);
+            Debug.Log("[TCG Trailer] Recording started.");
+        }
     }
 
     [MenuItem(Menu + "3 - Start Recording (Game View Only)", true)]
     static bool CanStart() => !EditorApplication.isCompiling && !EditorUtility.scriptCompilationFailed
-        && EditorApplication.isPlaying && activeRecording == null;
+        && !SessionState.GetBool(StartKey, false) && !IsRecording();
 
     [MenuItem(Menu + "4 - Stop Recording")]
     static void Stop()
     {
+        SessionState.SetBool(StartKey, false);
+        bool wasRecording = IsRecording();
         activeRecording?.StopRecording();
         activeRecording = null;
         foreach (var recorder in Resources.FindObjectsOfTypeAll<RecorderWindow>())
@@ -131,7 +158,20 @@ public static class CpiRecordingSetup
             var view = FindGameView();
             if (view != null) view.maximized = false;
         }
+        if (IsRecording())
+        {
+            Debug.LogError("[TCG Trailer] Recorder is still active after Stop.");
+            return;
+        }
+        FindGameView()?.ShowNotification(new GUIContent(wasRecording
+            ? "Video kaydı durdu. Oyun devam ediyor."
+            : "Aktif video kaydı yok."), 4);
+        Debug.Log(wasRecording ? "[TCG Trailer] Recording stopped; Play mode remains running."
+            : "[TCG Trailer] No active recording to stop.");
     }
+
+    static bool IsRecording() => (activeRecording != null && activeRecording.IsRecording())
+        || Resources.FindObjectsOfTypeAll<RecorderWindow>().Any(window => window.IsRecording());
 
     static EditorWindow FindGameView() => Resources.FindObjectsOfTypeAll<EditorWindow>()
         .FirstOrDefault(window => window.GetType().Name == "GameView");

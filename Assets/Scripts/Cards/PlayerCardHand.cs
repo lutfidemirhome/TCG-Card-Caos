@@ -73,6 +73,7 @@ public class PlayerCardHand : MonoBehaviour
     Transform _handAnchor;
     Camera _camera;
     float _handZoomScale = 1f;
+    float _portraitCaptureScale = 1f;
     int _selectedIndex;
     readonly List<WorldCard> _cards = new List<WorldCard>();
     readonly List<WorldBoosterPack> _heldPacks = new List<WorldBoosterPack>();
@@ -454,6 +455,9 @@ public class PlayerCardHand : MonoBehaviour
         float halfFovRad = _camera.fieldOfView * 0.5f * Mathf.Deg2Rad;
         // Keep the whole hand at its normal screen size during temporary camera zoom.
         _handZoomScale = Mathf.Tan(halfFovRad) / Mathf.Tan(GameSettings.Fov * 0.5f * Mathf.Deg2Rad);
+        // Portrait trailer framing: scale the whole fan uniformly, including its spacing.
+        _portraitCaptureScale = CpiTrailerMoundToggle.IsCaptureScene && _camera.aspect < 1f ? 0.6f : 1f;
+        _handZoomScale *= _portraitCaptureScale;
         float frustumHeight = 2f * handDistance * Mathf.Tan(halfFovRad);
         float cardViewportHeight = GetCardViewportHeight(frustumHeight);
 
@@ -1197,8 +1201,8 @@ public class PlayerCardHand : MonoBehaviour
         {
             HeldScale = EffectiveHeldScale,
             CardPitchDegrees = cardPitchDegrees,
-            CardDepthStep = cardDepthStep * depthFit,
-            CardVisualOffsetY = cardVisualOffsetY,
+            CardDepthStep = cardDepthStep * depthFit * _portraitCaptureScale,
+            CardVisualOffsetY = cardVisualOffsetY * _portraitCaptureScale,
             MinFanAngle = minFanAngle,
             MaxFanAngle = maxFanAngle,
             FanAngleRampCardSpan = fanAngleRampCardSpan,
@@ -1212,7 +1216,7 @@ public class PlayerCardHand : MonoBehaviour
             MinCardSpacing = minCardSpacing * _handZoomScale,
             MaxCardSpacing = maxCardSpacing * _handZoomScale,
             SelectedLift = CardDimensions.Height * EffectiveHeldScale * selectedLiftPercent,
-            SelectedForwardMargin = selectedForwardMargin,
+            SelectedForwardMargin = selectedForwardMargin * _portraitCaptureScale,
         };
     }
 

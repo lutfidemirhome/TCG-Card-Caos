@@ -47,6 +47,7 @@ public sealed class SkillPanelView : MonoBehaviour
     int _selected, _revision = -1;
     ulong _taskProgressRevision;
     [SerializeField] string trailerTaskLocalizationKey;
+    [SerializeField] bool hideCaptureHud;
     readonly int[] _barState = { -1,-1,-1,-1,-1 };
     bool _pausedByUs;
     CursorLockMode _previousLock;
@@ -155,7 +156,7 @@ public sealed class SkillPanelView : MonoBehaviour
         if (!gameplay) { Close(); SetVisible(_task, false); SetVisible(_bar, false); return; }
         if (IsOpen && (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab))) Close();
         else if (!GamePause.IsPaused && !MinorSkillUnlockView.ConsumesInput && Input.GetKeyDown(KeyCode.Tab)) Open();
-        bool hudVisible = !GamePause.IsPaused;
+        bool hudVisible = !GamePause.IsPaused && !hideCaptureHud;
         SetVisible(_task, hudVisible); SetVisible(_bar, hudVisible);
         _refresh -= Time.unscaledDeltaTime;
         if (_revision != SkillProgress.Revision || _refresh <= 0f)
