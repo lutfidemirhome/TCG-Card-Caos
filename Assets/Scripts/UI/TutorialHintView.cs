@@ -129,7 +129,7 @@ public class TutorialHintView : MonoBehaviour
             return;
         }
 
-        if (!_showThisSession || _step == Step.Done)
+        if (CpiTrailerMoundToggle.IsCaptureScene || !_showThisSession || _step == Step.Done)
         {
             Hide();
             return;

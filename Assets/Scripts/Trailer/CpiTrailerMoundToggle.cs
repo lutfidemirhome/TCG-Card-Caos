@@ -5,6 +5,14 @@ using System.Collections.Generic;
 [DisallowMultipleComponent]
 public sealed class CpiTrailerMoundToggle : MonoBehaviour
 {
+    static CpiTrailerMoundToggle _instance;
+    public static bool IsCaptureScene => _instance != null;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => _instance = null;
+    void Awake() => _instance = this;
+    void OnDestroy() { if (_instance == this) _instance = null; }
+
     [SerializeField] GameObject moundRoot;
     [SerializeField] KeyCode toggleKey = KeyCode.Y;
     WorldCard[] _cards;

@@ -46,6 +46,7 @@ public sealed class SkillPanelView : MonoBehaviour
     float _refresh;
     int _selected, _revision = -1;
     ulong _taskProgressRevision;
+    [SerializeField] string trailerTaskLocalizationKey;
     readonly int[] _barState = { -1,-1,-1,-1,-1 };
     bool _pausedByUs;
     CursorLockMode _previousLock;
@@ -198,6 +199,14 @@ public sealed class SkillPanelView : MonoBehaviour
     static void Set(TMP_Text label, string value) { if (label != null && label.text != value) label.text = value; }
     void RefreshTask()
     {
+        // Presentation-only override for trailer capture; progression remains untouched.
+        if (!string.IsNullOrEmpty(trailerTaskLocalizationKey))
+        {
+            Set(_taskText, Localization.Get(trailerTaskLocalizationKey));
+            LayoutTask();
+            _taskProgressRevision = GameProgressCounter.Revision;
+            return;
+        }
         int target = SkillProgress.NextGoal, points = SkillProgress.Points;
         string taskText;
         if (target > 0)

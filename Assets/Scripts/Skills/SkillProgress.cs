@@ -27,6 +27,7 @@ public static class SkillProgress
     static readonly float[] Cooldowns = new float[SkillCatalog.Count];
     static readonly float[] Active = new float[SkillCatalog.Count];
     static SkillAutoshelfContext _autoshelfContext;
+    static int _trailerPoints;
     public static bool Ready { get; private set; }
     public static SkillAutoshelfContext AutoshelfContext => _autoshelfContext;
 
@@ -46,7 +47,7 @@ public static class SkillProgress
             int earned = 0, spent = 0;
             foreach (int threshold in SkillCatalog.Milestones) if (Completed.Count >= threshold) earned++;
             foreach (int level in Levels) spent += level;
-            return Mathf.Max(0, earned - spent);
+            return Mathf.Max(0, earned + _trailerPoints - spent);
         }
     }
     public static int NextMilestone
@@ -60,6 +61,7 @@ public static class SkillProgress
     {
         Ready = false; Completed.Clear(); CompletedSeries.Clear(); Rows.Clear(); PsaKeys.Clear();
         _autoshelfContext = null;
+        _trailerPoints = 0;
         Array.Clear(Levels, 0, Levels.Length); Array.Clear(Cooldowns, 0, Cooldowns.Length); Array.Clear(Active, 0, Active.Length);
         Revision++;
     }
@@ -101,6 +103,20 @@ public static class SkillProgress
             foreach (CardShelf shelf in shelves) migrated |= Collect(shelf);
             foreach (PsaCabinet cabinet in UnityEngine.Object.FindObjectsByType<PsaCabinet>(FindObjectsSortMode.None))
                 migrated |= Collect(cabinet);
+        }
+        // Only the authored CPI capture scene receives this temporary allowance.
+        // No fake completed rows or minor-skill unlocks are created.
+        if (UnityEngine.Object.FindFirstObjectByType<CpiTrailerMoundToggle>() != null)
+        {
+            int spent = 0, earned = 0;
+            for (int i = 0; i < Levels.Length; i++)
+            {
+                Levels[i] = Mathf.Max(1, Levels[i]);
+                spent += Levels[i];
+            }
+            foreach (int threshold in SkillCatalog.Milestones)
+                if (Completed.Count >= threshold) earned++;
+            _trailerPoints = Mathf.Max(0, 50 + spent - earned);
         }
         Ready = true;
         Revision++;

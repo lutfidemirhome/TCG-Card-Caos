@@ -13,7 +13,6 @@ public static class CpiRecordingSetup
 {
     const string Menu = "Tools/TCG Trailer/";
     const string RestoreKey = "TCG.Trailer.RestoreGameView";
-    const string StartKey = "TCG.Trailer.StartPending";
     static RecorderController activeRecording;
 
     static CpiRecordingSetup()
@@ -25,23 +24,8 @@ public static class CpiRecordingSetup
                 activeRecording?.StopRecording();
                 activeRecording = null;
             }
-            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool(StartKey, false))
-            {
-                SessionState.SetBool(StartKey, false);
-                EditorApplication.delayCall += () =>
-                {
-                    if (!EditorApplication.isPlaying) return;
-                    activeRecording = new RecorderController(RecorderControllerSettings.GetGlobalSettings());
-                    foreach (var movie in activeRecording.Settings.RecorderSettings.OfType<MovieRecorderSettings>())
-                        movie.OutputFile = Path.Combine(Path.GetFullPath("Recordings/Trailer"),
-                            $"TCG_{movie.ImageInputSettings.OutputHeight}p_{DateTime.Now:yyyyMMdd_HHmmss_fff}_<Take>");
-                    activeRecording.PrepareRecording();
-                    if (!activeRecording.StartRecording()) Stop();
-                };
-            }
             if (state != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(RestoreKey, false))
                 return;
-            SessionState.SetBool(StartKey, false);
             SessionState.SetBool(RestoreKey, false);
             var view = FindGameView();
             if (view != null) view.maximized = false;
@@ -56,14 +40,14 @@ public static class CpiRecordingSetup
     [MenuItem(Menu + "1 - 4K 30 FPS - Premiere ProRes HQ")]
     public static void Quality4K() => Configure(3840, 2160, 30, true);
 
-    [MenuItem(Menu + "2 - 1440p 30 FPS - Lower Recording Load")]
+    [MenuItem(Menu + "2 - 1440p 30 FPS - Compact MP4")]
     public static void Smooth1440() => Configure(2560, 1440, 30, false);
 
     [MenuItem(Menu + "1440p 60 FPS - Higher Recording Load", false, 3)]
     static void HighFrameRate1440() => Configure(2560, 1440, 60, false);
 
     [MenuItem(Menu + "1 - 4K 30 FPS - Premiere ProRes HQ", true)]
-    [MenuItem(Menu + "2 - 1440p 30 FPS - Lower Recording Load", true)]
+    [MenuItem(Menu + "2 - 1440p 30 FPS - Compact MP4", true)]
     [MenuItem(Menu + "1440p 60 FPS - Higher Recording Load", true)]
     static bool CanConfigure() => !EditorApplication.isPlayingOrWillChangePlaymode && !EditorApplication.isCompiling;
 
@@ -84,10 +68,15 @@ public static class CpiRecordingSetup
         movie.name = movie.name.Length == 0 ? "Movie" : movie.name;
         movie.Enabled = true;
         movie.ImageInputSettings = new GameViewInputSettings { OutputWidth = width, OutputHeight = height };
-        movie.EncoderSettings = new ProResEncoderSettings
-        {
-            Format = hq ? ProResEncoderSettings.OutputFormat.ProRes422HQ : ProResEncoderSettings.OutputFormat.ProRes422
-        };
+        if (hq)
+            movie.EncoderSettings = new ProResEncoderSettings { Format = ProResEncoderSettings.OutputFormat.ProRes422HQ };
+        else
+            movie.EncoderSettings = new CoreEncoderSettings
+            {
+                Codec = CoreEncoderSettings.OutputCodec.MP4,
+                EncodingQuality = CoreEncoderSettings.VideoEncodingQuality.Custom,
+                TargetBitRate = fps > 30 ? 40f : 25f
+            };
         movie.CaptureAlpha = false;
         movie.CaptureAudio = true;
         movie.AccumulationSettings.CaptureAccumulation = false;
@@ -97,12 +86,12 @@ public static class CpiRecordingSetup
         settings.FrameRatePlayback = FrameRatePlayback.Constant;
         settings.FrameRate = fps;
         settings.CapFrameRate = true;
-        settings.ExitPlayMode = true;
+        settings.ExitPlayMode = false;
         settings.SetRecordModeToManual();
         settings.Save();
         PlayModeWindow.SetCustomRenderingResolution((uint)width, (uint)height, $"Trailer {height}p");
         EditorWindow.GetWindow<RecorderWindow>().SetRecorderControllerSettings(settings);
-        Debug.Log($"Trailer: {width}x{height}, {fps} FPS, ProRes {(hq ? "422 HQ" : "422")}. Output: Recordings/Trailer.");
+        Debug.Log($"Trailer: {width}x{height}, {fps} FPS, {(hq ? "ProRes 422 HQ" : "H.264 MP4")}. Output: Recordings/Trailer.");
     }
 
     [MenuItem(Menu + "3 - Start Recording (Game View Only)")]
@@ -117,23 +106,31 @@ public static class CpiRecordingSetup
             view.maximized = true;
             view.Focus();
         }
-        SessionState.SetBool(StartKey, true);
-        EditorApplication.isPlaying = true;
+        activeRecording = new RecorderController(RecorderControllerSettings.GetGlobalSettings());
+        foreach (var movie in activeRecording.Settings.RecorderSettings.OfType<MovieRecorderSettings>())
+            movie.OutputFile = Path.Combine(Path.GetFullPath("Recordings/Trailer"),
+                $"TCG_{movie.ImageInputSettings.OutputHeight}p_{DateTime.Now:yyyyMMdd_HHmmss_fff}_<Take>");
+        activeRecording.PrepareRecording();
+        if (!activeRecording.StartRecording()) Stop();
     }
 
     [MenuItem(Menu + "3 - Start Recording (Game View Only)", true)]
     static bool CanStart() => !EditorApplication.isCompiling && !EditorUtility.scriptCompilationFailed
-        && !EditorApplication.isPlayingOrWillChangePlaymode;
+        && EditorApplication.isPlaying && activeRecording == null;
 
     [MenuItem(Menu + "4 - Stop Recording")]
     static void Stop()
     {
-        bool wasRecording = activeRecording != null;
         activeRecording?.StopRecording();
         activeRecording = null;
         foreach (var recorder in Resources.FindObjectsOfTypeAll<RecorderWindow>())
             if (recorder.IsRecording()) recorder.StopRecording();
-        if (wasRecording) EditorApplication.isPlaying = false;
+        if (SessionState.GetBool(RestoreKey, false))
+        {
+            SessionState.SetBool(RestoreKey, false);
+            var view = FindGameView();
+            if (view != null) view.maximized = false;
+        }
     }
 
     static EditorWindow FindGameView() => Resources.FindObjectsOfTypeAll<EditorWindow>()

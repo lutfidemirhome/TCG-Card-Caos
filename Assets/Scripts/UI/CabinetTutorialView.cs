@@ -73,7 +73,7 @@ public sealed class CabinetTutorialView : MonoBehaviour
             if (Time.frameCount != _openedFrame && Input.GetKeyDown(KeyCode.Escape)) Dismiss();
             return;
         }
-        if (_menuMode || _seen || Time.unscaledTime < _nextCheck) return;
+        if (CpiTrailerMoundToggle.IsCaptureScene || _menuMode || _seen || Time.unscaledTime < _nextCheck) return;
         _nextCheck = Time.unscaledTime + .4f;
         if (!GameScenes.IsActiveGameScene() || GameSceneLoader.IsLoading || GamePause.IsPaused
             || !CardInstancedRenderManager.IsGameplayReady || WelcomePopupView.IsWaitingForStart
