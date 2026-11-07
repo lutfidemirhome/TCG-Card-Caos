@@ -350,7 +350,7 @@ public class InteractionController : MonoBehaviour
 
     void HandleGroundCardTarget(WorldCard worldCard)
     {
-        if (worldCard == null || worldCard.IsInHand || worldCard.IsShelfRowCompleteLocked)
+        if (worldCard == null || worldCard.IsInHand || worldCard.IsFlyingToShelf || worldCard.IsShelfRowCompleteLocked)
         {
             ClearDelayedInspectUiState();
             return;
@@ -372,9 +372,9 @@ public class InteractionController : MonoBehaviour
             CardInteractionFocus.ClearFocus();
         }
 
-        // Pickup and highlight must not wait for the large inspect preview.
+        // Pickup and highlight are immediate; the pickup text appears with the preview.
         CardInteractionFocus.SetFocusedCard(worldCard);
-        ShowPrompt(worldCard, worldCard.GetPromptText());
+        SetInteractionTarget(worldCard);
     }
 
     void HandleGroundPackTarget(WorldBoosterPack worldPack)
@@ -464,6 +464,8 @@ public class InteractionController : MonoBehaviour
             _psaInspectPreview?.Hide();
             _inspectPreview.Show(worldCard);
         }
+
+        ShowPrompt(worldCard, worldCard.GetPromptText());
     }
 
     void ShowGroundPackPreview(WorldBoosterPack worldPack)
@@ -843,6 +845,15 @@ public class InteractionController : MonoBehaviour
                 : DefaultPromptBackground;
         }
 
+        SetInteractionTarget(interactable);
+        if (_promptText != null)
+            _promptText.text = prompt;
+        if (_promptRoot != null && !_promptRoot.activeSelf)
+            _promptRoot.SetActive(true);
+    }
+
+    void SetInteractionTarget(IInteractable interactable)
+    {
         if (!ReferenceEquals(interactable, _currentTarget))
         {
             if (_currentTarget is CardShelf previousShelf)
@@ -854,12 +865,6 @@ public class InteractionController : MonoBehaviour
             _currentTarget = interactable;
             _currentHighlight = GetHighlight(interactable);
             _currentHighlight?.SetInteractionHighlight(true);
-            _promptText.text = prompt;
-            _promptRoot.SetActive(true);
-        }
-        else if (_promptText != null)
-        {
-            _promptText.text = prompt;
         }
     }
 

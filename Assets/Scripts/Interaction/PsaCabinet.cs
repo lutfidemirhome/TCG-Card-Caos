@@ -13,6 +13,9 @@ public class PsaCabinet : MonoBehaviour
 
     void OnDisable() => CabinetCompletionEffect.Cancel(transform);
 
+    // A new completion may celebrate again without granting another earned credit.
+    internal void ResetCompletionFeedback() => _celebratedCabinet = false;
+
     /// <summary>Called only by a real placement landing, never by save restoration.</summary>
     public bool TryPlayCompletionFeedback()
     {
@@ -134,14 +137,6 @@ public class PsaCabinet : MonoBehaviour
             keys.Add(key);
         }
         return keys.Count > 0;
-    }
-
-    public void SetSkillCompletionLock(bool locked)
-    {
-        EnsureSlotCache();
-        if (slots == null) return;
-        foreach (PsaCabinetSlot slot in slots)
-            if (slot != null && slot.OccupiedCard != null) slot.OccupiedCard.SetSkillCompletionLocked(locked);
     }
 
     public bool AcceptsSkillCard(WorldCard card)

@@ -102,17 +102,10 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool IsPackReveal => _handState == HandState.PackReveal;
     public bool IsInHand => _handState == HandState.Held || _handState == HandState.FlyingToHand;
     public bool HasActivePhysics => _rigidbody != null;
-    bool _skillCompletionLocked;
     bool HasActiveShelfCompletionEffect => _shelfRowCompleteEffect != null && _shelfRowCompleteEffect.IsActiveFor(this);
-    public bool IsShelfRowCompleteLocked => _skillCompletionLocked || HasActiveShelfCompletionEffect;
-    public bool IsSkillCompletionLocked => _skillCompletionLocked;
-
-    // Reconstructed from completed shelf contents on load, rather than stored in scene assets.
-    public void SetSkillCompletionLocked(bool locked)
-    {
-        _skillCompletionLocked = locked;
-        if (locked) SetPlayerAimFocus(false);
-    }
+    // Only the short completion animation blocks pickup. Earned progress lives in SkillProgress;
+    // completed cards remain movable after that animation, including after loading a save.
+    public bool IsShelfRowCompleteLocked => HasActiveShelfCompletionEffect;
 
     /// <summary>
     /// True for a dynamic physics card, including a sleeping card in a pile. Sleeping bodies

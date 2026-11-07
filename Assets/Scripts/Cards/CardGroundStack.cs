@@ -163,6 +163,7 @@ public static class CardGroundStack
     }
 
     static readonly HashSet<WorldCard> RayCandidateSeen = new HashSet<WorldCard>();
+    static readonly HashSet<long> RayCellSeen = new HashSet<long>();
 
     /// <summary>Collect ground cards near a view ray (spatial cells when many cards are tracked).</summary>
     public static void CollectRayCandidates(Ray ray, float maxDistance, List<WorldCard> results)
@@ -192,6 +193,7 @@ public static class CardGroundStack
         float step = Mathf.Max(cellSize * 0.75f, 0.08f);
         int steps = Mathf.CeilToInt(maxDistance / step);
         RayCandidateSeen.Clear();
+        RayCellSeen.Clear();
 
         for (int s = 0; s <= steps; s++)
         {
@@ -205,6 +207,10 @@ public static class CardGroundStack
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     long key = PackCell(cx + dx, cz + dz);
+                    // Consecutive ray samples often visit the same cell, especially looking down.
+                    // Scan each bucket only once, retaining the original first-visit candidate order.
+                    if (!RayCellSeen.Add(key))
+                        continue;
                     if (!SpatialBuckets.TryGetValue(key, out List<WorldCard> bucket))
                         continue;
 
@@ -798,7 +804,7 @@ public static class CardGroundStack
         for (int i = CellScratch.Count - 1; i >= 0; i--)
         {
             WorldCard card = CellScratch[i];
-            if (card == null || card.IsInHand || card.IsPhysicsSimulating)
+            if (card == null || card == seed || card.IsInHand || card.IsPhysicsSimulating)
                 CellScratch.RemoveAt(i);
         }
 
@@ -811,20 +817,25 @@ public static class CardGroundStack
             WorldCard current = OpenScratch[last];
             OpenScratch.RemoveAt(last);
 
-            if (current == null || current.IsInHand || results.Contains(current))
+            if (current == null || current.IsInHand)
                 continue;
 
             results.Add(current);
 
-            for (int i = 0; i < CellScratch.Count; i++)
+            // Discovered cards leave the candidate list immediately. Dense piles used to
+            // enqueue the same neighbours repeatedly and linearly search results each time.
+            // Only membership matters here: ApplyPileLayers sorts the final cluster by the
+            // existing ground order before assigning layers.
+            for (int i = CellScratch.Count - 1; i >= 0; i--)
             {
                 WorldCard other = CellScratch[i];
-                if (other == null || other.IsInHand || results.Contains(other))
-                    continue;
                 if (!OverlapsOnGround(current, other))
                     continue;
 
                 OpenScratch.Add(other);
+                int lastCandidate = CellScratch.Count - 1;
+                CellScratch[i] = CellScratch[lastCandidate];
+                CellScratch.RemoveAt(lastCandidate);
             }
         }
 

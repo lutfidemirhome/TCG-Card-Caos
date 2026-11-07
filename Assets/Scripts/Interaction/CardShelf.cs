@@ -537,14 +537,6 @@ public class CardShelf : MonoBehaviour, IInteractable
         return false;
     }
 
-    public void SetSkillRowCompletionLock(int rowIndex, bool locked)
-    {
-        EnsureSlotCache();
-        foreach (CardShelfSlot slot in _slots)
-            if (slot != null && slot.RowIndex == rowIndex && slot.OccupiedCard != null)
-                slot.OccupiedCard.SetSkillCompletionLocked(locked);
-    }
-
     public bool TryGetSkillAimRow(Ray ray, out int rowIndex)
     {
         EnsureSlotCache();
@@ -630,6 +622,13 @@ public class CardShelf : MonoBehaviour, IInteractable
         }
 
         return true;
+    }
+
+    // Rearm visuals on removal only. Earned progress stays in SkillProgress.
+    internal void ResetCompletionFeedback(int rowIndex)
+    {
+        _celebratedRows.Remove(rowIndex);
+        _celebratedCabinet = false;
     }
 
     void PlayRowCompleteFeedback(int rowIndex)

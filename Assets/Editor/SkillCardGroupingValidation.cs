@@ -118,16 +118,15 @@ public static class SkillCardGroupingValidation
             var held = Card(8, PsaCardSet.Japanese, 2);
             var flying = Card(8, PsaCardSet.Japanese, 3);
             var reveal = Card(8, PsaCardSet.English, 2);
-            var locked = Card(8, PsaCardSet.English, 3);
+            var movedFromCompleted = Card(8, PsaCardSet.English, 3);
             var shelved = Card(8, PsaCardSet.Japanese, 4);
             var inactive = Card(8, PsaCardSet.English, 4);
             Set(held, "_handState", Enum.Parse(typeof(WorldCard).GetNestedType("HandState", Flags), "Held"));
             Set(flying, "_handState", Enum.Parse(typeof(WorldCard).GetNestedType("HandState", Flags), "FlyingToShelf"));
             Set(reveal, "_handState", Enum.Parse(typeof(WorldCard).GetNestedType("HandState", Flags), "PackReveal"));
-            Set(locked, "_skillCompletionLocked", true);
             shelved.transform.SetParent(empty.transform, false);
             inactive.gameObject.SetActive(false);
-            tracked.AddRange(new[] { english, japanese, wrongGrade, normalA, held, flying, reveal, locked, shelved, inactive });
+            tracked.AddRange(new[] { english, japanese, wrongGrade, normalA, held, flying, reveal, movedFromCompleted, shelved, inactive });
             foreach (WorldCard card in tracked) CardGroundStack.Track(card);
             MethodInfo find = typeof(CardSkillController).GetMethod("FindMatching", Flags);
             var candidates = (List<WorldCard>)Get(controller, "_matching");
@@ -135,7 +134,8 @@ public static class SkillCardGroupingValidation
             {
                 Check((bool)find.Invoke(controller, new object[] { selected }), "Collection/highlight candidate search succeeds");
                 Check(candidates.Contains(english) && candidates.Contains(japanese), "Collection/highlight candidate search includes both languages");
-                foreach (WorldCard excluded in new[] { wrongGrade, normalA, held, flying, reveal, locked, shelved, inactive })
+                Check(candidates.Contains(movedFromCompleted), "Movable ground card is not permanently excluded by past completion");
+                foreach (WorldCard excluded in new[] { wrongGrade, normalA, held, flying, reveal, shelved, inactive })
                     Check(!candidates.Contains(excluded), "Collection/highlight excludes ineligible card: " + Array.IndexOf(tracked.ToArray(), excluded));
             }
             var legacy = JsonUtility.FromJson<SkillAutoshelfContext>("{\"psa\":true,\"psaSet\":1,\"psaNumber\":8}");

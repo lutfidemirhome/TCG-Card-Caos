@@ -149,7 +149,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
             if (occupiedCard.IsInHand)
             {
-                occupiedCard = null;
+                ReleaseOccupancy();
                 return true;
             }
 
@@ -638,7 +638,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         if (occupiedCard != card)
             return;
 
-        occupiedCard = null;
+        ReleaseOccupancy();
         CardGroundQuery.UntrackShelfCard(card);
         RefreshEditorPreviewVisibility();
         RefreshLabel();
@@ -744,9 +744,15 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
 
     public void ClearOccupant()
     {
-        occupiedCard = null;
+        if (occupiedCard != null) ReleaseOccupancy();
         RefreshEditorPreviewVisibility();
         RefreshLabel();
+    }
+
+    void ReleaseOccupancy()
+    {
+        occupiedCard = null;
+        GetComponentInParent<PsaCabinet>()?.ResetCompletionFeedback();
     }
 
     public Vector3 GetSpawnPosition()
@@ -773,7 +779,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     public void RefreshOccupancy()
     {
         if (occupiedCard != null && occupiedCard.IsInHand)
-            occupiedCard = null;
+            ReleaseOccupancy();
         RefreshEditorPreviewVisibility();
         RefreshLabel();
     }

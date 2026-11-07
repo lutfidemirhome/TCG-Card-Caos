@@ -47,8 +47,7 @@ public class CardShelfSlot : MonoBehaviour
             }
             if (occupiedCard.IsInHand)
             {
-                occupiedCard = null;
-                _placementOrder = 0;
+                ReleaseOccupancy();
                 return true;
             }
 
@@ -160,8 +159,7 @@ public class CardShelfSlot : MonoBehaviour
         if (occupiedCard != card)
             return;
 
-        occupiedCard = null;
-        _placementOrder = 0;
+        ReleaseOccupancy();
         CardGroundQuery.UntrackShelfCard(card);
         card?.SetPlayerAimFocus(false);
         RefreshPreviewVisibility();
@@ -174,11 +172,15 @@ public class CardShelfSlot : MonoBehaviour
     public void RefreshOccupancy()
     {
         if (occupiedCard != null && occupiedCard.IsInHand)
-        {
-            occupiedCard = null;
-            _placementOrder = 0;
-        }
+            ReleaseOccupancy();
         RefreshPreviewVisibility();
+    }
+
+    void ReleaseOccupancy()
+    {
+        occupiedCard = null;
+        _placementOrder = 0;
+        GetComponentInParent<CardShelf>()?.ResetCompletionFeedback(rowIndex);
     }
 
     void Awake()

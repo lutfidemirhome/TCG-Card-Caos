@@ -86,6 +86,7 @@ public static class InteractionAimValidation
             Set(controller, "_packInspectPreview", cameraObject.AddComponent<PackInspectPreview>());
             Set(controller, "_psaInspectPreview", cameraObject.AddComponent<PsaInspectPreview>());
             Call(controller, "BuildPromptUI");
+            var promptPanel = (GameObject)Get(controller, "_promptRoot");
             var card = Create("Isolated normal card").AddComponent<WorldCard>();
             var psa = Create("Isolated graded card").AddComponent<WorldCard>();
             Set(psa, "psaSlotNumber", 8);
@@ -103,10 +104,12 @@ public static class InteractionAimValidation
                 object preview = Get(controller, isCard ? (item == psa ? "_psaInspectPreview" : "_inspectPreview") : "_packInspectPreview");
                 var root = (RectTransform)Get(preview, "_previewRoot");
                 Check(root == null || !root.gameObject.activeSelf, "Large preview hidden on target entry");
+                Check(promptPanel.activeSelf == !isCard, "Card pickup prompt waits; pack prompt remains immediate");
                 Set(controller, "_inspectPreviewTimer", 0.05f - Time.deltaTime);
                 Call(controller, "UpdateInspectPreview");
                 root = (RectTransform)Get(preview, "_previewRoot");
                 Check(root == null || !root.gameObject.activeSelf, "Preview remains hidden before 0.15 seconds");
+                Check(promptPanel.activeSelf == !isCard, "Card pickup prompt stays hidden before preview delay");
                 Check(ReferenceEquals(Get(controller, "_currentTarget"), item), "Waiting for preview preserves immediate pickup");
                 Call(controller, isCard ? "HandleGroundCardTarget" : "HandleGroundPackTarget", item);
                 Check(Mathf.Abs((float)Get(controller, "_inspectPreviewTimer") - 0.05f) < 0.0001f, "Stable aim preserves preview timer");
@@ -114,17 +117,33 @@ public static class InteractionAimValidation
                 Call(controller, "UpdateInspectPreview");
                 root = (RectTransform)Get(preview, "_previewRoot");
                 Check(root != null && root.gameObject.activeSelf, "Large preview shown after delay");
+                Check(promptPanel.activeSelf, "Pickup prompt visible together with preview");
                 Check(ReferenceEquals(Get(controller, "_currentTarget"), item), "Preview preserves pickup target");
+            }
+            for (int i = 0; i < 12; i++)
+            {
+                var next = i % 2 == 0 ? psa : card;
+                Set(controller, "_raycastAimedCard", next);
+                Call(controller, "HandleGroundCardTarget", next);
+                Set(controller, "_inspectPreviewTimer", 0.05f - Time.deltaTime);
+                Call(controller, "UpdateInspectPreview");
+                Check(!promptPanel.activeSelf, "Sweeping over different cards does not flash pickup prompts");
+                Check((bool)Call(controller, "ShouldUseCurrentTargetForInteract"), "Sweeping preserves instant pickup");
             }
             Call(controller, "ClearTarget");
             Check(Get(controller, "_currentTarget") == null && CardInteractionFocus.FocusedCard == null, "Leaving target clears interaction focus");
             Check(!(bool)Get(card, "_interactionHighlighted"), "Leaving target clears outline");
+            Check(!promptPanel.activeSelf, "Leaving target hides pickup prompt");
+            Call(controller, "ShowPrompt", shelf, "Place card", 220f, false, false);
+            Check(promptPanel.activeSelf, "Shelf placement prompt remains immediate");
+            Call(controller, "ClearTarget");
             Set(controller, "inspectPreviewDelay", 0f);
             Set(controller, "_raycastAimedCard", card);
             Call(controller, "HandleGroundCardTarget", card);
             Call(controller, "UpdateInspectPreview");
             Check(ReferenceEquals(Get(controller, "_currentTarget"), card), "Zero-delay preview does not clear pickup target");
-            report.AppendLine("PASS: normal card / pack / graded card switches, immediate pickup eligibility and outline, delayed preview, clear focus, zero-delay preview.");
+            Check(promptPanel.activeSelf, "Zero-delay card preview shows its prompt immediately");
+            report.AppendLine("PASS: card/TCG pickup prompt synchronized with delayed preview; rapid target changes stay quiet; pickup, outline, pack and placement prompts stay immediate.");
             report.AppendLine("PASS: " + checks + " checks. No Play Mode or player save writes.");
         }
         catch (Exception exception)

@@ -14,7 +14,7 @@ public sealed class SkillSaveRecord
     public SkillAutoshelfContext autoshelving;
 }
 
-/// <summary>Per-save progress. Completed rows are locked; their contents can earn credit only once.</summary>
+/// <summary>Per-save progress. Cards remain movable; each row and its contents can earn credit only once.</summary>
 public static class SkillProgress
 {
     const int SaveVersion = 2;
@@ -67,8 +67,6 @@ public static class SkillProgress
     public static void Restore(SkillSaveRecord saved, bool isNewGame = false)
     {
         Reset();
-        foreach (WorldCard card in UnityEngine.Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None))
-            card.SetSkillCompletionLocked(false);
         if (!isNewGame && saved != null)
         {
             AddSavedKeys(Completed, saved.completedRows);
@@ -92,8 +90,8 @@ public static class SkillProgress
         bool migrated = false;
         if (!isNewGame)
         {
-            // Keep legacy earned credits. Current completed contents become locked and are
-            // recorded by series, so a second physical row can never reward those cards again.
+            // Keep legacy earned credits and record completed contents by series, so moving
+            // those cards to a second physical row can never reward them again.
             CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>(FindObjectsSortMode.None);
             // Seed every already-credited legacy row before checking new rows. Otherwise a
             // duplicated series visited first could earn again before its old row is seen.
@@ -138,7 +136,6 @@ public static class SkillProgress
         foreach (int row in Rows)
         {
             if (!shelf.TryGetCompletedSkillSeries(row, out string series)) continue;
-            shelf.SetSkillRowCompletionLock(row, true);
             string rowKey = path + ":row:" + row;
             bool freshSeries = CompletedSeries.Add("normal:" + series);
             // Old saves may already own this physical row: preserve that credit, while
@@ -152,7 +149,6 @@ public static class SkillProgress
     static bool Collect(PsaCabinet cabinet)
     {
         if (!cabinet || !cabinet.CopyCompletedSkillCardKeys(PsaKeys)) return false;
-        cabinet.SetSkillCompletionLock(true);
         string rowKey = PersistentId.BuildPathFallback(cabinet.transform) + ":psa";
         bool unusedContents = true, changed = false;
         foreach (string key in PsaKeys) if (CompletedSeries.Contains(key)) unusedContents = false;
