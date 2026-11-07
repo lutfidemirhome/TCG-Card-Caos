@@ -17,7 +17,7 @@ public sealed class MinorKeyInspectPreview : MonoBehaviour
         if (key == null || key.IsHeld || key.InspectSprite == null) { Hide(); return; }
         if (_image == null)
         {
-            var canvas = RuntimeOverlayCanvasFactory.Create(transform, "KeyInspectPreviewCanvas", sortingOrder: 95, matchWidthOrHeight: .5f);
+            var canvas = RuntimeOverlayCanvasFactory.Create(transform, "KeyInspectPreviewCanvas", sortingOrder: 95);
             var go = new GameObject("KeyArt", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(canvas.transform, false);
             _image = go.GetComponent<Image>();

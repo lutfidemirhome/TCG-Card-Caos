@@ -529,12 +529,7 @@ public static class MainMenuUIBuilder
         canvas.sortingOrder = 0;
 
         var scaler = canvasGo.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(
-            RuntimeOverlayCanvasFactory.ReferenceWidth,
-            RuntimeOverlayCanvasFactory.ReferenceHeight);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        RuntimeOverlayCanvasFactory.ConfigureScreenScaling(scaler);
 
         canvasGo.AddComponent<GraphicRaycaster>();
         return canvas;

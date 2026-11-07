@@ -94,7 +94,7 @@ public class MainMenuController : MonoBehaviour
 
     void BuildMenu()
     {
-        Canvas canvas = RuntimeOverlayCanvasFactory.Create(transform, "MainMenuCanvas", sortingOrder: 0, matchWidthOrHeight: 0.5f);
+        Canvas canvas = RuntimeOverlayCanvasFactory.Create(transform, "MainMenuCanvas", sortingOrder: 0);
 
         CreateBackground(canvas.transform);
         CreateButtonStack(canvas.transform);

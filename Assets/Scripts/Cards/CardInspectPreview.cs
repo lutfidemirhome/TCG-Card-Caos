@@ -72,7 +72,7 @@ public class CardInspectPreview : MonoBehaviour
         if (_previewRoot != null)
             return;
 
-        _canvas = RuntimeOverlayCanvasFactory.Create(transform, "CardInspectPreviewCanvas", sortingOrder: 95, matchWidthOrHeight: 0.5f);
+        _canvas = RuntimeOverlayCanvasFactory.Create(transform, "CardInspectPreviewCanvas", sortingOrder: 95);
 
         var rootGo = new GameObject("InspectCard");
         rootGo.transform.SetParent(_canvas.transform, false);

@@ -9,7 +9,16 @@ public static class RuntimeOverlayCanvasFactory
     public const float ReferenceWidth = 1920f;
     public const float ReferenceHeight = 1080f;
 
-    public static Canvas Create(Transform parent, string objectName, int sortingOrder, float matchWidthOrHeight = 0f)
+    // Keep the entire 16:9 design visible. Extra width/height expands the canvas instead
+    // of enlarging the controls until fixed-height panels extend beyond the screen.
+    public static void ConfigureScreenScaling(CanvasScaler scaler)
+    {
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(ReferenceWidth, ReferenceHeight);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+    }
+
+    public static Canvas Create(Transform parent, string objectName, int sortingOrder)
     {
         var canvasGo = new GameObject(objectName);
         canvasGo.transform.SetParent(parent, false);
@@ -19,9 +28,7 @@ public static class RuntimeOverlayCanvasFactory
         canvas.sortingOrder = sortingOrder;
 
         var scaler = canvasGo.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(ReferenceWidth, ReferenceHeight);
-        scaler.matchWidthOrHeight = matchWidthOrHeight;
+        ConfigureScreenScaling(scaler);
 
         canvasGo.AddComponent<GraphicRaycaster>();
         return canvas;

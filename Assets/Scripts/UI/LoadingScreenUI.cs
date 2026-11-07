@@ -207,12 +207,7 @@ public class LoadingScreenUI : MonoBehaviour
         if (scaler == null)
             scaler = gameObject.AddComponent<CanvasScaler>();
 
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(
-            RuntimeOverlayCanvasFactory.ReferenceWidth,
-            RuntimeOverlayCanvasFactory.ReferenceHeight);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        RuntimeOverlayCanvasFactory.ConfigureScreenScaling(scaler);
         scaler.enabled = false;
         scaler.enabled = true;
 
@@ -235,8 +230,7 @@ public class LoadingScreenUI : MonoBehaviour
         float screenH = Mathf.Max(1, Screen.height);
         float refW = scaler != null ? scaler.referenceResolution.x : RuntimeOverlayCanvasFactory.ReferenceWidth;
         float refH = scaler != null ? scaler.referenceResolution.y : RuntimeOverlayCanvasFactory.ReferenceHeight;
-        float match = scaler != null ? scaler.matchWidthOrHeight : 0.5f;
-        float scale = Mathf.Lerp(screenW / refW, screenH / refH, match);
+        float scale = Mathf.Min(screenW / refW, screenH / refH);
         if (scale < 0.0001f)
             scale = 1f;
 
