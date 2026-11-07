@@ -8,34 +8,37 @@ using UnityEngine;
 /// </summary>
 public static class PackOpenSequence
 {
-    const float FlipDuration = 0.233f;
-    const float FlipStagger = 0.054f;
+    // Scale only this sequence; keep authored hand settings and global game time unchanged.
+    const float OpeningSpeed = 1.5f;
+
+    const float FlipDuration = 0.233f / OpeningSpeed;
+    const float FlipStagger = 0.054f / OpeningSpeed;
     const float FlipRevealPopPeak = 1.09f;
-    const float FlipRevealPopDuration = 0.117f;
+    const float FlipRevealPopDuration = 0.117f / OpeningSpeed;
     const float RevealWavePeak = 1.14f;
-    const float RevealWavePulseDuration = 0.2f;
-    const float RevealWaveStagger = 0.05f;
+    const float RevealWavePulseDuration = 0.2f / OpeningSpeed;
+    const float RevealWaveStagger = 0.05f / OpeningSpeed;
     const float RevealWaveDipHeightFactor = 0.042f;
     const float RevealScreenScaleMultiplier = 1.2f;
     const float RevealCardSpacingFactor = 1.12f;
     const float RevealScreenMargin = 0.05f;
     const float RevealCardAnchorHeight = 0.02f;
     const float PackRevealLocalYOffsetFactor = 0.44f;
-    const float PackMoveToRevealDuration = 0.1f;
+    const float PackMoveToRevealDuration = 0.1f / OpeningSpeed;
     const float PackDriftDurationFactor = 0.075f;
     const float PackExitDropFactor = 1.35f;
-    const float PackPostShakePause = 0.05f;
+    const float PackPostShakePause = 0.05f / OpeningSpeed;
     const float PackRevealSettleDropFactor = 0.14f;
     const float PackRevealSettleDurationFactor = 0.1f;
-    const float CardEjectDuration = 0.26f;
-    const float CardEjectStagger = 0.1f;
+    const float CardEjectDuration = 0.26f / OpeningSpeed;
+    const float CardEjectStagger = 0.1f / OpeningSpeed;
     const float CardEjectStartScaleFactor = 0.32f;
     const float CardEjectArcHeightFactor = 0.09f;
     const float PackEjectLocalYOffsetFactor = 0.22f;
     const float PackEjectLocalZInsetFactor = 2.8f;
     const float RevealBackdropAlpha = 0.62f;
-    const float RevealBackdropFadeInDuration = 0.12f;
-    const float RevealBackdropFadeOutDuration = 0.32f;
+    const float RevealBackdropFadeInDuration = 0.12f / OpeningSpeed;
+    const float RevealBackdropFadeOutDuration = 0.32f / OpeningSpeed;
 
     // Opening spans many frames. Before all five cards exist, saves retain the unopened
     // pack and omit partial previews. After the commit, saves contain all five held cards.
@@ -184,7 +187,7 @@ public static class PackOpenSequence
             revealDistance,
             heldScale,
             CardDimensions.CardsPerBoosterPack);
-        float duration = hand.OpenSequenceDuration;
+        float duration = hand.OpenSequenceDuration / OpeningSpeed;
         Quaternion revealFaceRotation = CardArtLibrary.RevealRootLocalRotation;
         Quaternion packRevealWorldRotation = revealRoot.rotation * revealFaceRotation;
         Vector3 packRevealLocalStart = new Vector3(
@@ -227,7 +230,7 @@ public static class PackOpenSequence
             packTransform,
             baseLocalPos,
             revealScale,
-            hand.OpenPackAnticipationHold);
+            hand.OpenPackAnticipationHold / OpeningSpeed);
 
         Vector3 ejectAnchorPos = baseLocalPos + new Vector3(
             0f,
@@ -334,7 +337,7 @@ public static class PackOpenSequence
             yield return new WaitForSeconds(flyDuration * 0.12f);
         }
 
-        float waitRemaining = flyDuration + 0.05f;
+        float waitRemaining = flyDuration + 0.05f / OpeningSpeed;
         while (waitRemaining > 0f)
         {
             waitRemaining -= Time.deltaTime;

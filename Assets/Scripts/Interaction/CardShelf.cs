@@ -964,7 +964,10 @@ public class CardShelf : MonoBehaviour, IInteractable
             if (slot == null || (!includeOccupied && !slot.IsEmpty))
                 continue;
 
-            float distSq = GetAimDistanceSq(slot.transform.position, aimRay, useRay);
+            // Slot markers sit at the bottom edge. Aim at the visible card center,
+            // using the same pose as placement and its outline, not the shelf board above it.
+            GetSlotFlightPose(slot.transform, out Vector3 cardCenter, out _);
+            float distSq = GetAimDistanceSq(cardCenter, aimRay, useRay);
             if (distSq > maxDistSq || distSq >= bestDistSq)
                 continue;
 
@@ -1032,11 +1035,10 @@ public class CardShelf : MonoBehaviour, IInteractable
         EnsurePlacementOutline();
         CardArtLibrary.EnsureLoaded();
 
-        float halfHeight = CardDimensions.Height * CardDimensions.WorldCardScale * 0.5f;
-        Vector3 outlinePos = slot.transform.position + slot.transform.up * (halfHeight + surfacePadding);
+        GetSlotFlightPose(slot.transform, out Vector3 outlinePos, out Quaternion outlineRotation);
 
         Transform t = _placementOutline.transform;
-        t.SetPositionAndRotation(outlinePos, slot.transform.rotation);
+        t.SetPositionAndRotation(outlinePos, outlineRotation);
         t.localScale = Vector3.one * CardDimensions.WorldCardScale;
         _placementOutline.SetActive(true);
     }
