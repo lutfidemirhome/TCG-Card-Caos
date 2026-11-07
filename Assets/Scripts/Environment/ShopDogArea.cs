@@ -50,10 +50,26 @@ public sealed class ShopDogArea : MonoBehaviour
 
     void OnEnable()
     {
-        if (Application.isPlaying && !_started)
+        if (!Application.isPlaying) return;
+        GameSettings.Changed += ApplyDogVisibility;
+        ApplyDogVisibility();
+    }
+
+    void ApplyDogVisibility()
+    {
+        if (!GameSettings.Current.showDog)
+        {
+            if (_dog) _dog.SetActive(false);
+            return;
+        }
+        if (!_started)
         {
             _started = true;
             _routine = StartCoroutine(Prepare());
+        }
+        else if (IsReady && _dog)
+        {
+            _dog.SetActive(true);
         }
     }
 
@@ -194,9 +210,11 @@ public sealed class ShopDogArea : MonoBehaviour
         IsReady = true;
         ShopDogGroundAlignment alignment = _dog.AddComponent<ShopDogGroundAlignment>();
         alignment.Initialize(this, _visualPivot, agent);
-        ShopDogPlayerCollision playerCollision = _dog.AddComponent<ShopDogPlayerCollision>();
-        playerCollision.Initialize(modelScale);
-        controller.Initialize(this, agent, alignment, playerCollision);
+        // Navigation already follows floors, stairs and walls. No physical body is needed:
+        // the ambient dog and player can pass through each other without pushing or blocking.
+        controller.Initialize(this, agent, alignment);
+        // The setting can change while the asynchronous navigation build is finishing.
+        _dog.SetActive(GameSettings.Current.showDog);
         _routine = null;
     }
 
@@ -393,6 +411,7 @@ public sealed class ShopDogArea : MonoBehaviour
 
     void OnDisable()
     {
+        GameSettings.Changed -= ApplyDogVisibility;
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
         IsReady = false;

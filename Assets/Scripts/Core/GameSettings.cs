@@ -41,6 +41,7 @@ public static class GameSettings
         public float sensitivity;
         public bool invertY;
         public bool invertX;
+        public bool showDog;
         public float masterVolume;
         public float musicVolume;
         public float sfxVolume;
@@ -97,6 +98,7 @@ public static class GameSettings
             sensitivity = DefaultSensitivity,
             invertY = false,
             invertX = false,
+            showDog = true,
             masterVolume = 1f,
             musicVolume = GameAudioSettings.MusicVolume,
             sfxVolume = GameAudioSettings.SfxVolume
@@ -108,6 +110,17 @@ public static class GameSettings
         _current = Sanitize(snapshot);
         WritePrefs(_current);
         Apply(_current, persist: true);
+        Changed?.Invoke();
+    }
+
+    public static void SetDogVisible(bool visible)
+    {
+        EnsureLoaded();
+        if (_current.showDog == visible) return;
+        _current.showDog = visible;
+        // A HUD click changes this preference only, without reapplying display, FOV or audio.
+        PlayerPrefs.SetInt(Prefix + "showDog", visible ? 1 : 0);
+        PlayerPrefs.Save();
         Changed?.Invoke();
     }
 
@@ -195,6 +208,7 @@ public static class GameSettings
             sensitivity = DefaultSensitivity,
             invertY = false,
             invertX = false,
+            showDog = true,
             masterVolume = 1f,
             musicVolume = GameAudioSettings.MusicVolume,
             sfxVolume = GameAudioSettings.SfxVolume
@@ -202,6 +216,7 @@ public static class GameSettings
 
         if (!PlayerPrefs.HasKey(Prefix + "version"))
         {
+            hardware.showDog = PlayerPrefs.GetInt(Prefix + "showDog", 1) == 1;
             _current = hardware;
             return;
         }
@@ -219,6 +234,7 @@ public static class GameSettings
             sensitivity = PlayerPrefs.GetFloat(Prefix + "sensitivity", hardware.sensitivity),
             invertY = PlayerPrefs.GetInt(Prefix + "invertY", 0) == 1,
             invertX = PlayerPrefs.GetInt(Prefix + "invertX", 0) == 1,
+            showDog = PlayerPrefs.GetInt(Prefix + "showDog", 1) == 1,
             masterVolume = PlayerPrefs.GetFloat(Prefix + "master", hardware.masterVolume),
             musicVolume = PlayerPrefs.GetFloat(Prefix + "music", hardware.musicVolume),
             sfxVolume = PlayerPrefs.GetFloat(Prefix + "sfx", hardware.sfxVolume)
@@ -239,6 +255,7 @@ public static class GameSettings
         PlayerPrefs.SetFloat(Prefix + "sensitivity", snapshot.sensitivity);
         PlayerPrefs.SetInt(Prefix + "invertY", snapshot.invertY ? 1 : 0);
         PlayerPrefs.SetInt(Prefix + "invertX", snapshot.invertX ? 1 : 0);
+        PlayerPrefs.SetInt(Prefix + "showDog", snapshot.showDog ? 1 : 0);
         PlayerPrefs.SetFloat(Prefix + "master", snapshot.masterVolume);
         PlayerPrefs.SetFloat(Prefix + "music", snapshot.musicVolume);
         PlayerPrefs.SetFloat(Prefix + "sfx", snapshot.sfxVolume);

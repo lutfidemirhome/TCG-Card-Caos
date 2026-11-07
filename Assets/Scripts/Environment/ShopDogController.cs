@@ -12,6 +12,7 @@ public sealed class ShopDogController : MonoBehaviour
     // run clip moves its feet much faster than the former 1.65 m/s agent speed.
     private const float WalkAuthoredSpeed = 0.95f;
     private const float RunAuthoredSpeed = 4.6f;
+    private const double ExtraRestChance = 0.30;
 
     private enum Behaviour { Waiting, Idle, Moving, LyingDown, Sleeping, Waking, Voice }
 
@@ -19,7 +20,6 @@ public sealed class ShopDogController : MonoBehaviour
     private ShopDogArea _area;
     private NavMeshAgent _agent;
     private ShopDogGroundAlignment _alignment;
-    private ShopDogPlayerCollision _playerCollision;
     private Animation _animation;
     private AnimationState _idle, _idle2, _walk, _run, _lie, _sleep, _voice, _playing;
     private Behaviour _behaviour;
@@ -28,9 +28,6 @@ public sealed class ShopDogController : MonoBehaviour
     private bool _initialized, _prepared, _paused, _canRest = true, _restedHere, _running, _preferRunning;
     private float _gaitElapsed, _safeRunTime, _walkCooldown, _animationScale = 1f;
     private int _journeyCount;
-    private bool _yielding;
-    private float _playerCheckRemaining, _detourRetryRemaining;
-    private bool _takingDetour;
 
     public bool PrepareAnimations(Animation animation, AnimationClip[] clips)
     {
@@ -64,13 +61,11 @@ public sealed class ShopDogController : MonoBehaviour
         return _idle != null && _walk != null;
     }
 
-    public void Initialize(ShopDogArea area, NavMeshAgent agent, ShopDogGroundAlignment alignment,
-        ShopDogPlayerCollision playerCollision)
+    public void Initialize(ShopDogArea area, NavMeshAgent agent, ShopDogGroundAlignment alignment)
     {
         _area = area;
         _agent = agent;
         _alignment = alignment;
-        _playerCollision = playerCollision;
         _initialized = _area && _agent && _animation && _prepared && _idle != null && _walk != null;
         if (!_initialized)
         {
@@ -139,11 +134,7 @@ public sealed class ShopDogController : MonoBehaviour
         double choice = _random.NextDouble();
         if (_canRest && !_restedHere && choice < 0.2 && _lie != null && _sleep != null)
         {
-            _restedHere = true;
-            StopMoving();
-            _behaviour = Behaviour.LyingDown;
-            Play(_lie, WrapMode.ClampForever);
-            _remaining = _lie.length;
+            BeginLyingDown();
         }
         else if (_canRest && !_restedHere && choice < 0.25 && _voice != null)
         {
@@ -153,10 +144,28 @@ public sealed class ShopDogController : MonoBehaviour
             Play(_voice, WrapMode.ClampForever);
             _remaining = _voice.length;
         }
+        else if (_canRest && _random.NextDouble() < ExtraRestChance)
+        {
+            // Replace 30% of otherwise planned trips with rest at a safe floor destination.
+            // Walk/run speeds and the two-floor itinerary remain unchanged.
+            if (_lie != null && _sleep != null && _random.NextDouble() < 0.5)
+                BeginLyingDown();
+            else
+                BeginIdle(6f, 10f);
+        }
         else if (!TryStartMoving())
         {
             BeginIdle(3f, 6f);
         }
+    }
+
+    private void BeginLyingDown()
+    {
+        _restedHere = true;
+        StopMoving();
+        _behaviour = Behaviour.LyingDown;
+        Play(_lie, WrapMode.ClampForever);
+        _remaining = _lie.length;
     }
 
     private bool TryStartMoving()
@@ -178,11 +187,6 @@ public sealed class ShopDogController : MonoBehaviour
         // walking across the four-leg floor itinerary instead of one fixed floor.
         _preferRunning = _run != null && _journeyCount++ % 5 != 2;
         _gaitElapsed = _safeRunTime = _walkCooldown = 0f;
-        _yielding = false;
-        _playerCheckRemaining = 0f;
-
-        _takingDetour = false;
-        _detourRetryRemaining = 0f;
         _canRest = false;
         _restedHere = false;
         _behaviour = Behaviour.Moving;
@@ -194,8 +198,6 @@ public sealed class ShopDogController : MonoBehaviour
 
     private void UpdateMovement(float delta)
     {
-        _detourRetryRemaining = Mathf.Max(0f, _detourRetryRemaining - delta);
-        if (UpdatePlayerYield(delta)) return;
         _travelTime += delta;
         _withoutProgress += delta;
         if ((transform.position - _progressPosition).sqrMagnitude > 0.0025f)
@@ -218,12 +220,6 @@ public sealed class ShopDogController : MonoBehaviour
         }
         if (_agent.remainingDistance <= _agent.stoppingDistance + 0.06f)
         {
-            if (_takingDetour)
-            {
-                _takingDetour = false;
-                BeginIdle(0.5f, 1f);
-                return;
-            }
             // Only successfully reached floor destinations may be used for sleeping.
             _area.ConfirmArrival(transform.position);
             _canRest = true;
@@ -242,53 +238,6 @@ public sealed class ShopDogController : MonoBehaviour
             float target = MovementPlaybackSpeed(_playing);
             _playing.speed = Mathf.MoveTowards(_playing.speed, target, delta * 6f);
         }
-    }
-
-    private bool UpdatePlayerYield(float delta)
-    {
-        _playerCheckRemaining -= delta;
-        if (_playerCheckRemaining > 0f) return _yielding;
-        _playerCheckRemaining = 0.1f;
-        // Use the planned speed even while stopped, so the release distance does
-        // not shrink and repeatedly restart the dog in front of a standing player.
-        bool wait = _playerCollision && _playerCollision.ShouldYieldToPlayer(
-            _agent.steeringTarget, _preferRunning ? runSpeed : walkSpeed, _yielding);
-        if (wait && _detourRetryRemaining <= 0f)
-        {
-            _detourRetryRemaining = 1f;
-            if (_playerCollision.TryFindPlayerDetour(walkSpeed, out Vector3 destination)
-                && _agent.SetDestination(destination))
-            {
-                _takingDetour = true;
-                _preferRunning = false;
-                _yielding = false;
-                _running = false;
-                _agent.speed = walkSpeed;
-                _agent.isStopped = false;
-                _progressPosition = transform.position;
-                _withoutProgress = _travelTime = _safeRunTime = 0f;
-                Play(_walk, WrapMode.Loop);
-                return false;
-            }
-        }
-        if (wait == _yielding) return _yielding;
-
-        _yielding = wait;
-        _running = false;
-        _agent.isStopped = wait;
-        if (wait)
-        {
-            Play(_idle, WrapMode.Loop);
-        }
-        else
-        {
-            _agent.speed = walkSpeed;
-            _progressPosition = transform.position;
-            _withoutProgress = _gaitElapsed = _safeRunTime = 0f;
-            _walkCooldown = 0.5f;
-            Play(_walk, WrapMode.Loop);
-        }
-        return _yielding;
     }
 
     private void UpdateGait(float delta)
@@ -349,7 +298,6 @@ public sealed class ShopDogController : MonoBehaviour
     private void BeginIdle(float minimum, float maximum)
     {
         _running = false;
-        _yielding = false;
         StopMoving();
         _behaviour = Behaviour.Idle;
         AnimationState idle = _idle2 != null && _random.NextDouble() < 0.35 ? _idle2 : _idle;
@@ -373,7 +321,7 @@ public sealed class ShopDogController : MonoBehaviour
         _paused = paused;
         if (_animation) _animation.enabled = !paused;
         if (_agent && _agent.enabled && _agent.isOnNavMesh)
-            _agent.isStopped = paused || _yielding || _behaviour != Behaviour.Moving;
+            _agent.isStopped = paused || _behaviour != Behaviour.Moving;
     }
 
     private void StopMoving()
@@ -395,6 +343,5 @@ public sealed class ShopDogController : MonoBehaviour
         _playing = null;
         _behaviour = Behaviour.Waiting;
         _running = _preferRunning = false;
-        _yielding = false;
     }
 }

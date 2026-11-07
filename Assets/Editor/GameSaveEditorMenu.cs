@@ -136,16 +136,8 @@ public static class GameSaveEditorMenu
     }
 }
 
-class WipeSavesOnBuild : IPreprocessBuildWithReport
-{
-    public int callbackOrder => 0;
-
-    public void OnPreprocessBuild(BuildReport report)
-    {
-        GameSaveEditorMenu.WipeLocalSaveFolders();
-    }
-}
-
+// Building never clears persistent player data. Saves are outside the build output;
+// the explicit Wipe Local Saves command remains available for fresh-player testing.
 class SteamAppIdOnBuild : IPostprocessBuildWithReport
 {
     public int callbackOrder => 0;

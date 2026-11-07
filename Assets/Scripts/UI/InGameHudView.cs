@@ -33,6 +33,7 @@ public class InGameHudView : MonoBehaviour
             gameObject.AddComponent<SkillBarView>();
         Refresh();
         SkillPanelView.Ensure(transform);
+        DogHudToggle.Ensure(transform);
         CabinetTutorialView.Ensure(transform);
         GameCompleteView.Ensure(transform);
     }

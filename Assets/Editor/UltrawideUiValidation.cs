@@ -92,7 +92,20 @@ public static class UltrawideUiValidation
             clone.SetActive(true);
             foreach (MonoBehaviour component in clone.GetComponentsInChildren<MonoBehaviour>(true))
                 if (!(component is UIBehaviour)) component.enabled = false;
-            SettingsPanelView.Ensure(clone.transform);
+            SettingsPanelView settings = SettingsPanelView.Ensure(clone.transform);
+            settings.Show();
+            Toggle dogToggle = settings.transform.Find("Panel/Content/Row_ShowDog/Toggle").GetComponent<Toggle>();
+            bool savedDog = GameSettings.Current.showDog;
+            Check(dogToggle.isOn == savedDog, "Show Dog displays the saved preference", report, ref checks);
+            dogToggle.isOn = !savedDog;
+            typeof(SettingsPanelView).GetMethod("ReadDraftFromControls", Flags).Invoke(settings, null);
+            var draft = (GameSettings.Snapshot)typeof(SettingsPanelView).GetField("_draft", Flags).GetValue(settings);
+            Check(draft.showDog == !savedDog && GameSettings.Current.showDog == savedDog,
+                "Show Dog updates only the draft before Save", report, ref checks);
+            typeof(SettingsPanelView).GetMethod("CancelAndHide", Flags).Invoke(settings, null);
+            settings.Show();
+            Check(dogToggle.isOn == savedDog, "Cancel and reopen restores the saved Show Dog choice", report, ref checks);
+            settings.Hide();
             if (pause)
             {
                 var save = SaveGamePanelView.CreateFromLoadPanel(clone.GetComponentInChildren<LoadGamePanelView>(true), clone.transform);
@@ -109,6 +122,7 @@ public static class UltrawideUiValidation
             foreach (var load in clone.GetComponentsInChildren<LoadGamePanelView>(true))
                 typeof(LoadGamePanelView).GetMethod("EnsureCancelLabel", Flags).Invoke(load, null);
             foreach (TMP_Text text in clone.GetComponentsInChildren<TMP_Text>(true)) fonts.Isolate(text);
+            foreach (LocalizedText label in clone.GetComponentsInChildren<LocalizedText>(true)) label.Refresh();
             Canvas canvas = clone.GetComponent<Canvas>();
             CanvasScaler scaler = clone.GetComponent<CanvasScaler>();
             Check(scaler.screenMatchMode == CanvasScaler.ScreenMatchMode.Expand, source.name + " uses Expand", report, ref checks);
@@ -168,6 +182,18 @@ public static class UltrawideUiValidation
                             controls++;
                         }
                         Check(controls > 0, "Visible controls checked for " + panel, report, ref checks);
+                        if (panel == "Panel_Settings")
+                        {
+                            RectTransform body = visible.Find("Panel") as RectTransform;
+                            foreach (Transform row in visible.Find("Panel/Content"))
+                            {
+                                if (!row.name.StartsWith("Row_")) continue;
+                                var corners = new Vector3[4]; ((RectTransform)row).GetWorldCorners(corners);
+                                foreach (Vector3 corner in corners)
+                                    Check(body.rect.Contains(body.InverseTransformPoint(corner)),
+                                        row.name + " stays inside settings panel " + size, report, ref checks);
+                            }
+                        }
                         foreach (Transform child in visible)
                         {
                             if (!child.name.Contains("Confirm")) continue;

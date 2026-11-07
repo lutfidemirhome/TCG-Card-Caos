@@ -82,6 +82,8 @@ public static class LocalizationKeys
     public const string SettingsSensitivity = "settings.sensitivity";
     public const string SettingsInvertY = "settings.invert_y";
     public const string SettingsInvertX = "settings.invert_x";
+    public const string SettingsShowDog = "settings.show_dog";
+    public const string HudHideDog = "hud.hide_dog";
     public const string SettingsMaster = "settings.master";
     public const string SettingsMusic = "settings.music";
     public const string SettingsSfx = "settings.sfx";

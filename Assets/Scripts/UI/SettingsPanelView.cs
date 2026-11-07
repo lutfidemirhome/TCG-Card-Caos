@@ -19,7 +19,7 @@ public class SettingsPanelView : MonoBehaviour
     static readonly Color CheckOff = new Color(0.85f, 0.77f, 0.70f, 1f);
     static readonly Color ListColor = new Color(0.85f, 0.77f, 0.70f, 1f);
 
-    const float RowHeight = 54f;
+    const float RowHeight = 50f;
     const float PanelWidth = 760f;
     const float PanelHeight = 820f;
 
@@ -38,6 +38,7 @@ public class SettingsPanelView : MonoBehaviour
     Toggle _fullscreenToggle;
     Toggle _invertYToggle;
     Toggle _invertXToggle;
+    Toggle _showDogToggle;
     Slider _fovSlider;
     Slider _sensitivitySlider;
     Slider _masterSlider;
@@ -268,6 +269,7 @@ public class SettingsPanelView : MonoBehaviour
         _sensitivitySlider = CreateSliderRow(content, "Sensitivity", LocalizationKeys.SettingsSensitivity, 0.01f, 1f, whole: false, out _sensitivityValue, value => _draft.sensitivity = value);
         _invertYToggle = CreateToggleRow(content, "InvertY", LocalizationKeys.SettingsInvertY, value => _draft.invertY = value);
         _invertXToggle = CreateToggleRow(content, "InvertX", LocalizationKeys.SettingsInvertX, value => _draft.invertX = value);
+        _showDogToggle = BindDogToggle(content);
         _masterSlider = CreateSliderRow(content, "Master", LocalizationKeys.SettingsMaster, 0f, 100f, whole: true, out _masterValue, value => _draft.masterVolume = value / 100f);
         _musicSlider = CreateSliderRow(content, "Music", LocalizationKeys.SettingsMusic, 0f, 100f, whole: true, out _musicValue, value => _draft.musicVolume = value / 100f);
         _sfxSlider = CreateSliderRow(content, "Sfx", LocalizationKeys.SettingsSfx, 0f, 100f, whole: true, out _sfxValue, value => _draft.sfxVolume = value / 100f);
@@ -294,6 +296,7 @@ public class SettingsPanelView : MonoBehaviour
         _fullscreenToggle = BindToggle(content, "Fullscreen", value => _draft.fullscreen = value);
         _invertYToggle = BindToggle(content, "InvertY", value => _draft.invertY = value);
         _invertXToggle = BindToggle(content, "InvertX", value => _draft.invertX = value);
+        _showDogToggle = BindDogToggle(content);
         _fovSlider = BindSlider(content, "Fov", "{0:0}", value => _draft.fov = value, out _fovValue);
         _sensitivitySlider = BindSlider(content, "Sensitivity", "{0:0.00}", value => _draft.sensitivity = value, out _sensitivityValue);
         _masterSlider = BindSlider(content, "Master", "{0:0}", value => _draft.masterVolume = value / 100f, out _masterValue);
@@ -396,7 +399,7 @@ public class SettingsPanelView : MonoBehaviour
             return BindDropdown(content, "FrameRate");
 
         // Older authored menu / pause panels predate this control. Reuse their art and
-        // typography instead of rebuilding the panel. Twelve 54px rows fit its content.
+        // typography instead of rebuilding the panel.
         Transform qualityRow = content.Find("Row_Quality");
         Transform qualityList = _listOverlay != null ? _listOverlay.Find("QualityList") : null;
         if (_listOverlay == null)
@@ -434,6 +437,41 @@ public class SettingsPanelView : MonoBehaviour
         if (value != null)
             value.fontSize = 22f;
         return dropdown;
+    }
+
+    Toggle BindDogToggle(Transform content)
+    {
+        Transform row = content.Find("Row_ShowDog");
+        Transform template = content.Find("Row_InvertX");
+        if (row == null)
+        {
+            if (template != null)
+            {
+                row = Instantiate(template.gameObject, content, false).transform;
+                row.name = "Row_ShowDog";
+                LocalizedText label = row.Find("Label")?.GetComponent<LocalizedText>();
+                if (label != null)
+                {
+                    label.enabled = true;
+                    label.SetKey(LocalizationKeys.SettingsShowDog);
+                }
+            }
+            else
+            {
+                row = CreateToggleRow(content, "ShowDog", LocalizationKeys.SettingsShowDog, null).transform.parent;
+            }
+        }
+        if (template != null) row.SetSiblingIndex(template.GetSiblingIndex() + 1);
+        // Thirteen rows must still fit the existing panel, including older authored scenes.
+        foreach (Transform child in content)
+        {
+            if (!child.name.StartsWith("Row_")) continue;
+            LayoutElement layout = child.GetComponent<LayoutElement>();
+            if (layout == null) continue;
+            layout.minHeight = RowHeight;
+            layout.preferredHeight = RowHeight;
+        }
+        return BindToggle(content, "ShowDog", value => _draft.showDog = value);
     }
 
     static Toggle BindToggle(Transform content, string name, Action<bool> changed)
@@ -485,6 +523,8 @@ public class SettingsPanelView : MonoBehaviour
             _invertYToggle.SetIsOnWithoutNotify(_draft.invertY);
         if (_invertXToggle != null)
             _invertXToggle.SetIsOnWithoutNotify(_draft.invertX);
+        if (_showDogToggle != null)
+            _showDogToggle.SetIsOnWithoutNotify(_draft.showDog);
 
         SetSlider(_fovSlider, _fovValue, _draft.fov, "{0:0}");
         SetSlider(_sensitivitySlider, _sensitivityValue, _draft.sensitivity, "{0:0.00}");
@@ -515,6 +555,8 @@ public class SettingsPanelView : MonoBehaviour
             _draft.invertY = _invertYToggle.isOn;
         if (_invertXToggle != null)
             _draft.invertX = _invertXToggle.isOn;
+        if (_showDogToggle != null)
+            _draft.showDog = _showDogToggle.isOn;
         if (_fovSlider != null)
             _draft.fov = _fovSlider.value;
         if (_sensitivitySlider != null)

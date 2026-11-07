@@ -901,6 +901,34 @@ MonoBehaviour:
     - "X\u8EF8\u3092\u53CD\u8EE2"
     - "X\uCD95 \uBC18\uC804"
     - "\u0418\u043D\u0432\u0435\u0440\u0442 \u043E\u0441\u0438 X"
+  - key: hud.hide_dog
+    values:
+    - Hide Dog
+    - "Köpeği Gizle"
+    - Masquer le chien
+    - Nascondi il cane
+    - Hund ausblenden
+    - Ocultar perro
+    - Ocultar cachorro
+    - "隐藏狗狗"
+    - "隱藏狗狗"
+    - "犬を非表示"
+    - "강아지 숨기기"
+    - "Скрыть собаку"
+  - key: settings.show_dog
+    values:
+    - Show Dog
+    - "Köpeği Göster"
+    - Afficher le chien
+    - Mostra il cane
+    - Hund anzeigen
+    - Mostrar perro
+    - Mostrar cachorro
+    - "显示狗狗"
+    - "顯示狗狗"
+    - "犬を表示"
+    - "강아지 표시"
+    - "Показывать собаку"
   - key: settings.master
     values:
     - Master Volume
