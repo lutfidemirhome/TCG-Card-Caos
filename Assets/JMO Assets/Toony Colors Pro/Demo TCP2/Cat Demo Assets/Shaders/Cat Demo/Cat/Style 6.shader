@@ -1,4 +1,4 @@
-﻿// Toony Colors Pro+Mobile 2
+// Toony Colors Pro+Mobile 2
 // (c) 2014-2019 Jean Moreno
 
 Shader "Toony Colors Pro 2/Examples/Cat Demo/Cat/Style 6"
@@ -459,10 +459,10 @@ Shader "Toony Colors Pro 2/Examples/Cat Demo/Cat/Style 6"
 			#pragma vertex TCP2_Outline_Vert
 			#pragma fragment TCP2_Outline_Frag
 
-			#pragma multi_compile TCP2_NONE TCP2_ZSMOOTH_ON
-			#pragma multi_compile TCP2_NONE TCP2_OUTLINE_CONST_SIZE
-			#pragma multi_compile TCP2_NONE TCP2_COLORS_AS_NORMALS TCP2_TANGENT_AS_NORMALS TCP2_UV2_AS_NORMALS
-			#pragma multi_compile TCP2_NONE TCP2_OUTLINE_TEXTURED			
+			#pragma multi_compile _ TCP2_ZSMOOTH_ON
+			#pragma multi_compile _ TCP2_OUTLINE_CONST_SIZE
+			#pragma multi_compile _ TCP2_COLORS_AS_NORMALS TCP2_TANGENT_AS_NORMALS TCP2_UV2_AS_NORMALS
+			#pragma multi_compile _ TCP2_OUTLINE_TEXTURED			
 			#pragma multi_compile_instancing
 
 

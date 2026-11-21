@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 static class GamePlayBootstrap
 {
-    static int _bootstrappedSceneHandle = -1;
+    static SceneHandle? _bootstrappedSceneHandle;
     static bool _sceneHookRegistered;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -15,12 +15,12 @@ static class GamePlayBootstrap
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
         _sceneHookRegistered = false;
-        _bootstrappedSceneHandle = -1;
+        _bootstrappedSceneHandle = null;
     }
 
     public static void PrepareForSceneReload()
     {
-        _bootstrappedSceneHandle = -1;
+        _bootstrappedSceneHandle = null;
         MinorSkillProgress.PrepareForSceneReload();
         CardFactory.InvalidateGroundCache();
         WelcomePopupView.ResetSession();

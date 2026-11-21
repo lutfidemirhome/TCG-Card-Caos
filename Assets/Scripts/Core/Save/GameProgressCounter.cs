@@ -36,7 +36,7 @@ public static class GameProgressCounter
 
     static readonly List<CardShelf> AllShelves = new List<CardShelf>(128);
     static readonly List<PsaCabinet> AllPsaCabinets = new List<PsaCabinet>(8);
-    static int _cachedSceneHandle = int.MinValue;
+    static SceneHandle? _cachedSceneHandle;
     static int _lockedTotalCards = -1;
     static int _cachedFullCardTotal = -1;
     static bool _cacheValid;
@@ -219,7 +219,7 @@ public static class GameProgressCounter
     {
         AllShelves.Clear();
         AllPsaCabinets.Clear();
-        _cachedSceneHandle = int.MinValue;
+        _cachedSceneHandle = null;
         InvalidateCache();
     }
 

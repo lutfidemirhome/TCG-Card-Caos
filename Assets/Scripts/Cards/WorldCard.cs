@@ -114,7 +114,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
     internal bool CanUseWorldAtlas => _handState == HandState.World && !UsesPsaSlab
         && !_interactionHighlighted && _fullDetailTexture == null && !HasShelfPlacementFeedback && !IsPhysicsSimulating;
-    public int CardDefinitionId => definition != null ? definition.GetInstanceID() : 0;
+    public int CardDefinitionId => definition != null ? definition.GetEntityId().GetHashCode() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
     public bool UsesPsaSlab => PsaArtLibrary.IsCabinetSlotNumber(psaSlotNumber);

@@ -9,6 +9,8 @@ Recordings/
 .DS_Store
 *.csproj
 *.sln
+*.slnx
+/.vsconfig
 *.user
 *.userprefs
 unity-create.log

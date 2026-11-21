@@ -12,6 +12,6 @@ public static class WorldCardDrawOrder
         if (b == null)
             return 1;
 
-        return a.GetInstanceID().CompareTo(b.GetInstanceID());
+        return a.GetEntityId().CompareTo(b.GetEntityId());
     }
 }

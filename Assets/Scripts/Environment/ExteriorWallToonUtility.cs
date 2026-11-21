@@ -29,7 +29,7 @@ public static class ExteriorWallToonUtility
         if (wallTemplate == null)
             return 0;
 
-        var processedRenderers = new HashSet<int>();
+        var processedRenderers = new HashSet<EntityId>();
         int changedMaterialSlots = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
@@ -42,7 +42,7 @@ public static class ExteriorWallToonUtility
             if (renderer == null || !ShouldApplyToRenderer(renderer))
                 continue;
 
-            if (!processedRenderers.Add(renderer.GetInstanceID()))
+            if (!processedRenderers.Add(renderer.GetEntityId()))
                 continue;
 
             changedMaterialSlots += HideBackingLayersOnRenderer(renderer, useSharedMaterials);

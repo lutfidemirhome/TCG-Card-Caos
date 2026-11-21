@@ -20,7 +20,7 @@ public static class DemoShelfTargets
     static readonly HashSet<string> NameSet = new HashSet<string>(ObjectNames);
     static readonly List<CardShelf> Shelves = new List<CardShelf>(8);
     static readonly List<PsaCabinet> Cabinets = new List<PsaCabinet>(2);
-    static int _cachedSceneHandle = int.MinValue;
+    static SceneHandle? _cachedSceneHandle;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
@@ -140,7 +140,7 @@ public static class DemoShelfTargets
     {
         Shelves.Clear();
         Cabinets.Clear();
-        _cachedSceneHandle = int.MinValue;
+        _cachedSceneHandle = null;
     }
 
     static Transform FindNamed(string objectName)

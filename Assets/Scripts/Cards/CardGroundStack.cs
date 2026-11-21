@@ -74,7 +74,7 @@ public static class CardGroundStack
         if (card == null)
             return 0f;
 
-        int id = Mathf.Abs(card.GetInstanceID());
+        int id = Mathf.Abs(card.GetEntityId().GetHashCode());
         return (id % UniqueDepthBiasSteps) * (UniqueDepthBiasRange / UniqueDepthBiasSteps);
     }
 
@@ -1020,7 +1020,7 @@ public static class CardGroundStack
 
     static float GetUniqueDepthBiasForPack(WorldBoosterPack pack)
     {
-        int id = Mathf.Abs(pack.GetInstanceID());
+        int id = Mathf.Abs(pack.GetEntityId().GetHashCode());
         return (id % UniqueDepthBiasSteps) * (UniqueDepthBiasRange / UniqueDepthBiasSteps);
     }
 

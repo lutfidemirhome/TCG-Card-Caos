@@ -161,7 +161,7 @@ public static class ExteriorColliderCleanup
 
     public static int EnsurePlacedColumnColliders()
     {
-        var processedRoots = new HashSet<int>();
+        var processedRoots = new HashSet<EntityId>();
         int added = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
@@ -178,7 +178,7 @@ public static class ExteriorColliderCleanup
             if (columnRoot == null || IsProtectedTransform(columnRoot))
                 continue;
 
-            if (!processedRoots.Add(columnRoot.GetInstanceID()))
+            if (!processedRoots.Add(columnRoot.GetEntityId()))
                 continue;
 
             if (columnRoot.GetComponent<Collider>() != null)
@@ -267,7 +267,7 @@ public static class ExteriorColliderCleanup
 
     public static int EnsurePlacedPropColliders()
     {
-        var processedRoots = new HashSet<int>();
+        var processedRoots = new HashSet<EntityId>();
         int added = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
@@ -284,7 +284,7 @@ public static class ExteriorColliderCleanup
             if (propRoot == null)
                 continue;
 
-            if (!processedRoots.Add(propRoot.GetInstanceID()))
+            if (!processedRoots.Add(propRoot.GetEntityId()))
                 continue;
 
             if (propRoot.GetComponent<Collider>() != null)
@@ -303,7 +303,7 @@ public static class ExteriorColliderCleanup
 
     static int EnsurePlacedPropCollidersFor(Func<string, bool> nameMatcher)
     {
-        var processedRoots = new HashSet<int>();
+        var processedRoots = new HashSet<EntityId>();
         int added = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
@@ -320,7 +320,7 @@ public static class ExteriorColliderCleanup
             if (propRoot == null)
                 continue;
 
-            if (!processedRoots.Add(propRoot.GetInstanceID()))
+            if (!processedRoots.Add(propRoot.GetEntityId()))
                 continue;
 
             if (propRoot.GetComponent<Collider>() != null)

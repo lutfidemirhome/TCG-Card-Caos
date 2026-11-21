@@ -160,7 +160,7 @@ public class StoreLighting : MonoBehaviour
     static List<Transform> CollectCeilingTiles()
     {
         var results = new List<Transform>(32);
-        var seen = new HashSet<int>();
+        var seen = new HashSet<EntityId>();
 
         GameObject[] roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
         for (int r = 0; r < roots.Length; r++)
@@ -172,7 +172,7 @@ public class StoreLighting : MonoBehaviour
                 if (t == null || !IsCeilingTileName(t.name) || t.childCount > 0)
                     continue;
 
-                int id = t.GetInstanceID();
+                var id = t.GetEntityId();
                 if (!seen.Add(id))
                     continue;
 

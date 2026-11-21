@@ -24,9 +24,9 @@ public class MainSceneShortcutEditor : Editor
 public static class MainSceneShortcutOpener
 {
     [UnityEditor.Callbacks.OnOpenAsset(1)]
-    public static bool OpenShortcut(int instanceID, int line)
+    public static bool OpenShortcut(EntityId entityId, int line)
     {
-        if (EditorUtility.InstanceIDToObject(instanceID) is not MainSceneShortcut)
+        if (EditorUtility.EntityIdToObject(entityId) is not MainSceneShortcut)
             return false;
 
         FirstPersonSceneSetup.OpenMainScene();

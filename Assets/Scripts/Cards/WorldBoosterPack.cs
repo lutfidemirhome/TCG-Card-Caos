@@ -74,7 +74,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
     bool _groundModelRenderersVisible = true;
     bool _authoredLevelItem;
     bool _preserveSavedContents;
-    readonly Dictionary<int, Material[]> _liveHandMaterialsByRenderer = new Dictionary<int, Material[]>();
+    readonly Dictionary<EntityId, Material[]> _liveHandMaterialsByRenderer = new Dictionary<EntityId, Material[]>();
 
     public PackState State => _state;
     public bool IsInHand => _state == PackState.Held || _state == PackState.Opening;
@@ -1223,7 +1223,7 @@ public class WorldBoosterPack : MonoBehaviour, IInteractable, IInteractionHighli
         if (renderer == null)
             return;
 
-        int rendererId = renderer.GetInstanceID();
+        var rendererId = renderer.GetEntityId();
         if (_liveHandMaterialsByRenderer.ContainsKey(rendererId))
             return;
 
