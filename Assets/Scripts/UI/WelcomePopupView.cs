@@ -71,6 +71,7 @@ public class WelcomePopupView : MonoBehaviour
 
     public static bool ShouldBlockGameplay()
     {
+        if (CoopSession.InShop) return false;
         if (!_sessionDecided)
         {
             _sessionDecided = true;

@@ -22,6 +22,7 @@ public class MainMenuView : MonoBehaviour
     [SerializeField] Button howToPlayButton;
     [SerializeField] Button quitButton;
     [SerializeField] Button feedbackButton;
+    Button coopButton;
 
     [Header("Menu layout")]
     [SerializeField] RectTransform logoRect;
@@ -71,6 +72,18 @@ public class MainMenuView : MonoBehaviour
             settingsPanel = SettingsPanelView.Ensure(transform);
         if (settingsPanel != null)
             settingsPanel.Hide();
+        if (Application.isPlaying && !GameBuildVariant.IsDemo && newGameButton != null)
+        {
+            coopButton = Instantiate(newGameButton, newGameButton.transform.parent);
+            coopButton.name = "Button_Coop";
+            coopButton.transform.SetSiblingIndex(newGameButton.transform.GetSiblingIndex() + 1);
+            coopButton.onClick = new Button.ButtonClickedEvent();
+            foreach (var label in coopButton.GetComponentsInChildren<LocalizedText>(true))
+                label.SetKey(LocalizationKeys.CoopTitle);
+            foreach (var label in coopButton.GetComponentsInChildren<TMP_Text>(true))
+                label.text = Localization.Get(LocalizationKeys.CoopTitle);
+            CoopLobbyPanel.Install(this, coopButton);
+        }
         ApplyMenuLayout();
         WireButtons();
         ApplyVersionLabel();
@@ -115,16 +128,19 @@ public class MainMenuView : MonoBehaviour
     void ApplyMenuLayout()
     {
         bool hasSave = GameSaveStore.HasAnySave();
+        float step = hasSave && coopButton ? 83f : MenuButtonStep;
 
         if (continueButton != null)
             continueButton.gameObject.SetActive(hasSave);
 
         SetAnchoredY(quitButton, QuitAnchoredY);
-        SetAnchoredY(settingsButton, QuitAnchoredY + MenuButtonStep);
-        SetAnchoredY(howToPlayButton, QuitAnchoredY + MenuButtonStep * 2f);
-        SetAnchoredY(loadGameButton, QuitAnchoredY + MenuButtonStep * 3f);
-        SetAnchoredY(newGameButton, QuitAnchoredY + MenuButtonStep * 4f);
-        SetAnchoredY(continueButton, QuitAnchoredY + MenuButtonStep * 5f);
+        SetAnchoredY(settingsButton, QuitAnchoredY + step);
+        SetAnchoredY(howToPlayButton, QuitAnchoredY + step * 2f);
+        SetAnchoredY(loadGameButton, QuitAnchoredY + step * 3f);
+        SetAnchoredY(coopButton, QuitAnchoredY + step * 4f);
+        int newGameRow = coopButton ? 5 : 4;
+        SetAnchoredY(newGameButton, QuitAnchoredY + step * newGameRow);
+        SetAnchoredY(continueButton, QuitAnchoredY + step * (newGameRow + 1));
     }
 
     static void SetAnchoredY(Component target, float y)

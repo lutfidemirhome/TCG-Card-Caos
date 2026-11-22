@@ -89,7 +89,7 @@ public class InteractionController : MonoBehaviour
         AimedSkillShelf = null;
         _cachedSkillRow = -2;
         AimedSkillPsaCabinet = null;
-        if (GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
+        if (CoopSession.InShop || GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
         {
             _raycastAimedCard = null;
             ClearTarget();

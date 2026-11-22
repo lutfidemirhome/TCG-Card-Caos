@@ -36,7 +36,7 @@ public static class SteamSkillAchievements
 
     public static void NotifyGameCompleted()
     {
-        if (!IsAvailableForBuild || GameCompleted) return;
+        if (CoopSession.InShop || !IsAvailableForBuild || GameCompleted) return;
         GameCompleted = true;
         CompletionEarned?.Invoke();
     }
@@ -44,7 +44,7 @@ public static class SteamSkillAchievements
     /// <summary>Call after restoring or increasing the real completed-task count.</summary>
     public static void NotifyProgress(int completedRows)
     {
-        if (!IsAvailableForBuild) return;
+        if (CoopSession.InShop || !IsAvailableForBuild) return;
         completedRows = Mathf.Clamp(completedRows, 0, Goals[Goals.Length - 1]);
         if (completedRows <= HighestCompletedRows) return;
         HighestCompletedRows = completedRows;

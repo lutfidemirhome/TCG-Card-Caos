@@ -23,6 +23,7 @@ public static class SettingsArt
     public static Sprite SliderHandle => Load(SettingsFolder, "UI/Settings/", "bar_circle.png");
     public static Sprite ValueBox => CheckboxOff;
     public static Sprite ButtonSave => Load(LoadFolder, "UI/LoadGame/", "yes_button.png");
+    public static Sprite ButtonCancel => Load(LoadFolder, "UI/LoadGame/", "no_button.png");
     public static Sprite EscIcon => Load(PauseFolder, "UI/ingame/", "esc_icon.png");
 
     public static void Apply(Image image, Sprite sprite, Color fallback)

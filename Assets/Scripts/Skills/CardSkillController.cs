@@ -78,6 +78,7 @@ public sealed class CardSkillController : MonoBehaviour
 
     void LateUpdate()
     {
+        if (CoopSession.InShop) return;
         if (!SkillProgress.Ready || GameSceneLoader.IsLoading || !CardInstancedRenderManager.IsGameplayReady) return;
         if (WelcomePopupView.IsWaitingForStart) return;
         if (GamePause.IsPaused) return;
@@ -108,6 +109,7 @@ public sealed class CardSkillController : MonoBehaviour
 
     public bool Activate(int skill)
     {
+        if (CoopSession.InShop) return false;
         if (GamePause.IsPaused || GameSceneLoader.IsLoading || !SkillProgress.CanUse(skill)) return false;
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (!hand || hand.IsHandInputLocked || hand.IsAwaitingRevealCollect) return false;

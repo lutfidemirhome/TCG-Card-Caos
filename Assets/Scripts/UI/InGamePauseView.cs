@@ -43,6 +43,11 @@ public class InGamePauseView : MonoBehaviour
             settingsPanel = SettingsPanelView.Ensure(transform);
 
         Wire(resumeButton, Resume);
+        if (CoopSession.InShop)
+        {
+            if (saveButton) saveButton.interactable = false;
+            if (loadButton) loadButton.interactable = false;
+        }
         Wire(saveButton, OnSaveGame);
         Wire(loadButton, OnLoadGame);
         Wire(settingsButton, OnSettings);
@@ -226,6 +231,7 @@ public class InGamePauseView : MonoBehaviour
 
     void OnSaveGame()
     {
+        if (CoopSession.InShop) return;
         if (loadGamePanel != null)
             loadGamePanel.Hide();
         if (settingsPanel != null)
@@ -239,6 +245,7 @@ public class InGamePauseView : MonoBehaviour
 
     void OnLoadGame()
     {
+        if (CoopSession.InShop) return;
         if (saveGamePanel != null)
             saveGamePanel.Hide();
         if (settingsPanel != null)

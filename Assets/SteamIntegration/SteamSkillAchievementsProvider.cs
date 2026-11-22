@@ -21,6 +21,7 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
     readonly bool[] locallySet = new bool[SteamSkillAchievements.Count];
     Callback<UserStatsStored_t> statsStored;
     Callback<UserAchievementStored_t> achievementStored;
+    SteamCoopRooms coopRooms;
     bool initialized, waitingForStore, warningShown, preferencesDirty;
     float nextAttempt, nextStoreAllowed, storeStarted, nextPreferencesFlush, nextPumpAllowed;
     int highestRows;
@@ -105,6 +106,7 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
 
             // Required Steam callback pump; no scene scans, reflection or achievement loops per frame.
             SteamAPI.RunCallbacks();
+            coopRooms?.Tick();
             if (preferencesDirty && now >= nextPreferencesFlush) FlushPreferences();
             if (waitingForStore)
             {
@@ -169,6 +171,8 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
         RememberProgress();
         statsStored = Callback<UserStatsStored_t>.Create(OnStatsStored);
         achievementStored = Callback<UserAchievementStored_t>.Create(OnAchievementStored);
+        coopRooms = new SteamCoopRooms(new CSteamID(steamUser));
+        CoopSession.SetRooms(coopRooms);
         // Steamworks.NET 2025.164.1 uses the stats preloaded by Steam at launch;
         // its SDK no longer exposes the obsolete RequestCurrentStats method.
         nextAttempt = Time.realtimeSinceStartup + 2f;
@@ -267,6 +271,8 @@ public sealed class SteamSkillAchievementsProvider : MonoBehaviour
         SteamSkillAchievements.ProgressChanged -= OnProgress;
         SteamSkillAchievements.CompletionEarned -= OnCompletion;
         FlushPreferences();
+        coopRooms?.Dispose();
+        if (coopRooms != null) CoopSession.SetRooms(null);
         statsStored?.Dispose();
         achievementStored?.Dispose();
         if (initialized) SteamAPI.Shutdown();

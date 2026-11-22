@@ -161,7 +161,7 @@ public sealed class GameSaveManager : MonoBehaviour
 
     public void BeginGameplaySession(bool fromSave, double loadedPlayTime)
     {
-        _sessionStarted = true;
+        _sessionStarted = !CoopSession.InShop;
         _periodicTimer = 0f;
         if (fromSave)
             GamePlayTime.BeginSession(loadedPlayTime);

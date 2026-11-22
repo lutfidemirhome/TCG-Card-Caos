@@ -4,6 +4,23 @@
 /// </summary>
 public static class LocalizationKeys
 {
+    public const string CoopTitle = "coop.title";
+    public const string CoopCreate = "coop.create";
+    public const string CoopRefresh = "coop.refresh";
+    public const string CoopMembers = "coop.members";
+    public const string CoopInvite = "coop.invite";
+    public const string CoopStart = "coop.start";
+    public const string CoopWaitHost = "coop.wait_host";
+    public const string CoopLeave = "coop.leave";
+    public const string CoopBack = "coop.back";
+    public const string CoopOffline = "coop.offline";
+    public const string CoopPreview = "coop.preview";
+    public const string CoopEmpty = "coop.empty";
+    public const string CoopWorking = "coop.working";
+    public const string CoopFailed = "coop.failed";
+    public const string CoopOverlay = "coop.overlay";
+    public const string CoopHostLeft = "coop.host_left";
+    public const string CoopDisconnected = "coop.disconnected";
     public const string GameCompleteTitle = "game_complete.title";
     public const string GameCompleteMessage = "game_complete.message";
     // Main menu buttons

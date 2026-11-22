@@ -150,7 +150,7 @@ public sealed class SkillPanelView : MonoBehaviour
     void OnDestroy() { if (Instance == this) Instance = null; }
     void Update()
     {
-        bool gameplay = SkillProgress.Ready && CardInstancedRenderManager.IsGameplayReady && !GameSceneLoader.IsLoading && !WelcomePopupView.IsWaitingForStart;
+        bool gameplay = !CoopSession.InShop && SkillProgress.Ready && CardInstancedRenderManager.IsGameplayReady && !GameSceneLoader.IsLoading && !WelcomePopupView.IsWaitingForStart;
         if (!gameplay) { Close(); SetVisible(_task, false); SetVisible(_bar, false); return; }
         if (IsOpen && (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab))) Close();
         else if (!GamePause.IsPaused && !MinorSkillUnlockView.ConsumesInput && Input.GetKeyDown(KeyCode.Tab)) Open();
@@ -173,6 +173,7 @@ public sealed class SkillPanelView : MonoBehaviour
     static void SetVisible(GameObject obj, bool visible) { if (obj != null && obj.activeSelf != visible) obj.SetActive(visible); }
     public void Open()
     {
+        if (CoopSession.InShop) return;
         if (IsOpen || GamePause.IsPaused || MinorSkillUnlockView.ConsumesInput || !SkillProgress.Ready || GameSceneLoader.IsLoading
             || !CardInstancedRenderManager.IsGameplayReady || WelcomePopupView.IsWaitingForStart) return;
         PlayerCardHand hand = PlayerCardHand.Instance;

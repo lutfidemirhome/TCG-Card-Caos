@@ -59,7 +59,7 @@ public class TutorialHintView : MonoBehaviour
     {
         _step = Step.Move;
         _sessionDecided = true;
-        _showThisSession = GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
+        _showThisSession = !CoopSession.InShop && GameSceneLoader.PendingLoadMode == GameLoadMode.NewGame;
         if (_gameplayInstance != null)
         {
             _gameplayInstance._arrangeCacheValid = false;
