@@ -53,6 +53,12 @@ internal sealed class SteamCoopPresence : IDisposable
 
     bool CanTalk(ulong sender) => sender != local && allowed.Contains(sender) && (local == host || sender == host);
 
+    public Transform PlayerBody(ulong id)
+    {
+        if (id == local) return player ? player.transform : null;
+        return avatars.TryGetValue(id, out Remote remote) && remote.Body ? remote.Body.transform : null;
+    }
+
     public void SetMembers(ulong user, ulong owner, List<ulong> peers)
     {
         local = user;

@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
 {
     const string ProtocolKey = "tcg_coop_protocol";
-    const string Protocol = "2";
+    const string Protocol = "3";
     const string HostKey = "tcg_host";
     const string PhaseKey = "tcg_phase";
     const string Waiting = "waiting", Playing = "playing";
@@ -28,6 +28,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
     readonly Callback<GameLobbyJoinRequested_t> invited;
     readonly Callback<SteamServersDisconnected_t> disconnected;
     readonly SteamCoopPresence presence;
+    SteamCoopCards cards;
     readonly SteamRoomAdmission admission = new SteamRoomAdmission();
     readonly List<ulong> steamMembers = new List<ulong>();
     JoinStep joinStep;
@@ -105,8 +106,12 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
             else { CancelGate(); SetStatus(LocalizationKeys.CoopFailed); }
         }
         if (HasLobby && !InRoom && Time.realtimeSinceStartup > rosterDeadline) EndRoom(LocalizationKeys.CoopFailed);
-        if (InRoom && CoopSession.InShop && online)
+        if (InRoom && CoopSession.InShop && online && GameScenes.IsActiveGameScene() && CardInstancedRenderManager.IsGameplayReady)
+        {
             presence.Tick(lobby.m_SteamID);
+            cards ??= new SteamCoopCards(lobby.m_SteamID, local.m_SteamID, host.m_SteamID, peers, presence.PlayerBody);
+            cards.Tick();
+        }
     }
 
     bool CanRequest => Online && CoopSession.CanEnter && !HasLobby && joinStep == JoinStep.Idle && !Busy;
@@ -404,6 +409,8 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         CancelGate();
         ClearCreateKey();
         admission.Reset();
+        cards?.Dispose();
+        cards = null;
         presence.Clear();
         if (HasLobby)
         {

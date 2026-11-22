@@ -270,7 +270,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     public bool CanPlaceCardInSlot(WorldCard card, CardShelfSlot slot)
     {
-        return card != null && slot != null && slot.IsEmpty;
+        return card != null && !CoopTableCard.Controls(card) && slot != null && slot.IsEmpty;
     }
 
     public bool IsCorrectPlacement(WorldCard card, CardShelfSlot slot)
@@ -317,7 +317,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (hand.HasSelectedHeldCard() && !aimOnOccupied)
         {
             WorldCard selectedCard = hand.SelectedHeldCard;
-            if (selectedCard == null || selectedCard.UsesPsaSlab)
+            if (selectedCard == null || selectedCard.UsesPsaSlab || CoopTableCard.Controls(selectedCard))
             {
                 HidePlacementOutline();
                 return string.Empty;
@@ -925,7 +925,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         RefreshOccupancy();
         WorldCard selectedCard = hand.SelectedHeldCard;
-        if (selectedCard == null)
+        if (selectedCard == null || CoopTableCard.Controls(selectedCard))
         {
             HidePlacementOutline();
             return;

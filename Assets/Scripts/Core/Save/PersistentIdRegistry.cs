@@ -111,6 +111,7 @@ public static class PersistentIdRegistry
     }
 
     public static bool TryGetCard(string id, out WorldCard card) => Cards.TryGetValue(id, out card);
+    public static PersistentId FindRegistered(string id) => Ids.TryGetValue(id, out var item) ? item : null;
     public static bool TryGetPack(string id, out WorldBoosterPack pack) => Packs.TryGetValue(id, out pack);
     public static bool TryGetShelf(string id, out CardShelf shelf) => Shelves.TryGetValue(id, out shelf);
     public static bool TryGetPsaCabinet(string id, out PsaCabinet cabinet) => PsaCabinets.TryGetValue(id, out cabinet);

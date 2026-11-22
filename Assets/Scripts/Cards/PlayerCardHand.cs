@@ -88,7 +88,7 @@ public class PlayerCardHand : MonoBehaviour
     public int Count => _cards.Count;
     public static PlayerCardHand Instance { get; private set; }
     public bool IsFull => OccupiedHandSlots >= CardDimensions.MaxHandSize;
-    public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots();
+    public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots() + (CoopTableCard.ReservingSlot ? 1 : 0);
     public int AvailableSlots => Mathf.Max(0, CardDimensions.MaxHandSize - OccupiedHandSlots);
     public int SelectedIndex => _selectedIndex;
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent) * _handZoomScale;
@@ -494,6 +494,9 @@ public class PlayerCardHand : MonoBehaviour
         if (OccupiedHandSlots >= CardDimensions.MaxHandSize)
             return false;
 
+        if (CoopTableCard.Controls(card))
+            return CoopTableCard.Active.RequestPickup();
+
         EnsureHandAnchor();
         UpdateHandAnchorTransform();
 
@@ -558,14 +561,22 @@ public class PlayerCardHand : MonoBehaviour
     public bool TryTakeSelectedHeldCard(out WorldCard card)
     {
         card = GetSelectedHeldCard();
-        if (card == null)
+        if (card == null || CoopTableCard.Controls(card))
+        {
+            card = null;
             return false;
+        }
 
-        _cards.Remove(card);
+        RemoveFromHand(card);
+        return true;
+    }
+
+    internal void RemoveFromHand(WorldCard card)
+    {
+        if (!_cards.Remove(card)) return;
         RemoveHandFanEntry(card);
         ClampSelectionIndex();
         ApplyFanLayout();
-        return true;
     }
 
     /// <summary>
@@ -971,6 +982,9 @@ public class PlayerCardHand : MonoBehaviour
         if (_camera == null)
             return false;
 
+        if (CoopTableCard.Controls(GetSelectedHeldCard()))
+            return CoopTableCard.Active.RequestPlacement(_camera);
+
         if (!TryTakeSelectedHeldCard(out WorldCard selectedCard))
             return false;
 
@@ -1218,11 +1232,8 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool TryTakeHeldCardForSkill(WorldCard card)
     {
-        if (IsHandInputLocked || card == null || !card.IsHeld || !_cards.Contains(card)) return false;
-        _cards.Remove(card);
-        RemoveHandFanEntry(card);
-        ClampSelectionIndex();
-        ApplyFanLayout();
+        if (IsHandInputLocked || card == null || CoopTableCard.Controls(card) || !card.IsHeld || !_cards.Contains(card)) return false;
+        RemoveFromHand(card);
         return true;
     }
 
