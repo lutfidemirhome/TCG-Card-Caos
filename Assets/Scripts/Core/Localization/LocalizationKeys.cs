@@ -6,6 +6,13 @@ public static class LocalizationKeys
 {
     public const string CoopTitle = "coop.title";
     public const string CoopCreate = "coop.create";
+    public const string CoopPublic = "coop.public";
+    public const string CoopPrivate = "coop.private";
+    public const string CoopLocked = "coop.locked";
+    public const string CoopPassword = "coop.password";
+    public const string CoopOptionalPassword = "coop.optional_password";
+    public const string CoopJoin = "coop.join";
+    public const string CoopWrongPassword = "coop.wrong_password";
     public const string CoopRefresh = "coop.refresh";
     public const string CoopMembers = "coop.members";
     public const string CoopInvite = "coop.invite";

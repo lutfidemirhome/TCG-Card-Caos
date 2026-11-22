@@ -8,13 +8,15 @@ public readonly struct CoopRoomInfo
     public readonly ulong Id;
     public readonly string HostName;
     public readonly int Players, Capacity;
+    public readonly bool PasswordRequired;
 
-    public CoopRoomInfo(ulong id, string hostName, int players, int capacity)
+    public CoopRoomInfo(ulong id, string hostName, int players, int capacity, bool passwordRequired = false)
     {
         Id = id;
         HostName = hostName;
         Players = players;
         Capacity = capacity;
+        PasswordRequired = passwordRequired;
     }
 }
 
@@ -25,11 +27,15 @@ public interface ICoopRooms
     bool Busy { get; }
     bool InRoom { get; }
     bool IsHost { get; }
+    bool NeedsPassword { get; }
+    bool IsPrivate { get; }
+    bool IsLocked { get; }
     IReadOnlyList<CoopRoomInfo> PublicRooms { get; }
     IReadOnlyList<string> Members { get; }
     string StatusKey { get; }
     void Search();
-    void Host();
+    void Host(bool inviteOnly, string password);
+    void SubmitPassword(string password);
     void Join(ulong lobby);
     void Invite();
     void StartShop();
@@ -39,6 +45,7 @@ public interface ICoopRooms
 public static class CoopSession
 {
     public const int Capacity = 4;
+    public const int MaxPasswordLength = 64;
     public static ICoopRooms Rooms { get; private set; }
     public static bool InShop { get; private set; }
     public static bool ShowLobbyOnMenu { get; private set; }

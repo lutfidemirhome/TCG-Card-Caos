@@ -41,12 +41,13 @@ internal sealed class SteamCoopPresence : IDisposable
     FirstPersonController player;
     Material avatarMaterial;
 
-    public SteamCoopPresence()
+    public SteamCoopPresence(SteamRoomAdmission admission)
     {
         requested = Callback<SteamNetworkingMessagesSessionRequest_t>.Create(e =>
         {
             var peer = e.m_identityRemote;
-            if (CanTalk(peer.GetSteamID64())) SteamNetworkingMessages.AcceptSessionWithUser(ref peer);
+            if (CanTalk(peer.GetSteamID64()) || admission.CanReceiveRequests)
+                SteamNetworkingMessages.AcceptSessionWithUser(ref peer);
         });
     }
 
