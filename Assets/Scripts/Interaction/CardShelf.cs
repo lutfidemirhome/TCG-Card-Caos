@@ -270,7 +270,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     public bool CanPlaceCardInSlot(WorldCard card, CardShelfSlot slot)
     {
-        return card != null && !CoopTableCard.Controls(card) && slot != null && slot.IsEmpty;
+        return card != null && slot != null && slot.IsEmpty && !CoopShopCards.SlotPending(slot);
     }
 
     public bool IsCorrectPlacement(WorldCard card, CardShelfSlot slot)
@@ -317,7 +317,7 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (hand.HasSelectedHeldCard() && !aimOnOccupied)
         {
             WorldCard selectedCard = hand.SelectedHeldCard;
-            if (selectedCard == null || selectedCard.UsesPsaSlab || CoopTableCard.Controls(selectedCard))
+            if (selectedCard == null || selectedCard.UsesPsaSlab)
             {
                 HidePlacementOutline();
                 return string.Empty;
@@ -357,6 +357,11 @@ public class CardShelf : MonoBehaviour, IInteractable
         if (slot == null || selectedCard == null || selectedCard.UsesPsaSlab || !CanPlaceCardInSlot(selectedCard, slot))
             return;
 
+        if (CoopShopCards.Controls(selectedCard))
+        {
+            if (CoopShopCards.Active.RequestShelf(selectedCard, slot)) ClearAim();
+            return;
+        }
         if (!hand.TryTakeSelectedHeldCard(out WorldCard card))
             return;
 
@@ -568,6 +573,7 @@ public class CardShelf : MonoBehaviour, IInteractable
     {
         if (hand == null || !card || !card.IsHeld || hand.IsHandInputLocked
             || !TryFindSkillSlot(card, rowIndex, out CardShelfSlot slot)) return false;
+        if (CoopShopCards.Controls(card)) return CoopShopCards.Active.RequestShelf(card, slot);
         if (!hand.TryTakeHeldCardForSkill(card)) return false;
         // Occupy immediately, just like manual placement, so successive flights cannot share a slot.
         slot.Occupy(card);
@@ -824,6 +830,14 @@ public class CardShelf : MonoBehaviour, IInteractable
         return closest != null && !closest.IsEmpty;
     }
 
+    internal void PlaceCoopCard(WorldCard card, CardShelfSlot slot)
+    {
+        slot.Occupy(card);
+        BeginShelfFlight(card, slot, IsCorrectPlacement(card, slot));
+    }
+
+    internal void CancelCoopFlight(WorldCard card) => RemoveShelfFlight(card);
+
     void BeginShelfFlight(WorldCard card, CardShelfSlot slot, bool isCorrect)
     {
         if (card == null || slot == null)
@@ -925,7 +939,7 @@ public class CardShelf : MonoBehaviour, IInteractable
 
         RefreshOccupancy();
         WorldCard selectedCard = hand.SelectedHeldCard;
-        if (selectedCard == null || CoopTableCard.Controls(selectedCard))
+        if (selectedCard == null)
         {
             HidePlacementOutline();
             return;

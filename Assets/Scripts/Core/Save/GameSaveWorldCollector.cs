@@ -50,7 +50,7 @@ public static class GameSaveWorldCollector
             }
         }
 
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Exclude);
         for (int i = 0; i < cards.Length; i++)
         {
             CardSaveRecord record = CollectCard(cards[i], HeldCardSet);
@@ -58,7 +58,7 @@ public static class GameSaveWorldCollector
                 CardScratch.Add(record);
         }
 
-        WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(FindObjectsInactive.Exclude);
         for (int i = 0; i < packs.Length; i++)
         {
             PackSaveRecord record = CollectPack(packs[i], HeldPackSet);
@@ -70,7 +70,7 @@ public static class GameSaveWorldCollector
             PackScratch.Add(openingPack);
 
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
-        FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
+        FirstPersonController player = Object.FindAnyObjectByType<FirstPersonController>();
 
         var data = new GameSaveData
         {
@@ -229,7 +229,7 @@ public static class GameSaveWorldCollector
             }
         }
 
-        return Object.FindFirstObjectByType<PsaCabinet>();
+        return Object.FindAnyObjectByType<PsaCabinet>();
     }
 
     public static void CountProgress(
@@ -269,8 +269,7 @@ public static class GameSaveWorldCollector
     {
         OccupiedShelfSlotByCard.Clear();
         CardShelfSlot[] slots = Object.FindObjectsByType<CardShelfSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < slots.Length; i++)
         {
             CardShelfSlot slot = slots[i];
@@ -287,8 +286,7 @@ public static class GameSaveWorldCollector
     {
         OccupiedPsaSlotByCard.Clear();
         PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];

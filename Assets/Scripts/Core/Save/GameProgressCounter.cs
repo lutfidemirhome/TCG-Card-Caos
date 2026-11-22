@@ -197,8 +197,7 @@ public static class GameProgressCounter
         _cachedSceneHandle = active.handle;
 
         CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < shelves.Length; i++)
         {
             if (shelves[i] != null)
@@ -206,8 +205,7 @@ public static class GameProgressCounter
         }
 
         PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < cabinets.Length; i++)
         {
             if (cabinets[i] != null)

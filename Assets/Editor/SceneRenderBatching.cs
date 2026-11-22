@@ -21,7 +21,7 @@ public static class SceneRenderBatching
         if (scene.path != "Assets/Scenes/MainScene.unity")
             throw new System.InvalidOperationException("Open MainScene first.");
         int changed = 0;
-        foreach (var renderer in Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+        foreach (var renderer in Object.FindObjectsByType<MeshRenderer>())
         {
             if (renderer.gameObject.scene != scene || !renderer.enabled) continue;
             Material[] materials = renderer.sharedMaterials;

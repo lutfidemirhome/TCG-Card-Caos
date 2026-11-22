@@ -38,7 +38,7 @@ public static class ShopDogValidation
         for (int i = 0; i < SceneManager.sceneCount; i++)
             if (SceneManager.GetSceneAt(i).isDirty) throw new InvalidOperationException("Save scene changes first.");
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath)) throw new InvalidOperationException("Temporary scene already exists.");
-        ShopDogArea source = Object.FindFirstObjectByType<ShopDogArea>();
+        ShopDogArea source = Object.FindAnyObjectByType<ShopDogArea>();
         if (!source) throw new InvalidOperationException("Open MainScene first.");
         SessionState.SetString(SessionKey + ".start", AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene));
         Scene previous = SceneManager.GetActiveScene();
@@ -137,7 +137,7 @@ public static class ShopDogValidation
         LoadingScreenUI.Instance?.Hide();
         typeof(CardInstancedRenderManager).GetProperty("IsGameplayReady", Flags).SetValue(null, true);
         GamePause.SetPaused(false);
-        ShopDogArea area = Object.FindFirstObjectByType<ShopDogArea>(FindObjectsInactive.Include);
+        ShopDogArea area = Object.FindAnyObjectByType<ShopDogArea>(FindObjectsInactive.Include);
         CharacterController player = GameObject.Find("Validation Player").GetComponent<CharacterController>();
         PlayerPrefs.DeleteKey("tcg.settings.version"); PlayerPrefs.DeleteKey("tcg.settings.showDog"); ReloadSettings();
         Check(GameSettings.Current.showDog, "Dog defaults ON for a new player");

@@ -122,10 +122,9 @@ public static class SteamFullGameStore
 
     static Type FindType(string fullName)
     {
-        Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        for (int i = 0; i < assemblies.Length; i++)
+        foreach (Assembly assembly in UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies())
         {
-            Type type = assemblies[i].GetType(fullName, false);
+            Type type = assembly.GetType(fullName, false);
             if (type != null)
                 return type;
         }

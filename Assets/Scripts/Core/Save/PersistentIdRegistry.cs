@@ -23,7 +23,7 @@ public static class PersistentIdRegistry
             && existing != null
             && existing != persistent)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             Debug.LogWarning(
                 "[Save] Duplicate PersistentId '" + persistent.Value + "' on '"
                 + persistent.gameObject.name + "'. Other object: '"
@@ -52,7 +52,7 @@ public static class PersistentIdRegistry
         Shelves.Clear();
         UniqueShelves.Clear();
 
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Include);
         for (int i = 0; i < cards.Length; i++)
         {
             WorldCard card = cards[i];
@@ -63,7 +63,7 @@ public static class PersistentIdRegistry
                 Cards[id] = card;
         }
 
-        WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(FindObjectsInactive.Include);
         for (int i = 0; i < packs.Length; i++)
         {
             WorldBoosterPack pack = packs[i];
@@ -74,7 +74,7 @@ public static class PersistentIdRegistry
                 Packs[id] = pack;
         }
 
-        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(FindObjectsInactive.Include);
         for (int i = 0; i < shelves.Length; i++)
         {
             CardShelf shelf = shelves[i];
@@ -97,7 +97,7 @@ public static class PersistentIdRegistry
     public static void RebuildPsaCabinetLookups()
     {
         PsaCabinets.Clear();
-        PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(FindObjectsInactive.Exclude);
         for (int i = 0; i < cabinets.Length; i++)
         {
             PsaCabinet cabinet = cabinets[i];

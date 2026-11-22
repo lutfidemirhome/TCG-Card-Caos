@@ -150,7 +150,7 @@ public static class CardCollisionUtility
             return;
 
         if (_cachedPlayer == null)
-            _cachedPlayer = Object.FindFirstObjectByType<FirstPersonController>();
+            _cachedPlayer = Object.FindAnyObjectByType<FirstPersonController>();
 
         PlayerColliderScratch.Clear();
         if (_cachedPlayer != null)

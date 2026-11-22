@@ -17,7 +17,7 @@ public class BackgroundMusic : MonoBehaviour
         if (_instance != null)
             return _instance;
 
-        BackgroundMusic existing = FindFirstObjectByType<BackgroundMusic>();
+        BackgroundMusic existing = FindAnyObjectByType<BackgroundMusic>();
         if (existing != null)
         {
             _instance = existing;

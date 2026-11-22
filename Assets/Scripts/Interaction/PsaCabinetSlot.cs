@@ -774,7 +774,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         AcceptsPsaCard(card) && card.PsaSlotNumber == SlotNumber;
 
     public bool CanPlaceHeldCard(WorldCard card) =>
-        AcceptsPsaCard(card) && IsEmpty;
+        AcceptsPsaCard(card) && IsEmpty && !CoopShopCards.SlotPending(this);
 
     public void RefreshOccupancy()
     {
@@ -848,6 +848,11 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
         if (selectedCard == null || !CanPlaceHeldCard(selectedCard))
             return;
 
+        if (CoopShopCards.Controls(selectedCard))
+        {
+            CoopShopCards.Active.RequestShelf(selectedCard, this);
+            return;
+        }
         if (!hand.TryTakeSelectedHeldCard(out WorldCard card))
             return;
 
@@ -865,6 +870,7 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
     {
         if (!hand || !card || !card.IsHeld || hand.IsHandInputLocked
             || !CanPlaceHeldCard(card) || !IsCorrectPlacement(card)) return false;
+        if (CoopShopCards.Controls(card)) return CoopShopCards.Active.RequestShelf(card, this);
         if (!hand.TryTakeHeldCardForSkill(card)) return false;
         Occupy(card);
         BeginPlacementFlight(card);
@@ -963,6 +969,18 @@ public class PsaCabinetSlot : MonoBehaviour, IInteractable
             });
         // Occupancy is committed before landing, including saves made while paused in flight.
         GameSaveDirtyTracker.MarkDirty();
+    }
+
+    internal void PlaceCoopCard(WorldCard card)
+    {
+        Occupy(card);
+        BeginPlacementFlight(card);
+    }
+
+    internal void RemoveCoopCard(WorldCard card)
+    {
+        if (card.IsFlyingToShelf) RemovePlacementFlight(card);
+        ClearIfMatches(card);
     }
 
     void UpdatePlacementFlights()

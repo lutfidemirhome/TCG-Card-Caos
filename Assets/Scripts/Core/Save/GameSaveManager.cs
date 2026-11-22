@@ -86,7 +86,7 @@ public sealed class GameSaveManager : MonoBehaviour
         if (_instance != null)
             return _instance;
 
-        var existing = FindFirstObjectByType<GameSaveManager>();
+        var existing = FindAnyObjectByType<GameSaveManager>();
         if (existing != null)
         {
             _instance = existing;
@@ -403,7 +403,7 @@ public sealed class GameSaveManager : MonoBehaviour
             else
             {
                 GameSaveEvents.RaiseSaveFailed(error ?? "Save failed.");
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
                 Debug.LogWarning("[Save] Failed (" + kind + "): " + error);
 #endif
             }

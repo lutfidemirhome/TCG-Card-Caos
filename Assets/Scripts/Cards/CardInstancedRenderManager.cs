@@ -129,8 +129,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     {
         CardArtLibrary.EnsureLoaded();
         CardShelfSlot[] slots = Object.FindObjectsByType<CardShelfSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < slots.Length; i++)
         {
             CardShelfSlot slot = slots[i];
@@ -154,8 +153,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     static void RefreshAllShelfCompleteSigns()
     {
         CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < shelves.Length; i++)
         {
             if (shelves[i] != null)
@@ -166,8 +164,7 @@ public class CardInstancedRenderManager : MonoBehaviour
     static void RefreshAllPsaCabinetCardVisuals()
     {
         PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];
@@ -195,8 +192,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         int processed = 0;
 
         WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < packs.Length; i++)
         {
             WorldBoosterPack pack = packs[i];
@@ -212,8 +208,7 @@ public class CardInstancedRenderManager : MonoBehaviour
         }
 
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int pass = 0; pass < 2; pass++)
         {
             bool demoPass = pass == 0;
@@ -255,7 +250,7 @@ public class CardInstancedRenderManager : MonoBehaviour
             return _instance;
         }
 
-        var existing = FindFirstObjectByType<CardInstancedRenderManager>();
+        var existing = FindAnyObjectByType<CardInstancedRenderManager>();
         if (existing != null)
         {
             _instance = existing;

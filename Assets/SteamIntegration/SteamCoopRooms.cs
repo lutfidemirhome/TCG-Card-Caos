@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
 {
     const string ProtocolKey = "tcg_coop_protocol";
-    const string Protocol = "3";
+    const string Protocol = "4";
     const string HostKey = "tcg_host";
     const string PhaseKey = "tcg_phase";
     const string Waiting = "waiting", Playing = "playing";

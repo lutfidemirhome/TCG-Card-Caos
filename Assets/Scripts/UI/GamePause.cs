@@ -18,7 +18,8 @@ public static class GamePause
     public static void SetPaused(bool paused)
     {
         IsPaused = paused;
-        Time.timeScale = paused ? 0f : 1f;
+        // Opening a personal menu must not freeze the host's shared card physics or shelf flights.
+        Time.timeScale = paused && !CoopSession.InShop ? 0f : 1f;
         AudioListener.pause = paused;
     }
 }

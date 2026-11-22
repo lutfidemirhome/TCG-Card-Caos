@@ -101,7 +101,7 @@ static class GamePlayBootstrap
 
     static void EnsurePlayerHand()
     {
-        FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
+        FirstPersonController player = Object.FindAnyObjectByType<FirstPersonController>();
         if (player == null)
             return;
 

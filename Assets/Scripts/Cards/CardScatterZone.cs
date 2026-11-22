@@ -104,7 +104,7 @@ public class CardScatterZone : MonoBehaviour
 
     public static CardScatterZone FindActive()
     {
-        return FindFirstObjectByType<CardScatterZone>();
+        return FindAnyObjectByType<CardScatterZone>();
     }
 
     public Vector2 GetRandomXZ()

@@ -36,7 +36,7 @@ public class ExteriorTrafficSpawner : MonoBehaviour
 
     public static IEnumerator PrewarmAll()
     {
-        foreach (var spawner in FindObjectsByType<ExteriorTrafficSpawner>(FindObjectsSortMode.None))
+        foreach (var spawner in FindObjectsByType<ExteriorTrafficSpawner>())
             yield return spawner.Prewarm();
     }
 

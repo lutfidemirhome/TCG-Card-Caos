@@ -459,8 +459,7 @@ public class TutorialHintView : MonoBehaviour
     static bool FindArrangedMatchingRow()
     {
         CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < shelves.Length; i++)
         {
             CardShelf shelf = shelves[i];
@@ -469,8 +468,7 @@ public class TutorialHintView : MonoBehaviour
         }
 
         PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < cabinets.Length; i++)
         {
             PsaCabinet cabinet = cabinets[i];

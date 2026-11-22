@@ -322,7 +322,7 @@ public static class SaveFileIO
         string metaJson = JsonUtility.ToJson(metadata, false);
         if (!TryWriteAtomic(GetMetaPath(data.slotId), metaJson, out string metaError))
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             Debug.LogWarning("[Save] Metadata write failed: " + metaError);
 #endif
         }

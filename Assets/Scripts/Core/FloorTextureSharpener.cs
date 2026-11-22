@@ -14,7 +14,7 @@ public static class FloorTextureSharpener
         CardLayers.EnsureInitialized();
         int worldCardLayer = CardLayers.WorldCard;
 
-        Renderer[] renderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        Renderer[] renderers = Object.FindObjectsByType<Renderer>();
         for (int i = 0; i < renderers.Length; i++)
         {
             Renderer renderer = renderers[i];

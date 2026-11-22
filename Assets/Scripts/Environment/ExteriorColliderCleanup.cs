@@ -111,8 +111,7 @@ public static class ExteriorColliderCleanup
     public static void EnsurePlacedHouseWallColliders()
     {
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -165,8 +164,7 @@ public static class ExteriorColliderCleanup
         int added = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -271,8 +269,7 @@ public static class ExteriorColliderCleanup
         int added = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -307,8 +304,7 @@ public static class ExteriorColliderCleanup
         int added = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -453,7 +449,7 @@ public static class ExteriorColliderCleanup
 
     static void RemoveMatchingComponents<T>() where T : Component
     {
-        T[] components = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        T[] components = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include);
         for (int i = 0; i < components.Length; i++)
         {
             T component = components[i];

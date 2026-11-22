@@ -57,7 +57,7 @@ public class LoadingScreenUI : MonoBehaviour
             return _instance;
         }
 
-        LoadingScreenUI existing = FindFirstObjectByType<LoadingScreenUI>(FindObjectsInactive.Include);
+        LoadingScreenUI existing = FindAnyObjectByType<LoadingScreenUI>(FindObjectsInactive.Include);
         if (existing != null && !existing.editorPreview)
         {
             _instance = existing;

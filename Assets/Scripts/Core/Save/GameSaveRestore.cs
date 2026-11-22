@@ -35,7 +35,7 @@ public static class GameSaveRestore
             {
                 _shelvesLoaded = true;
                 CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
-                    FindObjectsInactive.Include, FindObjectsSortMode.None);
+                    FindObjectsInactive.Include);
                 for (int i = 0; i < shelves.Length; i++)
                 {
                     CardShelf shelf = shelves[i];
@@ -65,7 +65,7 @@ public static class GameSaveRestore
                     return _psaSlots;
 
                 _psaSlots = Object.FindObjectsByType<PsaCabinetSlot>(
-                    FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                    FindObjectsInactive.Exclude);
                 for (int i = 0; i < _psaSlots.Length; i++)
                 {
                     PsaCabinetSlot slot = _psaSlots[i];
@@ -179,7 +179,7 @@ public static class GameSaveRestore
 
         if (data.player != null)
         {
-            FirstPersonController player = Object.FindFirstObjectByType<FirstPersonController>();
+            FirstPersonController player = Object.FindAnyObjectByType<FirstPersonController>();
             if (player != null)
                 player.RestoreSaveState(data.player);
         }
@@ -393,8 +393,7 @@ public static class GameSaveRestore
     static void PrepareShelvesForRestore()
     {
         CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         for (int i = 0; i < shelves.Length; i++)
         {
             if (shelves[i] != null)
@@ -442,8 +441,7 @@ public static class GameSaveRestore
     static void FinalizeShelfRestores()
     {
         CardShelfSlot[] slots = UnityEngine.Object.FindObjectsByType<CardShelfSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < slots.Length; i++)
         {
             CardShelfSlot slot = slots[i];
@@ -465,8 +463,7 @@ public static class GameSaveRestore
     static void FinalizePsaRestores()
     {
         PsaCabinetSlot[] slots = UnityEngine.Object.FindObjectsByType<PsaCabinetSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];

@@ -119,7 +119,7 @@ public class StoreLighting : MonoBehaviour
 
     static Light FindDirectionalLight()
     {
-        Light[] lights = FindObjectsByType<Light>(FindObjectsSortMode.None);
+        Light[] lights = FindObjectsByType<Light>();
         for (int i = 0; i < lights.Length; i++)
         {
             Light light = lights[i];
@@ -238,7 +238,7 @@ public class StoreLighting : MonoBehaviour
 
     public static StoreLighting EnsureExists()
     {
-        StoreLighting existing = FindFirstObjectByType<StoreLighting>();
+        StoreLighting existing = FindAnyObjectByType<StoreLighting>();
         if (existing != null)
             return existing;
 

@@ -174,7 +174,7 @@ public static class CardFactory
         float bestPlane = 0f;
         bool foundPlane = false;
 
-        Collider[] colliders = Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
+        Collider[] colliders = Object.FindObjectsByType<Collider>();
         CardLayers.EnsureInitialized();
         int worldCardLayer = CardLayers.WorldCard;
         for (int i = 0; i < colliders.Length; i++)
@@ -224,7 +224,7 @@ public static class CardFactory
         if (foundPlane)
             return bestPlane;
 
-        Renderer[] renderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        Renderer[] renderers = Object.FindObjectsByType<Renderer>();
         float bestRenderer = 0f;
         bool foundRenderer = false;
         for (int i = 0; i < renderers.Length; i++)

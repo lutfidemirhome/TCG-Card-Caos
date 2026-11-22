@@ -1,0 +1,6 @@
+{
+    "name": "TCG.Coop.PlayModeTests",
+    "references": ["TCGCardCaos"],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

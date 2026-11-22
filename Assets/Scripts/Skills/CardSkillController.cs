@@ -71,9 +71,9 @@ public sealed class CardSkillController : MonoBehaviour
 
     void Start()
     {
-        _shelves = FindObjectsByType<CardShelf>(FindObjectsSortMode.None);
-        _psaCabinets = FindObjectsByType<PsaCabinet>(FindObjectsSortMode.None);
-        _interaction = FindFirstObjectByType<InteractionController>();
+        _shelves = FindObjectsByType<CardShelf>();
+        _psaCabinets = FindObjectsByType<PsaCabinet>();
+        _interaction = FindAnyObjectByType<InteractionController>();
     }
 
     void LateUpdate()
@@ -223,7 +223,7 @@ public sealed class CardSkillController : MonoBehaviour
     bool TryAutoshelf(bool place)
     {
         if (_interaction == null)
-            _interaction = FindFirstObjectByType<InteractionController>();
+            _interaction = FindAnyObjectByType<InteractionController>();
         PlayerCardHand hand = PlayerCardHand.Instance;
         if (_interaction == null || hand == null || hand.IsHandInputLocked || hand.IsAwaitingRevealCollect) return false;
         if (!place)

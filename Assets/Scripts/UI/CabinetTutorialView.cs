@@ -84,8 +84,8 @@ public sealed class CabinetTutorialView : MonoBehaviour
         if (_cabinets == null)
         {
             var list = new List<CabinetSurface>();
-            foreach (var shelf in FindObjectsByType<CardShelf>(FindObjectsSortMode.None)) CacheSurfaces(shelf.transform, list);
-            foreach (var cabinet in FindObjectsByType<PsaCabinet>(FindObjectsSortMode.None)) CacheSurfaces(cabinet.transform, list);
+            foreach (var shelf in FindObjectsByType<CardShelf>()) CacheSurfaces(shelf.transform, list);
+            foreach (var cabinet in FindObjectsByType<PsaCabinet>()) CacheSurfaces(cabinet.transform, list);
             _cabinets = list.ToArray();
         }
         Vector3 player = hand.transform.position;

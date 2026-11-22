@@ -49,13 +49,13 @@ public static class CardWorldAtlasValidation
             }
             if (Application.isPlaying && CardInstancedRenderManager.IsGameplayReady)
             {
-                var player = Object.FindFirstObjectByType<FirstPersonController>();
+                var player = Object.FindAnyObjectByType<FirstPersonController>();
                 var controller = player.GetComponent<CharacterController>();
                 int layer = LayerMask.NameToLayer(CardLayers.WorldCardLayerName);
                 Check((controller.excludeLayers.value & (1 << layer)) != 0, "Player permanently excludes loose card/pack layer");
-                var cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
+                var cards = Object.FindObjectsByType<WorldCard>();
                 Check(cards.All(c => !c.GetComponent<Collider>() || c.gameObject.layer == layer), "All card root colliders use the excluded item layer");
-                var packs = Object.FindObjectsByType<WorldBoosterPack>(FindObjectsSortMode.None);
+                var packs = Object.FindObjectsByType<WorldBoosterPack>();
                 Check(packs.All(c => !c.GetComponent<Collider>() || c.gameObject.layer == layer), "All pack root colliders use the excluded item layer");
                 foreach (bool japanese in new[] { false, true })
                 {

@@ -14,7 +14,7 @@ public sealed class ShopDogAreaEditor : Editor
     private static void SelectWalkingArea()
     {
         ShopDogArea[] areas = Object.FindObjectsByType<ShopDogArea>(
-            FindObjectsInactive.Include, FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         ShopDogArea found = null;
         foreach (ShopDogArea area in areas)
         {

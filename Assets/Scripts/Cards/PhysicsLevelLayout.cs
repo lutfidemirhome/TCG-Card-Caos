@@ -102,7 +102,7 @@ public class PhysicsLevelLayout : MonoBehaviour
 
     public static PhysicsLevelLayout FindExisting()
     {
-        return Object.FindFirstObjectByType<PhysicsLevelLayout>();
+        return Object.FindAnyObjectByType<PhysicsLevelLayout>();
     }
 
     public static void SuspendAuthoredItemsForSaveRestore()

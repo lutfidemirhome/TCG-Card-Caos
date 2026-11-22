@@ -665,7 +665,7 @@ public class InteractionController : MonoBehaviour
         bool interactPressed = WasInteractPressedThisFrame();
         if (interactPressed && SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
         {
-            if (_skillController == null) _skillController = FindFirstObjectByType<CardSkillController>();
+            if (_skillController == null) _skillController = FindAnyObjectByType<CardSkillController>();
             if (_skillController != null && _skillController.TryStartAutoshelvingFromInteract()) return;
         }
 

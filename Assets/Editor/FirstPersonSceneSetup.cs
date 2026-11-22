@@ -79,7 +79,7 @@ public static class FirstPersonSceneSetup
         CreateEmptyRoom();
         CreateDirectionalLightIfNeeded();
 
-        FirstPersonController existingPlayer = Object.FindFirstObjectByType<FirstPersonController>();
+        FirstPersonController existingPlayer = Object.FindAnyObjectByType<FirstPersonController>();
         GameObject player = existingPlayer != null ? existingPlayer.gameObject : CreatePlayer();
         WirePlayerGameplay(player);
 
@@ -113,7 +113,7 @@ public static class FirstPersonSceneSetup
         if (player.GetComponent<PlayerCardHand>() == null)
             player.AddComponent<PlayerCardHand>();
 
-        Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
+        Camera[] cameras = Object.FindObjectsByType<Camera>();
         foreach (Camera other in cameras)
         {
             if (other == camera)
@@ -227,7 +227,7 @@ public static class FirstPersonSceneSetup
 
     static void CreateDirectionalLightIfNeeded()
     {
-        Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+        Light[] lights = Object.FindObjectsByType<Light>();
         foreach (Light existingLight in lights)
         {
             if (existingLight.type == LightType.Directional)

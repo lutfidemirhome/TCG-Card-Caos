@@ -101,7 +101,7 @@ public static class LoadingScreenUIBuilder
         if (found != null)
             return found.transform;
 
-        LoadingScreenUI[] views = Object.FindObjectsByType<LoadingScreenUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        LoadingScreenUI[] views = Object.FindObjectsByType<LoadingScreenUI>(FindObjectsInactive.Include);
         return views.Length > 0 ? views[0].transform : null;
     }
 

@@ -156,7 +156,7 @@ public static class SaveSafetyValidation
             }
 
             CardArtLibrary.EnsureLoaded();
-            var authored = Object.FindObjectsByType<WorldBoosterPack>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            var authored = Object.FindObjectsByType<WorldBoosterPack>(FindObjectsInactive.Include)
                 .Where(p => !EditorSceneManager.IsPreviewScene(p.gameObject.scene) && p.GetComponent<PhysicsLevelItem>() != null).ToArray();
             Check(authored.Length > 0, "Authored packs available in the open game scene");
             int inverted = 0;

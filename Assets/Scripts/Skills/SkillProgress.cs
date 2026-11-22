@@ -92,12 +92,12 @@ public static class SkillProgress
         {
             // Keep legacy earned credits and record completed contents by series, so moving
             // those cards to a second physical row can never reward them again.
-            CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>(FindObjectsSortMode.None);
+            CardShelf[] shelves = UnityEngine.Object.FindObjectsByType<CardShelf>();
             // Seed every already-credited legacy row before checking new rows. Otherwise a
             // duplicated series visited first could earn again before its old row is seen.
             foreach (CardShelf shelf in shelves) migrated |= SeedCreditedSeries(shelf);
             foreach (CardShelf shelf in shelves) migrated |= Collect(shelf);
-            foreach (PsaCabinet cabinet in UnityEngine.Object.FindObjectsByType<PsaCabinet>(FindObjectsSortMode.None))
+            foreach (PsaCabinet cabinet in UnityEngine.Object.FindObjectsByType<PsaCabinet>())
                 migrated |= Collect(cabinet);
         }
         Ready = true;

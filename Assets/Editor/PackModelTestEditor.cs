@@ -157,7 +157,7 @@ public static class PackModelTestEditor
         Camera camera = Camera.main;
         Vector3 reference = camera != null ? camera.transform.position : Vector3.zero;
 
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>();
         WorldCard nearest = null;
         float bestDistance = float.MaxValue;
 

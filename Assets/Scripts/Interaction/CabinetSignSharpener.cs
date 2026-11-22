@@ -12,8 +12,7 @@ public static class CabinetSignSharpener
     public static void Apply()
     {
         CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < shelves.Length; i++)
         {
             CardShelf shelf = shelves[i];

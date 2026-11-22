@@ -63,6 +63,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     ShelfCompletionEffect.Handle _shelfRowCompleteEffect;
     HandState _handState = HandState.World;
     bool _authoredPhysicsItem;
+    bool _usesReplicatedPhysicsPose;
     float _packRevealFlipT;
     Transform _handAnchor;
     bool _interactionHighlighted;
@@ -113,7 +114,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// </summary>
     public bool IsPhysicsSimulating => _rigidbody != null && !_rigidbody.isKinematic;
     internal bool CanUseWorldAtlas => _handState == HandState.World && !UsesPsaSlab
-        && !_interactionHighlighted && _fullDetailTexture == null && !HasShelfPlacementFeedback && !IsPhysicsSimulating;
+        && !_interactionHighlighted && _fullDetailTexture == null && !HasShelfPlacementFeedback && !IsPhysicsSimulating && !_usesReplicatedPhysicsPose;
     public int CardDefinitionId => definition != null ? definition.GetEntityId().GetHashCode() : 0;
     public int PaletteIndex => paletteIndex;
     public int GroundStackLayer => _groundStackLayer;
@@ -138,6 +139,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public bool CanUseInstancedRendering =>
         Application.isPlaying
+        && !_usesReplicatedPhysicsPose
         && !UsesPsaSlab
         && _handState == HandState.World
         && _rigidbody == null
@@ -150,6 +152,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public bool CanUseInstancedBackRendering =>
         Application.isPlaying
+        && !_usesReplicatedPhysicsPose
         && !UsesPsaSlab
         && _handState == HandState.World
         && _rigidbody == null
@@ -461,6 +464,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         ClearSkillPickupMotion();
         _handState = HandState.FlyingToHand;
+        _usesReplicatedPhysicsPose = false;
         _handAnchor = handAnchor;
         _flightTargetHandScale = targetHandScale;
         _flightDuration = Mathf.Max(0.05f, duration);
@@ -857,6 +861,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
 
     public void DropWithPhysics(Vector3 velocity, float worldScaleTransitionDuration = 0.12f)
     {
+        _usesReplicatedPhysicsPose = false;
         ClearSkillPickupMotion();
         _handState = HandState.World;
         SetHandSelected(false);
@@ -1212,7 +1217,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     {
         if (UsesPsaSlab && _psaController != null)
         {
-            _psaController.ApplyWorldOrientation(alignModelToGround: !HasActivePhysics);
+            _psaController.ApplyWorldOrientation(alignModelToGround: !HasActivePhysics && !_usesReplicatedPhysicsPose);
             _psaController.ApplyBodyCollider();
             return;
         }
@@ -1492,7 +1497,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
             return;
         }
 
-        _psaController.ApplyWorldOrientation(alignModelToGround: !HasActivePhysics);
+        _psaController.ApplyWorldOrientation(alignModelToGround: !HasActivePhysics && !_usesReplicatedPhysicsPose);
         _psaController.ApplyBodyCollider();
     }
 
@@ -1955,9 +1960,11 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
     /// <summary>
     /// Places the card face-up flat on the ground without physics.
     /// </summary>
-    public void PlaceOnSurface(Transform parent, Vector3 worldPosition, Quaternion worldRotation)
+    public void PlaceOnSurface(Transform parent, Vector3 worldPosition, Quaternion worldRotation, bool replicatedPhysics = false)
     {
         ClearSkillPickupMotion();
+        _usesReplicatedPhysicsPose = replicatedPhysics;
+        _psaCabinetPlaced = false;
         _handState = HandState.World;
         ClearShelfPlacementStatus();
         SetInteractionHighlight(false);
@@ -1970,8 +1977,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
         if (_collider != null)
         {
             _collider.enabled = true;
-            if (_collider is BoxCollider boxCollider)
-                CardCollisionUtility.ApplyFlatWorldSize(boxCollider);
+            ApplyFlatWorldCollider();
         }
 
         transform.SetParent(parent, true);

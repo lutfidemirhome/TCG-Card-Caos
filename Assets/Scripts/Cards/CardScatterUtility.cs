@@ -605,8 +605,7 @@ public static class CardScatterUtility
     static void ClearHolderPsaCards()
     {
         PsaCabinetSlot[] slots = Object.FindObjectsByType<PsaCabinetSlot>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < slots.Length; i++)
         {
             PsaCabinetSlot slot = slots[i];
@@ -698,7 +697,7 @@ public static class CardScatterUtility
     public static int SnapCardsToFloor()
     {
         int snapped = SnapScatterCardsToFloor();
-        WorldCard[] shelfCards = Object.FindObjectsByType<WorldCard>(FindObjectsSortMode.None);
+        WorldCard[] shelfCards = Object.FindObjectsByType<WorldCard>();
         CardFactory.InvalidateGroundCache();
         float groundY = CardFactory.GroundHeightOffset();
         for (int i = 0; i < shelfCards.Length; i++)

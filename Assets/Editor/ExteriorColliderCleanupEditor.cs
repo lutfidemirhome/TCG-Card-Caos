@@ -119,7 +119,7 @@ public static class ExteriorColliderCleanupEditor
 
     static int StripComponents<T>() where T : Component
     {
-        T[] components = Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        T[] components = Object.FindObjectsByType<T>(FindObjectsInactive.Include);
         int removed = 0;
 
         for (int i = 0; i < components.Length; i++)

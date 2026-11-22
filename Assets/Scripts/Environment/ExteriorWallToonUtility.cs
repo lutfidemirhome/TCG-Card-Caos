@@ -33,8 +33,7 @@ public static class ExteriorWallToonUtility
         int changedMaterialSlots = 0;
 
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -414,8 +413,7 @@ public static class ExteriorWallToonUtility
 
         int changedMaterialSlots = 0;
         MeshRenderer[] renderers = UnityEngine.Object.FindObjectsByType<MeshRenderer>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
 
         for (int i = 0; i < renderers.Length; i++)
         {

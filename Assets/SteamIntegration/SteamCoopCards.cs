@@ -8,6 +8,7 @@ using UnityEngine;
 internal sealed class SteamCoopCards : IDisposable
 {
     const int Channel = 33;
+    const int MotionChannel = 34;
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     struct Packet { public ulong Room; public CoopCardMessage Message; }
 
@@ -16,7 +17,7 @@ internal sealed class SteamCoopCards : IDisposable
     readonly IntPtr[] incoming = new IntPtr[24];
     readonly ulong room, local, host;
     readonly List<ulong> peers;
-    readonly CoopTableCard card;
+    readonly CoopShopCards card;
 
     public SteamCoopCards(ulong room, ulong local, ulong host, List<ulong> peers, Func<ulong, Transform> playerBody)
     {
@@ -24,13 +25,19 @@ internal sealed class SteamCoopCards : IDisposable
         this.local = local;
         this.host = host;
         this.peers = peers;
-        card = new CoopTableCard(local, host, peers, Send, playerBody);
+        card = new CoopShopCards(local, host, peers, Send, playerBody);
     }
 
     public void Tick()
     {
         card.Tick();
-        int count = SteamNetworkingMessages.ReceiveMessagesOnChannel(Channel, incoming, incoming.Length);
+        Receive(Channel);
+        if (local != host) Receive(MotionChannel);
+    }
+
+    void Receive(int channel)
+    {
+        int count = SteamNetworkingMessages.ReceiveMessagesOnChannel(channel, incoming, incoming.Length);
         for (int i = 0; i < count; i++)
         {
             IntPtr ptr = incoming[i];
@@ -40,7 +47,8 @@ internal sealed class SteamCoopCards : IDisposable
                 ulong sender = message.m_identityPeer.GetSteamID64();
                 if (message.m_cbSize != PacketSize || sender == local || (local != host && sender != host) || !peers.Contains(sender)) continue;
                 var packet = Marshal.PtrToStructure<Packet>(message.m_pData);
-                if (packet.Room == room) card.Receive(sender, packet.Message);
+                if (packet.Room == room && (packet.Message.Action == CoopCardAction.Motion) == (channel == MotionChannel))
+                    card.Receive(sender, packet.Message);
             }
             finally { SteamNetworkingMessage_t.Release(ptr); }
         }
@@ -51,8 +59,10 @@ internal sealed class SteamCoopCards : IDisposable
         SteamNetworkingIdentity peer = default;
         peer.SetSteamID64(target);
         Marshal.StructureToPtr(new Packet { Room = room, Message = message }, outgoing, false);
+        bool motion = message.Action == CoopCardAction.Motion;
+        int flags = motion ? Constants.k_nSteamNetworkingSend_Unreliable : Constants.k_nSteamNetworkingSend_Reliable;
         SteamNetworkingMessages.SendMessageToUser(ref peer, outgoing, (uint)PacketSize,
-            Constants.k_nSteamNetworkingSend_Reliable | Constants.k_nSteamNetworkingSend_AutoRestartBrokenSession, Channel);
+            flags | Constants.k_nSteamNetworkingSend_AutoRestartBrokenSession, motion ? MotionChannel : Channel);
     }
 
     public void Dispose()
@@ -64,6 +74,7 @@ internal sealed class SteamCoopCards : IDisposable
                 SteamNetworkingIdentity peer = default;
                 peer.SetSteamID64(id);
                 SteamNetworkingMessages.CloseChannelWithUser(ref peer, Channel);
+                SteamNetworkingMessages.CloseChannelWithUser(ref peer, MotionChannel);
             }
         Marshal.FreeHGlobal(outgoing);
     }

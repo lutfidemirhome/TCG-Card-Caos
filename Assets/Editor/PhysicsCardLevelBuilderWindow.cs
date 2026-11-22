@@ -50,8 +50,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         var faceUp = new List<WorldCard>(512);
         var faceDown = new List<WorldCard>(512);
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < cards.Length; i++)
         {
             WorldCard card = cards[i];
@@ -123,7 +122,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     [MenuItem("TCG Card Chaos/Fix Pink Card Art")]
     public static void FixPinkCardArtInScene()
     {
-        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        WorldCard[] cards = Object.FindObjectsByType<WorldCard>(FindObjectsInactive.Include);
         int count = 0;
         for (int i = 0; i < cards.Length; i++)
         {
@@ -592,8 +591,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         int removed = 0;
 
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         for (int i = 0; i < cards.Length; i++)
         {
             if (cards[i] == null)
@@ -603,8 +601,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
 
         WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         for (int i = 0; i < packs.Length; i++)
         {
             if (packs[i] == null)
@@ -614,8 +611,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
         }
 
         PhysicsLevelItem[] leftovers = Object.FindObjectsByType<PhysicsLevelItem>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         for (int i = 0; i < leftovers.Length; i++)
         {
             if (leftovers[i] == null)
@@ -1478,8 +1474,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     {
         var items = new List<PhysicsLevelItem>();
         PhysicsLevelItem[] all = Object.FindObjectsByType<PhysicsLevelItem>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < all.Length; i++)
         {
             PhysicsLevelItem item = all[i];
@@ -1764,8 +1759,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     void BakeOthersAsStatic(HashSet<PhysicsLevelItem> keepDynamic)
     {
         PhysicsLevelItem[] items = Object.FindObjectsByType<PhysicsLevelItem>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < items.Length; i++)
         {
             PhysicsLevelItem item = items[i];
@@ -1976,8 +1970,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     {
         var seen = new HashSet<GameObject>();
         MeshRenderer[] renderers = Object.FindObjectsByType<MeshRenderer>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < renderers.Length; i++)
         {
             MeshRenderer renderer = renderers[i];
@@ -2292,8 +2285,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
     int CountArea(PhysicsLevelItem.AreaKind area, int batchIndex)
     {
         PhysicsLevelItem[] items = Object.FindObjectsByType<PhysicsLevelItem>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         int count = 0;
         for (int i = 0; i < items.Length; i++)
         {
@@ -2361,7 +2353,7 @@ public class PhysicsCardLevelBuilderWindow : EditorWindow
 
     static void PlaceDemoVolumeFromScatterZone(Transform demoVolume)
     {
-        CardScatterZone zone = Object.FindFirstObjectByType<CardScatterZone>();
+        CardScatterZone zone = Object.FindAnyObjectByType<CardScatterZone>();
         if (zone == null)
         {
             demoVolume.position = new Vector3(8.97f, 1.6f, -8.05f);

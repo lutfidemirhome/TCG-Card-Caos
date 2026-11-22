@@ -89,7 +89,7 @@ public class GameSceneLoader : MonoBehaviour
         if (loadingScreen != null)
             loadingScreen.Show();
 
-        InGamePauseView pause = Object.FindFirstObjectByType<InGamePauseView>();
+        InGamePauseView pause = Object.FindAnyObjectByType<InGamePauseView>();
         if (pause != null)
             pause.Hide();
 

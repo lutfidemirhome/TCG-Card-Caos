@@ -141,7 +141,7 @@ public static class GameSettings
     public static void ApplyCameraFov(float fov)
     {
         fov = Mathf.Clamp(fov, MinFov, MaxFov);
-        FirstPersonController player = UnityEngine.Object.FindFirstObjectByType<FirstPersonController>();
+        FirstPersonController player = UnityEngine.Object.FindAnyObjectByType<FirstPersonController>();
         if (player != null)
             player.ApplySettingsFov(fov);
         else if (Camera.main != null)

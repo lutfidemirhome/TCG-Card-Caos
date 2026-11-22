@@ -103,8 +103,7 @@ public static class DemoShelfTargets
         _cachedSceneHandle = active.handle;
 
         CardShelf[] shelves = Object.FindObjectsByType<CardShelf>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < shelves.Length; i++)
         {
             CardShelf shelf = shelves[i];
@@ -113,8 +112,7 @@ public static class DemoShelfTargets
         }
 
         PsaCabinet[] cabinets = Object.FindObjectsByType<PsaCabinet>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
         for (int i = 0; i < cabinets.Length; i++)
         {
             PsaCabinet cabinet = cabinets[i];

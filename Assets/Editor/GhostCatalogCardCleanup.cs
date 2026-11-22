@@ -34,8 +34,7 @@ public static class GhostCatalogCardCleanup
     {
         int removed = 0;
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         for (int i = 0; i < cards.Length; i++)
         {
             WorldCard card = cards[i];
@@ -50,8 +49,7 @@ public static class GhostCatalogCardCleanup
         }
 
         WorldBoosterPack[] packs = Object.FindObjectsByType<WorldBoosterPack>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         CardDefinition replacement = FirstValidDefinition();
         for (int i = 0; i < packs.Length; i++)
         {

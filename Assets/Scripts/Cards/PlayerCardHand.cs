@@ -88,7 +88,7 @@ public class PlayerCardHand : MonoBehaviour
     public int Count => _cards.Count;
     public static PlayerCardHand Instance { get; private set; }
     public bool IsFull => OccupiedHandSlots >= CardDimensions.MaxHandSize;
-    public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots() + (CoopTableCard.ReservingSlot ? 1 : 0);
+    public int OccupiedHandSlots => CountHeldCards() + CountOccupiedPackSlots() + CoopShopCards.ReservedSlots;
     public int AvailableSlots => Mathf.Max(0, CardDimensions.MaxHandSize - OccupiedHandSlots);
     public int SelectedIndex => _selectedIndex;
     public float EffectiveHeldScale => heldCardScale * (1f - handScaleReductionPercent) * _handZoomScale;
@@ -494,8 +494,8 @@ public class PlayerCardHand : MonoBehaviour
         if (OccupiedHandSlots >= CardDimensions.MaxHandSize)
             return false;
 
-        if (CoopTableCard.Controls(card))
-            return CoopTableCard.Active.RequestPickup();
+        if (CoopShopCards.Controls(card))
+            return CoopShopCards.Active.RequestPickup(card);
 
         EnsureHandAnchor();
         UpdateHandAnchorTransform();
@@ -561,7 +561,7 @@ public class PlayerCardHand : MonoBehaviour
     public bool TryTakeSelectedHeldCard(out WorldCard card)
     {
         card = GetSelectedHeldCard();
-        if (card == null || CoopTableCard.Controls(card))
+        if (card == null || CoopShopCards.Controls(card))
         {
             card = null;
             return false;
@@ -737,6 +737,12 @@ public class PlayerCardHand : MonoBehaviour
             SelectLastHeldPack();
 
         WorldBoosterPack pack = ResolveHeldPackToOpen();
+        if (!CanOpenHeldPack(pack) || _openPackRoutine != null) return false;
+        return CoopShopCards.Active != null ? CoopShopCards.Active.OpenPack(pack, this) : BeginPackOpening(pack);
+    }
+
+    internal bool BeginPackOpening(WorldBoosterPack pack)
+    {
         if (!CanOpenHeldPack(pack) || _openPackRoutine != null)
             return false;
 
@@ -784,6 +790,7 @@ public class PlayerCardHand : MonoBehaviour
             SetHandInputLocked(false);
             _isOpeningPack = false;
             _openPackRoutine = null;
+            CoopShopCards.Active?.FinishPackOpening(pack);
         }
     }
 
@@ -982,11 +989,8 @@ public class PlayerCardHand : MonoBehaviour
         if (_camera == null)
             return false;
 
-        if (CoopTableCard.Controls(GetSelectedHeldCard()))
-            return CoopTableCard.Active.RequestPlacement(_camera);
-
-        if (!TryTakeSelectedHeldCard(out WorldCard selectedCard))
-            return false;
+        WorldCard selectedCard = GetSelectedHeldCard();
+        if (!selectedCard) return false;
 
         Vector3 handPos = selectedCard.transform.position;
         Ray aimRay = _camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
@@ -997,7 +1001,11 @@ public class PlayerCardHand : MonoBehaviour
         else
             throwDirection.Normalize();
 
-        selectedCard.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
+        Vector3 velocity = throwDirection * throwSpeed;
+        if (CoopShopCards.Controls(selectedCard))
+            return CoopShopCards.Active.RequestThrow(selectedCard, velocity);
+        RemoveFromHand(selectedCard);
+        selectedCard.DropWithPhysics(velocity, dropScaleTransitionDuration);
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
         GameSaveSignals.MarkDirty();
         return true;
@@ -1232,7 +1240,7 @@ public class PlayerCardHand : MonoBehaviour
 
     public bool TryTakeHeldCardForSkill(WorldCard card)
     {
-        if (IsHandInputLocked || card == null || CoopTableCard.Controls(card) || !card.IsHeld || !_cards.Contains(card)) return false;
+        if (IsHandInputLocked || card == null || CoopShopCards.Controls(card) || !card.IsHeld || !_cards.Contains(card)) return false;
         RemoveFromHand(card);
         return true;
     }

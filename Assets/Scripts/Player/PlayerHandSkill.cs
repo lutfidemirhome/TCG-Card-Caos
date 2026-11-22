@@ -56,8 +56,7 @@ public static class PlayerHandSkill
     static bool PullMatchingPacks(PlayerCardHand hand)
     {
         WorldBoosterPack[] allPacks = Object.FindObjectsByType<WorldBoosterPack>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
 
         bool[] heldVariant = new bool[PackArtLibrary.PackVariantCount + 1];
         for (int i = 0; i < allPacks.Length; i++)
@@ -129,8 +128,7 @@ public static class PlayerHandSkill
     {
         results.Clear();
         WorldCard[] cards = Object.FindObjectsByType<WorldCard>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Exclude);
 
         for (int i = 0; i < cards.Length; i++)
         {

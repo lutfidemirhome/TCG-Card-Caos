@@ -294,7 +294,7 @@ public static class CeilingCleanupTools
             yield break;
         }
 
-        Transform[] sceneTransforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Transform[] sceneTransforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include);
         for (int i = 0; i < sceneTransforms.Length; i++)
         {
             Transform t = sceneTransforms[i];

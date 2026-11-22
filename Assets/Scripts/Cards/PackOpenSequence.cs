@@ -132,6 +132,7 @@ public static class PackOpenSequence
                     {
                         if (card == null)
                             continue;
+                        CoopShopCards.DiscardReveal(card);
                         card.gameObject.SetActive(false);
                         Object.Destroy(card.gameObject);
                     }
@@ -144,7 +145,7 @@ public static class PackOpenSequence
                     // finish delivery rather than leave them parented to a hidden UI root.
                     if (hand != null && hand.isActiveAndEnabled)
                         foreach (WorldCard card in PendingCards)
-                            if (card != null)
+                            if (card != null && !CoopShopCards.CollectReveal(card))
                                 hand.RestoreHeldCard(card);
                     if (pack != null)
                         Object.Destroy(pack.gameObject);
@@ -333,7 +334,8 @@ public static class PackOpenSequence
                 continue;
 
             card.transform.SetParent(null, true);
-            hand.AddRevealedCard(card, flyDuration, hand.PickupFlightArcHeight);
+            if (!CoopShopCards.CollectReveal(card))
+                hand.AddRevealedCard(card, flyDuration, hand.PickupFlightArcHeight);
             yield return new WaitForSeconds(flyDuration * 0.12f);
         }
 
@@ -442,6 +444,7 @@ public static class PackOpenSequence
                 paletteIndex: 0,
                 cardName: "PackCard_" + (i + 1));
             PendingCards.Add(card);
+            CoopShopCards.BindReveal(pack, i, card);
 
             card.BeginRevealPreview(
                 revealRoot,

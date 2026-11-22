@@ -92,7 +92,7 @@ public class GameSoundEffects : MonoBehaviour
         if (_instance != null)
             return _instance;
 
-        GameSoundEffects existing = FindFirstObjectByType<GameSoundEffects>();
+        GameSoundEffects existing = FindAnyObjectByType<GameSoundEffects>();
         if (existing != null)
         {
             _instance = existing;
