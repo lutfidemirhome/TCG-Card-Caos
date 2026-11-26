@@ -832,8 +832,9 @@ public class CardShelf : MonoBehaviour, IInteractable
 
     internal void PlaceCoopCard(WorldCard card, CardShelfSlot slot)
     {
+        bool isCorrect = IsCorrectPlacement(card, slot);
         slot.Occupy(card);
-        BeginShelfFlight(card, slot, IsCorrectPlacement(card, slot));
+        BeginShelfFlight(card, slot, isCorrect);
     }
 
     internal void CancelCoopFlight(WorldCard card) => RemoveShelfFlight(card);

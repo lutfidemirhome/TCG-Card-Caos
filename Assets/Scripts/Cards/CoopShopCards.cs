@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-public enum CoopCardAction : byte { Sync, Take, Collect, Throw, Shelve, OpenPack, CancelPack, Return, Denied, PackClaimed, PackReleased, Held, OnShelf, Flight, Ground, Motion }
+public enum CoopCardAction : byte { Sync, Take, Collect, Throw, Shelve, OpenPack, CancelPack, Return, Denied, PackClaimed, PackReleased, Held, OnShelf, Flight, Ground, Motion, Progress }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct CoopCardMessage
 {
     public CoopCardAction Action;
+    public byte PhysicalPose;
     public Guid Card, Slot;
     public ulong Actor;
     public uint Revision, Request;
@@ -16,7 +17,7 @@ public struct CoopCardMessage
     public Quaternion Rotation;
 }
 
-public sealed class CoopShopCards : IDisposable
+public sealed partial class CoopShopCards : IDisposable
 {
     static readonly Guid EntranceCard = new Guid("fdc2d8ec316e4d94bbe9b1456e942322");
     readonly ulong local, host;
@@ -103,7 +104,10 @@ public sealed class CoopShopCards : IDisposable
                 foreach (var request in retry) send(host, request);
             }
         }
+        TickPacks();
         flights.Tick();
+        TickCheckpoint();
+        TickProgress();
         foreach (var pair in remoteHands)
         {
             Transform body = playerBody(states[pair.Key].Actor);
@@ -193,12 +197,16 @@ public sealed class CoopShopCards : IDisposable
             return;
         }
         if (sender != host) return;
+        if (m.Action == CoopCardAction.Progress) { ReceiveProgress(m); return; }
         if (m.Action == CoopCardAction.Denied)
         {
-            if (pending.TryGetValue(m.Card, out var request) && request.Request == m.Request) ClearPending(m.Card);
+            // A retry can reach the host twice before its accepted change reaches this guest.
+            // Keep the original request until the guest has seen the host's state for the item.
+            if (m.Revision <= revision && pending.TryGetValue(m.Card, out var request) && request.Request == m.Request)
+                ClearPending(m.Card);
             return;
         }
-        if (m.Action == CoopCardAction.Motion) { flights.Sample(m); return; }
+        if (m.Action == CoopCardAction.Motion) { if (!SamplePack(m)) flights.Sample(m); return; }
         if (m.Action < CoopCardAction.PackClaimed || m.Action > CoopCardAction.Ground || m.Revision <= revision) return;
         if (m.Revision != revision + 1) { nextSync = 0; return; }
         if (Apply(m)) revision = m.Revision;
@@ -208,6 +216,7 @@ public sealed class CoopShopCards : IDisposable
     {
         int n = 0;
         foreach (var id in held) if (states[id].Actor == actor) n++;
+        foreach (var owner in packHolders.Values) if (owner == actor) n++;
         return n;
     }
 
@@ -216,18 +225,26 @@ public sealed class CoopShopCards : IDisposable
         states.TryGetValue(m.Card, out var old);
         if (old.Revision == m.Revision && TryChange(sender, old, m)) return true;
         if (sender == local) ClearPending(m.Card);
-        else { m.Action = CoopCardAction.Denied; send(sender, m); }
+        else
+        {
+            m.Action = CoopCardAction.Denied;
+            m.Revision = old.Revision;
+            send(sender, m);
+        }
         return false;
     }
 
     bool TryChange(ulong actor, CoopCardMessage old, CoopCardMessage m)
     {
         m.Actor = actor;
+        var physicalPack = layout.AvailablePack(m.Card);
+        if (physicalPack && (m.Action == CoopCardAction.Take || m.Action == CoopCardAction.Throw || m.Action == CoopCardAction.Return))
+            return ChangePack(actor, old, m, physicalPack);
         if (m.Action == CoopCardAction.OpenPack || m.Action == CoopCardAction.CancelPack)
         {
             if (m.Action == CoopCardAction.OpenPack)
             {
-                if (!layout.AvailablePack(m.Card) || packOwners.ContainsKey(m.Card)) return false;
+                if (!physicalPack || old.Action != CoopCardAction.Held || old.Actor != actor || packOwners.ContainsKey(m.Card)) return false;
                 m.Action = CoopCardAction.PackClaimed;
             }
             else
@@ -316,6 +333,9 @@ public sealed class CoopShopCards : IDisposable
 
     void Commit(CoopCardMessage m)
     {
+        if (m.Action == CoopCardAction.Flight || (m.Action == CoopCardAction.Ground
+            && states.TryGetValue(m.Card, out var previous) && previous.Action == CoopCardAction.Flight))
+            m.PhysicalPose = 1;
         m.Revision = revision + 1;
         // Store before presenting. A full local hand can immediately return a newly granted card.
         revision = m.Revision;
@@ -327,13 +347,24 @@ public sealed class CoopShopCards : IDisposable
     {
         if (m.Action == CoopCardAction.PackClaimed || m.Action == CoopCardAction.PackReleased)
         {
+            bool requestedOpen = pending.TryGetValue(m.Card, out var opening) && opening.Action == CoopCardAction.OpenPack && opening.Request == m.Request;
             ClearPending(m.Card);
             states[m.Card] = m;
-            if (m.Action == CoopCardAction.PackReleased) packOwners.Remove(m.Card);
+            if (m.Action == CoopCardAction.PackReleased)
+            {
+                packOwners.Remove(m.Card);
+                if (packHolders.TryGetValue(m.Card, out ulong holder))
+                {
+                    var released = m;
+                    released.Action = CoopCardAction.Held;
+                    released.Actor = holder;
+                    states[m.Card] = released;
+                }
+            }
             else
             {
                 packOwners[m.Card] = m.Actor;
-                if (m.Actor == local)
+                if (m.Actor == local && requestedOpen)
                 {
                     var pack = layout.AvailablePack(m.Card);
                     var hand = PlayerCardHand.Instance;
@@ -343,6 +374,8 @@ public sealed class CoopShopCards : IDisposable
             }
             return true;
         }
+        var physicalPack = layout.AvailablePack(m.Card);
+        if (physicalPack) return ApplyPack(m, physicalPack);
         var card = layout.Resolve(m.Card, m.Position);
         if (!card) return false;
         if (m.Action == CoopCardAction.OnShelf && !layout.Slots.ContainsKey(m.Slot)) return false;
@@ -350,7 +383,9 @@ public sealed class CoopShopCards : IDisposable
         if (previous.Revision == 0 && layout.SourcePack(m.Card, out var source))
         {
             packOwners.Remove(source);
+            packHolders.Remove(source);
             layout.ConsumePack(source);
+            RemovePackAnchor(source);
         }
         ClearPending(m.Card);
         states[m.Card] = m;
@@ -408,6 +443,7 @@ public sealed class CoopShopCards : IDisposable
             remoteHands.Remove(m.Card);
             ArrangeRemoteHand(previous.Actor);
         }
+        GameProgressCounter.InvalidateCache();
         return true;
     }
 
@@ -432,6 +468,8 @@ public sealed class CoopShopCards : IDisposable
 
     public void Dispose()
     {
+        FlushCheckpoint();
+        DisposePacks();
         if (Active == this) Active = null;
         foreach (var id in held)
         {

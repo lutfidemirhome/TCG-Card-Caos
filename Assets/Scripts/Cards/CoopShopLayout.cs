@@ -144,6 +144,7 @@ internal sealed class CoopShopLayout
         id = default;
         return !ReferenceEquals(pack, null) && packKeys.TryGetValue(pack, out var keys) && SourcePack(keys[0], out id);
     }
+    public bool UnconsumedPack(Guid id) => packs.ContainsKey(id);
     public WorldBoosterPack AvailablePack(Guid id) => packs.TryGetValue(id, out var pack) ? pack : null;
 
     public void ConsumePack(Guid source)

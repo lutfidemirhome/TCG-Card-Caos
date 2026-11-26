@@ -6,20 +6,21 @@ using Steamworks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
+internal sealed class SteamCoopRooms : ICoopRooms, ICoopRoomControls, ICoopRoomInvites, ICoopMemberPortraits, ICoopVoiceSettings, IDisposable
 {
     const string ProtocolKey = "tcg_coop_protocol";
-    const string Protocol = "4";
+    const string Protocol = "6";
     const string HostKey = "tcg_host";
     const string PhaseKey = "tcg_phase";
     const string Waiting = "waiting", Playing = "playing";
     const string LockedKey = "tcg_locked", PrivateKey = "tcg_private", RosterKey = "tcg_admitted";
-    enum JoinStep { Idle, Metadata, Password, Verification }
+    enum JoinStep { Idle, Code, Metadata, Password, Verification }
 
     readonly CSteamID local;
     readonly List<CoopRoomInfo> rooms = new List<CoopRoomInfo>();
     readonly List<string> names = new List<string>();
     readonly List<ulong> peers = new List<ulong>();
+    readonly List<ulong> shopPeers = new List<ulong>();
     readonly CallResult<LobbyCreated_t> created;
     readonly CallResult<LobbyEnter_t> entered;
     readonly CallResult<LobbyMatchList_t> listed;
@@ -28,13 +29,77 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
     readonly Callback<GameLobbyJoinRequested_t> invited;
     readonly Callback<SteamServersDisconnected_t> disconnected;
     readonly SteamCoopPresence presence;
+    readonly Callback<PersonaStateChange_t> personaChanged;
+    readonly Dictionary<ulong, Texture2D> portraits = new Dictionary<ulong, Texture2D>();
+    readonly HashSet<ulong> requestedProfiles = new HashSet<ulong>();
     SteamCoopCards cards;
+    SteamCoopVoice voice;
+    readonly HashSet<ulong> muted = new HashSet<ulong>();
+    public bool VoiceEnabled { get; private set; } = PlayerPrefs.GetInt("coop.voice.enabled", 1) != 0;
+    public bool IsMuted(ulong id) => muted.Contains(id);
+    public void ToggleMute(ulong id)
+    {
+        if (id == LocalId || !peers.Contains(id)) return;
+        if (muted.Add(id)) voice?.Silence(id); else muted.Remove(id);
+        CoopSession.Notify();
+    }
+    public void SetVoiceEnabled(bool enabled)
+    {
+        VoiceEnabled = enabled;
+        PlayerPrefs.SetInt("coop.voice.enabled", enabled ? 1 : 0); PlayerPrefs.Save();
+        if (!enabled) voice?.SilenceAll();
+        CoopSession.Notify();
+    }
+    readonly SteamRoomCodes codes = new SteamRoomCodes();
+    readonly Dictionary<ulong, float> codeInvites = new Dictionary<ulong, float>();
+    readonly List<ulong> expiredInvites = new List<ulong>();
+    bool locallyReady, startRequested;
+    public string RoomCode => InRoom ? SteamMatchmaking.GetLobbyMemberData(lobby, host, "tcg_code") : null;
+    bool AcceptsCode => IsHost && InRoom && OpenPhase(lobby);
     readonly SteamRoomAdmission admission = new SteamRoomAdmission();
     readonly List<ulong> steamMembers = new List<ulong>();
     JoinStep joinStep;
     CSteamID expectedOwner;
     byte[] createKey;
-    bool createPrivate;
+    bool createPrivate, resume;
+    CSteamID reconnect;
+    public ulong LocalId => local.m_SteamID;
+    public ulong HostId => host.m_SteamID;
+    public IReadOnlyList<ulong> Players => peers;
+    public bool Ready(ulong id) => id == LocalId ? locallyReady : SteamMatchmaking.GetLobbyMemberData(lobby, new CSteamID(id), "tcg_ready") == "1";
+    public void ToggleReady()
+    {
+        if (!InRoom || CoopSession.InShop) return;
+        if (IsHost && !startRequested) return;
+        if (IsHost) startRequested = false;
+        SetReady(!locallyReady);
+        RefreshLobby();
+    }
+    void SetReady(bool ready)
+    {
+        locallyReady = ready;
+        SteamMatchmaking.SetLobbyMemberData(lobby, "tcg_ready", ready ? "1" : "0");
+    }
+
+    public bool AllowJoin => HasLobby && SteamMatchmaking.GetLobbyData(lobby, "tcg_open") == "1";
+    public void ToggleJoin()
+    {
+        if (!IsHost || !InRoom || !CoopSession.InShop) return;
+        bool open = !AllowJoin;
+        SteamMatchmaking.SetLobbyData(lobby, "tcg_open", open ? "1" : "0");
+        CoopSession.Notify();
+    }
+    public void RemovePlayer(ulong id)
+    {
+        if (!IsHost || id == LocalId || !peers.Contains(id)) return;
+        if (SteamMatchmaking.SetLobbyData(lobby, "tcg_removed_" + id, "1")) RefreshLobby();
+    }
+    public bool CanResume => IsHost && CoopShopCards.HasSave(LocalId);
+    public void ContinueShop() { if (CanResume) StartShop(true); }
+    public bool CanReconnect => reconnect.IsValid() && CanRequest;
+    public void Reconnect() { if (CanReconnect) Join(reconnect.m_SteamID); }
+    static bool OpenPhase(CSteamID id) => SteamMatchmaking.GetLobbyData(id, PhaseKey) == Waiting ||
+        (SteamMatchmaking.GetLobbyData(id, PhaseKey) == Playing && SteamMatchmaking.GetLobbyData(id, "tcg_open") == "1");
     float deadline, rosterDeadline;
     public bool IsPrivate { get; private set; }
     public bool IsLocked { get; private set; }
@@ -43,10 +108,10 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
     bool pendingEntry, abandonEntry, searching, returnToMenu, wasBackground, backgroundChanged;
     bool lastOnline;
     public bool Online => SteamUser.BLoggedOn() && SteamUser.GetSteamID() == local;
-    public bool Busy => pendingEntry || searching || joinStep == JoinStep.Metadata || joinStep == JoinStep.Verification
+    public bool Busy => pendingEntry || searching || joinStep == JoinStep.Code || joinStep == JoinStep.Metadata || joinStep == JoinStep.Verification
         || (HasLobby && !InRoom);
     bool HasLobby => lobby.IsValid();
-    public bool InRoom => HasLobby && (!IsLocked || peers.Contains(local.m_SteamID));
+    public bool InRoom => HasLobby && peers.Contains(local.m_SteamID);
     public bool IsHost => HasLobby && local == host;
     public IReadOnlyList<CoopRoomInfo> PublicRooms => rooms;
     public IReadOnlyList<string> Members => names;
@@ -62,7 +127,8 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         data = Callback<LobbyDataUpdate_t>.Create(OnLobbyData);
         invited = Callback<GameLobbyJoinRequested_t>.Create(e => QueueInvite(e.m_steamIDLobby));
         disconnected = Callback<SteamServersDisconnected_t>.Create(e => OnDisconnect());
-        presence = new SteamCoopPresence(admission);
+        presence = new SteamCoopPresence(admission, () => AcceptsCode);
+        personaChanged = Callback<PersonaStateChange_t>.Create(OnPersonaChanged);
         lastOnline = Online;
         var args = Environment.GetCommandLineArgs();
         for (int i = 1; i < args.Length - 1; i++)
@@ -98,9 +164,10 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
             CoopSession.ShowLobby(true);
             Join(target.m_SteamID);
         }
+        if (online && (IsHost || joinStep == JoinStep.Code)) codes.Poll(ResolveCode, OnCodeResolved);
         if (online && (admission.CanReceiveRequests || joinStep == JoinStep.Verification))
             admission.Poll(local.m_SteamID, OnPasswordReply);
-        if ((joinStep == JoinStep.Metadata || joinStep == JoinStep.Verification) && Time.realtimeSinceStartup > deadline)
+        if ((joinStep == JoinStep.Code || joinStep == JoinStep.Metadata || joinStep == JoinStep.Verification) && Time.realtimeSinceStartup > deadline)
         {
             if (joinStep == JoinStep.Verification) OnPasswordReply(false, false);
             else { CancelGate(); SetStatus(LocalizationKeys.CoopFailed); }
@@ -109,8 +176,15 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         if (InRoom && CoopSession.InShop && online && GameScenes.IsActiveGameScene() && CardInstancedRenderManager.IsGameplayReady)
         {
             presence.Tick(lobby.m_SteamID);
-            cards ??= new SteamCoopCards(lobby.m_SteamID, local.m_SteamID, host.m_SteamID, peers, presence.PlayerBody);
+            if (cards == null)
+            {
+                cards = new SteamCoopCards(lobby.m_SteamID, LocalId, HostId, shopPeers, presence.PlayerBody);
+                if (IsHost && !CoopShopCards.Active.UseCheckpoint(CoopShopCards.SavePath(LocalId), resume))
+                { EndRoom("coop.save_failed"); return; }
+            }
             cards.Tick();
+            voice ??= new SteamCoopVoice(lobby.m_SteamID, LocalId, HostId, shopPeers, IsMuted);
+            voice.Tick(VoiceEnabled);
         }
     }
 
@@ -121,7 +195,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         if (!CanRequest) return;
         rooms.Clear();
         SteamMatchmaking.AddRequestLobbyListStringFilter(ProtocolKey, Protocol, ELobbyComparison.k_ELobbyComparisonEqual);
-        SteamMatchmaking.AddRequestLobbyListStringFilter(PhaseKey, Waiting, ELobbyComparison.k_ELobbyComparisonEqual);
+
         SteamMatchmaking.AddRequestLobbyListFilterSlotsAvailable(1);
         SteamMatchmaking.AddRequestLobbyListDistanceFilter(ELobbyDistanceFilter.k_ELobbyDistanceFilterWorldwide);
         SteamMatchmaking.AddRequestLobbyListResultCountFilter(50);
@@ -141,7 +215,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
                 CSteamID id = SteamMatchmaking.GetLobbyByIndex(i);
                 int capacity = SteamMatchmaking.GetLobbyMemberLimit(id);
                 int count = SteamMatchmaking.GetNumLobbyMembers(id);
-                if (!Compatible(id) || count >= capacity || SteamMatchmaking.GetLobbyData(id, PhaseKey) != Waiting
+                if (!Compatible(id) || count >= capacity || !OpenPhase(id)
                     || SteamMatchmaking.GetLobbyData(id, PrivateKey) != "0") continue;
                 string name = SteamMatchmaking.GetLobbyData(id, "name");
                 rooms.Add(new CoopRoomInfo(id.m_SteamID, name, count, capacity, SteamMatchmaking.GetLobbyData(id, LockedKey) == "1"));
@@ -172,6 +246,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
             && SteamMatchmaking.SetLobbyData(id, PrivateKey, createPrivate ? "1" : "0")
             && SteamMatchmaking.SetLobbyData(id, LockedKey, createKey != null ? "1" : "0")
             && SteamMatchmaking.SetLobbyData(id, RosterKey, local.m_SteamID.ToString(CultureInfo.InvariantCulture))
+            && SteamMatchmaking.SetLobbyData(id, "tcg_open", "1")
             && SteamMatchmaking.SetLobbyData(id, PhaseKey, Waiting);
         if (!configured) { ClearCreateKey(); SteamMatchmaking.LeaveLobby(id); SetStatus(LocalizationKeys.CoopFailed); return; }
         if (createKey != null)
@@ -179,7 +254,102 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
             admission.Open(id.m_SteamID, local.m_SteamID, createKey);
             createKey = null; // The admission gate now owns and clears this array.
         }
+        SteamMatchmaking.SetLobbyMemberData(id, "tcg_code", codes.Open(LocalId));
         Enter(id, local);
+    }
+
+    public void JoinByCode(string code)
+    {
+        if (!CanRequest) return;
+        if (!codes.Request(LocalId, code)) { SetStatus("coop.bad_code"); return; }
+        joinStep = JoinStep.Code;
+        deadline = Time.realtimeSinceStartup + 12f;
+        SetStatus(LocalizationKeys.CoopWorking);
+    }
+
+    ulong ResolveCode(ulong sender)
+    {
+        if (!AcceptsCode || sender == LocalId || steamMembers.Contains(sender) ||
+            SteamMatchmaking.GetNumLobbyMembers(lobby) >= CoopSession.Capacity ||
+            SteamMatchmaking.GetLobbyData(lobby, "tcg_removed_" + sender) == "1") return 0;
+        if (!IsPrivate) return lobby.m_SteamID;
+        float now = Time.realtimeSinceStartup;
+        expiredInvites.Clear();
+        foreach (var entry in codeInvites)
+            if (entry.Value <= now) expiredInvites.Add(entry.Key);
+        foreach (ulong id in expiredInvites) codeInvites.Remove(id);
+        if (codeInvites.ContainsKey(sender)) return lobby.m_SteamID;
+        if (codeInvites.Count >= 64 || !SteamMatchmaking.InviteUserToLobby(lobby, new CSteamID(sender))) return 0;
+        codeInvites[sender] = now + 15f;
+        return lobby.m_SteamID;
+    }
+
+    void OnCodeResolved(ulong id)
+    {
+        if (joinStep != JoinStep.Code) return;
+        joinStep = JoinStep.Idle;
+        if (id == 0) SetStatus(LocalizationKeys.CoopFailed);
+        else Join(id);
+    }
+
+    public void GetOnlineFriends(List<CoopFriend> friends)
+    {
+        friends.Clear();
+        if (!InRoom || !Online) return;
+        const EFriendFlags flags = EFriendFlags.k_EFriendFlagImmediate;
+        int count = SteamFriends.GetFriendCount(flags);
+        for (int i = 0; i < count; i++)
+        {
+            var id = SteamFriends.GetFriendByIndex(i, flags);
+            if (CanInvite(id)) friends.Add(new CoopFriend(id.m_SteamID, SteamFriends.GetFriendPersonaName(id)));
+        }
+        friends.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
+    }
+
+    bool CanInvite(CSteamID id) => InRoom && Online && OpenPhase(lobby) && steamMembers.Count < CoopSession.Capacity &&
+        !steamMembers.Contains(id.m_SteamID) && SteamFriends.GetFriendPersonaState(id) != EPersonaState.k_EPersonaStateOffline &&
+        SteamMatchmaking.GetLobbyData(lobby, "tcg_removed_" + id.m_SteamID) != "1";
+
+    void OnPersonaChanged(PersonaStateChange_t change)
+    {
+        ulong id = change.m_ulSteamID;
+        if (!peers.Contains(id)) return;
+        if ((change.m_nChangeFlags & EPersonaChange.k_EPersonaChangeAvatar) != 0 && portraits.TryGetValue(id, out var old))
+        {
+            UnityEngine.Object.Destroy(old);
+            portraits.Remove(id);
+        }
+        RefreshLobby();
+    }
+
+    public Texture2D GetPortrait(ulong member)
+    {
+        if (!peers.Contains(member)) return null;
+        if (portraits.TryGetValue(member, out var cached)) return cached;
+        var id = new CSteamID(member);
+        int image = SteamFriends.GetSmallFriendAvatar(id);
+        if (image <= 0)
+        {
+            if (requestedProfiles.Add(member)) SteamFriends.RequestUserInformation(id, false);
+            return null;
+        }
+        if (!SteamUtils.GetImageSize(image, out uint w, out uint h) || w == 0 || h == 0 || w > 64 || h > 64) return null;
+        byte[] rgba = new byte[w * h * 4];
+        if (!SteamUtils.GetImageRGBA(image, rgba, rgba.Length)) return null;
+        var texture = new Texture2D((int)w, (int)h, TextureFormat.RGBA32, false);
+        texture.LoadRawTextureData(rgba);
+        texture.Apply(false, true);
+        requestedProfiles.Add(member);
+        portraits.Add(member, texture);
+        return texture;
+    }
+
+    public bool InviteFriend(ulong id)
+    {
+        var friend = new CSteamID(id);
+        bool sent = CanInvite(friend) && SteamMatchmaking.InviteUserToLobby(lobby, friend);
+        SetStatus(sent ? null : LocalizationKeys.CoopFailed);
+        return sent;
     }
 
     public void Join(ulong id)
@@ -208,7 +378,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
     {
         string locked = SteamMatchmaking.GetLobbyData(joinTarget, LockedKey);
         if (!Compatible(joinTarget) || (locked != "0" && locked != "1")
-            || SteamMatchmaking.GetLobbyData(joinTarget, PhaseKey) != Waiting
+            || (!OpenPhase(joinTarget) && SteamMatchmaking.GetLobbyData(joinTarget, "tcg_played_" + LocalId) != "1") || SteamMatchmaking.GetLobbyData(joinTarget, "tcg_removed_" + LocalId) == "1"
             || !ulong.TryParse(SteamMatchmaking.GetLobbyData(joinTarget, HostKey), out ulong owner) || owner == 0)
         {
             CancelGate();
@@ -293,6 +463,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         invite = default;
         lobby = id;
         host = owner;
+        SetReady(false);
         IsPrivate = SteamMatchmaking.GetLobbyData(id, PrivateKey) == "1";
         IsLocked = SteamMatchmaking.GetLobbyData(id, LockedKey) == "1";
         rosterDeadline = Time.realtimeSinceStartup + 12f;
@@ -321,6 +492,8 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
             EndRoom(LocalizationKeys.CoopHostLeft);
             return;
         }
+        if (SteamMatchmaking.GetLobbyData(lobby, "tcg_removed_" + LocalId) == "1")
+        { reconnect = default; EndRoom("coop.removed"); return; }
         steamMembers.Clear();
         int count = SteamMatchmaking.GetNumLobbyMembers(lobby);
         for (int i = 0; i < count; i++)
@@ -341,6 +514,12 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         foreach (ulong member in steamMembers)
         {
             if (IsLocked && (IsHost ? !admission.IsAdmitted(member) : Array.IndexOf(approved, member.ToString(CultureInfo.InvariantCulture)) < 0)) continue;
+            if (SteamMatchmaking.GetLobbyData(lobby, "tcg_removed_" + member) == "1") continue;
+            if (SteamMatchmaking.GetLobbyData(lobby, PhaseKey) == Playing && SteamMatchmaking.GetLobbyData(lobby, "tcg_played_" + member) != "1")
+            {
+                if (!AllowJoin) continue;
+                if (IsHost && !SteamMatchmaking.SetLobbyData(lobby, "tcg_played_" + member, "1")) continue;
+            }
             peers.Add(member);
             names.Add(SteamFriends.GetFriendPersonaName(new CSteamID(member)));
         }
@@ -353,9 +532,28 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
                 return;
             }
         }
-        presence.SetMembers(local.m_SteamID, host.m_SteamID, peers);
-        if (InRoom && !CoopSession.InShop && SteamMatchmaking.GetLobbyData(lobby, PhaseKey) == Playing)
-            CoopSession.BeginShop();
+        foreach (var id in requestedProfiles)
+            if (!peers.Contains(id) && portraits.TryGetValue(id, out var portrait))
+            {
+                UnityEngine.Object.Destroy(portrait);
+                portraits.Remove(id);
+            }
+        requestedProfiles.RemoveWhere(id => !peers.Contains(id));
+        // A late arrival can stay in the lobby before pressing Ready. Stream shop
+        // state, poses and voice only to players who have entered the session.
+        shopPeers.Clear();
+        foreach (ulong id in peers)
+            if (Ready(id)) shopPeers.Add(id);
+        presence.SetMembers(local.m_SteamID, host.m_SteamID, shopPeers);
+        voice?.UpdateMembers();
+        if (!peers.Contains(LocalId) && !OpenPhase(lobby) && SteamMatchmaking.GetLobbyData(lobby, "tcg_played_" + LocalId) != "1")
+        { EndRoom(LocalizationKeys.CoopFailed); return; }
+        if (InRoom) reconnect = default;
+        if (InRoom && locallyReady && !CoopSession.InShop)
+        {
+            if (SteamMatchmaking.GetLobbyData(lobby, PhaseKey) == Playing) CoopSession.BeginShop();
+            else if (IsHost && startRequested && peers.TrueForAll(Ready)) LaunchShop();
+        }
         CoopSession.Notify();
     }
 
@@ -366,17 +564,28 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         else SetStatus(LocalizationKeys.CoopOverlay);
     }
 
-    public void StartShop()
+    public void StartShop() => StartShop(false);
+
+    void StartShop(bool fromSave)
     {
         if (!IsHost || !CoopSession.CanEnter || !Online) return;
-        if (!SteamMatchmaking.SetLobbyJoinable(lobby, false)) { SetStatus(LocalizationKeys.CoopFailed); return; }
+        resume = fromSave;
+        startRequested = true;
+        SetReady(true);
+        RefreshLobby();
+    }
+
+    void LaunchShop()
+    {
+        startRequested = false;
+        foreach (ulong id in peers)
+            if (!SteamMatchmaking.SetLobbyData(lobby, "tcg_played_" + id, "1")) { SetReady(false); SetStatus(LocalizationKeys.CoopFailed); return; }
         if (!SteamMatchmaking.SetLobbyData(lobby, PhaseKey, Playing))
         {
-            SteamMatchmaking.SetLobbyJoinable(lobby, true);
+            SetReady(false);
             SetStatus(LocalizationKeys.CoopFailed);
             return;
         }
-        admission.CloseAdmission();
         CoopSession.BeginShop();
     }
 
@@ -393,6 +602,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
     void OnDisconnect()
     {
         if (!Busy && !HasLobby && joinStep == JoinStep.Idle) return;
+        if (InRoom && !IsHost && CoopSession.InShop) reconnect = lobby;
         // The Steam connection owning these requests has gone away. Its call results
         // may never run; the next connection must be free to create or join again.
         created.Cancel();
@@ -409,6 +619,14 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         CancelGate();
         ClearCreateKey();
         admission.Reset();
+        codes.Reset();
+        codeInvites.Clear();
+        foreach (var portrait in portraits.Values) UnityEngine.Object.Destroy(portrait);
+        portraits.Clear();
+        requestedProfiles.Clear();
+        locallyReady = startRequested = false;
+        voice?.Dispose();
+        voice = null;
         cards?.Dispose();
         cards = null;
         presence.Clear();
@@ -418,10 +636,11 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
             SteamMatchmaking.LeaveLobby(lobby);
         }
         lobby = host = default;
-        IsLocked = IsPrivate = false;
+        IsLocked = IsPrivate = resume = false;
         rooms.Clear();
         names.Clear();
         peers.Clear();
+        shopPeers.Clear();
         if (backgroundChanged) Application.runInBackground = wasBackground;
         backgroundChanged = false;
         if (CoopSession.InShop) returnToMenu = true;
@@ -438,6 +657,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
     {
         joinStep = JoinStep.Idle;
         admission.CancelRequest();
+        codes.Cancel();
         expectedOwner = default;
     }
 
@@ -447,6 +667,7 @@ internal sealed class SteamCoopRooms : ICoopRooms, IDisposable
         created.Dispose(); entered.Dispose(); listed.Dispose();
         chat.Dispose(); data.Dispose(); invited.Dispose(); disconnected.Dispose();
         presence.Dispose();
+        personaChanged.Dispose();
     }
 }
 #endif

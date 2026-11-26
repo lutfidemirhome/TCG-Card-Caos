@@ -26,6 +26,8 @@ internal sealed class SteamCoopPresence : IDisposable
     {
         public GameObject Body;
         public Pose Target;
+        public TMPro.TextMeshPro Label;
+        public Renderer Renderer;
     }
 
     static readonly int PoseSize = Marshal.SizeOf<Pose>();
@@ -40,13 +42,15 @@ internal sealed class SteamCoopPresence : IDisposable
     float nextSend;
     FirstPersonController player;
     Material avatarMaterial;
+    readonly MaterialPropertyBlock tint = new MaterialPropertyBlock();
+    readonly List<ulong> roster = new List<ulong>();
 
-    public SteamCoopPresence(SteamRoomAdmission admission)
+    public SteamCoopPresence(SteamRoomAdmission admission, Func<bool> acceptsCode)
     {
         requested = Callback<SteamNetworkingMessagesSessionRequest_t>.Create(e =>
         {
             var peer = e.m_identityRemote;
-            if (CanTalk(peer.GetSteamID64()) || admission.CanReceiveRequests)
+            if (CanTalk(peer.GetSteamID64()) || admission.CanReceiveRequests || acceptsCode())
                 SteamNetworkingMessages.AcceptSessionWithUser(ref peer);
         });
     }
@@ -69,6 +73,8 @@ internal sealed class SteamCoopPresence : IDisposable
         foreach (ulong id in removed) RemovePeer(id);
         allowed.Clear();
         foreach (ulong id in peers) allowed.Add(id);
+        roster.Clear(); roster.AddRange(peers);
+        foreach (var pair in avatars) Tint(pair.Key, pair.Value);
     }
 
     public void Tick(ulong room)
@@ -101,6 +107,17 @@ internal sealed class SteamCoopPresence : IDisposable
                 if (!avatars.TryGetValue(pose.Actor, out Remote avatar))
                 {
                     avatar = new Remote { Body = MakeAvatar(pose.Actor), Target = pose };
+                    avatar.Renderer = avatar.Body.GetComponentInChildren<MeshRenderer>();
+                    var labelObject = new GameObject("Player name");
+                    labelObject.transform.SetParent(avatar.Body.transform, false);
+                    labelObject.transform.localPosition = Vector3.up * (player.GetComponent<CharacterController>().center.y + player.GetComponent<CharacterController>().height * .5f + .18f);
+                    avatar.Label = labelObject.AddComponent<TMPro.TextMeshPro>();
+                    avatar.Label.richText = false;
+                    avatar.Label.fontSize = 2;
+                    avatar.Label.alignment = TMPro.TextAlignmentOptions.Center;
+                    avatar.Label.rectTransform.sizeDelta = new Vector2(3f, .45f);
+                    avatar.Label.text = SteamFriends.GetFriendPersonaName(new CSteamID(pose.Actor));
+                    Tint(pose.Actor, avatar);
                     avatars.Add(pose.Actor, avatar);
                     avatar.Body.transform.position = Position(pose);
                 }
@@ -114,12 +131,24 @@ internal sealed class SteamCoopPresence : IDisposable
         foreach (Remote remote in avatars.Values)
         {
             Transform t = remote.Body.transform;
+            var camera = Camera.main;
+            remote.Label.enabled = camera && (t.position - player.transform.position).sqrMagnitude < 36f;
+            if (remote.Label.enabled) remote.Label.transform.rotation = camera.transform.rotation;
             t.SetPositionAndRotation(Vector3.Lerp(t.position, Position(remote.Target), blend),
                 Quaternion.Slerp(t.rotation, Quaternion.Euler(0, remote.Target.Yaw, 0), blend));
         }
     }
 
     static Vector3 Position(Pose pose) => new Vector3(pose.X, pose.Y, pose.Z);
+
+    void Tint(ulong id, Remote remote)
+    {
+        Color color = CoopPlayerColors.For(id, roster);
+        tint.SetColor("_BaseColor", color);
+        tint.SetColor("_Color", color);
+        remote.Renderer.SetPropertyBlock(tint);
+        remote.Label.color = color;
+    }
 
     GameObject MakeAvatar(ulong id)
     {

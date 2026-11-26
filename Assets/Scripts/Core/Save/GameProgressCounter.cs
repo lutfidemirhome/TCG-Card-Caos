@@ -73,6 +73,7 @@ public static class GameProgressCounter
 
     public static Snapshot Capture()
     {
+        if (CoopShopCards.Active != null && CoopShopCards.Active.TryGetProgress(out var shared)) return shared;
         if (!_cacheValid)
             RebuildCache();
 

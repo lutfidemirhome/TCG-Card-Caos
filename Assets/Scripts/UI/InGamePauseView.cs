@@ -19,6 +19,7 @@ public class InGamePauseView : MonoBehaviour
     [SerializeField] SaveGamePanelView saveGamePanel;
     [SerializeField] SettingsPanelView settingsPanel;
 
+    CoopTeamPanel team;
     public bool IsOpen => root != null && root.activeSelf;
 
     void Awake()
@@ -45,8 +46,14 @@ public class InGamePauseView : MonoBehaviour
         Wire(resumeButton, Resume);
         if (CoopSession.InShop)
         {
-            if (saveButton) saveButton.interactable = false;
-            if (loadButton) loadButton.interactable = false;
+            if (saveButton) saveButton.interactable = CoopSession.Rooms?.IsHost == true;
+            if (loadButton)
+            {
+                loadButton.interactable = CoopSession.Rooms is ICoopRoomControls;
+                var caption = loadButton.GetComponentInChildren<TMPro.TMP_Text>(true);
+                if (caption && caption.TryGetComponent(out LocalizedText localized)) localized.SetKey("coop.team");
+                else if (caption) caption.text = Localization.Get("coop.team");
+            }
         }
         Wire(saveButton, OnSaveGame);
         Wire(loadButton, OnLoadGame);
@@ -79,6 +86,7 @@ public class InGamePauseView : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (team && team.gameObject.activeSelf) { team.gameObject.SetActive(false); return; }
             if (settingsPanel != null && settingsPanel.IsOpen)
             {
                 settingsPanel.Cancel();
@@ -110,7 +118,7 @@ public class InGamePauseView : MonoBehaviour
 
     bool PointerOverOverlay()
     {
-        return (loadGamePanel != null && loadGamePanel.IsOpen)
+        return (team && team.gameObject.activeSelf) || (loadGamePanel != null && loadGamePanel.IsOpen)
             || (saveGamePanel != null && saveGamePanel.IsOpen)
             || (settingsPanel != null && settingsPanel.IsOpen);
     }
@@ -231,7 +239,7 @@ public class InGamePauseView : MonoBehaviour
 
     void OnSaveGame()
     {
-        if (CoopSession.InShop) return;
+        if (CoopSession.InShop) { if (CoopSession.Rooms?.IsHost == true) CoopShopCards.Active?.FlushCheckpoint(); return; }
         if (loadGamePanel != null)
             loadGamePanel.Hide();
         if (settingsPanel != null)
@@ -245,7 +253,16 @@ public class InGamePauseView : MonoBehaviour
 
     void OnLoadGame()
     {
-        if (CoopSession.InShop) return;
+        if (CoopSession.InShop)
+        {
+            if (CoopSession.Rooms is ICoopRoomControls)
+            {
+                if (!team) team = CoopTeamPanel.Create(root.transform);
+                team.gameObject.SetActive(true);
+                team.transform.SetAsLastSibling();
+            }
+            return;
+        }
         if (saveGamePanel != null)
             saveGamePanel.Hide();
         if (settingsPanel != null)
@@ -279,6 +296,7 @@ public class InGamePauseView : MonoBehaviour
 
     void OnQuit()
     {
+        if (CoopSession.InShop) CoopShopCards.Active?.FlushCheckpoint();
         Hide();
         GamePause.SetPaused(false);
         GameSaveStore.SaveBeforeLeaveGameplay();

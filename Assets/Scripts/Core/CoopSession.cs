@@ -42,6 +42,22 @@ public interface ICoopRooms
     void Leave();
 }
 
+public interface ICoopRoomControls
+{
+    ulong LocalId { get; }
+    ulong HostId { get; }
+    IReadOnlyList<ulong> Players { get; }
+    bool Ready(ulong id);
+    void ToggleReady();
+    bool AllowJoin { get; }
+    void ToggleJoin();
+    void RemovePlayer(ulong id);
+    bool CanResume { get; }
+    void ContinueShop();
+    bool CanReconnect { get; }
+    void Reconnect();
+}
+
 public static class CoopSession
 {
     public const int Capacity = 4;

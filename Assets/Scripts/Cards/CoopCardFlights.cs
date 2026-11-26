@@ -57,7 +57,7 @@ internal sealed class CoopCardFlights
             return;
         }
         bool wasInFlight = tracked.Remove(m.Card);
-        ShowGround(card, m.Position, m.Rotation, wasInFlight);
+        ShowGround(card, m.Position, m.Rotation, wasInFlight || m.PhysicalPose != 0);
     }
 
     public static void ShowGround(WorldCard card, Vector3 position, Quaternion rotation, bool replicatedPhysics = false)

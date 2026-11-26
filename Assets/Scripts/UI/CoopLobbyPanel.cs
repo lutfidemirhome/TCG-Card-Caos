@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,7 +10,11 @@ public sealed class CoopLobbyPanel : MonoBehaviour
     GameObject overlay;
     RectTransform panel, contents;
     CanvasGroup menuGroup;
-    TMP_Text menuLabel;
+    TMP_Text menuLabel, heading;
+    bool browsing, viewingFriends, revealCode;
+    string codeDraft = string.Empty;
+    readonly List<CoopFriend> friends = new List<CoopFriend>();
+    readonly HashSet<ulong> invitations = new HashSet<ulong>();
     bool previousInteractable, preview, dirty;
     bool creating, previewSetup, inviteOnly, previewLocked, wasPrompt;
     string formPassword = string.Empty;
@@ -48,9 +53,10 @@ public sealed class CoopLobbyPanel : MonoBehaviour
     void Open()
     {
         if (!CoopSession.CanEnter) return;
+        browsing = viewingFriends = revealCode = false;
+        codeDraft = string.Empty;
         page = 0;
         CoopSession.ShowLobby(true);
-        CoopSession.Rooms?.Search();
     }
 
     void Update()
@@ -71,6 +77,7 @@ public sealed class CoopLobbyPanel : MonoBehaviour
 
     void Back()
     {
+        if (viewingFriends) { viewingFriends = false; page = 0; MarkDirty(); return; }
         if (preview) { preview = false; MarkDirty(); return; }
         var rooms = CoopSession.Rooms;
         if (creating || rooms?.NeedsPassword == true)
@@ -78,10 +85,24 @@ public sealed class CoopLobbyPanel : MonoBehaviour
             creating = false;
             formPassword = string.Empty;
             rooms?.Leave();
+            if (browsing) rooms?.Search();
             MarkDirty();
             return;
         }
-        if (rooms != null && rooms.InRoom) { rooms.Leave(); return; }
+        if (rooms != null && rooms.InRoom)
+        {
+            revealCode = browsing = false;
+            invitations.Clear();
+            rooms.Leave();
+            return;
+        }
+        if (browsing)
+        {
+            browsing = false;
+            rooms?.Leave();
+            MarkDirty();
+            return;
+        }
         rooms?.Leave();
         CoopSession.ShowLobby(false);
     }
@@ -99,7 +120,7 @@ public sealed class CoopLobbyPanel : MonoBehaviour
         var image = panel.gameObject.AddComponent<Image>();
         SettingsArt.Apply(image, SettingsArt.Panel, new Color(.14f, .20f, .28f));
         image.preserveAspect = false;
-        Text(panel, "Co-op", new Vector2(760, 80), new Vector2(0, 326), 64);
+        heading = Text(panel, string.Empty, new Vector2(760, 80), new Vector2(0, 326), 64);
         overlay.SetActive(false);
     }
 
@@ -128,65 +149,146 @@ public sealed class CoopLobbyPanel : MonoBehaviour
             wasPrompt = prompt;
             if (prompt) creating = false;
         }
-        if (preview || (room != null && room.InRoom))
+        heading.text = T(LocalizationKeys.CoopTitle);
+        if (preview || room?.InRoom == true)
         {
-            creating = false;
-            formPassword = string.Empty;
-            string title = preview ? T(LocalizationKeys.CoopPreview)
-                : T(LocalizationKeys.CoopMembers) + "   " + room.Members.Count + " / " + CoopSession.Capacity;
-            Text(contents, title, new Vector2(740, 60), new Vector2(0, 240), 40);
-            string access = T((preview ? inviteOnly : room.IsPrivate) ? LocalizationKeys.CoopPrivate : LocalizationKeys.CoopPublic);
-            if (preview ? previewLocked : room.IsLocked) access += " · " + T(LocalizationKeys.CoopLocked);
-            Text(contents, access, new Vector2(740, 38), new Vector2(0, 195), 26);
-            if (preview)
-                Text(contents, "1 / " + CoopSession.Capacity, new Vector2(680, 55), new Vector2(0, 133), 36);
-            else
-                for (int i = 0; i < room.Members.Count; i++)
-                    Text(contents, room.Members[i], new Vector2(680, 48), new Vector2(0, 160 - i * 54), 34);
-            bool host = preview || room.IsHost;
-            if (!preview) Button(T(LocalizationKeys.CoopInvite), -198, -140, 345, room.Invite);
-            if (host) Button(T(LocalizationKeys.CoopStart), preview ? 0 : 198, -140, 345,
-                () => { if (preview) CoopSession.BeginShop(); else room.StartShop(); });
-            string status = room?.StatusKey;
-            if (!string.IsNullOrEmpty(status) || !host)
-                Note(!string.IsNullOrEmpty(status) ? status : LocalizationKeys.CoopWaitHost);
-            Button(T(LocalizationKeys.CoopLeave), 0, -306, 340, Back, backButton: true);
+            creating = browsing = false;
+            codeDraft = formPassword = string.Empty;
+            if (viewingFriends && room is ICoopRoomInvites inviteList) DrawFriends(room, inviteList);
+            else DrawLobby(room);
             return;
         }
+        viewingFriends = revealCode = false;
+        invitations.Clear();
         if (prompt || creating)
         {
             DrawRoomForm(room, prompt);
             return;
         }
 
-        if (room == null || !room.Online)
+        bool online = room?.Online == true;
+        if (browsing && online)
         {
-            Text(contents, T(LocalizationKeys.CoopOffline), new Vector2(750, 130), new Vector2(0, 98), 36);
-#if UNITY_EDITOR
-            Button(T(LocalizationKeys.CoopPreview), 0, -85, 460, () => OpenCreate(true));
-#endif
-        }
-        else
-        {
-            Button(T(LocalizationKeys.CoopCreate), -198, 206, 340, () => OpenCreate(false), !room.Busy);
-            Button(T(LocalizationKeys.CoopRefresh), 198, 206, 340, () => { page = 0; room.Search(); }, !room.Busy);
-            int pages = Mathf.Max(1, (room.PublicRooms.Count + RoomsPerPage - 1) / RoomsPerPage);
-            page = Mathf.Clamp(page, 0, pages - 1);
+            heading.text = T("coop.browse");
+            Button(T(LocalizationKeys.CoopRefresh), 0, 207, 360, () => { page = 0; room.Search(); }, !room.Busy);
+            Paginate(room.PublicRooms.Count);
             for (int i = page * RoomsPerPage; i < Mathf.Min((page + 1) * RoomsPerPage, room.PublicRooms.Count); i++)
             {
                 var item = room.PublicRooms[i];
                 string lockLabel = item.PasswordRequired ? " · " + T(LocalizationKeys.CoopLocked) : string.Empty;
                 Button(item.HostName + "   " + item.Players + " / " + item.Capacity + lockLabel, 0, 111 - (i % RoomsPerPage) * 74, 670, () => room.Join(item.Id), !room.Busy);
             }
-            if (pages > 1)
-            {
-                Button("‹", -150, -191, 85, () => { page--; MarkDirty(); }, page > 0);
-                Text(contents, (page + 1) + " / " + pages, new Vector2(170, 48), new Vector2(0, -191), 30);
-                Button("›", 150, -191, 85, () => { page++; MarkDirty(); }, page < pages - 1);
-            }
             if (!string.IsNullOrEmpty(room.StatusKey)) Note(room.StatusKey);
         }
+        else
+        {
+            bool canUse = online && !room.Busy;
+            Button(T(LocalizationKeys.CoopCreate), -190, 184, 355, () => OpenCreate(false), canUse);
+            Button(T("coop.browse"), 190, 184, 355, () => { browsing = true; page = 0; room.Search(); MarkDirty(); }, canUse);
+            var invites = room as ICoopRoomInvites;
+            Text(contents, T("coop.room_code"), new Vector2(660, 50), new Vector2(0, 75), 34);
+            var input = InputField(canUse && invites != null, false);
+            var join = Button(T(LocalizationKeys.CoopJoin), 0, -88, 340, () => invites?.JoinByCode(codeDraft),
+                canUse && invites != null && !string.IsNullOrWhiteSpace(codeDraft));
+            input.onValueChanged.AddListener(value =>
+            {
+                codeDraft = value;
+                join.interactable = canUse && invites != null && !string.IsNullOrWhiteSpace(value);
+            });
+            input.onSubmit.AddListener(_ => { if (join.IsInteractable()) invites.JoinByCode(codeDraft); });
+            if (room is ICoopRoomControls c && c.CanReconnect)
+                Button(T("coop.reconnect"), 0, -171, 425, c.Reconnect, !room.Busy);
+#if UNITY_EDITOR
+            if (!online) Button(T(LocalizationKeys.CoopPreview), 0, -171, 455, () => OpenCreate(true));
+#endif
+            if (!online) Note(LocalizationKeys.CoopOffline);
+            else if (!string.IsNullOrEmpty(room.StatusKey)) Note(room.StatusKey);
+        }
         Button(T(LocalizationKeys.CoopBack), 0, -306, 340, Back, backButton: true);
+    }
+
+    void DrawLobby(ICoopRooms room)
+    {
+        var controls = room as ICoopRoomControls;
+        var invites = room as ICoopRoomInvites;
+        bool host = preview || room.IsHost;
+        int count = preview ? 1 : room.Members.Count;
+        string access = T((preview ? inviteOnly : room.IsPrivate) ? LocalizationKeys.CoopPrivate : LocalizationKeys.CoopPublic);
+        if (preview ? previewLocked : room.IsLocked) access += " · " + T(LocalizationKeys.CoopLocked);
+        Text(contents, access + "   " + count + " / " + CoopSession.Capacity, new Vector2(750, 53), new Vector2(0, 245), 38);
+        string code = preview ? null : invites?.RoomCode;
+        if (!string.IsNullOrEmpty(code))
+        {
+            Button(revealCode ? code : T("coop.show_code"), -110, 177, 475, () => { revealCode = !revealCode; MarkDirty(); });
+            Button(T("coop.copy"), 255, 177, 212, () => GUIUtility.systemCopyBuffer = code);
+        }
+        for (int i = 0; i < count; i++)
+        {
+            string name = preview ? T(LocalizationKeys.CoopPreview) : room.Members[i];
+            bool ready = !preview && controls != null && controls.Ready(controls.Players[i]);
+            if (ready) name += "  · " + T("coop.ready");
+            float y = 107 - i * 45;
+            var portrait = !preview && controls != null && room is ICoopMemberPortraits profiles
+                ? profiles.GetPortrait(controls.Players[i]) : null;
+            if (portrait)
+            {
+                var image = Rect("Steam avatar", contents, new Vector2(39, 39), new Vector2(-288, y)).gameObject.AddComponent<RawImage>();
+                image.texture = portrait;
+                image.uvRect = new Rect(0, 1, 1, -1);
+                image.raycastTarget = false;
+            }
+            var label = Text(contents, name, new Vector2(550, 44), new Vector2(22, y), 33);
+            if (ready) label.color = new Color(.56f, .94f, .62f);
+        }
+        if (!preview && controls != null && (!host || controls.Ready(controls.LocalId)))
+            Button(T(controls.Ready(controls.LocalId) ? "coop.unready" : "coop.ready"), 0, -88, 400, controls.ToggleReady);
+        else if (host)
+        {
+            bool canResume = !preview && controls?.CanResume == true;
+            Button(T(canResume ? LocalizationKeys.CoopStart : "coop.ready"), canResume ? -196 : 0, -88, 370,
+                () => { if (preview) CoopSession.BeginShop(); else room.StartShop(); });
+            if (canResume) Button(T("coop.continue"), 196, -88, 370, controls.ContinueShop);
+        }
+        if (!preview)
+            Button(T(LocalizationKeys.CoopInvite), 0, -166, 455, () =>
+            {
+                if (invites == null) room.Invite();
+                else { viewingFriends = true; page = 0; MarkDirty(); }
+            });
+        if (!string.IsNullOrEmpty(room?.StatusKey)) Note(room.StatusKey);
+        else if (!preview && controls?.Ready(controls.LocalId) == true) Note("coop.wait_ready");
+        Button(T(LocalizationKeys.CoopLeave), 0, -306, 340, Back, backButton: true);
+    }
+
+    void DrawFriends(ICoopRooms room, ICoopRoomInvites invites)
+    {
+        heading.text = T(LocalizationKeys.CoopInvite);
+        invites.GetOnlineFriends(friends);
+        Paginate(friends.Count);
+        if (friends.Count == 0) Text(contents, T("coop.no_friends"), new Vector2(730, 85), new Vector2(0, 100), 34);
+        for (int i = page * RoomsPerPage; i < Mathf.Min((page + 1) * RoomsPerPage, friends.Count); i++)
+        {
+            var friend = friends[i];
+            bool sent = invitations.Contains(friend.Id);
+            Button(friend.Name + (sent ? "  · " + T("coop.invited") : ""), 0, 208 - (i % RoomsPerPage) * 75, 670, () =>
+            {
+                if (invites.InviteFriend(friend.Id)) invitations.Add(friend.Id);
+                MarkDirty();
+            }, !sent);
+        }
+        Button("Steam", 0, -113, 365, room.Invite);
+        if (!string.IsNullOrEmpty(room.StatusKey)) Note(room.StatusKey);
+        Button(T(LocalizationKeys.CoopBack), 0, -306, 340, Back, backButton: true);
+    }
+
+    void Paginate(int count)
+    {
+        int pages = Mathf.Max(1, (count + RoomsPerPage - 1) / RoomsPerPage);
+        page = Mathf.Clamp(page, 0, pages - 1);
+        if (pages == 1) return;
+        Button("‹", -150, -182, 85, () => { page--; MarkDirty(); }, page > 0);
+        Text(contents, (page + 1) + " / " + pages, new Vector2(170, 48), new Vector2(0, -182), 30);
+        Button("›", 150, -182, 85, () => { page++; MarkDirty(); }, page < pages - 1);
     }
 
     void OpenCreate(bool localPreview)
@@ -215,7 +317,7 @@ public sealed class CoopLobbyPanel : MonoBehaviour
         }
         Text(contents, T(joining ? LocalizationKeys.CoopPassword : LocalizationKeys.CoopOptionalPassword),
             new Vector2(740, 54), new Vector2(0, 24), 32);
-        var input = PasswordField(available && !busy);
+        var input = InputField(available && !busy, true);
         Action submit = () =>
         {
             if (joining)
@@ -246,12 +348,12 @@ public sealed class CoopLobbyPanel : MonoBehaviour
         Button(T(LocalizationKeys.CoopBack), 0, -306, 340, Back, backButton: true);
     }
 
-    TMP_InputField PasswordField(bool enabled)
+    TMP_InputField InputField(bool enabled, bool password)
     {
-        var box = Rect("Password", contents, new Vector2(550, 66), new Vector2(0, -40));
+        var box = Rect(password ? "Password" : "Room code", contents, new Vector2(610, 66), new Vector2(0, password ? -40 : -2));
         var background = box.gameObject.AddComponent<Image>();
         background.color = new Color(.08f, .12f, .24f);
-        var viewport = Rect("Viewport", box, new Vector2(510, 60), Vector2.zero);
+        var viewport = Rect("Viewport", box, new Vector2(574, 60), Vector2.zero);
         viewport.gameObject.AddComponent<RectMask2D>();
         var label = Text(viewport, string.Empty, viewport.sizeDelta, Vector2.zero, 34);
         label.enableAutoSizing = false;
@@ -262,10 +364,10 @@ public sealed class CoopLobbyPanel : MonoBehaviour
         input.textViewport = viewport;
         input.textComponent = label;
         input.fontAsset = label.font;
-        input.contentType = TMP_InputField.ContentType.Password;
+        input.contentType = password ? TMP_InputField.ContentType.Password : TMP_InputField.ContentType.Standard;
         input.asteriskChar = '*';
         input.characterLimit = CoopSession.MaxPasswordLength;
-        input.SetTextWithoutNotify(formPassword);
+        input.SetTextWithoutNotify(password ? formPassword : codeDraft);
         input.interactable = enabled;
         return input;
     }

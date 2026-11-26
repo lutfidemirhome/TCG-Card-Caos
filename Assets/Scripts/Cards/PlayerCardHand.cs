@@ -701,6 +701,7 @@ public class PlayerCardHand : MonoBehaviour
         if (pack == null || pack.IsInHand || pack.State == WorldBoosterPack.PackState.FlyingToHand || !CanPickUpPack)
             return false;
 
+        if (CoopShopCards.ControlsPack(pack)) return CoopShopCards.Active.PickupPack(pack);
         EnsureHandAnchor();
         UpdateHandAnchorTransform();
         _heldPacks.Add(pack);
@@ -887,11 +888,6 @@ public class PlayerCardHand : MonoBehaviour
         if (pack == null)
             return false;
 
-        _heldPacks.Remove(pack);
-        RemoveHandFanEntry(pack);
-        pack.SetHandSelected(false);
-        ClampSelectionIndex();
-
         Vector3 handPos = pack.transform.position;
         Ray aimRay = _camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         Vector3 aimPoint = GetReticleAimPoint(aimRay);
@@ -901,6 +897,9 @@ public class PlayerCardHand : MonoBehaviour
         else
             throwDirection.Normalize();
 
+        if (CoopShopCards.ControlsPack(pack)) return CoopShopCards.Active.ThrowPack(pack, throwDirection * throwSpeed);
+        ClearHeldPackReference(pack);
+        pack.SetHandSelected(false);
         pack.DropWithPhysics(throwDirection * throwSpeed, dropScaleTransitionDuration);
         GameSaveSignals.MarkDirty();
         GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);

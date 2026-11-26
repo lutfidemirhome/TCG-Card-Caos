@@ -85,18 +85,27 @@ public class InteractionController : MonoBehaviour
 
     void Update()
     {
+        UpdateInteraction(Cursor.lockState == CursorLockMode.Locked,
+            Input.GetKeyDown(interactKey) || Input.GetMouseButtonDown(0), PlayerCardHand.IsPackActionKeyDown());
+    }
+
+    void UpdateInteraction(bool pointerLocked, bool interactPressed, bool packPressed)
+    {
         CurrentReticleTarget = ReticleTarget.None;
         AimedSkillShelf = null;
         _cachedSkillRow = -2;
         AimedSkillPsaCabinet = null;
-        if (CoopSession.InShop || GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
+        // A Steam player must wait for the shared card state before modifying the shop.
+        // The offline room preview has no Steam room and uses local interactions.
+        bool waitingForCards = CoopSession.InShop && CoopSession.Rooms?.InRoom == true && CoopShopCards.Active == null;
+        if (waitingForCards || GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
         {
             _raycastAimedCard = null;
             ClearTarget();
             return;
         }
 
-        if (viewCamera == null || Cursor.lockState != CursorLockMode.Locked)
+        if (viewCamera == null || !pointerLocked)
         {
             _raycastAimedCard = null;
             ClearTarget();
@@ -112,7 +121,7 @@ public class InteractionController : MonoBehaviour
             if (hand.IsAwaitingRevealCollect)
             {
                 UpdateSelectedPackPrompt();
-                HandleInput();
+                HandleInput(interactPressed, packPressed);
             }
             else
             {
@@ -124,7 +133,7 @@ public class InteractionController : MonoBehaviour
 
         UpdateTarget();
         UpdateInspectPreview();
-        HandleInput();
+        HandleInput(interactPressed, packPressed);
     }
 
     void UpdateTarget()
@@ -190,7 +199,7 @@ public class InteractionController : MonoBehaviour
         else if (interactable is WorldCard skillPsaCard && skillPsaCard.UsesPsaSlab)
             AimedSkillPsaCabinet = skillPsaCard.GetComponentInParent<PsaCabinet>();
 
-        if (SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
+        if (!CoopSession.InShop && SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
             ResolveAutoshelfAim(ray, HitBuffer, hitCount, aimedCard, aimedCardDistance);
 
         if (interactable == null)
@@ -530,6 +539,8 @@ public class InteractionController : MonoBehaviour
             }
 
             IInteractable interactable = collider.GetComponentInParent<IInteractable>();
+            if (CoopSession.InShop && (interactable is WorldMinorSkillKey || interactable is WorldMinorSkillChest))
+                continue;
             if (interactable == null || interactable is WorldBoosterPack)
                 continue;
             if (interactable is WorldCard lockedCard && lockedCard.IsShelfRowCompleteLocked)
@@ -639,11 +650,11 @@ public class InteractionController : MonoBehaviour
         return best;
     }
 
-    void HandleInput()
+    void HandleInput(bool interactPressed, bool packPressed)
     {
         PlayerCardHand hand = ResolveHand();
 
-        if (hand != null && PlayerCardHand.IsPackActionKeyDown())
+        if (hand != null && packPressed)
         {
             if (hand.IsAwaitingRevealCollect)
             {
@@ -662,8 +673,7 @@ public class InteractionController : MonoBehaviour
             }
         }
 
-        bool interactPressed = WasInteractPressedThisFrame();
-        if (interactPressed && SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
+        if (interactPressed && !CoopSession.InShop && SkillProgress.ActiveTime((int)CardSkill.Autoshelving) > 0f)
         {
             if (_skillController == null) _skillController = FindAnyObjectByType<CardSkillController>();
             if (_skillController != null && _skillController.TryStartAutoshelvingFromInteract()) return;
@@ -676,9 +686,6 @@ public class InteractionController : MonoBehaviour
             return;
         }
     }
-
-    bool WasInteractPressedThisFrame() =>
-        Input.GetKeyDown(interactKey) || Input.GetMouseButtonDown(0);
 
     bool ShouldUseCurrentTargetForInteract()
     {
