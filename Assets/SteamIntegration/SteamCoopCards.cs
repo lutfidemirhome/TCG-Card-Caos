@@ -18,6 +18,8 @@ internal sealed class SteamCoopCards : IDisposable
     readonly ulong room, local, host;
     readonly List<ulong> peers;
     readonly CoopShopCards card;
+    float lastHostPacket = Time.realtimeSinceStartup;
+    public bool ConnectionTimedOut => local != host && Time.realtimeSinceStartup - lastHostPacket > 30f;
 
     public SteamCoopCards(ulong room, ulong local, ulong host, List<ulong> peers, Func<ulong, Transform> playerBody)
     {
@@ -48,7 +50,10 @@ internal sealed class SteamCoopCards : IDisposable
                 if (message.m_cbSize != PacketSize || sender == local || (local != host && sender != host) || !peers.Contains(sender)) continue;
                 var packet = Marshal.PtrToStructure<Packet>(message.m_pData);
                 if (packet.Room == room && (packet.Message.Action == CoopCardAction.Motion) == (channel == MotionChannel))
+                {
+                    if (sender == host) lastHostPacket = Time.realtimeSinceStartup;
                     card.Receive(sender, packet.Message);
+                }
             }
             finally { SteamNetworkingMessage_t.Release(ptr); }
         }

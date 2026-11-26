@@ -53,7 +53,8 @@ public sealed partial class CoopShopCards
 
     bool ApplyPack(CoopCardMessage m, WorldBoosterPack pack)
     {
-        ClearPending(m.Card);
+        states.TryGetValue(m.Card, out var old);
+        ClearPendingOnPlacement(m, old);
         states[m.Card] = m;
         var hand = PlayerCardHand.Instance;
         if (packHolders.TryGetValue(m.Card, out ulong previous) && previous == local && hand)

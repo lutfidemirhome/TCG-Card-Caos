@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-public enum CoopCardAction : byte { Sync, Take, Collect, Throw, Shelve, OpenPack, CancelPack, Return, Denied, PackClaimed, PackReleased, Held, OnShelf, Flight, Ground, Motion, Progress }
+public enum CoopCardAction : byte { Sync, Take, Collect, Throw, Shelve, OpenPack, CancelPack, Return, Denied, PackClaimed, PackReleased, Held, OnShelf, Flight, Ground, Motion, Progress, TakeKey, DropKey, UseKey, KeyHeld, KeyGround, KeyUsed }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct CoopCardMessage
@@ -25,6 +25,7 @@ public sealed partial class CoopShopCards : IDisposable
     readonly Action<ulong, CoopCardMessage> send;
     readonly Func<ulong, Transform> playerBody;
     readonly Dictionary<Guid, CoopCardMessage> states = new Dictionary<Guid, CoopCardMessage>();
+    readonly Dictionary<Guid, uint> landingFromFlight = new Dictionary<Guid, uint>();
     readonly Dictionary<Guid, CoopCardMessage> pending = new Dictionary<Guid, CoopCardMessage>();
     readonly Dictionary<Guid, ulong> packOwners = new Dictionary<Guid, ulong>();
     readonly Dictionary<Guid, Transform> remoteHands = new Dictionary<Guid, Transform>();
@@ -33,13 +34,27 @@ public sealed partial class CoopShopCards : IDisposable
     readonly List<CoopCardMessage> retry = new List<CoopCardMessage>();
     // Reliable changes are replayable in commit order. An untouched authored card needs no packet.
     readonly List<CoopCardMessage> history = new List<CoopCardMessage>();
-    readonly Dictionary<ulong, uint> cursors = new Dictionary<ulong, uint>();
+    sealed class ReplayCursor
+    {
+        public Guid Stream;
+        public uint Sent, Acknowledged;
+        public float LastAdvance;
+    }
+    const uint ReplayWindow = 128;
+    readonly Guid stream = Guid.NewGuid();
+    readonly Dictionary<ulong, ReplayCursor> cursors = new Dictionary<ulong, ReplayCursor>();
+    readonly List<ulong> departedPeers = new List<ulong>();
     readonly CoopCardFlights flights;
     readonly CoopShopLayout layout;
-    uint revision, nextRequest;
+    uint revision, nextRequest, lastAcknowledged;
+    bool missingChange;
+    float nextRepair;
     int reservations;
     float nextSync, nextRetry;
     public static CoopShopCards Active { get; private set; }
+    public bool ReadyForInteraction => local == host || sharedProgress.HasValue;
+    public static bool WaitingForShop => CoopSession.InShop && (Active != null
+        ? !Active.ReadyForInteraction : CoopSession.Rooms?.InRoom == true);
     public static int ReservedSlots => Active?.reservations ?? 0;
     public static bool Controls(WorldCard card) => card && Active != null && Active.layout.CardIds.ContainsKey(card);
     public static bool SlotPending(Component slot) => Active != null && Active.IsSlotPending(slot);
@@ -53,6 +68,7 @@ public sealed partial class CoopShopCards : IDisposable
         this.send = send;
         this.playerBody = playerBody;
         layout = new CoopShopLayout();
+        FindRoomKeys();
         flights = new CoopCardFlights(local == host, BroadcastMotion, Commit);
         SetUpEntranceCard();
         Active = this;
@@ -73,28 +89,36 @@ public sealed partial class CoopShopCards : IDisposable
     {
         if (local == host)
         {
+            ReleaseDepartedKeys();
             changed.Clear();
             foreach (var id in held) if (!IsMember(states[id].Actor)) changed.Add(id);
             foreach (var id in changed) Release(id);
             changed.Clear();
             foreach (var pair in packOwners) if (!IsMember(pair.Value)) changed.Add(pair.Key);
             foreach (var id in changed) Commit(new CoopCardMessage { Card = id, Action = CoopCardAction.PackReleased });
+            departedPeers.Clear();
+            foreach (var peer in cursors.Keys) if (!IsMember(peer)) departedPeers.Add(peer);
+            foreach (var peer in departedPeers) cursors.Remove(peer);
             for (int i = 0; i < members.Count; i++)
             {
                 ulong peer = members[i];
-                if (peer == local || !cursors.TryGetValue(peer, out uint cursor)) continue;
+                if (peer == local || !cursors.TryGetValue(peer, out var cursor)) continue;
                 int budget = 16;
-                while (cursor < history.Count && budget-- > 0) send(peer, history[(int)cursor++]);
-                cursors[peer] = cursor;
+                while (cursor.Sent < history.Count && cursor.Sent - cursor.Acknowledged < ReplayWindow && budget-- > 0)
+                    send(peer, history[(int)cursor.Sent++]);
             }
         }
         else
         {
             float now = Time.unscaledTime;
-            if (now >= nextSync)
+            bool repair = missingChange && now >= nextRepair;
+            if (now >= nextSync || revision - lastAcknowledged >= ReplayWindow / 4 || repair)
             {
                 nextSync = now + 2f;
-                send(host, new CoopCardMessage { Action = CoopCardAction.Sync, Revision = revision });
+                if (repair) { missingChange = false; nextRepair = now + .5f; }
+                lastAcknowledged = revision;
+                send(host, new CoopCardMessage { Action = CoopCardAction.Sync, Card = stream, Revision = revision,
+                    Request = (ReadyForInteraction ? 0u : 1u) | (repair ? 2u : 0u) });
             }
             if (pending.Count != 0 && now >= nextRetry)
             {
@@ -165,11 +189,12 @@ public sealed partial class CoopShopCards : IDisposable
 
     bool Request(CoopCardMessage request)
     {
+        if (!ReadyForInteraction && request.Action != CoopCardAction.Return && request.Action != CoopCardAction.CancelPack) return false;
         if (pending.ContainsKey(request.Card)) return false;
         states.TryGetValue(request.Card, out var previous);
         if (previous.Action == CoopCardAction.Held && NeedsSlot(request.Action)) return false;
         bool packRequest = request.Action == CoopCardAction.OpenPack || request.Action == CoopCardAction.CancelPack;
-        if (!packRequest && !NeedsSlot(request.Action) && (previous.Action != CoopCardAction.Held || previous.Actor != local)) return false;
+        if (!IsKeyRequest(request.Action) && !packRequest && !NeedsSlot(request.Action) && (previous.Action != CoopCardAction.Held || previous.Actor != local)) return false;
         request.Request = ++nextRequest;
         request.Revision = previous.Revision;
         pending.Add(request.Card, request);
@@ -185,14 +210,34 @@ public sealed partial class CoopShopCards : IDisposable
         pending.Remove(id);
     }
 
+    void ClearPendingOnPlacement(CoopCardMessage change, CoopCardMessage previous)
+    {
+        if (change.Action == CoopCardAction.Ground && previous.Action == CoopCardAction.Flight &&
+            pending.TryGetValue(change.Card, out var take) && take.Action == CoopCardAction.Take && take.Revision == previous.Revision) return;
+        ClearPending(change.Card);
+    }
+
     public void Receive(ulong sender, CoopCardMessage m)
     {
         if (!IsMember(sender)) return;
         if (local == host)
         {
             if (m.Action == CoopCardAction.Sync)
-                cursors[sender] = Math.Min(m.Revision, revision);
-            else if (m.Action >= CoopCardAction.Take && m.Action <= CoopCardAction.Return && m.Request != 0)
+            {
+                uint received = Math.Min(m.Revision, revision);
+                float now = Time.unscaledTime;
+                if (!cursors.TryGetValue(sender, out var cursor) || cursor.Stream != m.Card)
+                    cursors[sender] = new ReplayCursor { Stream = m.Card, Acknowledged = received, Sent = received, LastAdvance = now };
+                else if (received >= cursor.Acknowledged && received <= cursor.Sent)
+                {
+                    bool stalled = received == cursor.Acknowledged && now - cursor.LastAdvance >= 3f;
+                    if (received > cursor.Acknowledged || stalled || (m.Request & 2u) != 0) cursor.LastAdvance = now;
+                    cursor.Acknowledged = received;
+                    if (stalled || (m.Request & 2u) != 0) cursor.Sent = received;
+                }
+                if ((m.Request & 1u) != 0) send(sender, ProgressMessage());
+            }
+            else if ((m.Action >= CoopCardAction.Take && m.Action <= CoopCardAction.Return || IsKeyRequest(m.Action)) && m.Request != 0)
                 HandleRequest(sender, m);
             return;
         }
@@ -203,13 +248,21 @@ public sealed partial class CoopShopCards : IDisposable
             // A retry can reach the host twice before its accepted change reaches this guest.
             // Keep the original request until the guest has seen the host's state for the item.
             if (m.Revision <= revision && pending.TryGetValue(m.Card, out var request) && request.Request == m.Request)
+            {
                 ClearPending(m.Card);
+                if (request.Action == CoopCardAction.UseKey) MinorSkillProgress.RefreshRoomKeys();
+            }
             return;
         }
         if (m.Action == CoopCardAction.Motion) { if (!SamplePack(m)) flights.Sample(m); return; }
-        if (m.Action < CoopCardAction.PackClaimed || m.Action > CoopCardAction.Ground || m.Revision <= revision) return;
-        if (m.Revision != revision + 1) { nextSync = 0; return; }
-        if (Apply(m)) revision = m.Revision;
+        if (!(m.Action >= CoopCardAction.PackClaimed && m.Action <= CoopCardAction.Ground || IsKeyState(m.Action)) || m.Revision <= revision) return;
+        if (m.Revision != revision + 1) { missingChange = true; return; }
+        if (Apply(m, !ReadyForInteraction))
+        {
+            revision = m.Revision;
+            if (pendingProgress.HasValue && pendingProgress.Value.Revision <= revision)
+                ReceiveProgress(pendingProgress.Value);
+        }
     }
 
     int HeldCount(ulong actor)
@@ -223,7 +276,10 @@ public sealed partial class CoopShopCards : IDisposable
     bool HandleRequest(ulong sender, CoopCardMessage m)
     {
         states.TryGetValue(m.Card, out var old);
-        if (old.Revision == m.Revision && TryChange(sender, old, m)) return true;
+        // Landing changes the pose of a free item. A click on that same flight is still valid.
+        bool justLanded = m.Action == CoopCardAction.Take && old.Action == CoopCardAction.Ground &&
+            landingFromFlight.TryGetValue(m.Card, out uint flight) && m.Revision == flight;
+        if ((old.Revision == m.Revision || justLanded) && TryChange(sender, old, m)) return true;
         if (sender == local) ClearPending(m.Card);
         else
         {
@@ -237,6 +293,7 @@ public sealed partial class CoopShopCards : IDisposable
     bool TryChange(ulong actor, CoopCardMessage old, CoopCardMessage m)
     {
         m.Actor = actor;
+        if (IsKeyRequest(m.Action)) return ChangeKey(old, m);
         var physicalPack = layout.AvailablePack(m.Card);
         if (physicalPack && (m.Action == CoopCardAction.Take || m.Action == CoopCardAction.Throw || m.Action == CoopCardAction.Return))
             return ChangePack(actor, old, m, physicalPack);
@@ -331,20 +388,30 @@ public sealed partial class CoopShopCards : IDisposable
         Commit(new CoopCardMessage { Card = id, Action = CoopCardAction.Ground, Position = position, Rotation = Quaternion.identity });
     }
 
-    void Commit(CoopCardMessage m)
+    void Commit(CoopCardMessage m) => Commit(m, false);
+
+    void Commit(CoopCardMessage m, bool restoring)
     {
-        if (m.Action == CoopCardAction.Flight || (m.Action == CoopCardAction.Ground
-            && states.TryGetValue(m.Card, out var previous) && previous.Action == CoopCardAction.Flight))
+        if (m.Action == CoopCardAction.Ground && states.TryGetValue(m.Card, out var previous) && previous.Action == CoopCardAction.Flight)
+        {
+            landingFromFlight[m.Card] = previous.Revision;
             m.PhysicalPose = 1;
+        }
+        else
+        {
+            landingFromFlight.Remove(m.Card);
+            if (m.Action == CoopCardAction.Flight) m.PhysicalPose = 1;
+        }
         m.Revision = revision + 1;
         // Store before presenting. A full local hand can immediately return a newly granted card.
         revision = m.Revision;
         history.Add(m);
-        Apply(m);
+        Apply(m, restoring);
     }
 
-    bool Apply(CoopCardMessage m)
+    bool Apply(CoopCardMessage m, bool restoring)
     {
+        if (IsKeyState(m.Action)) return ApplyKey(m, restoring);
         if (m.Action == CoopCardAction.PackClaimed || m.Action == CoopCardAction.PackReleased)
         {
             bool requestedOpen = pending.TryGetValue(m.Card, out var opening) && opening.Action == CoopCardAction.OpenPack && opening.Request == m.Request;
@@ -387,7 +454,7 @@ public sealed partial class CoopShopCards : IDisposable
             layout.ConsumePack(source);
             RemovePackAnchor(source);
         }
-        ClearPending(m.Card);
+        ClearPendingOnPlacement(m, previous);
         states[m.Card] = m;
         if (previous.Action == CoopCardAction.Held)
         {
@@ -408,7 +475,7 @@ public sealed partial class CoopShopCards : IDisposable
                     if (hand && hand.RestoreHeldCard(card))
                     {
                         hand.SelectRightmostFanEntry();
-                        GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
+                        if (!restoring) GameSoundEffects.Play(GameSoundEffects.Id.CardPickup);
                     }
                     else Request(new CoopCardMessage { Action = CoopCardAction.Return, Card = m.Card });
                 }
@@ -426,11 +493,11 @@ public sealed partial class CoopShopCards : IDisposable
                 }
                 break;
             case CoopCardAction.OnShelf:
-                layout.Slots[m.Slot].Place(card);
+                layout.Slots[m.Slot].Place(card, restoring);
                 break;
             case CoopCardAction.Flight:
                 flights.Start(card, m);
-                if (previous.Action == CoopCardAction.Held) GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
+                if (!restoring && previous.Action == CoopCardAction.Held) GameSoundEffects.Play(GameSoundEffects.Id.CardThrow);
                 break;
             case CoopCardAction.Ground:
                 flights.Land(card, m);
@@ -443,7 +510,8 @@ public sealed partial class CoopShopCards : IDisposable
             remoteHands.Remove(m.Card);
             ArrangeRemoteHand(previous.Actor);
         }
-        GameProgressCounter.InvalidateCache();
+        if (m.Action == CoopCardAction.OnShelf || previous.Action == CoopCardAction.OnShelf)
+            GameProgressCounter.InvalidateCache();
         return true;
     }
 

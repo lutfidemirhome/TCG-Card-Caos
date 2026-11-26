@@ -149,7 +149,7 @@ public class PlayerCardHand : MonoBehaviour
 
     void Update()
     {
-        if (Cursor.lockState != CursorLockMode.Locked || SkillPanelView.ConsumesPauseInput)
+        if (Cursor.lockState != CursorLockMode.Locked || SkillPanelView.ConsumesPauseInput || CoopShopCards.WaitingForShop)
             return;
 
         if (IsHandInputLocked)

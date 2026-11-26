@@ -167,7 +167,7 @@ public sealed class WorldMinorSkillChest : MonoBehaviour, IInteractable
         yield return modelView.Open();
         _unlockingHere = true;
         bool unlocked;
-        try { unlocked = MinorSkillProgress.TryUnlock(skillIndex); }
+        try { unlocked = CoopShopCards.Active != null ? CoopShopCards.Active.RequestKeyUse(this) : MinorSkillProgress.TryUnlock(skillIndex); }
         finally { _unlockingHere = false; }
         _awaitingNotice = unlocked;
         _keyInUse.EndLockUse(); _keyInUse = null;

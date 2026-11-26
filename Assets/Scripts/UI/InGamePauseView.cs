@@ -20,6 +20,7 @@ public class InGamePauseView : MonoBehaviour
     [SerializeField] SettingsPanelView settingsPanel;
 
     CoopTeamPanel team;
+    LoadGameConfirmView leaveAfterSaveFailure;
     public bool IsOpen => root != null && root.activeSelf;
 
     void Awake()
@@ -86,6 +87,7 @@ public class InGamePauseView : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (leaveAfterSaveFailure && leaveAfterSaveFailure.IsOpen) { leaveAfterSaveFailure.Hide(); return; }
             if (team && team.gameObject.activeSelf) { team.gameObject.SetActive(false); return; }
             if (settingsPanel != null && settingsPanel.IsOpen)
             {
@@ -118,7 +120,7 @@ public class InGamePauseView : MonoBehaviour
 
     bool PointerOverOverlay()
     {
-        return (team && team.gameObject.activeSelf) || (loadGamePanel != null && loadGamePanel.IsOpen)
+        return (leaveAfterSaveFailure && leaveAfterSaveFailure.IsOpen) || (team && team.gameObject.activeSelf) || (loadGamePanel != null && loadGamePanel.IsOpen)
             || (saveGamePanel != null && saveGamePanel.IsOpen)
             || (settingsPanel != null && settingsPanel.IsOpen);
     }
@@ -170,6 +172,7 @@ public class InGamePauseView : MonoBehaviour
 
     public void Show()
     {
+        if (CoopSession.InShop) SetSaveCaption(LocalizationKeys.PauseSave);
         WelcomePopupView.CoverForPause();
         DemoCompleteView.CoverForPause();
 
@@ -198,6 +201,7 @@ public class InGamePauseView : MonoBehaviour
 
     public void Hide()
     {
+        if (leaveAfterSaveFailure) leaveAfterSaveFailure.Hide();
         if (loadGamePanel != null)
             loadGamePanel.Hide();
         if (saveGamePanel != null)
@@ -239,7 +243,12 @@ public class InGamePauseView : MonoBehaviour
 
     void OnSaveGame()
     {
-        if (CoopSession.InShop) { if (CoopSession.Rooms?.IsHost == true) CoopShopCards.Active?.FlushCheckpoint(); return; }
+        if (CoopSession.InShop)
+        {
+            if (CoopSession.Rooms?.IsHost == true && CoopShopCards.Active != null)
+                SetSaveCaption(CoopShopCards.Active.FlushCheckpoint() ? LocalizationKeys.SaveGameSaved : "save.failed");
+            return;
+        }
         if (loadGamePanel != null)
             loadGamePanel.Hide();
         if (settingsPanel != null)
@@ -296,7 +305,42 @@ public class InGamePauseView : MonoBehaviour
 
     void OnQuit()
     {
-        if (CoopSession.InShop) CoopShopCards.Active?.FlushCheckpoint();
+        if (leaveAfterSaveFailure && leaveAfterSaveFailure.IsOpen) return;
+        if (CoopSession.InShop && CoopSession.Rooms?.IsHost == true && CoopShopCards.Active != null &&
+            !CoopShopCards.Active.FlushCheckpoint())
+        {
+            SetSaveCaption("save.failed");
+            if (!leaveAfterSaveFailure && loadGamePanel)
+            {
+                var template = loadGamePanel.GetComponentInChildren<LoadGameConfirmView>(true);
+                if (template)
+                {
+                    leaveAfterSaveFailure = Instantiate(template, root.transform, false);
+                    leaveAfterSaveFailure.Show();
+                    var message = leaveAfterSaveFailure.transform.Find("Band/Message");
+                    var localized = message.GetComponent<LocalizedText>() ?? message.gameObject.AddComponent<LocalizedText>();
+                    localized.SetKey("coop.leave_unsaved");
+                    leaveAfterSaveFailure.YesButton.onClick = new Button.ButtonClickedEvent();
+                    leaveAfterSaveFailure.NoButton.onClick = new Button.ButtonClickedEvent();
+                    leaveAfterSaveFailure.YesButton.onClick.AddListener(LeaveToMenu);
+                    leaveAfterSaveFailure.NoButton.onClick.AddListener(leaveAfterSaveFailure.Hide);
+                }
+            }
+            if (leaveAfterSaveFailure) leaveAfterSaveFailure.Show();
+            return;
+        }
+        LeaveToMenu();
+    }
+
+    void SetSaveCaption(string key)
+    {
+        var label = saveButton ? saveButton.GetComponentInChildren<TMPro.TMP_Text>(true) : null;
+        if (label && label.TryGetComponent(out LocalizedText localized)) localized.SetKey(key);
+        else if (label) label.text = Localization.Get(key);
+    }
+
+    void LeaveToMenu()
+    {
         Hide();
         GamePause.SetPaused(false);
         GameSaveStore.SaveBeforeLeaveGameplay();

@@ -339,6 +339,11 @@ public static class CardArtLibrary
         if (material == null || material.shader == null)
             return true;
 
+        // A headless player reports every shader as unsupported. Replacing a cached
+        // material there would allocate an identical fallback on every card move.
+        if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            return false;
+
         string shaderName = material.shader.name;
         return string.IsNullOrEmpty(shaderName)
             || shaderName.IndexOf("InternalError") >= 0

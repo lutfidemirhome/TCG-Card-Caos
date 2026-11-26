@@ -101,11 +101,19 @@ internal sealed class CoopShopLayout
                 return position;
             }
         }
-        public bool CanPlace(WorldCard card) => regular ? !card.UsesPsaSlab && regular.IsEmpty : psa.AcceptsPsaCard(card) && psa.IsEmpty;
+        public bool IsRegular => regular != null;
+        public bool Accepts(WorldCard card) => card && (regular ? !card.UsesPsaSlab : psa.AcceptsPsaCard(card));
+        public bool CanPlace(WorldCard card) => Accepts(card) && (regular ? regular.IsEmpty : psa.IsEmpty);
 
-        public void Place(WorldCard card)
+        public void Place(WorldCard card, bool restoring)
         {
-            if (regular) regular.GetComponentInParent<CardShelf>().PlaceCoopCard(card, regular);
+            if (regular)
+            {
+                var shelf = regular.GetComponentInParent<CardShelf>();
+                if (restoring) regular.RestoreOccupiedCard(card, shelf.SurfacePadding, shelf.IsCorrectPlacement(card, regular), false);
+                else shelf.PlaceCoopCard(card, regular);
+            }
+            else if (restoring) psa.RestoreOccupiedCard(card, false);
             else psa.PlaceCoopCard(card);
         }
 
@@ -138,6 +146,13 @@ internal sealed class CoopShopLayout
     public void DiscardPreview(WorldCard preview) => previews.Remove(preview);
 
     public bool SourcePack(Guid id, out Guid pack) => sourcePacks.TryGetValue(id, out pack);
+    public bool CanRestorePlacement(Guid cardId, Guid slotId)
+    {
+        if (!Slots.TryGetValue(slotId, out var slot)) return false;
+        if (Cards.TryGetValue(cardId, out var card)) return slot.Accepts(card);
+        // Unopened packs cannot be shelved. Their individual products are regular cards.
+        return slot.IsRegular && packContents.ContainsKey(cardId);
+    }
     public Guid[] Products(Guid source) => products[source];
     public bool PackId(WorldBoosterPack pack, out Guid id)
     {

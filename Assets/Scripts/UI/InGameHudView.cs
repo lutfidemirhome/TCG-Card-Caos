@@ -13,6 +13,7 @@ public class InGameHudView : MonoBehaviour
     const float RefreshInterval = 0.12f;
     float _refreshTimer;
     CounterState _shelvesCounter, _cardsCounter, _handCounter;
+    TMP_Text _syncLabel;
 
     struct CounterState
     {
@@ -36,6 +37,7 @@ public class InGameHudView : MonoBehaviour
         DogHudToggle.Ensure(transform);
         CabinetTutorialView.Ensure(transform);
         GameCompleteView.Ensure(transform);
+        if (CoopSession.InShop) gameObject.AddComponent<CoopSpeakingHud>();
     }
 
     void LateUpdate()
@@ -66,6 +68,24 @@ public class InGameHudView : MonoBehaviour
 
     void Refresh()
     {
+        bool waiting = CoopShopCards.WaitingForShop;
+        if (waiting && !_syncLabel && cardsValueText)
+        {
+            _syncLabel = Instantiate(cardsValueText, transform);
+            _syncLabel.name = "Co-op sync status";
+            var rect = _syncLabel.rectTransform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            rect.sizeDelta = new Vector2(860f, 86f);
+            rect.anchoredPosition = new Vector2(0f, 80f);
+            _syncLabel.alignment = TextAlignmentOptions.Center;
+            _syncLabel.raycastTarget = false;
+        }
+        if (_syncLabel && _syncLabel.gameObject.activeSelf != waiting) _syncLabel.gameObject.SetActive(waiting);
+        if (waiting)
+        {
+            if (_syncLabel) _syncLabel.text = Localization.Get("coop.sync_shop");
+            return;
+        }
         GameProgressCounter.Snapshot progress = GameProgressCounter.Capture();
         GameCompleteView.Observe(progress);
         SetCounter(shelvesValueText, progress.shelvesCompleted, progress.totalShelves, ref _shelvesCounter);

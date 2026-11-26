@@ -1758,7 +1758,7 @@ public class WorldCard : MonoBehaviour, IInteractable, IInteractionHighlight
                 meshFilter.sharedMesh = combined;
                 // Setting sharedMaterial alone leaves a previous second material slot
                 // alive, which would draw the entire combined mesh a second time.
-                if (_singlePassMaterials == null)
+                if (_singlePassMaterials == null || _singlePassMaterials.Length != 1)
                     _singlePassMaterials = new Material[1];
                 _singlePassMaterials[0] = materials[0];
                 meshRenderer.sharedMaterials = _singlePassMaterials;

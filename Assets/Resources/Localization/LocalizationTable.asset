@@ -13,6 +13,76 @@ MonoBehaviour:
   m_Name: LocalizationTable
   m_EditorClassIdentifier: 
   entries:
+  - key: coop.leave_unsaved
+    values:
+    - "The shop could not be saved. Leave without saving your latest changes?"
+    - "Mağaza kaydedilemedi. Son değişiklikleri kaydetmeden çıkmak istiyor musun?"
+    - "La boutique n’a pas pu être sauvegardée. Quitter sans enregistrer les dernières modifications ?"
+    - "Impossibile salvare il negozio. Uscire senza salvare le ultime modifiche?"
+    - "Der Laden konnte nicht gespeichert werden. Ohne die letzten Änderungen verlassen?"
+    - "No se pudo guardar la tienda. ¿Salir sin guardar los últimos cambios?"
+    - "Não foi possível salvar a loja. Sair sem salvar as últimas alterações?"
+    - "商店保存失败。要放弃最近的更改并退出吗？"
+    - "商店儲存失敗。要放棄最近的變更並離開嗎？"
+    - "お店を保存できませんでした。最新の変更を保存せずに退出しますか？"
+    - "상점을 저장하지 못했습니다. 최근 변경 사항을 저장하지 않고 나갈까요?"
+    - "Не удалось сохранить магазин. Выйти без сохранения последних изменений?"
+  - key: coop.sync_shop
+    values:
+    - "Syncing shop…"
+    - "Mağaza eşitleniyor…"
+    - "Synchronisation de la boutique…"
+    - "Sincronizzazione del negozio…"
+    - "Laden wird synchronisiert…"
+    - "Sincronizando la tienda…"
+    - "Sincronizando a loja…"
+    - "正在同步商店…"
+    - "正在同步商店…"
+    - "お店を同期中…"
+    - "상점 동기화 중…"
+    - "Синхронизация магазина…"
+  - key: coop.closed
+    values:
+    - "The host has closed the room to new players."
+    - "Ev sahibi odayı yeni oyunculara kapattı."
+    - "L’hôte a fermé la salle aux nouveaux joueurs."
+    - "L’host ha chiuso la stanza ai nuovi giocatori."
+    - "Der Host hat den Raum für neue Spieler geschlossen."
+    - "El anfitrión ha cerrado la sala a nuevos jugadores."
+    - "O anfitrião fechou a sala para novos jogadores."
+    - "房主已禁止新玩家加入。"
+    - "房主已禁止新玩家加入。"
+    - "ホストが新規参加を締め切りました。"
+    - "방장이 신규 참가를 막았습니다."
+    - "Хозяин закрыл вход для новых игроков."
+  - key: coop.full
+    values:
+    - "The room is full."
+    - "Oda dolu."
+    - "La salle est pleine."
+    - "La stanza è piena."
+    - "Der Raum ist voll."
+    - "La sala está llena."
+    - "A sala está cheia."
+    - "房间已满。"
+    - "房間已滿。"
+    - "ルームは満員です。"
+    - "방이 가득 찼습니다."
+    - "В комнате нет мест."
+  - key: coop.host_connection_lost
+    values:
+    - "Lost connection to the host."
+    - "Ev sahibiyle bağlantı kesildi."
+    - "Connexion à l’hôte perdue."
+    - "Connessione con l’host persa."
+    - "Verbindung zum Host verloren."
+    - "Se ha perdido la conexión con el anfitrión."
+    - "A conexão com o anfitrião foi perdida."
+    - "与房主的连接已断开。"
+    - "與房主的連線已中斷。"
+    - "ホストとの接続が切れました。"
+    - "방장과의 연결이 끊어졌습니다."
+    - "Соединение с хозяином потеряно."
   - key: coop.public
     values:
     - "Public"

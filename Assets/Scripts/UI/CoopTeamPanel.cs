@@ -7,6 +7,7 @@ public sealed class CoopTeamPanel : MonoBehaviour
 {
     RectTransform panel;
     bool dirty;
+    readonly RawImage[] microphones = new RawImage[CoopSession.Capacity];
     public static CoopTeamPanel Create(Transform parent)
     {
         var root = new GameObject("Co-op team", typeof(RectTransform), typeof(Image));
@@ -22,7 +23,14 @@ public sealed class CoopTeamPanel : MonoBehaviour
     void Refresh() => dirty = true;
     void Update()
     {
-        if (!dirty || !(CoopSession.Rooms is ICoopRoomControls room)) return;
+        if (!(CoopSession.Rooms is ICoopRoomControls room)) return;
+        if (!dirty)
+        {
+            if (CoopSession.Rooms is ICoopVoiceSettings voiceSettings)
+                for (int i = 0; i < room.Players.Count; i++)
+                    if (microphones[i]) microphones[i].enabled = voiceSettings.IsSpeaking(room.Players[i]);
+            return;
+        }
         dirty = false;
         if (panel) { panel.gameObject.SetActive(false); Destroy(panel.gameObject); }
         panel = Rect("Team", transform, 0, 0, 880, 650);
@@ -32,6 +40,8 @@ public sealed class CoopTeamPanel : MonoBehaviour
             ulong id = room.Players[i];
             float y = 145 - 64*i;
             Label(panel, CoopSession.Rooms.Members[i], CoopPlayerColors.For(id, room.Players), -170, y, 410, 34);
+            microphones[i] = CoopSpeakingHud.AddMicrophone(panel, new Vector2(-396, y), 27f);
+            microphones[i].enabled = CoopSession.Rooms is ICoopVoiceSettings speakers && speakers.IsSpeaking(id);
             if (id != room.LocalId && CoopSession.Rooms is ICoopVoiceSettings voice)
                 Button(voice.IsMuted(id) ? "coop.unmute" : "coop.mute", 73, y, 177, () => voice.ToggleMute(id));
             if (id != room.LocalId && room.LocalId == room.HostId)

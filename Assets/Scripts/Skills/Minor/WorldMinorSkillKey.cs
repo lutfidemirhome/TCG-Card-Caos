@@ -24,6 +24,14 @@ public sealed class WorldMinorSkillKey : MonoBehaviour, IInteractable, IInteract
     Vector3 _authoredPosition;
     Quaternion _authoredRotation;
     bool _dropped;
+    bool _heldByOtherPlayer;
+    internal Quaternion AuthoredRotation => _authoredRotation;
+    internal void SetRoomPose(bool heldByOther, bool ground, Vector3 position, Quaternion rotation)
+    {
+        _heldByOtherPlayer = heldByOther;
+        StopDropPhysics();
+        if (ground) transform.SetPositionAndRotation(position, rotation);
+    }
     static MinorKeyGroundRecord[] _restoredGround;
     Collider[] _colliders;
     bool[] _colliderEnabled;
@@ -83,6 +91,7 @@ public sealed class WorldMinorSkillKey : MonoBehaviour, IInteractable, IInteract
     public bool DropFromHand(Vector3 velocity)
     {
         if (!IsHeld || _usingLock || visualRoot == null || !MinorSkillProgress.HasKey(skillIndex)) return false;
+        if (CoopShopCards.Active != null) return CoopShopCards.Active.RequestKeyDrop(this);
         Vector3 position = visualRoot.position;
         Quaternion rotation = visualRoot.rotation * Quaternion.Inverse(_originalRotation);
         if (!MinorSkillProgress.TryDropKey(skillIndex)) return false;
@@ -228,6 +237,7 @@ public sealed class WorldMinorSkillKey : MonoBehaviour, IInteractable, IInteract
 
     void OnEnable()
     {
+        if (IsHeld) DetachFromHand();
         Active.Add(this);
         MinorSkillProgress.Changed += Refresh;
         Refresh();
@@ -240,7 +250,15 @@ public sealed class WorldMinorSkillKey : MonoBehaviour, IInteractable, IInteract
         StopDropPhysics();
         _usingLock = false;
         SetOutlineState(false, false);
-        DetachFromHand();
+        if (!IsHeld) return;
+        // Unity forbids reparenting into a root while it is being deactivated.
+        PlayerCardHand.Instance?.RemoveHeldKey(this);
+        if (visualRoot && !visualRoot.IsChildOf(transform)) visualRoot.gameObject.SetActive(false);
+    }
+
+    void OnDestroy()
+    {
+        if (IsHeld && visualRoot && !visualRoot.IsChildOf(transform)) Destroy(visualRoot.gameObject);
     }
 
     void CachePresentation()
@@ -281,7 +299,7 @@ public sealed class WorldMinorSkillKey : MonoBehaviour, IInteractable, IInteract
         if (_usingLock && MinorSkillProgress.Ready && MinorSkillProgress.HasKey(skillIndex)) return;
         SetOutlineState(false, false);
         if (!MinorSkillProgress.Ready || MinorSkillProgress.IsUnlocked(skillIndex)) StopDropPhysics();
-        bool visible = MinorSkillProgress.Ready && MinorSkillProgress.IsValidIndex(skillIndex)
+        bool visible = !_heldByOtherPlayer && MinorSkillProgress.Ready && MinorSkillProgress.IsValidIndex(skillIndex)
             && !MinorSkillProgress.HasKey(skillIndex) && !MinorSkillProgress.IsUnlocked(skillIndex);
         bool owned = MinorSkillProgress.Ready && MinorSkillProgress.HasKey(skillIndex) && !MinorSkillProgress.IsUnlocked(skillIndex);
         if (owned && _canToggleVisual && PlayerCardHand.Instance != null) PlayerCardHand.Instance.AddHeldKey(this);
@@ -298,7 +316,7 @@ public sealed class WorldMinorSkillKey : MonoBehaviour, IInteractable, IInteract
 
     public string GetPromptText()
     {
-        if (!MinorSkillInteraction.CanInteract() || !MinorSkillProgress.IsValidIndex(skillIndex)
+        if (_heldByOtherPlayer || !MinorSkillInteraction.CanInteract() || !MinorSkillProgress.IsValidIndex(skillIndex)
             || MinorSkillProgress.HasKey(skillIndex) || MinorSkillProgress.IsUnlocked(skillIndex))
             return string.Empty;
         return InteractPrompt.Format(Localization.Format("minor.key.pickup", skillIndex + 1));
@@ -306,6 +324,8 @@ public sealed class WorldMinorSkillKey : MonoBehaviour, IInteractable, IInteract
 
     public void Interact(GameObject interactor)
     {
-        if (MinorSkillInteraction.CanInteract()) MinorSkillProgress.TryCollectKey(skillIndex);
+        if (!MinorSkillInteraction.CanInteract() || _heldByOtherPlayer) return;
+        if (CoopShopCards.Active != null) CoopShopCards.Active.RequestKeyPickup(this);
+        else MinorSkillProgress.TryCollectKey(skillIndex);
     }
 }

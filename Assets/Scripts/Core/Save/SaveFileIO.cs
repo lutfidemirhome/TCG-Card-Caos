@@ -56,7 +56,7 @@ public static class SaveFileIO
         Directory.CreateDirectory(RootFolder);
     }
 
-    public static bool TryWriteAtomic(string finalPath, string json, out string error)
+    public static bool TryWriteAtomic(string finalPath, string json, out string error, bool preserveBackup = false)
     {
         error = null;
         if (string.IsNullOrEmpty(finalPath) || json == null)
@@ -65,22 +65,24 @@ public static class SaveFileIO
             return false;
         }
 
-        EnsureRoot();
-        string tempPath = finalPath + TmpSuffix;
+        string tempPath = finalPath + "." + Guid.NewGuid().ToString("N") + TmpSuffix;
         string backupPath = finalPath + BackupSuffix;
 
         try
         {
-            File.WriteAllText(tempPath, json);
-            using (FileStream stream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(finalPath)));
+            using (var stream = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                using (var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false), 4096, true))
+                    writer.Write(json);
                 stream.Flush(true);
-
-            if (File.Exists(finalPath))
-                File.Copy(finalPath, backupPath, overwrite: true);
-
-            if (File.Exists(finalPath))
-                File.Delete(finalPath);
-            File.Move(tempPath, finalPath);
+            }
+            if (!File.Exists(finalPath))
+            {
+                try { File.Move(tempPath, finalPath); return true; }
+                catch (IOException) when (File.Exists(finalPath)) { }
+            }
+            File.Replace(tempPath, finalPath, preserveBackup ? null : backupPath);
 
             return true;
         }

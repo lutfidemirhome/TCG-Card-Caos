@@ -56,6 +56,18 @@ public static class MinorSkillProgress
     public static bool IsUnlocked(int index) => IsValidIndex(index) && (_unlockedSkills & (1 << index)) != 0;
     public static bool HasKey(int index) => IsValidIndex(index) && (_ownedKeys & (1 << index)) != 0;
 
+    internal static void RefreshRoomKeys() => Changed?.Invoke();
+
+    internal static void ApplyRoomKey(int index, bool owned, bool unlocked, bool showUnlock)
+    {
+        int bit = 1 << index;
+        bool formerlyUnlocked = IsUnlocked(index);
+        _ownedKeys = owned ? _ownedKeys | bit : _ownedKeys & ~bit;
+        _unlockedSkills = unlocked ? _unlockedSkills | bit : _unlockedSkills & ~bit;
+        Changed?.Invoke();
+        if (unlocked && !formerlyUnlocked && showUnlock) Unlocked?.Invoke(index);
+    }
+
     public static void PrepareForSceneReload()
     {
         Ready = false;

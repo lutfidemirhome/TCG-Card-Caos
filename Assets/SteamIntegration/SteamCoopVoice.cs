@@ -15,10 +15,13 @@ internal sealed class SteamCoopVoice : IDisposable
     readonly IntPtr[] received = new IntPtr[32];
     readonly Dictionary<ulong, Speaker> playback = new Dictionary<ulong, Speaker>();
     readonly Dictionary<ulong, uint> latest = new Dictionary<ulong, uint>();
+    readonly Dictionary<ulong, float> speakingUntil = new Dictionary<ulong, float>();
     readonly Func<ulong, bool> muted;
     readonly List<ulong> departed = new List<ulong>();
     uint sequence;
     bool recording, draining;
+    public bool IsSpeaking(ulong id) => id == local ? recording :
+        speakingUntil.TryGetValue(id, out float until) && Time.unscaledTime < until;
 
     sealed class Speaker : IDisposable
     {
@@ -86,6 +89,7 @@ internal sealed class SteamCoopVoice : IDisposable
                     != EVoiceResult.k_EVoiceResultOK || written == 0) continue;
                 if (!playback.TryGetValue(speaker, out var player)) playback.Add(speaker, player = new Speaker());
                 player.Queue.Write(pcm, (int)written);
+                speakingUntil[speaker] = Time.unscaledTime + .35f;
             }
             finally { SteamNetworkingMessage_t.Release(received[i]); }
         }
@@ -104,6 +108,7 @@ internal sealed class SteamCoopVoice : IDisposable
     void StopMic() { SteamUser.StopVoiceRecording(); recording = false; draining = true; }
     public void Silence(ulong id)
     {
+        speakingUntil.Remove(id);
         if (playback.TryGetValue(id, out var s)) { s.Dispose(); playback.Remove(id); }
     }
     public void SilenceAll()
@@ -111,6 +116,7 @@ internal sealed class SteamCoopVoice : IDisposable
         if (recording) StopMic();
         foreach (var s in playback.Values) s.Dispose();
         playback.Clear();
+        speakingUntil.Clear();
     }
     public void UpdateMembers()
     {

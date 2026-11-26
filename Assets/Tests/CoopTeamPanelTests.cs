@@ -22,6 +22,8 @@ public class CoopTeamPanelTests
         public void RemovePlayer(ulong id) => Removed = id;
         public bool IsMuted(ulong id) => Muted == id;
         public void ToggleMute(ulong id) => Muted = IsMuted(id) ? 0 : id;
+        public ulong Speaker;
+        public bool IsSpeaking(ulong id) => VoiceEnabled && Speaker == id && !IsMuted(id);
         public void SetVoiceEnabled(bool enabled) => VoiceEnabled = enabled;
         public void ToggleJoin() => AllowJoin = !AllowJoin;
         public bool Online => true;
@@ -62,6 +64,41 @@ public class CoopTeamPanelTests
     }
 
     Button Find(string key) => canvas.GetComponentsInChildren<Button>().SingleOrDefault(b => b.name == key);
+
+    [UnityTest]
+    public IEnumerator GameplayHudShowsTheSpeakerAndHidesOnIndividualOrGlobalMute()
+    {
+        canvas.AddComponent<CoopSpeakingHud>();
+        room.Speaker = 2;
+        yield return new WaitForSecondsRealtime(.15f);
+        var label = canvas.GetComponentInChildren<TMPro.TMP_Text>();
+        Assert.That(label.text, Is.EqualTo("Guest"));
+        Assert.That(label.GetComponentInChildren<RawImage>().texture, Is.Not.Null);
+
+        room.ToggleMute(2);
+        yield return new WaitForSecondsRealtime(.15f);
+        Assert.That(label.gameObject.activeSelf, Is.False);
+        room.ToggleMute(2);
+        room.Speaker = 1;
+        yield return new WaitForSecondsRealtime(.15f);
+        Assert.That(label.gameObject.activeSelf && label.text == "Host", Is.True);
+        room.SetVoiceEnabled(false);
+        yield return new WaitForSecondsRealtime(.15f);
+        Assert.That(label.gameObject.activeSelf, Is.False);
+    }
+
+    [UnityTest]
+    public IEnumerator SpeakingIndicatorFollowsGuestAndClearsOnMute()
+    {
+        CoopTeamPanel.Create(canvas.transform);
+        room.Speaker = 2;
+        yield return null;
+        var icons = canvas.GetComponentsInChildren<RawImage>();
+        Assert.That(icons.Count(i => i.enabled && i.texture), Is.EqualTo(1));
+        Find("coop.mute").onClick.Invoke();
+        yield return null;
+        Assert.That(canvas.GetComponentsInChildren<RawImage>().Any(i => i.enabled), Is.False);
+    }
 
     [UnityTest]
     public IEnumerator HostCanMuteOnePlayerAndDisableAndRestoreVoice()

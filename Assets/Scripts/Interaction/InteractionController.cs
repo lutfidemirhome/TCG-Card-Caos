@@ -97,8 +97,7 @@ public class InteractionController : MonoBehaviour
         AimedSkillPsaCabinet = null;
         // A Steam player must wait for the shared card state before modifying the shop.
         // The offline room preview has no Steam room and uses local interactions.
-        bool waitingForCards = CoopSession.InShop && CoopSession.Rooms?.InRoom == true && CoopShopCards.Active == null;
-        if (waitingForCards || GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
+        if (CoopShopCards.WaitingForShop || GamePause.IsPaused || SkillPanelView.ConsumesPauseInput)
         {
             _raycastAimedCard = null;
             ClearTarget();
@@ -539,8 +538,6 @@ public class InteractionController : MonoBehaviour
             }
 
             IInteractable interactable = collider.GetComponentInParent<IInteractable>();
-            if (CoopSession.InShop && (interactable is WorldMinorSkillKey || interactable is WorldMinorSkillChest))
-                continue;
             if (interactable == null || interactable is WorldBoosterPack)
                 continue;
             if (interactable is WorldCard lockedCard && lockedCard.IsShelfRowCompleteLocked)
@@ -578,6 +575,11 @@ public class InteractionController : MonoBehaviour
                 }
             }
         }
+
+        if ((bestOther is WorldMinorSkillKey || bestOther is WorldMinorSkillChest) &&
+            bestOtherDistance <= aimedCardDistance && bestOtherDistance <= aimedPackDistance &&
+            bestOtherDistance <= bestShelfDistance && !InteractionOcclusion.IsOccluded(ray, bestOtherDistance, interactDistance))
+            return bestOther;
 
         if (aimedPack != null)
         {

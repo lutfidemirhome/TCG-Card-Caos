@@ -397,11 +397,11 @@ public static class CardGroundQuery
             CardDimensions.Height * scale * 0.42f,
             CardDimensions.Height * scale * 0.58f);
 
-        Vector3 center = pack.transform.position;
-        if (pack.TryGetComponent(out BoxCollider boxCollider) && boxCollider.enabled)
-            center = boxCollider.transform.TransformPoint(boxCollider.center);
+        Transform packTransform = pack.transform;
+        var collider = pack.PhysCollider;
+        Vector3 center = collider && collider.enabled ? packTransform.TransformPoint(collider.center) : packTransform.position;
 
-        if (!TryRayIntersectOrientedBox(ray, center, pack.transform.rotation, halfExtents, out float distance))
+        if (!TryRayIntersectOrientedBox(ray, center, packTransform, halfExtents, out float distance))
             return;
 
         if (distance < 0f || distance > maxDistance)
@@ -426,11 +426,11 @@ public static class CardGroundQuery
 
         // Use the authored world pose. GetDrawWorldY snaps to the lower-floor stack plane,
         // so Mix packs on the mezzanine were hittable through the demo floor and flew into hand.
-        Vector3 center = pack.transform.position;
-        if (pack.TryGetComponent(out BoxCollider boxCollider) && boxCollider.enabled)
-            center = boxCollider.transform.TransformPoint(boxCollider.center);
+        Transform packTransform = pack.transform;
+        var collider = pack.PhysCollider;
+        Vector3 center = collider && collider.enabled ? packTransform.TransformPoint(collider.center) : packTransform.position;
 
-        if (!TryRayIntersectOrientedBox(ray, center, pack.transform.rotation, halfExtents, out float distance))
+        if (!TryRayIntersectOrientedBox(ray, center, packTransform, halfExtents, out float distance))
             return;
 
         if (distance < 0f || distance > maxDistance)
@@ -482,7 +482,7 @@ public static class CardGroundQuery
 
         Vector3 halfExtents = GetHalfExtents(card, lossyScale);
 
-        if (!TryRayIntersectOrientedBox(ray, center, cardTransform.rotation, halfExtents, out distance))
+        if (!TryRayIntersectOrientedBox(ray, center, cardTransform, halfExtents, out distance))
             return false;
 
         return distance >= 0f && distance <= maxDistance;
@@ -557,13 +557,22 @@ public static class CardGroundQuery
     static bool TryRayIntersectOrientedBox(
         Ray worldRay,
         Vector3 center,
-        Quaternion rotation,
+        Transform pose,
         Vector3 halfExtents,
         out float distance)
     {
-        Matrix4x4 toLocal = Matrix4x4.TRS(center, rotation, Vector3.one).inverse;
-        Vector3 localOrigin = toLocal.MultiplyPoint3x4(worldRay.origin);
-        Vector3 localDirection = toLocal.MultiplyVector(worldRay.direction);
+        Vector3 offset = worldRay.origin - center;
+        Vector3 direction = worldRay.direction;
+        // A ray missing the enclosing sphere cannot hit this box. Most packs in
+        // the store are well outside the aim ray, especially across aisles.
+        if (Vector3.Cross(direction, offset).sqrMagnitude > direction.sqrMagnitude * halfExtents.sqrMagnitude + 1e-6f)
+        {
+            distance = float.MaxValue;
+            return false;
+        }
+        Quaternion inverse = Quaternion.Inverse(pose.rotation);
+        Vector3 localOrigin = inverse * offset;
+        Vector3 localDirection = inverse * direction;
 
         float tMin = 0f;
         float tMax = float.MaxValue;

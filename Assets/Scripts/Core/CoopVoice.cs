@@ -6,6 +6,7 @@ public interface ICoopVoiceSettings
     bool VoiceEnabled { get; }
     void SetVoiceEnabled(bool value);
     bool IsMuted(ulong player);
+    bool IsSpeaking(ulong player);
     void ToggleMute(ulong player);
 }
 
